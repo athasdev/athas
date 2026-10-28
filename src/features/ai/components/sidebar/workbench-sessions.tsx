@@ -23,20 +23,22 @@ import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import {
   ContextMenu,
   ContextMenuContent,
-  ContextMenuItem,
+  ContextMenuItems,
   ContextMenuTrigger,
 } from "@/ui/context-menu";
 import { showConfirmDialog } from "@/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
+  DropdownMenuItems,
   DropdownMenuTrigger,
+  type MenuItem,
+  menuSeparator,
 } from "@/ui/dropdown";
 import {
   ArchiveIcon,
   ArrowCounterClockwiseIcon,
+  ChatBubbleTextIcon,
   CheckCircleIcon,
   ChevronDownIcon,
   ChevronRightIcon,
@@ -165,6 +167,35 @@ export function SessionSidebarRow({ chat }: { chat: ChatSession }) {
     setRenameValue(chat.title);
     setIsRenaming(true);
   };
+  const actions: MenuItem[] = [
+    {
+      id: "new-window",
+      label: "Open in New Window",
+      icon: <WindowExpandIcon />,
+      onClick: () => void openAgentInNewWindow(chat.id),
+    },
+    {
+      id: "pin",
+      label: chat.isPinned ? "Unpin" : "Pin",
+      icon: chat.isPinned ? <PinSlashIcon /> : <PinIcon />,
+      onClick: () => setChatPinned(chat.id, !chat.isPinned),
+    },
+    { id: "rename", label: "Rename", icon: <PencilLineIcon />, onClick: startRename },
+    {
+      id: "archive",
+      label: "Archive",
+      icon: <ArchiveIcon />,
+      onClick: () => setChatArchived(chat.id, true),
+    },
+    menuSeparator("delete-separator"),
+    {
+      id: "delete",
+      label: "Delete",
+      icon: <TrashIcon />,
+      tone: "destructive",
+      onClick: () => void confirmDeleteChat(chat),
+    },
+  ];
 
   if (isRenaming) {
     return (
@@ -203,30 +234,7 @@ export function SessionSidebarRow({ chat }: { chat: ChatSession }) {
                 <DotsIcon />
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => void openAgentInNewWindow(chat.id)}>
-                  <WindowExpandIcon />
-                  Open in New Window
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setChatPinned(chat.id, !chat.isPinned)}>
-                  {chat.isPinned ? <PinSlashIcon /> : <PinIcon />}
-                  {chat.isPinned ? "Unpin" : "Pin"}
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={startRename}>
-                  <PencilLineIcon />
-                  Rename
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setChatArchived(chat.id, true)}>
-                  <ArchiveIcon />
-                  Archive
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  variant="destructive"
-                  onClick={() => void confirmDeleteChat(chat)}
-                >
-                  <TrashIcon />
-                  Delete
-                </DropdownMenuItem>
+                <DropdownMenuItems items={actions} />
               </DropdownMenuContent>
             </DropdownMenu>
           }
@@ -251,25 +259,21 @@ export function SessionSidebarRow({ chat }: { chat: ChatSession }) {
         </SidebarListActionRow>
       </ContextMenuTrigger>
       <ContextMenuContent>
-        <ContextMenuItem disabled={isInAnotherWindow} onClick={startRename}>
-          <PencilLineIcon />
-          Rename
-        </ContextMenuItem>
-        <ContextMenuItem
-          disabled={isInAnotherWindow}
-          onClick={() => setChatArchived(chat.id, true)}
-        >
-          <ArchiveIcon />
-          Archive
-        </ContextMenuItem>
-        <ContextMenuItem
-          disabled={isInAnotherWindow}
-          variant="destructive"
-          onClick={() => void confirmDeleteChat(chat)}
-        >
-          <TrashIcon />
-          Delete
-        </ContextMenuItem>
+        <ContextMenuItems
+          items={[
+            {
+              id: "open",
+              label: "Open",
+              icon: <ChatBubbleTextIcon />,
+              onClick: () => void openAgentSession(chat.id),
+            },
+            ...actions.map((item) =>
+              item.separator || item.id === "new-window"
+                ? item
+                : { ...item, disabled: isInAnotherWindow },
+            ),
+          ]}
+        />
       </ContextMenuContent>
     </ContextMenu>
   );
@@ -302,25 +306,42 @@ function OutsideSessionRow({
     }
   };
   return (
-    <SidebarListItem
-      aria-label={`${session.title}, from outside Athas`}
-      title={session.title}
-      leading={
-        opening ? (
-          <Spinner compact label="Opening" />
-        ) : (
-          <ProviderIcon providerId={session.agentId} size={14} />
-        )
-      }
-      trailing={
-        <span className="text-subtle-foreground tabular-nums ui-text-caption">
-          {relativeTime(session.updatedAt)}
-        </span>
-      }
-      onClick={() => void open()}
-    >
-      <span className="text-muted-foreground">{session.title}</span>
-    </SidebarListItem>
+    <ContextMenu>
+      <ContextMenuTrigger className="block">
+        <SidebarListItem
+          aria-label={`${session.title}, from outside Athas`}
+          title={session.title}
+          leading={
+            opening ? (
+              <Spinner compact label="Opening" />
+            ) : (
+              <ProviderIcon providerId={session.agentId} size={14} />
+            )
+          }
+          trailing={
+            <span className="text-subtle-foreground tabular-nums ui-text-caption">
+              {relativeTime(session.updatedAt)}
+            </span>
+          }
+          onClick={() => void open()}
+        >
+          <span className="text-muted-foreground">{session.title}</span>
+        </SidebarListItem>
+      </ContextMenuTrigger>
+      <ContextMenuContent>
+        <ContextMenuItems
+          items={[
+            {
+              id: "open",
+              label: "Open in Athas",
+              icon: <ChatBubbleTextIcon />,
+              disabled: opening,
+              onClick: () => void open(),
+            },
+          ]}
+        />
+      </ContextMenuContent>
+    </ContextMenu>
   );
 }
 
@@ -414,25 +435,47 @@ export function ChatSessions({ chats }: { chats: ChatSession[] }) {
   const { toggleChatsCollapsed } = useWorkbenchSidebarStore.use.actions();
   return (
     <section className="flex flex-col gap-px" aria-label="Chats">
-      <SidebarListActionRow
-        actions={
-          <SidebarIconButton
-            tooltip="New chat"
-            aria-label="New chat"
-            onClick={() => void startProjectlessChat()}
+      <ContextMenu>
+        <ContextMenuTrigger className="block">
+          <SidebarListActionRow
+            actions={
+              <SidebarIconButton
+                tooltip="New chat"
+                aria-label="New chat"
+                onClick={() => void startProjectlessChat()}
+              >
+                <PlusIcon />
+              </SidebarIconButton>
+            }
           >
-            <PlusIcon />
-          </SidebarIconButton>
-        }
-      >
-        <SidebarListItem
-          aria-expanded={!collapsed}
-          leading={collapsed ? <ChevronRightIcon /> : <ChevronDownIcon />}
-          onClick={toggleChatsCollapsed}
-        >
-          Chats
-        </SidebarListItem>
-      </SidebarListActionRow>
+            <SidebarListItem
+              aria-expanded={!collapsed}
+              leading={collapsed ? <ChevronRightIcon /> : <ChevronDownIcon />}
+              onClick={toggleChatsCollapsed}
+            >
+              Chats
+            </SidebarListItem>
+          </SidebarListActionRow>
+        </ContextMenuTrigger>
+        <ContextMenuContent>
+          <ContextMenuItems
+            items={[
+              {
+                id: "new",
+                label: "New chat",
+                icon: <PlusIcon />,
+                onClick: () => void startProjectlessChat(),
+              },
+              {
+                id: "toggle",
+                label: collapsed ? "Expand" : "Collapse",
+                icon: collapsed ? <ChevronRightIcon /> : <ChevronDownIcon />,
+                onClick: toggleChatsCollapsed,
+              },
+            ]}
+          />
+        </ContextMenuContent>
+      </ContextMenu>
       {collapsed ? null : <SessionRows chats={chats} />}
     </section>
   );
@@ -476,32 +519,61 @@ export function ArchivedSessions({ chats }: { chats: ChatSession[] }) {
       </SidebarListItem>
       {open
         ? chats.map((chat) => (
-            <SidebarListActionRow
-              key={chat.id}
-              actions={[
-                <SidebarIconButton
-                  key="restore"
-                  tooltip="Restore"
-                  aria-label={`Restore ${chat.title}`}
-                  onClick={() => setChatArchived(chat.id, false)}
+            <ContextMenu key={chat.id}>
+              <ContextMenuTrigger className="block">
+                <SidebarListActionRow
+                  actions={[
+                    <SidebarIconButton
+                      key="restore"
+                      tooltip="Restore"
+                      aria-label={`Restore ${chat.title}`}
+                      onClick={() => setChatArchived(chat.id, false)}
+                    >
+                      <ArrowCounterClockwiseIcon />
+                    </SidebarIconButton>,
+                    <SidebarIconButton
+                      key="delete"
+                      tone="danger"
+                      tooltip="Delete"
+                      aria-label={`Delete ${chat.title}`}
+                      onClick={() => void confirmDeleteChat(chat)}
+                    >
+                      <TrashIcon />
+                    </SidebarIconButton>,
+                  ]}
                 >
-                  <ArrowCounterClockwiseIcon />
-                </SidebarIconButton>,
-                <SidebarIconButton
-                  key="delete"
-                  tone="danger"
-                  tooltip="Delete"
-                  aria-label={`Delete ${chat.title}`}
-                  onClick={() => void confirmDeleteChat(chat)}
-                >
-                  <TrashIcon />
-                </SidebarIconButton>,
-              ]}
-            >
-              <SidebarListItem onClick={() => void openAgentSession(chat.id)}>
-                {chat.title}
-              </SidebarListItem>
-            </SidebarListActionRow>
+                  <SidebarListItem onClick={() => void openAgentSession(chat.id)}>
+                    {chat.title}
+                  </SidebarListItem>
+                </SidebarListActionRow>
+              </ContextMenuTrigger>
+              <ContextMenuContent>
+                <ContextMenuItems
+                  items={[
+                    {
+                      id: "open",
+                      label: "Open",
+                      icon: <ChatBubbleTextIcon />,
+                      onClick: () => void openAgentSession(chat.id),
+                    },
+                    {
+                      id: "restore",
+                      label: "Restore",
+                      icon: <ArrowCounterClockwiseIcon />,
+                      onClick: () => setChatArchived(chat.id, false),
+                    },
+                    menuSeparator("delete-separator"),
+                    {
+                      id: "delete",
+                      label: "Delete",
+                      icon: <TrashIcon />,
+                      tone: "destructive",
+                      onClick: () => void confirmDeleteChat(chat),
+                    },
+                  ]}
+                />
+              </ContextMenuContent>
+            </ContextMenu>
           ))
         : null}
     </section>

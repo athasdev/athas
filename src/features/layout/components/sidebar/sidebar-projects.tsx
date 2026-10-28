@@ -19,7 +19,6 @@ import { useFileSystemStore } from "@/features/file-system/stores/file-system.st
 import { useRecentFoldersStore } from "@/features/file-system/stores/recent-folders.store";
 import { activateProject, showProjectView } from "@/features/layout/services/project-view";
 import { showProjectTool } from "@/features/layout/services/project-tools";
-import { useUIState } from "@/features/layout/stores/ui-state.store";
 import { useWorkbenchSidebarStore } from "@/features/layout/stores/workbench-sidebar.store";
 import {
   getClosedRemoteConnections,
@@ -46,21 +45,36 @@ import {
   useWorkspaceTabsStore,
 } from "@/features/workspace/stores/workspace-tabs.store";
 import { Button } from "@/ui/button";
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItems,
+  ContextMenuSeparator,
+  ContextMenuSub,
+  ContextMenuSubContent,
+  ContextMenuSubTrigger,
+  ContextMenuTrigger,
+} from "@/ui/context-menu";
 import { showConfirmDialog } from "@/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuGroup,
   DropdownMenuItem,
+  DropdownMenuItems,
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuSub,
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
+  type MenuItem,
+  menuSeparator,
 } from "@/ui/dropdown";
 import {
+  ChevronDownIcon,
   ChevronRightIcon,
+  CopyIcon,
   DotsIcon,
   FolderIcon,
   FolderOpenIcon,
@@ -79,34 +93,69 @@ import {
   SidebarSectionLabel,
 } from "@/ui/sidebar";
 import { Spinner } from "@/ui/spinner";
+import { writeClipboardText } from "@/utils/clipboard";
 import { cn } from "@/utils/cn";
+import { useAddProjectItems } from "../../hooks/use-add-project-items";
 import { useProjectIcon } from "../../hooks/use-project-icon";
 import { useProjectTools } from "../dock/project-tools";
 
-function ProjectToolsMenu({ project }: { project: ProjectTab }) {
-  const tools = useProjectTools();
+function useProjectToolItems(project: ProjectTab): MenuItem[] {
+  return useProjectTools().map((tool) => ({
+    id: tool.view,
+    label: tool.title,
+    icon: tool.icon,
+    onClick: () =>
+      void activateProject(project.id).then((active) => {
+        if (active) showProjectTool(tool.view);
+      }),
+  }));
+}
+
+/** The project's "More actions" menu and its right-click menu, built from the same lists. */
+function ProjectMenuItems({
+  menu,
+  open,
+  tools,
+  manage,
+}: {
+  menu: "dropdown" | "context";
+  open: MenuItem[];
+  tools: MenuItem[];
+  manage: MenuItem[];
+}) {
+  if (menu === "context") {
+    return (
+      <>
+        <ContextMenuItems items={open} />
+        <ContextMenuSub>
+          <ContextMenuSubTrigger>
+            <WrenchIcon />
+            Project tools
+          </ContextMenuSubTrigger>
+          <ContextMenuSubContent>
+            <ContextMenuItems items={tools} />
+          </ContextMenuSubContent>
+        </ContextMenuSub>
+        <ContextMenuSeparator />
+        <ContextMenuItems items={manage} />
+      </>
+    );
+  }
   return (
-    <DropdownMenuSub>
-      <DropdownMenuSubTrigger>
-        <WrenchIcon />
-        Project tools
-      </DropdownMenuSubTrigger>
-      <DropdownMenuSubContent size="compact">
-        {tools.map((tool) => (
-          <DropdownMenuItem
-            key={tool.view}
-            onClick={() =>
-              void activateProject(project.id).then((active) => {
-                if (active) showProjectTool(tool.view);
-              })
-            }
-          >
-            {tool.icon}
-            {tool.title}
-          </DropdownMenuItem>
-        ))}
-      </DropdownMenuSubContent>
-    </DropdownMenuSub>
+    <>
+      <DropdownMenuItems items={open} />
+      <DropdownMenuSub>
+        <DropdownMenuSubTrigger>
+          <WrenchIcon />
+          Project tools
+        </DropdownMenuSubTrigger>
+        <DropdownMenuSubContent size="compact">
+          <DropdownMenuItems items={tools} />
+        </DropdownMenuSubContent>
+      </DropdownMenuSub>
+      <DropdownMenuSeparator />
+      <DropdownMenuItems items={manage} />
+    </>
   );
 }
 
@@ -138,6 +187,72 @@ function ProjectGroup({
   const newSession = () => void startAgentInProject(project.id);
   const outside = useOutsideAgentSessions(project.path, aiEnabled && !collapsed && isLocal);
   const iconPath = useProjectIcon(project.path, project.customIcon);
+  const toolItems = useProjectToolItems(project);
+  const openItems: MenuItem[] = [
+    {
+      id: "dashboard",
+      label: "Open dashboard",
+      icon: <FolderIcon />,
+      onClick: () => void openProjectDashboard(project.id),
+    },
+    {
+      id: "files",
+      label: "Show project files",
+      icon: <SidebarRightIcon />,
+      onClick: () => void showProjectView(project.id),
+    },
+    ...(aiEnabled
+      ? [{ id: "new-session", label: "New session", icon: <PlusIcon />, onClick: newSession }]
+      : []),
+  ];
+  const manageItems: MenuItem[] = [
+    {
+      id: "collapse",
+      label: collapsed ? "Expand" : "Collapse",
+      icon: collapsed ? <ChevronRightIcon /> : <ChevronDownIcon />,
+      onClick: () => toggleProjectCollapsed(project.id),
+    },
+    ...(isLocal
+      ? [
+          {
+            id: "reveal",
+            label: "Reveal in file manager",
+            icon: <FolderOpenIcon />,
+            onClick: () => void revealInFolder(project.path),
+          },
+        ]
+      : []),
+    {
+      id: "copy-path",
+      label: "Copy path",
+      icon: <CopyIcon />,
+      onClick: () => void writeClipboardText(project.path),
+    },
+    ...(isRemoteProjectPath(project.path)
+      ? []
+      : [
+          {
+            id: "icon",
+            label: "Select project icon…",
+            icon: <ImageIcon />,
+            onClick: () => onSelectIcon(project),
+          },
+        ]),
+    menuSeparator("close-separator"),
+    {
+      id: "close",
+      label: "Close project",
+      icon: <XIcon />,
+      onClick: () => void closeProject(project.id),
+    },
+    {
+      id: "remove",
+      label: "Remove from Athas…",
+      icon: <TrashIcon />,
+      tone: "destructive",
+      onClick: () => onRemove(project),
+    },
+  ];
 
   return (
     <section
@@ -146,115 +261,99 @@ function ProjectGroup({
       data-active-project={active || undefined}
       className="flex flex-col gap-px"
     >
-      <SidebarListActionRow
-        actions={[
-          ...(aiEnabled
-            ? [
-                <SidebarIconButton
-                  key="new"
-                  tooltip={`New session in ${project.name}`}
-                  aria-label={`New session in ${project.name}`}
-                  onClick={newSession}
+      <ContextMenu>
+        <ContextMenuTrigger className="block">
+          <SidebarListActionRow
+            actions={[
+              ...(aiEnabled
+                ? [
+                    <SidebarIconButton
+                      key="new"
+                      tooltip={`New session in ${project.name}`}
+                      aria-label={`New session in ${project.name}`}
+                      onClick={newSession}
+                    >
+                      <PlusIcon />
+                    </SidebarIconButton>,
+                  ]
+                : []),
+              <DropdownMenu key="menu">
+                <DropdownMenuTrigger
+                  render={
+                    <SidebarIconButton
+                      tooltip="Project actions"
+                      aria-label={`Actions for ${project.name}`}
+                    />
+                  }
                 >
-                  <PlusIcon />
-                </SidebarIconButton>,
-              ]
-            : []),
-          <DropdownMenu key="menu">
-            <DropdownMenuTrigger
-              render={
-                <SidebarIconButton
-                  tooltip="Project actions"
-                  aria-label={`Actions for ${project.name}`}
-                />
-              }
-            >
-              <DotsIcon />
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" size="default">
-              <DropdownMenuItem onClick={() => void openProjectDashboard(project.id)}>
-                <FolderIcon />
-                Open dashboard
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => void showProjectView(project.id)}>
-                <SidebarRightIcon />
-                Show project files
-              </DropdownMenuItem>
-              <ProjectToolsMenu project={project} />
-              {aiEnabled ? (
-                <DropdownMenuItem onClick={newSession}>
-                  <PlusIcon />
-                  New session
-                </DropdownMenuItem>
-              ) : null}
-              <DropdownMenuSeparator />
-              {isLocal ? (
-                <DropdownMenuItem onClick={() => void revealInFolder(project.path)}>
-                  <FolderOpenIcon />
-                  Reveal in file manager
-                </DropdownMenuItem>
-              ) : null}
-              {isRemoteProjectPath(project.path) ? null : (
-                <DropdownMenuItem onClick={() => onSelectIcon(project)}>
-                  <ImageIcon />
-                  Select project icon…
-                </DropdownMenuItem>
-              )}
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => void closeProject(project.id)}>
-                <XIcon />
-                Close project
-              </DropdownMenuItem>
-              <DropdownMenuItem variant="destructive" onClick={() => onRemove(project)}>
-                <TrashIcon />
-                Remove from Athas…
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>,
-        ]}
-      >
-        <SidebarListItem
-          active={active && collapsed}
-          aria-expanded={!collapsed}
-          title={project.path}
-          leading={
-            <span className="relative flex size-[1em] items-center justify-center">
-              <span className="flex items-center justify-center transition-opacity duration-fast group-hover/sidebar-list-action-row:opacity-0 group-has-focus-visible/sidebar-list-action-row:opacity-0 motion-reduce:transition-none">
-                <ProjectGlyph projectPath={project.path} iconPath={iconPath} />
-              </span>
-              <ChevronRightIcon
-                aria-hidden
-                className={cn(
-                  "absolute opacity-0 transition-[opacity,transform] duration-fast group-hover/sidebar-list-action-row:opacity-100 group-has-focus-visible/sidebar-list-action-row:opacity-100 motion-reduce:transition-none",
-                  !collapsed && "rotate-90",
-                )}
-              />
-            </span>
-          }
-          trailing={
-            collapsed && status.attention ? (
-              <AgentAttentionDot attention={status.attention} />
-            ) : collapsed && status.working ? (
-              <Spinner label={`A session is working in ${project.name}`} compact />
-            ) : null
-          }
-          onClick={(event) => {
-            if (event.target instanceof Element && event.target.closest("[data-project-name]")) {
-              void openProjectDashboard(project.id);
-              return;
-            }
-            toggleProjectCollapsed(project.id);
-          }}
-        >
-          <span
-            data-project-name
-            title={`Open ${project.name} dashboard`}
-            className={cn("hover:underline", active && "font-medium text-foreground")}
+                  <DotsIcon />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" size="default">
+                  <ProjectMenuItems
+                    menu="dropdown"
+                    open={openItems}
+                    tools={toolItems}
+                    manage={manageItems}
+                  />
+                </DropdownMenuContent>
+              </DropdownMenu>,
+            ]}
           >
-            {project.name}
-          </span>
-        </SidebarListItem>
-      </SidebarListActionRow>
+            <SidebarListItem
+              active={active && collapsed}
+              aria-expanded={!collapsed}
+              title={project.path}
+              leading={
+                <span className="relative flex size-[1em] items-center justify-center">
+                  <span className="flex items-center justify-center transition-opacity duration-fast group-hover/sidebar-list-action-row:opacity-0 group-has-focus-visible/sidebar-list-action-row:opacity-0 motion-reduce:transition-none">
+                    <ProjectGlyph projectPath={project.path} iconPath={iconPath} />
+                  </span>
+                  <ChevronRightIcon
+                    aria-hidden
+                    className={cn(
+                      "absolute opacity-0 transition-[opacity,transform] duration-fast group-hover/sidebar-list-action-row:opacity-100 group-has-focus-visible/sidebar-list-action-row:opacity-100 motion-reduce:transition-none",
+                      !collapsed && "rotate-90",
+                    )}
+                  />
+                </span>
+              }
+              trailing={
+                collapsed && status.attention ? (
+                  <AgentAttentionDot attention={status.attention} />
+                ) : collapsed && status.working ? (
+                  <Spinner label={`A session is working in ${project.name}`} compact />
+                ) : null
+              }
+              onClick={(event) => {
+                if (
+                  event.target instanceof Element &&
+                  event.target.closest("[data-project-name]")
+                ) {
+                  void openProjectDashboard(project.id);
+                  return;
+                }
+                toggleProjectCollapsed(project.id);
+              }}
+            >
+              <span
+                data-project-name
+                title={`Open ${project.name} dashboard`}
+                className={cn("hover:underline", active && "font-medium text-foreground")}
+              >
+                {project.name}
+              </span>
+            </SidebarListItem>
+          </SidebarListActionRow>
+        </ContextMenuTrigger>
+        <ContextMenuContent>
+          <ProjectMenuItems
+            menu="context"
+            open={openItems}
+            tools={toolItems}
+            manage={manageItems}
+          />
+        </ContextMenuContent>
+      </ContextMenu>
       {collapsed ? null : (
         <div className="flex flex-col gap-px pl-4">
           <ProjectSessionList
@@ -289,13 +388,13 @@ export function SidebarProjects() {
   const handleOpenFolder = useFileSystemStore((state) => state.handleOpenFolder);
   const closeProject = useFileSystemStore((state) => state.closeProject);
   const removeFromRecents = useRecentFoldersStore((state) => state.actions.removeFromRecents);
-  const openProjectPicker = useUIState((state) => state.openProjectPicker);
   const [remoteConnections, setRemoteConnections] = useState<RemoteConnection[]>([]);
   const [connectingRemoteId, setConnectingRemoteId] = useState<string | null>(null);
   const [passwordPromptConnection, setPasswordPromptConnection] = useState<RemoteConnection | null>(
     null,
   );
   const [iconPickerProject, setIconPickerProject] = useState<ProjectTab | null>(null);
+  const addProjectItems = useAddProjectItems();
   const closedRemoteConnections = useMemo(
     () => getClosedRemoteConnections(projects, remoteConnections),
     [projects, remoteConnections],
@@ -376,64 +475,64 @@ export function SidebarProjects() {
     <div className="flex flex-col gap-3">
       <PinnedSessions chats={sessions.pinned} />
       <section aria-label="Projects" className="flex flex-col gap-1">
-        <SidebarSectionLabel
-          className="pr-0.5"
-          trailing={
-            <DropdownMenu
-              onOpenChange={(open) => {
-                if (open) void refreshRemoteConnections();
-              }}
-            >
-              <DropdownMenuTrigger
-                render={<SidebarIconButton tooltip="Add project" aria-label="Add project" />}
-              >
-                <PlusIcon />
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" size="default">
-                <DropdownMenuItem onClick={() => void handleOpenFolder()}>
-                  <FolderOpenIcon />
-                  Open project…
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => openProjectPicker("addRemote")}>
-                  <RemoteIcon />
-                  Add remote…
-                </DropdownMenuItem>
-                {closedRemoteConnections.length > 0 ? (
-                  <>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuGroup>
-                      <DropdownMenuLabel>Saved remotes</DropdownMenuLabel>
-                      {closedRemoteConnections.map((connection) => (
-                        <DropdownMenuItem
-                          key={connection.id}
-                          disabled={connectingRemoteId === connection.id}
-                          onClick={() => void handleConnectRemote(connection.id)}
-                          trailingAction={
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              iconOnly
-                              size="sm"
-                              aria-label={`Remove ${connection.name} from Athas`}
-                              onClick={() => void handleRemoveRemoteConnection(connection)}
+        <ContextMenu>
+          <ContextMenuTrigger className="block">
+            <SidebarSectionLabel
+              className="pr-0.5"
+              trailing={
+                <DropdownMenu
+                  onOpenChange={(open) => {
+                    if (open) void refreshRemoteConnections();
+                  }}
+                >
+                  <DropdownMenuTrigger
+                    render={<SidebarIconButton tooltip="Add project" aria-label="Add project" />}
+                  >
+                    <PlusIcon />
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" size="default">
+                    <DropdownMenuItems items={addProjectItems} />
+                    {closedRemoteConnections.length > 0 ? (
+                      <>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuGroup>
+                          <DropdownMenuLabel>Saved remotes</DropdownMenuLabel>
+                          {closedRemoteConnections.map((connection) => (
+                            <DropdownMenuItem
+                              key={connection.id}
+                              disabled={connectingRemoteId === connection.id}
+                              onClick={() => void handleConnectRemote(connection.id)}
+                              trailingAction={
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  iconOnly
+                                  size="sm"
+                                  aria-label={`Remove ${connection.name} from Athas`}
+                                  onClick={() => void handleRemoveRemoteConnection(connection)}
+                                >
+                                  <TrashIcon />
+                                </Button>
+                              }
                             >
-                              <TrashIcon />
-                            </Button>
-                          }
-                        >
-                          <RemoteIcon />
-                          {connection.name}
-                        </DropdownMenuItem>
-                      ))}
-                    </DropdownMenuGroup>
-                  </>
-                ) : null}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          }
-        >
-          Projects
-        </SidebarSectionLabel>
+                              <RemoteIcon />
+                              {connection.name}
+                            </DropdownMenuItem>
+                          ))}
+                        </DropdownMenuGroup>
+                      </>
+                    ) : null}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              }
+            >
+              Projects
+            </SidebarSectionLabel>
+          </ContextMenuTrigger>
+          <ContextMenuContent>
+            <ContextMenuItems items={addProjectItems} />
+          </ContextMenuContent>
+        </ContextMenu>
         {projects.map((project) => (
           <ProjectGroup
             key={project.id}

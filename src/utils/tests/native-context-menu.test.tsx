@@ -29,6 +29,7 @@ import {
   ContextMenu,
   ContextMenuContent,
   ContextMenuItem,
+  ContextMenuItems,
   ContextMenuPopup,
   ContextMenuSeparator,
   ContextMenuTrigger,
@@ -208,6 +209,16 @@ describe("ContextMenuPopup", () => {
   });
 });
 
+async function rightClick(selector: string) {
+  const target = document.querySelector<HTMLElement>(selector)!;
+  await act(async () => {
+    target.dispatchEvent(
+      new MouseEvent("contextmenu", { bubbles: true, cancelable: true, clientX: 5, clientY: 6 }),
+    );
+  });
+  await flush();
+}
+
 describe("ContextMenu composed from items", () => {
   it("reads its items into an OS menu on right click", async () => {
     const onRename = vi.fn();
@@ -246,6 +257,70 @@ describe("ContextMenu composed from items", () => {
     await act(async () => pick(0));
     expect(onRename).toHaveBeenCalledTimes(1);
   });
+
+  it("draws a shared item list, the same one a row's dropdown uses", async () => {
+    const onPin = vi.fn();
+    await act(async () =>
+      root.render(
+        <ContextMenu>
+          <ContextMenuTrigger data-testid="row">row</ContextMenuTrigger>
+          <ContextMenuContent>
+            <ContextMenuItems
+              items={[
+                { id: "pin", label: "Pin", icon: <svg />, onClick: onPin },
+                { id: "rename", label: "Rename", disabled: true, onClick: vi.fn() },
+                { id: "missing", label: "No action" },
+                { id: "separator", separator: true },
+                { id: "delete", label: "Delete", tone: "destructive", onClick: vi.fn() },
+              ]}
+            />
+          </ContextMenuContent>
+        </ContextMenu>,
+      ),
+    );
+    await rightClick('[data-testid="row"]');
+
+    expect(lastMenu().options.items).toMatchObject([
+      { text: "Pin", enabled: true },
+      { text: "Rename", enabled: false },
+      { text: "No action", enabled: false },
+      { item: "Separator" },
+      { text: "Delete", enabled: true },
+    ]);
+    await act(async () => pick(0));
+    expect(onPin).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([true, false])(
+    "opens only the innermost menu when triggers nest (native %s)",
+    async (native) => {
+      await act(async () =>
+        root.render(
+          <ContextMenu native={native}>
+            <ContextMenuTrigger data-testid="area">
+              <ContextMenu native={native}>
+                <ContextMenuTrigger data-testid="row">row</ContextMenuTrigger>
+                <ContextMenuContent>
+                  <ContextMenuItems
+                    items={[{ id: "row", label: "Row action", onClick: vi.fn() }]}
+                  />
+                </ContextMenuContent>
+              </ContextMenu>
+            </ContextMenuTrigger>
+            <ContextMenuContent>
+              <ContextMenuItems items={[{ id: "area", label: "Area action", onClick: vi.fn() }]} />
+            </ContextMenuContent>
+          </ContextMenu>,
+        ),
+      );
+      await rightClick('[data-testid="row"]');
+
+      const labels = native
+        ? mocks.created.flatMap((menu) => menu.options.items.map((item) => item.text))
+        : [...document.querySelectorAll('[role="menuitem"]')].map((item) => item.textContent);
+      expect(labels).toEqual(["Row action"]);
+    },
+  );
 
   it("falls back to the in-page menu when the OS menu can't be created", async () => {
     mocks.failNew = true;
