@@ -739,6 +739,44 @@ impl ToolInstaller {
       Ok(())
    }
 
+   /// Zip installs made before extraction kept execute bits left the programs shipped next to a
+   /// binary unrunnable, so native executables beside it get their execute bit back.
+   #[cfg(unix)]
+   fn restore_companion_executables(binary: &Path) {
+      use std::{io::Read, os::unix::fs::PermissionsExt};
+      const NATIVE_MAGIC: [[u8; 4]; 4] = [
+         [0x7f, b'E', b'L', b'F'],
+         [0xcf, 0xfa, 0xed, 0xfe],
+         [0xce, 0xfa, 0xed, 0xfe],
+         [0xca, 0xfe, 0xba, 0xbe],
+      ];
+      let Some(entries) = binary.parent().and_then(|dir| fs::read_dir(dir).ok()) else {
+         return;
+      };
+      for entry in entries.flatten() {
+         let path = entry.path();
+         let Ok(metadata) = entry.metadata() else {
+            continue;
+         };
+         if !metadata.is_file() || metadata.permissions().mode() & 0o111 != 0 {
+            continue;
+         }
+         let mut magic = [0u8; 4];
+         let is_native = fs::File::open(&path)
+            .and_then(|mut file| file.read_exact(&mut magic))
+            .is_ok()
+            && NATIVE_MAGIC.contains(&magic);
+         if is_native && let Err(error) = Self::ensure_executable(&path) {
+            log::warn!("Failed to make {:?} executable: {}", path, error);
+         }
+      }
+   }
+
+   #[cfg(not(unix))]
+   fn restore_companion_executables(binary: &Path) {
+      let _ = binary;
+   }
+
    #[cfg(not(unix))]
    fn ensure_executable(path: &Path) -> Result<(), ToolError> {
       let _ = path;
@@ -949,6 +987,11 @@ impl ToolInstaller {
 
             let mut output_file = fs::File::create(&output_path)?;
             std::io::copy(&mut file, &mut output_file)?;
+            // Agents ship helper programs next to their command (Antigravity's
+            // `localharness_external`), and they only run with the mode the archive gives them.
+            if file.unix_mode().is_some_and(|mode| mode & 0o111 != 0) {
+               Self::ensure_executable(&output_path)?;
+            }
          }
 
          return Ok(());
@@ -1028,6 +1071,7 @@ impl ToolInstaller {
          && let Ok(path) = Self::pick_binary(&install_dir, command_name)
       {
          Self::validate_existing_binary(&path, config)?;
+         Self::restore_companion_executables(&path);
          return Ok(Some(path));
       }
 
