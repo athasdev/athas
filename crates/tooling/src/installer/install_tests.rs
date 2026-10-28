@@ -776,6 +776,70 @@ fn reports_package_manager_failures() {
 
 #[cfg(unix)]
 #[test]
+fn keeps_the_execute_bits_a_zip_gives_its_files() {
+   use std::os::unix::fs::PermissionsExt;
+   let mut writer = zip::ZipWriter::new(Cursor::new(Vec::new()));
+   for (name, mode) in [("agent", 0o755), ("helper", 0o555), ("notes.txt", 0o644)] {
+      let options = zip::write::SimpleFileOptions::default()
+         .compression_method(zip::CompressionMethod::Stored)
+         .unix_permissions(mode);
+      writer.start_file(name, options).unwrap();
+      writer.write_all(b"data").unwrap();
+   }
+   let archive = writer.finish().unwrap().into_inner();
+   let target = tempfile::tempdir().unwrap();
+
+   ToolInstaller::extract_archive(&archive, "https://x/agent.zip", target.path()).unwrap();
+
+   let mode = |name: &str| {
+      fs::metadata(target.path().join(name))
+         .unwrap()
+         .permissions()
+         .mode()
+         & 0o111
+   };
+   assert_ne!(mode("agent"), 0);
+   assert_ne!(mode("helper"), 0);
+   assert_eq!(mode("notes.txt"), 0);
+}
+
+#[cfg(unix)]
+#[test]
+fn makes_native_programs_next_to_an_installed_binary_runnable_again() {
+   use std::os::unix::fs::PermissionsExt;
+   let dir = tempfile::tempdir().unwrap();
+   let write = |name: &str, bytes: &[u8], mode: u32| {
+      let path = dir.path().join(name);
+      fs::write(&path, bytes).unwrap();
+      fs::set_permissions(&path, fs::Permissions::from_mode(mode)).unwrap();
+      path
+   };
+   let binary = write("agy_acp_server.par", b"#!/bin/sh\n", 0o755);
+   write(
+      "localharness_external",
+      &[0xcf, 0xfa, 0xed, 0xfe, 0, 0],
+      0o644,
+   );
+   write("linux_helper", b"\x7fELF....", 0o644);
+   write("settings.json", b"{}", 0o644);
+
+   ToolInstaller::restore_companion_executables(&binary);
+
+   let executable = |name: &str| {
+      fs::metadata(dir.path().join(name))
+         .unwrap()
+         .permissions()
+         .mode()
+         & 0o111
+         != 0
+   };
+   assert!(executable("localharness_external"));
+   assert!(executable("linux_helper"));
+   assert!(!executable("settings.json"));
+}
+
+#[cfg(unix)]
+#[test]
 fn validates_installed_binaries_and_marks_them_executable() {
    use std::os::unix::fs::PermissionsExt;
    let temp = tempfile::tempdir().unwrap();
