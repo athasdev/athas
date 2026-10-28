@@ -229,7 +229,7 @@ describe("OpenAI-compatible provider", () => {
     ]);
 
     http.fetch.mockResolvedValueOnce(json({}, 500));
-    expect(await provider.getModels()).toEqual([]);
+    await expect(provider.getModels()).rejects.toThrow("The model list request failed (HTTP 500).");
   });
 
   it("validates keys against the models endpoint and rejects blank keys", async () => {

@@ -183,6 +183,8 @@ export interface AIChatActions {
   hasProviderApiKey: (providerId: string) => boolean;
 
   setDynamicModels: (providerId: string, models: ProviderModel[]) => void;
+  /** Forgets a provider's fetched models, including the custom endpoint's per-address lists. */
+  clearDynamicModels: (providerId: string) => void;
   /** Records a running agent, or forgets a stopped one together with its sessions. */
   setAcpAgentStatus: (status: AcpAgentStatus) => void;
   setSessionSlashCommands: (sessionId: string, commands: SlashCommand[]) => void;
