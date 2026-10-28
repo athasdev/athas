@@ -215,6 +215,11 @@ pub fn configure_app_window(window: &tauri::WebviewWindow) {
       {
          log::warn!("Failed to configure macOS window tabbing: {error}");
       }
+      if let Ok(ns_window) = window.ns_window()
+         && let Err(error) = crate::bootstrap::macos::ignore_window_cancel_operation(ns_window)
+      {
+         log::warn!("Failed to keep Escape from leaving full screen: {error}");
+      }
    }
 
    #[cfg(all(not(target_os = "macos"), not(target_os = "windows")))]
@@ -356,6 +361,15 @@ fn create_labeled_app_window_internal(
    let url = build_window_open_url(request.as_ref(), &label, created_at_ms);
    let title = window_title_for_request(request.as_ref());
    let trace_label = label.clone();
+   let is_workbench = !request
+      .as_ref()
+      .is_some_and(|request| request.content.is_some() || request.detached.is_some());
+   // A new workbench window follows a full-screen one into its own space instead of floating
+   // small over it.
+   let open_fullscreen = is_workbench
+      && app.webview_windows().values().any(|window| {
+         window.is_focused().unwrap_or(false) && window.is_fullscreen().unwrap_or(false)
+      });
 
    let builder = tauri::WebviewWindowBuilder::new(app, &label, WebviewUrl::App(url.into()))
       .title(title)
@@ -390,10 +404,7 @@ fn create_labeled_app_window_internal(
    // sidebar, centred on the pane headers. Detached and standalone windows keep AppKit's
    // own position over their 32px title bar.
    #[cfg(target_os = "macos")]
-   let builder = if request
-      .as_ref()
-      .is_some_and(|request| request.content.is_some() || request.detached.is_some())
-   {
+   let builder = if !is_workbench {
       builder
    } else {
       builder.traffic_light_position(tauri::LogicalPosition::new(
@@ -425,6 +436,14 @@ fn create_labeled_app_window_internal(
    let show_started_at = Instant::now();
    let _ = window.show();
    let _ = window.set_focus();
+   #[cfg(target_os = "macos")]
+   let open_fullscreen = open_fullscreen
+      && !window
+         .ns_window()
+         .is_ok_and(crate::bootstrap::macos::is_window_fullscreen);
+   if open_fullscreen {
+      let _ = window.set_fullscreen(true);
+   }
    log::info!(
       "[window-open:{label}] show-focus:end durationMs={} totalMs={}",
       show_started_at.elapsed().as_millis(),
