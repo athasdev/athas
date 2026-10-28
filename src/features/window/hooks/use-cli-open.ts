@@ -1,6 +1,7 @@
 import { listen } from "@tauri-apps/api/event";
 import { useEffect } from "react";
 import { commands } from "@/bindings/commands";
+import { trackCliWait } from "../services/cli-wait";
 import { enqueueWindowOpenRequest, type WindowOpenRequest } from "../services/window-open-request";
 import { createPendingQueueDrain } from "../utils/pending-queue-drain";
 import { disposeListener } from "@/utils/tauri-drag-drop";
@@ -17,6 +18,7 @@ interface CliOpenPayload {
   connection_id?: string;
   name?: string | null;
   resource_id?: number | null;
+  wait_marker?: string | null;
 }
 
 const toPositiveInteger = (value: number | null | undefined) =>
@@ -82,8 +84,12 @@ function mapCliOpenPayloadToWindowOpenRequest(payload: CliOpenPayload): WindowOp
 
 function enqueuePayload(payload: CliOpenPayload) {
   const request = mapCliOpenPayloadToWindowOpenRequest(payload);
-  if (request) {
-    void enqueueWindowOpenRequest(request);
+  if (!request) return;
+  const opened = enqueueWindowOpenRequest(request);
+  const marker = payload.kind === "path" ? payload.wait_marker : null;
+  if (marker && request.path) {
+    const track = trackCliWait.bind(null, marker, request.path);
+    void opened.then(track, track);
   }
 }
 

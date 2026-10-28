@@ -118,6 +118,7 @@ fn register_managed_state(app: &mut tauri::App) {
    app.manage(commands::IpcStreams::default());
    app.manage(commands::development::docker::DockerLogStreams::default());
    app.manage(commands::development::cli_args::PendingCliOpenRequests::default());
+   app.manage(commands::development::cli_wait::CliWaits::default());
    app.manage(commands::development::deep_links::PendingDeepLinks::default());
    app.manage(crate::claude_ide::ClaudeIdeState::default());
    crate::claude_ide::start_on_launch(app.handle());
@@ -250,6 +251,8 @@ fn queue_cli_requests(
       log::error!("Failed to create a workbench for CLI requests");
       return;
    };
+   app.state::<commands::development::cli_wait::CliWaits>()
+      .track(window.label(), &pending);
    app.state::<commands::development::cli_args::PendingCliOpenRequests>()
       .push_all(window.label(), pending);
    if let Err(error) = app.emit_to(window.label(), "cli_open_requests_pending", ()) {
