@@ -4,8 +4,16 @@ import { getProviderApiToken } from "@/features/ai/services/ai-token-service";
 export const CUSTOM_CHAT_PROVIDER_ID = "custom";
 const CUSTOM_AUTOCOMPLETE_PROVIDER_ID = "autocomplete-custom";
 
-export function resolveCustomProviderBaseUrl(settings: Settings): string {
+type CustomEndpointSettings = Pick<Settings, "aiCustomBaseUrl" | "aiAutocompleteCustomBaseUrl">;
+
+export function resolveCustomProviderBaseUrl(settings: CustomEndpointSettings): string {
   return settings.aiCustomBaseUrl || settings.aiAutocompleteCustomBaseUrl;
+}
+
+/** Where a provider's fetched models are cached. The custom endpoint's list belongs to its address. */
+export function getModelCatalogKey(providerId: string, settings: CustomEndpointSettings): string {
+  if (providerId !== CUSTOM_CHAT_PROVIDER_ID) return providerId;
+  return `${providerId}:${resolveCustomProviderBaseUrl(settings).trim()}`;
 }
 
 function isKnownNonCustomModelId(modelId: string): boolean {

@@ -7,6 +7,7 @@ import {
   storeProviderApiToken,
 } from "@/features/ai/services/ai-token-service";
 import { setCustomProviderBaseUrl } from "@/features/ai/services/providers/ai-provider-registry";
+import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import { useToast } from "@/utils/toast";
 import { getDefaultSetting } from "@/features/settings/config/default-settings";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
@@ -50,6 +51,7 @@ export function CustomEndpointSection() {
     setIsSavingApiKey(true);
     try {
       await storeProviderApiToken(CUSTOM_CHAT_PROVIDER_ID, token);
+      useAIChatStore.getState().actions.clearDynamicModels(CUSTOM_CHAT_PROVIDER_ID);
       setHasApiKey(true);
       setApiKeyInput("");
       showToast({ message: "Custom endpoint API key saved", type: "success" });
@@ -64,6 +66,7 @@ export function CustomEndpointSection() {
     setIsSavingApiKey(true);
     try {
       await removeProviderApiToken(CUSTOM_CHAT_PROVIDER_ID);
+      useAIChatStore.getState().actions.clearDynamicModels(CUSTOM_CHAT_PROVIDER_ID);
       setHasApiKey(false);
       setApiKeyInput("");
       showToast({ message: "Custom endpoint API key removed", type: "success" });

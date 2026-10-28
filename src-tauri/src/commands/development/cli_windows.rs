@@ -16,6 +16,7 @@ pub fn window_request(request: CliRequest) -> CreateAppWindowRequest {
          path,
          is_directory,
          line,
+         ..
       } => CreateAppWindowRequest {
          path: Some(path),
          is_directory: Some(is_directory),

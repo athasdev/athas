@@ -68,7 +68,7 @@ export class OpenAICompatibleProvider extends AIProvider {
       headers: this.buildHeaders(apiKey),
     });
 
-    if (!response.ok) return [];
+    if (!response.ok) throw new Error(`The model list request failed (HTTP ${response.status}).`);
 
     const data = (await response.json()) as {
       data?: Array<{ id?: string; name?: string; max_context_length?: number }>;

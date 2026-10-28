@@ -1236,6 +1236,8 @@ export const commands = {
   getCliInstallCommand: () => __TAURI_INVOKE<string>("get_cli_install_command"),
   getImportableIdeProjects: () => __TAURI_INVOKE<IdeRecentProject[]>("get_importable_ide_projects"),
   takePendingCliOpenRequests: () => __TAURI_INVOKE<CliRequest[]>("take_pending_cli_open_requests"),
+  /**  Called once the files a waiting CLI opened are all closed. */
+  releaseCliWait: (marker: string) => __TAURI_INVOKE<void>("release_cli_wait", { marker }),
   takePendingDeepLinks: () => __TAURI_INVOKE<string[]>("take_pending_deep_links"),
   /**
    *  Ensure a runtime is available, downloading if necessary
@@ -4672,7 +4674,14 @@ export type CliRequest =
   | { kind: "new_window"; request: CliRequest }
   | { kind: "surface"; name: string; working_directory: string; resource_id: number | null }
   | { kind: "empty" }
-  | { kind: "path"; path: string; is_directory: boolean; line: number | null }
+  | {
+      kind: "path";
+      path: string;
+      is_directory: boolean;
+      line: number | null;
+      /**  The file `athas --wait` watches; it is deleted once the files it opened are closed. */
+      wait_marker: string | null;
+    }
   | { kind: "web"; url: string }
   | { kind: "terminal"; command: string | null; working_directory: string | null }
   | { kind: "remote"; connection_id: string; name: string | null };

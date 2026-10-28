@@ -19,6 +19,7 @@ type ProviderActions = Pick<
   | "removeApiKey"
   | "hasProviderApiKey"
   | "setDynamicModels"
+  | "clearDynamicModels"
 >;
 
 export function getProviderAccessFromMap(
@@ -112,6 +113,14 @@ export function createProviderActions(set: SetAIChatStore, get: GetAIChatStore):
     setDynamicModels: (providerId, models) =>
       set((state) => {
         state.dynamicModels[providerId] = models;
+      }),
+    clearDynamicModels: (providerId) =>
+      set((state) => {
+        for (const key of Object.keys(state.dynamicModels)) {
+          if (key === providerId || key.startsWith(`${providerId}:`)) {
+            delete state.dynamicModels[key];
+          }
+        }
       }),
   };
 }

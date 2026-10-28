@@ -169,14 +169,108 @@ describe("useAIModelOptions", () => {
     expect(options.modelFetchError).toBe("No models detected. Please install a model in Ollama.");
   });
 
-  it("offers the configured custom model without fetching", async () => {
-    useSettingsStore.setState({
-      settings: { ...useSettingsStore.getState().settings, aiCustomModelId: "my-llm" },
-    });
+  it("offers the configured custom model without fetching while no address is set", async () => {
+    setCustomEndpoint("", "my-llm");
     await render("custom", "unsaved-model");
     expect(options.isCustomProvider).toBe(true);
     expect(options.isLoadingModels).toBe(false);
+    expect(http.fetch).not.toHaveBeenCalled();
     expect(options.availableModels.map((model) => model.id)).toContain("my-llm");
     expect(options.currentModelName).toBe("unsaved-model");
   });
+
+  describe("custom endpoint discovery", () => {
+    it("lists the endpoint's models next to the manual one, sending its key", async () => {
+      setCustomEndpoint("https://gateway.test/v1/chat/completions/", "my-llm");
+      http.fetch.mockResolvedValue(listResponse(["model-a", "model-b"]));
+
+      await render("custom", "model-b");
+
+      expect(http.fetch).toHaveBeenCalledTimes(1);
+      const [url, init] = http.fetch.mock.calls[0];
+      expect(url).toBe("https://gateway.test/v1/models");
+      expect(init.headers.Authorization).toBe("Bearer key");
+      expect(options.availableModels.map((model) => model.id)).toEqual([
+        "model-a",
+        "model-b",
+        "my-llm",
+      ]);
+      expect(options.currentModelName).toBe("model-b");
+      expect(
+        useAIChatStore.getState().dynamicModels["custom:https://gateway.test/v1/chat/completions/"],
+      ).toHaveLength(2);
+    });
+
+    it("lists without a key when the endpoint has none", async () => {
+      vi.mocked(commands.getAiProviderToken).mockResolvedValue(null);
+      setCustomEndpoint("http://localhost:1234/v1", "");
+      http.fetch.mockResolvedValue(listResponse(["local-model"]));
+
+      await render("custom", "local-model");
+
+      const [url, init] = http.fetch.mock.calls[0];
+      expect(url).toBe("http://localhost:1234/v1/models");
+      expect(init.headers.Authorization).toBeUndefined();
+      expect(options.availableModels.map((model) => model.id)).toEqual(["local-model"]);
+    });
+
+    it("keeps the manual model selectable when discovery fails, and retries", async () => {
+      setCustomEndpoint("https://gateway.test/v1", "my-llm");
+      http.fetch.mockResolvedValueOnce(new Response("missing", { status: 404 }));
+
+      await render("custom", "my-llm");
+
+      expect(options.modelFetchError).toBe("The model list request failed (HTTP 404).");
+      expect(options.availableModels.map((model) => model.id)).toEqual(["my-llm"]);
+
+      http.fetch.mockResolvedValueOnce(listResponse(["model-a"]));
+      await act(async () => options.retry());
+      await act(async () => {});
+      expect(options.modelFetchError).toBeNull();
+      expect(options.availableModels.map((model) => model.id)).toEqual(["model-a", "my-llm"]);
+    });
+
+    it("refetches for a new address and never shows the previous endpoint's list", async () => {
+      setCustomEndpoint("https://one.test/v1", "");
+      http.fetch.mockResolvedValueOnce(listResponse(["one-model"]));
+      await render("custom", "one-model");
+
+      setCustomEndpoint("https://two.test/v1", "");
+      http.fetch.mockResolvedValueOnce(listResponse(["two-model"]));
+      await render("custom", "two-model");
+
+      expect(http.fetch.mock.calls.map(([url]) => url)).toEqual([
+        "https://one.test/v1/models",
+        "https://two.test/v1/models",
+      ]);
+      expect(options.availableModels.map((model) => model.id)).toEqual(["two-model"]);
+    });
+
+    it("forgets every custom list when the credentials change", () => {
+      useAIChatStore.setState({
+        dynamicModels: {
+          "custom:https://one.test/v1": [{ id: "a", name: "a" }],
+          customer: [{ id: "b", name: "b" }],
+        },
+      });
+      useAIChatStore.getState().actions.clearDynamicModels("custom");
+      expect(Object.keys(useAIChatStore.getState().dynamicModels)).toEqual(["customer"]);
+    });
+  });
 });
+
+function setCustomEndpoint(baseUrl: string, modelId: string) {
+  useSettingsStore.setState({
+    settings: {
+      ...useSettingsStore.getState().settings,
+      aiCustomBaseUrl: baseUrl,
+      aiAutocompleteCustomBaseUrl: "",
+      aiCustomModelId: modelId,
+      aiAutocompleteCustomModelId: "",
+    },
+  });
+}
+
+function listResponse(ids: string[]) {
+  return new Response(JSON.stringify({ data: ids.map((id) => ({ id })) }));
+}

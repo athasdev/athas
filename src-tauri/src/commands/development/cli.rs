@@ -55,6 +55,7 @@ pub const CLI_HELP_TEXT: &str = r#"Athas CLI
 Usage:
   athas [--new-window | --reuse-window] [paths...]
   athas open [--new-window | --reuse-window] <paths...>
+  athas --wait <files...>
   athas window
   athas terminal [--cwd <directory>] [--reuse-window] [--] [command...]
   athas settings
@@ -68,6 +69,7 @@ Usage:
 Options:
   -n, --new-window     Open each target in a new window
   -r, --reuse-window   Open in an existing editor (create one if needed)
+  -w, --wait           Return only after the files are closed (EDITOR="athas --wait")
   --cwd <directory>   Working directory for terminals and repository commands
   --                  End Athas options; following arguments belong to the command
   -h, --help          Show this help
@@ -82,6 +84,7 @@ Examples:
   athas terminal -- bun test
   athas terminal 'git status && git diff'
   athas --new-window src/main.rs:120
+  git config --global core.editor "athas --wait"
   athas pr 42 --cwd ~/projects/my-app
 "#;
 
@@ -95,7 +98,10 @@ athas_binary='{binary}'
 case "${{1:-}}" in
     help|-h|--help) exec "$athas_binary" --help ;;
 esac
-"$athas_binary" --validate-cli "$@" || exit $?
+mode=$("$athas_binary" --validate-cli "$@") || exit $?
+if [ "$mode" = wait ]; then
+    exec "$athas_binary" "$@"
+fi
 nohup "$athas_binary" "$@" >/dev/null 2>&1 &
 "#
    )
@@ -134,14 +140,21 @@ $start.WorkingDirectory = (Get-Location).Path
 $start.UseShellExecute = $false
 $start.CreateNoWindow = $true
 $start.Arguments = '--validate-cli ' + $encodedArgs
+$start.RedirectStandardOutput = $true
 $validation = [System.Diagnostics.Process]::Start($start)
+$mode = $validation.StandardOutput.ReadToEnd().Trim()
 $validation.WaitForExit()
 if ($validation.ExitCode -ne 0) {{
   Write-Error 'Invalid arguments or inaccessible path. Run athas --help for usage.'
   exit $validation.ExitCode
 }}
+$start.RedirectStandardOutput = $false
 $start.Arguments = $encodedArgs
-[System.Diagnostics.Process]::Start($start) | Out-Null
+$process = [System.Diagnostics.Process]::Start($start)
+if ($mode -eq 'wait') {{
+  $process.WaitForExit()
+  exit $process.ExitCode
+}}
 "#
    ))
 }
@@ -700,6 +713,39 @@ mod tests {
       let script = user_path_script(r"C:\Users\O'Brien\.athas\bin");
       assert!(script.contains(r"$dir = 'C:\Users\O''Brien\.athas\bin'"));
       assert!(script.contains(r"'%USERPROFILE%\.athas\bin'"));
+   }
+
+   #[test]
+   fn launcher_runs_a_waiting_cli_in_the_foreground() {
+      let directory = std::env::temp_dir().join(format!(
+         "athas-cli-wait-test-{}",
+         SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_nanos()
+      ));
+      fs::create_dir_all(&directory).unwrap();
+      let binary = directory.join("athas-binary");
+      athas_test_support::write_executable(
+         &binary,
+         "#!/bin/bash\nif [ \"$1\" = --validate-cli ]; then echo wait; exit 0; fi\nsleep \
+          0.2\nprintf '%s ' \"$@\" > result\nexit 3\n",
+      );
+      let launcher = directory.join("athas");
+      fs::write(&launcher, unix_cli_script(&binary)).unwrap();
+      let status = Command::new("bash")
+         .arg(&launcher)
+         .args(["--wait", "COMMIT_EDITMSG"])
+         .current_dir(&directory)
+         .status()
+         .unwrap();
+
+      assert_eq!(status.code(), Some(3));
+      assert_eq!(
+         fs::read_to_string(directory.join("result")).unwrap(),
+         "--wait COMMIT_EDITMSG "
+      );
+      fs::remove_dir_all(directory).unwrap();
    }
 
    #[test]

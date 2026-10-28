@@ -71,6 +71,8 @@ pub enum CliRequest {
       path: String,
       is_directory: bool,
       line: Option<u32>,
+      /// The file `athas --wait` watches; it is deleted once the files it opened are closed.
+      wait_marker: Option<String>,
    },
    Web {
       url: String,
@@ -91,6 +93,7 @@ impl From<OpenRequest> for CliRequest {
          path: request.path,
          is_directory: request.is_directory,
          line: request.line,
+         wait_marker: None,
       }
    }
 }
@@ -222,9 +225,22 @@ fn parse_reused_cli_args(args: &[String], cwd: &Path) -> Vec<CliRequest> {
    }
 }
 
+/// The parsed requests and whether `--wait` asked the CLI to block until the files close.
+#[derive(Debug, Default, PartialEq)]
+pub struct ParsedCli {
+   pub requests: Vec<CliRequest>,
+   pub wait: bool,
+}
+
 pub fn parse_cli_args(args: &[String], cwd: &Path) -> Vec<CliRequest> {
+   parse_cli(args, cwd).requests
+}
+
+pub fn parse_cli(args: &[String], cwd: &Path) -> ParsedCli {
    let mut args = args.to_vec();
    let mut new_window = None;
+   let mut wait = false;
+   let mut wait_marker = None;
    let mut working_directory = cwd.to_path_buf();
    let mut index = 0;
    while index < args.len() {
@@ -232,6 +248,17 @@ pub fn parse_cli_args(args: &[String], cwd: &Path) -> Vec<CliRequest> {
          "--" => {
             args.remove(index);
             break;
+         }
+         "--wait" | "-w" => {
+            wait = true;
+            args.remove(index);
+         }
+         "--wait-marker" => {
+            if index + 1 >= args.len() {
+               return ParsedCli::default();
+            }
+            wait_marker = Some(args[index + 1].clone());
+            args.drain(index..=index + 1);
          }
          "--new-window" | "-n" => {
             new_window = Some(true);
@@ -243,18 +270,18 @@ pub fn parse_cli_args(args: &[String], cwd: &Path) -> Vec<CliRequest> {
          }
          "--cwd" => {
             if index + 1 >= args.len() {
-               return Vec::new();
+               return ParsedCli::default();
             }
             working_directory = cwd.join(&args[index + 1]);
             if !working_directory.is_dir() {
-               return Vec::new();
+               return ParsedCli::default();
             }
             args.drain(index..=index + 1);
          }
          "terminal" | "term" if index == 0 => {
             index += 1;
          }
-         value if value.starts_with('-') => return Vec::new(),
+         value if value.starts_with('-') => return ParsedCli::default(),
          _ if index > 0
             && matches!(args.first().map(String::as_str), Some("terminal" | "term")) =>
          {
@@ -280,7 +307,7 @@ pub fn parse_cli_args(args: &[String], cwd: &Path) -> Vec<CliRequest> {
             1
          };
          if args.len() != expected {
-            return Vec::new();
+            return ParsedCli::default();
          }
          let resource_id = if matches!(command, "pr" | "issue" | "action") {
             match args
@@ -289,7 +316,7 @@ pub fn parse_cli_args(args: &[String], cwd: &Path) -> Vec<CliRequest> {
                .filter(|id| *id > 0)
             {
                Some(id) => Some(id),
-               None => return Vec::new(),
+               None => return ParsedCli::default(),
             }
          } else {
             None
@@ -305,7 +332,41 @@ pub fn parse_cli_args(args: &[String], cwd: &Path) -> Vec<CliRequest> {
       }
       _ => parse_reused_cli_args(&args, &working_directory),
    };
-   if new_window.unwrap_or(standalone || command == "window") {
+   if wait || wait_marker.is_some() {
+      // Waiting needs files the editor can close: no folders, terminals or new windows.
+      if requests.is_empty()
+         || !requests.iter().all(|request| {
+            matches!(
+               request,
+               CliRequest::Path {
+                  is_directory: false,
+                  ..
+               }
+            )
+         })
+      {
+         return ParsedCli::default();
+      }
+      let requests = requests
+         .into_iter()
+         .map(|request| match request {
+            CliRequest::Path {
+               path,
+               is_directory,
+               line,
+               ..
+            } => CliRequest::Path {
+               path,
+               is_directory,
+               line,
+               wait_marker: wait_marker.clone(),
+            },
+            request => request,
+         })
+         .collect();
+      return ParsedCli { requests, wait };
+   }
+   let requests = if new_window.unwrap_or(standalone || command == "window") {
       requests
          .into_iter()
          .map(|request| CliRequest::NewWindow {
@@ -314,7 +375,8 @@ pub fn parse_cli_args(args: &[String], cwd: &Path) -> Vec<CliRequest> {
          .collect()
    } else {
       requests
-   }
+   };
+   ParsedCli { requests, wait }
 }
 
 /// Parses a full process argv vector, dropping the executable path before routing user args.
@@ -388,6 +450,7 @@ mod tests {
                .into_owned(),
             is_directory: false,
             line: None,
+            wait_marker: None,
          }]
       );
    }
@@ -581,8 +644,51 @@ mod tests {
                .into_owned(),
             is_directory: true,
             line: None,
+            wait_marker: None,
          }
       );
+   }
+
+   #[test]
+   fn wait_marks_each_file_and_keeps_them_in_the_current_window() {
+      let cwd = Path::new(env!("CARGO_MANIFEST_DIR"));
+      let args = [
+         "-n",
+         "--wait-marker",
+         "/tmp/athas-cli-wait/1-2",
+         "Cargo.toml",
+      ]
+      .map(String::from);
+      let parsed = parse_cli(&args, cwd);
+
+      assert!(!parsed.wait);
+      assert_eq!(
+         parsed.requests,
+         vec![CliRequest::Path {
+            path: dunce::canonicalize(cwd.join("Cargo.toml"))
+               .unwrap()
+               .to_string_lossy()
+               .into_owned(),
+            is_directory: false,
+            line: None,
+            wait_marker: Some("/tmp/athas-cli-wait/1-2".to_string()),
+         }]
+      );
+      assert!(parse_cli(&["--wait".to_string(), "Cargo.toml".to_string()], cwd).wait);
+   }
+
+   #[test]
+   fn wait_needs_files() {
+      let cwd = Path::new(env!("CARGO_MANIFEST_DIR"));
+      for args in [
+         vec!["--wait"],
+         vec!["-w", "."],
+         vec!["-w", "terminal"],
+         vec!["-w", "settings"],
+      ] {
+         let args = args.into_iter().map(String::from).collect::<Vec<_>>();
+         assert_eq!(parse_cli(&args, cwd), ParsedCli::default(), "{args:?}");
+      }
    }
 
    #[test]

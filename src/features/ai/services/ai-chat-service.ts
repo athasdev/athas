@@ -25,6 +25,7 @@ import { getProviderApiToken } from "@/features/ai/services/ai-token-service";
 import { resolveChatCompletionTokenLimit } from "@/features/ai/lib/chat-completion-budget";
 import {
   getCustomProviderApiToken,
+  getModelCatalogKey,
   resolveCustomProviderBaseUrl,
 } from "@/features/ai/services/custom-provider-config";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
@@ -131,7 +132,8 @@ export const getChatCompletionStream = async (
     const model = resolveAgentModel({
       provider,
       modelId,
-      dynamicModels: useAIChatStore.getState().dynamicModels[providerId] ?? [],
+      dynamicModels:
+        useAIChatStore.getState().dynamicModels[getModelCatalogKey(providerId, settings)] ?? [],
       customDefault: settings.aiCustomModelId || settings.aiAutocompleteCustomModelId,
     });
     if (model) modelId = model.id;

@@ -50,16 +50,24 @@ fn main() {
       println!("{}", commands::development::cli::CLI_HELP_TEXT);
       return;
    }
-   let cli_requests = commands::development::cli_args::parse_cli_args(
+   let parsed_cli = commands::development::cli_args::parse_cli(
       &cli_args,
       &std::env::current_dir().unwrap_or_default(),
    );
+   let cli_requests = parsed_cli.requests;
    if validate_cli {
       if !cli_args.is_empty() && cli_requests.is_empty() {
          eprintln!("athas: invalid arguments or inaccessible path. Run athas --help for usage.");
          std::process::exit(1);
       }
+      // The launcher runs a waiting CLI in the foreground instead of detaching it.
+      if parsed_cli.wait {
+         println!("wait");
+      }
       return;
+   }
+   if parsed_cli.wait {
+      std::process::exit(commands::development::cli_wait::run_waiting_cli(&cli_args));
    }
    let startup_timing = StartupTiming::new();
 
@@ -88,6 +96,10 @@ fn main() {
             browser::forget_window(window.app_handle(), window.label());
             claude_ide::forget_window(window.app_handle(), window.label());
             commands::forget_window_watches(window.app_handle(), window.label());
+            commands::development::cli_wait::release_window_waits(
+               window.app_handle(),
+               window.label(),
+            );
          }
       })
       .manage(startup_timing)
@@ -131,8 +143,10 @@ fn main() {
          } => app_setup::handle_reopen(app_handle, has_visible_windows),
          #[cfg(target_os = "macos")]
          tauri::RunEvent::Opened { urls } => app_setup::handle_opened_urls(app_handle, &urls),
-         tauri::RunEvent::ExitRequested { .. } | tauri::RunEvent::Exit => {
+         tauri::RunEvent::ExitRequested { .. } => shutdown_background_services(app_handle),
+         tauri::RunEvent::Exit => {
             shutdown_background_services(app_handle);
+            commands::development::cli_wait::release_all_waits(app_handle);
          }
          _ => {}
       });
@@ -554,6 +568,7 @@ pub(crate) fn specta_builder() -> tauri_specta::Builder<tauri::Wry> {
          get_cli_install_command,
          get_importable_ide_projects,
          take_pending_cli_open_requests,
+         release_cli_wait,
          take_pending_deep_links,
          // Runtime commands
          ensure_runtime,

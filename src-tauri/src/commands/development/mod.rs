@@ -1,5 +1,6 @@
 pub mod cli;
 pub mod cli_args;
+pub mod cli_wait;
 pub mod cli_windows;
 pub mod debugger;
 pub mod deep_links;
@@ -11,6 +12,7 @@ pub mod tools;
 
 pub use cli::*;
 pub use cli_args::*;
+pub use cli_wait::*;
 pub use debugger::*;
 pub use deep_links::*;
 pub use docker::*;

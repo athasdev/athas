@@ -44,6 +44,7 @@ type ChatActions = Omit<
   | "removeApiKey"
   | "hasProviderApiKey"
   | "setDynamicModels"
+  | "clearDynamicModels"
   | "setAcpAgentStatus"
   | "setSessionSlashCommands"
   | "setSessionModeState"
