@@ -65,6 +65,21 @@ sudo dnf install athas
 
 Installs from the APT and DNF repositories update with `apt upgrade` and `dnf upgrade`.
 
+Nix on Linux (nixpkgs unstable, with flakes enabled):
+
+```bash
+nix profile install github:NixOS/nixpkgs/nixos-unstable#athas
+```
+
+To run without installing into your profile:
+
+```bash
+nix run github:NixOS/nixpkgs/nixos-unstable#athas
+```
+
+The [community-maintained nixpkgs package](https://search.nixos.org/packages?channel=unstable&query=athas&show=athas)
+may lag behind the latest Athas release.
+
 ### Manual download
 
 Prebuilt packages for macOS, Windows, and Linux are available on the
