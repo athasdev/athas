@@ -499,7 +499,7 @@ pub fn git_diff_file(
                         }
                      }
                   }
-                  lines = Vec::new();
+                  lines.clear();
                } else if !is_binary {
                   let mut single_file_opts = git2::DiffOptions::new();
                   let target_path = if is_deleted {
@@ -624,7 +624,7 @@ pub fn git_diff_file(
          }
       }
 
-      lines = Vec::new();
+      lines.clear();
    } else if !is_binary {
       let parsed = parse_diff_to_lines(&mut diff)?;
       is_truncated = parsed.is_truncated;
