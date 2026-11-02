@@ -73,6 +73,5 @@ dependencies or launch the app.
 
 ## Installing a release
 
-To use a packaged release from nixpkgs unstable, see
-[Package managers](../README.md#package-managers). The development flake in this
-repository provides a shell, not an installable Athas package.
+The development flake in this repository provides a shell, not an installable
+Athas package. Packaging Athas for Nix is left to the community in nixpkgs.
