@@ -976,7 +976,7 @@ impl ToolInstaller {
 
             let output_path = target_dir.join(relative_path);
 
-            if file.name().ends_with('/') {
+            if file.is_dir() {
                fs::create_dir_all(&output_path)?;
                continue;
             }
@@ -1769,14 +1769,12 @@ impl ToolInstaller {
          ))
       })?;
       let bundle_index = (0..archive.len()).find(|index| {
-         archive
-            .by_index(*index)
-            .map(|entry| {
-               let name = entry.name();
+         archive.by_index(*index).is_ok_and(|entry| {
+            entry.name().is_ok_and(|name| {
                name.starts_with("extension/server/com.microsoft.java.debug.plugin-")
                   && name.ends_with(".jar")
             })
-            .unwrap_or(false)
+         })
       });
       let bundle_index = bundle_index.ok_or_else(|| {
          ToolError::InstallationFailed(

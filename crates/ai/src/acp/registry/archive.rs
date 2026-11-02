@@ -157,7 +157,7 @@ fn extract_zip(archive: &Path, destination: &Path) -> io::Result<()> {
    let mut zip = zip::ZipArchive::new(File::open(archive)?).map_err(io::Error::other)?;
    for index in 0..zip.len() {
       let mut file = zip.by_index(index).map_err(io::Error::other)?;
-      let name = file.name().to_string();
+      let name = file.name().map_err(io::Error::other)?.to_string();
       let path = safe_relative_path(&name)
          .filter(|_| file.enclosed_name().is_some())
          .ok_or_else(|| unsafe_entry(&name))?;
