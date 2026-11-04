@@ -92,7 +92,7 @@ Examples:
 fn unix_cli_script(binary: &std::path::Path) -> String {
    let binary = binary.to_string_lossy().replace('\'', "'\\''");
    format!(
-      r#"#!/bin/bash
+      r#"#!/usr/bin/env bash
 # Athas CLI launcher
 athas_binary='{binary}'
 case "${{1:-}}" in
@@ -159,8 +159,22 @@ if ($mode -eq 'wait') {{
    ))
 }
 
+/// Interpreter lines Athas launchers have used. Older ones named `/bin/bash`,
+/// which does not exist on systems such as NixOS.
 #[cfg(any(target_os = "macos", test))]
-const UNIX_CLI_SCRIPT_HEADER: &str = "#!/bin/bash\n# Athas CLI launcher\n";
+const UNIX_CLI_SHEBANGS: [&str; 2] = ["#!/usr/bin/env bash\n", "#!/bin/bash\n"];
+
+#[cfg(any(target_os = "macos", test))]
+const UNIX_CLI_MARKER: &str = "# Athas CLI launcher\n";
+
+#[cfg(any(target_os = "macos", test))]
+fn is_athas_launcher(script: &str) -> bool {
+   UNIX_CLI_SHEBANGS.iter().any(|shebang| {
+      script
+         .strip_prefix(shebang)
+         .is_some_and(|rest| rest.starts_with(UNIX_CLI_MARKER))
+   })
+}
 
 #[cfg(unix)]
 fn current_cli_script() -> Result<String, String> {
@@ -208,7 +222,7 @@ fn launcher_binary(script: &str) -> Option<std::path::PathBuf> {
 /// kept so channels do not keep overwriting each other.
 #[cfg(any(target_os = "macos", test))]
 fn launcher_needs_rewrite(existing: &str, current: &str) -> bool {
-   if !existing.starts_with(UNIX_CLI_SCRIPT_HEADER) || existing == current {
+   if !is_athas_launcher(existing) || existing == current {
       return false;
    }
    match launcher_binary(existing) {
@@ -661,6 +675,15 @@ mod tests {
 
       let missing = unix_cli_script(std::path::Path::new("/nonexistent/Athas.app/athas"));
       assert!(launcher_needs_rewrite(&missing, &current));
+
+      let old_shebang_missing = missing.replacen("#!/usr/bin/env bash\n", "#!/bin/bash\n", 1);
+      assert!(launcher_needs_rewrite(&old_shebang_missing, &current));
+   }
+
+   #[test]
+   fn launchers_find_bash_on_path() {
+      let script = unix_cli_script(std::path::Path::new("/opt/athas/athas"));
+      assert!(script.starts_with("#!/usr/bin/env bash\n# Athas CLI launcher\n"));
    }
 
    #[test]
@@ -672,7 +695,7 @@ mod tests {
          &current
       ));
 
-      let other_channel = unix_cli_script(std::path::Path::new("/bin/bash"));
+      let other_channel = unix_cli_script(&std::env::current_exe().unwrap());
       assert!(!launcher_needs_rewrite(&other_channel, &current));
    }
 
@@ -728,7 +751,7 @@ mod tests {
       let binary = directory.join("athas-binary");
       athas_test_support::write_executable(
          &binary,
-         "#!/bin/bash\nif [ \"$1\" = --validate-cli ]; then echo wait; exit 0; fi\nsleep \
+         "#!/usr/bin/env bash\nif [ \"$1\" = --validate-cli ]; then echo wait; exit 0; fi\nsleep \
           0.2\nprintf '%s ' \"$@\" > result\nexit 3\n",
       );
       let launcher = directory.join("athas");
@@ -761,8 +784,8 @@ mod tests {
       let binary = directory.join("Athas's binary");
       athas_test_support::write_executable(
          &binary,
-         "#!/bin/bash\nif [ \"$1\" = --validate-cli ]; then exit 0; fi\nprintf '%s\\0' \"$PWD\" \
-          \"$@\" > result\n",
+         "#!/usr/bin/env bash\nif [ \"$1\" = --validate-cli ]; then exit 0; fi\nprintf '%s\\0' \
+          \"$PWD\" \"$@\" > result\n",
       );
       let launcher = directory.join("athas");
       fs::write(&launcher, unix_cli_script(&binary)).unwrap();
