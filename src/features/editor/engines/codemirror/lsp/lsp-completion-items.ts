@@ -104,24 +104,32 @@ function insertText(item: CompletionItem) {
 /**
  * Converts an offset from the document the request was made against to the current one. Text is
  * only typed at the cursor while a result stays open, so offsets before the request position are
- * unchanged and offsets at or after it move with the typed text.
+ * unchanged and offsets after it move with the typed text. An offset right at the request position
+ * is where the typed text went: a range's start stays there (`side` -1), so the typed word is
+ * replaced, while its end moves past the typed text (`side` 1).
  */
-function mapRequestOffset(request: CompletionRequest, offset: number, cursor: number) {
-  return offset < request.position ? offset : offset + (cursor - request.position);
+function mapRequestOffset(
+  request: CompletionRequest,
+  offset: number,
+  cursor: number,
+  side: -1 | 1 = 1,
+) {
+  if (offset < request.position || (offset === request.position && side < 0)) return offset;
+  return offset + (cursor - request.position);
 }
 
 function nonOverlappingEdits(
   doc: Text,
   edits: readonly { range: LspRange; newText: string }[] | undefined,
   occupied: { from: number; to: number },
-  mapOffset: (offset: number) => number,
+  mapOffset: (offset: number, side: -1 | 1) => number,
 ): ChangeSpec[] {
   if (!edits?.length) return [];
   const changes: Array<{ from: number; to: number; insert: string }> = [];
   for (const edit of edits) {
     const range = fromLspRange(doc, edit.range);
-    const from = mapOffset(range.from);
-    const to = mapOffset(range.to);
+    const from = mapOffset(range.from, -1);
+    const to = Math.max(from, mapOffset(range.to, 1));
     if (from < occupied.to && to > occupied.from) continue;
     if (changes.some((change) => from < change.to && to > change.from)) continue;
     changes.push({ from, to, insert: edit.newText });
@@ -151,14 +159,14 @@ export function applyLspCompletion(
 ) {
   const item = entry.resolved ?? entry.item;
   const { request } = entry;
-  const map = (offset: number) => mapRequestOffset(request, offset, to);
+  const map = (offset: number, side: -1 | 1) => mapRequestOffset(request, offset, to, side);
   const range = insertRange(item);
   let start = from;
   let end = to;
   if (range) {
     const requested = fromLspRange(request.doc, range);
-    start = Math.min(map(requested.from), to);
-    end = Math.max(map(requested.to), to);
+    start = Math.min(map(requested.from, -1), to);
+    end = Math.max(map(requested.to, 1), to);
   }
   const text = insertText(item);
   const isSnippet = item.insertTextFormat === 2;

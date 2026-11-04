@@ -172,6 +172,23 @@ describe("LSP completion source", () => {
     expect(editor.state.doc.toString()).toBe("value");
   });
 
+  it("replaces the word typed after a request made at a trigger character", async () => {
+    mocks.getCompletions.mockResolvedValue([
+      {
+        label: "get_typed",
+        textEdit: {
+          range: { start: { line: 0, character: 4 }, end: { line: 0, character: 4 } },
+          newText: "get_typed",
+        },
+      },
+    ] satisfies CompletionItem[]);
+    const editor = createView("foo.");
+    const result = await complete(editor, true);
+    editor.dispatch({ changes: { from: 4, insert: "get" }, selection: { anchor: 7 } });
+    pick(editor, result!, result!.options[0]);
+    expect(editor.state.doc.toString()).toBe("foo.get_typed");
+  });
+
   it("inserts snippets as CodeMirror snippets", async () => {
     mocks.getCompletions.mockResolvedValue([
       { label: "fn", insertText: "fn ${1:name}() {\n\t$0\n}", insertTextFormat: 2 },
