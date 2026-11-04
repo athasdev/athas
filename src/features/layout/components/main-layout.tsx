@@ -31,14 +31,17 @@ import { getInternalTabDragData } from "@/features/tabs/services/internal-tab-dr
 import { WorkbenchFullscreenRootContext } from "@/ui/workbench-fullscreen-surface";
 import TitleBarWithSettings from "../../window/components/title-bar/title-bar";
 import { TitleLeading } from "../../window/components/title-bar/title-leading";
-import { MERGED_TITLE_ROW } from "@/features/window/services/title-row";
 import { ResizablePane } from "./resizable-pane";
 import { useDockCoversCentre, WorkbenchDock } from "./dock/workbench-dock";
 import { useDockOwner } from "../hooks/use-dock-owner";
 import { useAgentBufferSessionId } from "../hooks/use-active-session-id";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import { ProjectPickerHost, WorkbenchSidebar } from "./sidebar/workbench-sidebar";
+import { ActivityBar } from "./sidebar/activity-bar";
+import { useWorkbenchSidebarStore } from "../stores/workbench-sidebar.store";
+import { Pane } from "@/ui/pane";
 import { useResponsiveWorkbenchLayout } from "../hooks/use-responsive-workbench-layout";
+import { useMergedTitleRow } from "../hooks/use-merged-title-row";
 import { useProjectStore } from "@/features/workspace/stores/project.store";
 
 const CommandPalette = lazy(() => import("@/features/command-palette/components/command-palette"));
@@ -124,6 +127,11 @@ export function MainLayout() {
   const dockOwner = useDockOwner();
   const dockCoversCentre = useDockCoversCentre(dockOwner);
   const renderedSidebarVisible = isSidebarVisible && !responsiveLayout.narrow;
+  // The window controls sit on the sidebar's top row; with no sidebar under them they get a title
+  // row of their own, so they never straddle the activity bar and the centre.
+  const mergedTitleRow = useMergedTitleRow();
+  const sidebarOverlayOpen = useWorkbenchSidebarStore.use.overlayOpen() && responsiveLayout.narrow;
+  const { setOverlayOpen } = useWorkbenchSidebarStore.use.actions();
   const clearCentre = useIsEmptySessionInFront();
   const isDatabaseConnectionVisible = useUIState((state) => state.isDatabaseConnectionVisible);
   const setIsDatabaseConnectionVisible = useUIState(
@@ -168,6 +176,20 @@ export function MainLayout() {
       toast.warning("No supported dropped files or folders could be opened.");
     }
   }, !rootFolderPath);
+
+  useEffect(() => {
+    // The floating sidebar belongs to a narrow window; a wide one has its column back.
+    if (!responsiveLayout.narrow) setOverlayOpen(false);
+  }, [responsiveLayout.narrow, setOverlayOpen]);
+
+  useEffect(() => {
+    if (!sidebarOverlayOpen) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setOverlayOpen(false);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [setOverlayOpen, sidebarOverlayOpen]);
 
   useEffect(() => {
     setBottomBuffersVisible(bottomBuffersVisible);
@@ -307,23 +329,23 @@ export function MainLayout() {
           </div>
         )}
 
-        {MERGED_TITLE_ROW ? null : (
+        {mergedTitleRow ? null : (
           <div
             data-slot="workbench-title-row"
             data-tauri-drag-region
             className="relative z-20 h-title-bar shrink-0"
           >
-            <TitleLeading />
+            <TitleLeading narrow={responsiveLayout.narrow} />
           </div>
         )}
 
         <div
           className={cn(
             "athas-workbench-glass relative z-10 flex min-h-0 flex-1 flex-row overflow-hidden p-workbench",
-            !MERGED_TITLE_ROW && "pt-0",
+            !mergedTitleRow && "pt-0",
           )}
         >
-          {MERGED_TITLE_ROW ? (
+          {mergedTitleRow ? (
             <div
               aria-hidden
               data-slot="workbench-top-gap"
@@ -331,9 +353,27 @@ export function MainLayout() {
               className="absolute inset-x-0 top-0 h-workbench"
             />
           ) : null}
+          <ActivityBar narrow={responsiveLayout.narrow} titleRow={mergedTitleRow} />
           <ResizablePane hidden={!renderedSidebarVisible}>
-            <WorkbenchSidebar titleRow={MERGED_TITLE_ROW} />
+            <WorkbenchSidebar titleRow={mergedTitleRow} />
           </ResizablePane>
+          {sidebarOverlayOpen ? (
+            <>
+              <div
+                aria-hidden
+                data-slot="sidebar-overlay-backdrop"
+                className="absolute inset-0 z-40"
+                onClick={() => setOverlayOpen(false)}
+              />
+              <Pane
+                surface="island"
+                data-slot="sidebar-overlay"
+                className="absolute top-[calc(var(--spacing-workbench)+var(--spacing-pane-header))] bottom-workbench left-[calc(var(--spacing-workbench)+var(--spacing-activity-bar))] z-50 w-72 max-w-[calc(100%-var(--spacing-activity-bar)-2*var(--spacing-workbench))]"
+              >
+                <WorkbenchSidebar />
+              </Pane>
+            </>
+          ) : null}
 
           <div
             data-slot="workbench-centre"
@@ -355,7 +395,13 @@ export function MainLayout() {
           <WorkbenchDock owner={dockOwner} />
         </div>
 
-        {MERGED_TITLE_ROW ? <TitleLeading merged sidebarShown={renderedSidebarVisible} /> : null}
+        {mergedTitleRow ? (
+          <TitleLeading
+            merged
+            narrow={responsiveLayout.narrow}
+            sidebarShown={renderedSidebarVisible}
+          />
+        ) : null}
 
         <TitleBarWithSettings showMinimal overlay />
 

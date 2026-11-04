@@ -17,8 +17,8 @@ export function useDockShown(): boolean | null {
 }
 
 /**
- * Whether the dock would show anything when out. A session's dock holds its details once it has
- * started, or the tools opened in it; a session that has neither has nothing to show.
+ * Whether the dock would show anything when out: the tools opened in it, or a session's details
+ * once it has started.
  */
 export function useDockHasContent(): boolean {
   const owner = useDockLayoutStore((state) => state.currentOwner);
@@ -27,5 +27,5 @@ export function useDockHasContent(): boolean {
   );
   const useHasContent = getDockSessionInfo()?.useHasContent ?? noSessionInfo;
   const hasInfo = useHasContent(owner?.kind === "session" ? owner.id : "");
-  return owner?.kind !== "session" || hasPanes || hasInfo;
+  return hasPanes || (owner?.kind === "session" && hasInfo);
 }

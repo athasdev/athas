@@ -30,7 +30,7 @@ function getRepoPath(): string | null {
   );
 }
 
-/** Opens GitHub in the dock, then hands it the action once its view is mounted. */
+/** Opens GitHub in the sidebar, then hands it the action once its view is mounted. */
 function runGitHubSidebarAction(action: GitHubSidebarAction): Promise<boolean> {
   showProjectTool("github-prs");
   return runPaneCommand(getProjectToolPaneId("github-prs"), "action", action);

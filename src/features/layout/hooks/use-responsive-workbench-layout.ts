@@ -7,7 +7,9 @@ export function getResponsiveWorkbenchLayout(width: number) {
 }
 
 export function useResponsiveWorkbenchLayout() {
-  const [layout, setLayout] = useState(() => getResponsiveWorkbenchLayout(window.innerWidth));
+  const [layout, setLayout] = useState(() =>
+    getResponsiveWorkbenchLayout(typeof window === "undefined" ? Infinity : window.innerWidth),
+  );
 
   useEffect(() => {
     // Keep the same object until the breakpoint is crossed, so resizing the window doesn't

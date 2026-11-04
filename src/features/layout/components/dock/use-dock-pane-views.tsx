@@ -2,11 +2,9 @@ import { createElement, useMemo } from "react";
 import { getDockPanes } from "@/features/layout/services/dock-pane-registry";
 import type { DockOwner, DockPaneId } from "@/features/layout/types/dock.types";
 import type { DockPaneView } from "./dock-pane-frame";
-import { useProjectTools } from "./project-tools";
 
-/** The panes the owner's dock can show, by id: the session's own tools, then project tools. */
+/** The panes the owner's dock can show, by id. Project tools open in the sidebar instead. */
 export function useDockPaneViews(owner: DockOwner): Map<DockPaneId, DockPaneView> {
-  const projectTools = useProjectTools();
   return useMemo(() => {
     const views = new Map<DockPaneId, DockPaneView>();
     for (const pane of getDockPanes()) {
@@ -21,15 +19,6 @@ export function useDockPaneViews(owner: DockOwner): Map<DockPaneId, DockPaneView
         renderActions: HeaderActions ? (props) => createElement(HeaderActions, props) : undefined,
       });
     }
-    for (const tool of projectTools) {
-      views.set(tool.paneId, {
-        id: tool.paneId,
-        title: tool.title,
-        icon: tool.icon,
-        render: tool.render,
-        renderActions: tool.renderActions,
-      });
-    }
     return views;
-  }, [owner.kind, projectTools]);
+  }, [owner.kind]);
 }

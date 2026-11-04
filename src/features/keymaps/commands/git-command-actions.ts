@@ -21,7 +21,7 @@ import type { GitSidebarAction } from "@/features/git/types/git.types";
 
 const GIT_PANE = getProjectToolPaneId("git");
 
-/** Opens Source Control in the dock, then hands it the action once its view is mounted. */
+/** Opens Source Control in the sidebar, then hands it the action once its view is mounted. */
 export function openGitSidebarAction(detail: GitSidebarAction): Promise<boolean> {
   showProjectTool("git");
   return runPaneCommand(GIT_PANE, "action", detail);

@@ -82,7 +82,7 @@ describe("dock layout store", () => {
 
   it("remembers layouts, width and the hidden dock across restarts", async () => {
     actions().open(sessionA, "terminal");
-    actions().open(project, "view:git");
+    actions().open(sessionB, "view:git");
     actions().setWidth(420);
     actions().setHidden(true);
     const saved = localStorage.getItem(STORAGE_KEY) ?? "{}";
@@ -91,7 +91,8 @@ describe("dock layout store", () => {
     localStorage.setItem(STORAGE_KEY, saved);
     await useDockLayoutStore.persist.rehydrate();
     expect(layout(sessionA).panes).toEqual(["terminal"]);
-    expect(layout(project).panes).toEqual(["view:files", "view:git"]);
+    // Project tools moved to the sidebar, so a dock drops the ones it kept.
+    expect(layout(sessionB).panes).toEqual([]);
     expect(useDockLayoutStore.getState()).toMatchObject({ width: 420, hidden: true });
   });
 

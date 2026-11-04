@@ -2,6 +2,7 @@ import {
   getProjectToolOwner,
   showProjectTool,
   toggleProjectTool,
+  toggleWorkbenchSidebar,
 } from "@/features/layout/services/project-tools";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { openNewAgentChat } from "@/features/ai/services/open-new-agent-chat";
@@ -25,8 +26,7 @@ function getZoomTarget(): "editor" | "terminal" {
 }
 
 export function toggleSidebar(): void {
-  const state = useUIState.getState();
-  state.setIsSidebarVisible(!state.isSidebarVisible);
+  toggleWorkbenchSidebar();
 }
 
 export function toggleTerminalPane(): void {
@@ -92,7 +92,7 @@ export function openGlobalSearchBuffer(): void {
   useBufferStore.getState().actions.openGlobalSearchBuffer();
 }
 
-/** Opens Search in the dock, or brings it forward, with its query field focused. */
+/** Opens Search in the sidebar, or brings it forward, with its query field focused. */
 export function showGlobalSearch(): void {
   if (getProjectToolOwner()) showProjectTool("search", { focus: true });
   else openGlobalSearchBuffer();

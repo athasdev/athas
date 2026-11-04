@@ -3,7 +3,7 @@ import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import { useCommandShortcut } from "@/features/keymaps/hooks/use-command-shortcut";
 import { useDockLayoutStore, selectDockLayout } from "@/features/layout/stores/dock-layout.store";
 import { Button } from "@/ui/button";
-import { getProjectToolPaneId } from "@/features/layout/services/dock-pane-registry";
+import { showProjectTool } from "@/features/layout/services/project-tools";
 import { getSidebarViews } from "@/features/layout/services/sidebar-view-registry";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import {
@@ -102,16 +102,7 @@ function SessionMoreActionsMenu({ chatId }: { chatId: string }) {
         <DropdownMenuGroup>
           <DropdownMenuLabel>Project tools</DropdownMenuLabel>
           {tools.map((tool) => (
-            <DropdownMenuItem
-              key={tool.id}
-              onClick={() =>
-                useDockLayoutStore
-                  .getState()
-                  .actions.open(getSessionDockOwner(chatId), getProjectToolPaneId(tool.id), {
-                    focus: true,
-                  })
-              }
-            >
+            <DropdownMenuItem key={tool.id} onClick={() => showProjectTool(tool.id)}>
               {tool.icon}
               {tool.title}
             </DropdownMenuItem>

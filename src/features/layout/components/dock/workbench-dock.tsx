@@ -18,7 +18,7 @@ import {
 import type { DockOwner } from "@/features/layout/types/dock.types";
 import { PaneResizeHandle } from "@/features/panes/components/pane-resize-handle";
 import { Pane } from "@/ui/pane";
-import { MERGED_TITLE_ROW } from "@/features/window/services/title-row";
+import { useMergedTitleRow } from "@/features/layout/hooks/use-merged-title-row";
 import { cn } from "@/utils/cn";
 import { DockAddPaneMenu } from "./dock-add-pane-menu";
 import { DockPaneFrame } from "./dock-pane-frame";
@@ -129,6 +129,7 @@ function useDockPresence(shown: boolean) {
 }
 
 function Dock({ owner, hasInfo }: { owner: DockOwner; hasInfo: boolean }) {
+  const mergedTitleRow = useMergedTitleRow();
   const layout = useDockLayout(owner);
   const hidden = useDockLayoutStore.use.hidden();
   const width = useDockLayoutStore.use.width();
@@ -259,7 +260,7 @@ function Dock({ owner, hasInfo }: { owner: DockOwner; hasInfo: boolean }) {
                   maximized={view === maximized}
                   appear={!initialPanes.has(view.id)}
                   dockActions={index === 0 ? <DockAddPaneMenu owner={owner} /> : undefined}
-                  windowTopRow={MERGED_TITLE_ROW && index === 0 && !(hasInfo && !maximized)}
+                  windowTopRow={mergedTitleRow && index === 0 && !(hasInfo && !maximized)}
                 />
               </Fragment>
             ))}

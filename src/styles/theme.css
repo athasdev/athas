@@ -61,9 +61,13 @@
   --spacing-workbench: var(--athas-workbench-gap);
   /* Where a pane's first item starts from its island's edge: a tab, a title's icon, a sub-header. */
   --spacing-pane-inset: var(--athas-pane-inset);
+  /* The activity bar down the left edge: one rail control plus room either side. */
+  --spacing-activity-bar: calc(var(--athas-rail-control-size) + 0.5rem);
   /* Room the top-left pane header leaves for the window controls and sidebar toggle while the
      sidebar is hidden; the title row overlay keeps --athas-title-leading-end current. */
-  --spacing-title-leading: calc(var(--athas-title-leading-end, 0px) - var(--athas-workbench-gap));
+  --spacing-title-leading: calc(
+    var(--athas-title-leading-end, 0px) - var(--athas-workbench-gap) - var(--spacing-activity-bar)
+  );
   --spacing-chrome-control: var(--athas-chrome-control-height);
   /* Pads one line of composer text to the height of the buttons beside it (h-7), so a single
      line, and the last line of many, centres on them. */

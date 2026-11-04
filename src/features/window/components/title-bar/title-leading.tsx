@@ -1,4 +1,6 @@
+import { toggleWorkbenchSidebar } from "@/features/layout/services/project-tools";
 import { useUIState } from "@/features/layout/stores/ui-state.store";
+import { useWorkbenchSidebarStore } from "@/features/layout/stores/workbench-sidebar.store";
 import { WindowMenuDropdown } from "@/features/window/components/window-menu-bar";
 import { AthasMark } from "@/ui/brand-marks";
 import { Button } from "@/ui/button";
@@ -9,12 +11,13 @@ import { TabHistoryNavigation } from "@/features/tabs/components/tab-history-nav
 import { useLayoutEffect, useRef } from "react";
 import { useCommandShortcut } from "@/features/keymaps/hooks/use-command-shortcut";
 import { cn } from "@/utils/cn";
+import { TitleProjectSwitcher } from "./title-project-switcher";
 import { IS_MAC, IS_WEB } from "@/utils/platform";
 
 /**
  * The leading end of the title bar, next to the window controls: the app menu (Windows, Linux and
- * the web, where there is no native menu bar), the sidebar toggle, then back and forward. Projects
- * and their branches are shown in the sidebar and the session details.
+ * the web, where there is no native menu bar), the sidebar toggle, back and forward, then the
+ * project switcher.
  *
  * `merged` floats it over the top of the sidebar, in line with the pane headers, for windows
  * without a title row; while the sidebar is hidden it publishes where it ends, so the top-left
@@ -22,14 +25,18 @@ import { IS_MAC, IS_WEB } from "@/utils/platform";
  */
 export function TitleLeading({
   merged = false,
+  narrow = false,
   sidebarShown = true,
 }: {
   merged?: boolean;
+  /** A narrow window, where the sidebar floats over the centre instead of taking a column. */
+  narrow?: boolean;
   sidebarShown?: boolean;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const isSidebarVisible = useUIState((state) => state.isSidebarVisible);
-  const setIsSidebarVisible = useUIState((state) => state.setIsSidebarVisible);
+  const isSidebarColumnVisible = useUIState((state) => state.isSidebarVisible);
+  const isSidebarOverlayOpen = useWorkbenchSidebarStore.use.overlayOpen();
+  const isSidebarVisible = narrow ? isSidebarOverlayOpen : isSidebarColumnVisible;
   const toggleSidebarShortcut = useCommandShortcut("workbench.toggleSidebar");
 
   useLayoutEffect(() => {
@@ -78,7 +85,7 @@ export function TitleLeading({
           <Toggle
             type="button"
             pressed={isSidebarVisible}
-            onPressedChange={setIsSidebarVisible}
+            onPressedChange={toggleWorkbenchSidebar}
             tooltip={isSidebarVisible ? "Hide Sidebar" : "Show Sidebar"}
             shortcut={toggleSidebarShortcut}
             aria-label={isSidebarVisible ? "Hide sidebar" : "Show sidebar"}
@@ -87,6 +94,7 @@ export function TitleLeading({
           </Toggle>
         </div>
         <TabHistoryNavigation />
+        <TitleProjectSwitcher />
       </div>
     </ControlSizeProvider>
   );

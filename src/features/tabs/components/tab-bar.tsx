@@ -28,7 +28,7 @@ import {
   getTopCornerPaneGroup,
   isPaneInTopRow,
 } from "@/features/panes/services/pane-tree";
-import { MERGED_TITLE_ROW } from "@/features/window/services/title-row";
+import { useMergedTitleRow } from "@/features/layout/hooks/use-merged-title-row";
 import { getPaneView, reloadPaneView } from "@/features/panes/services/pane-view-registry";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import type { PaneContent } from "@/features/panes/types/pane-content.types";
@@ -136,8 +136,9 @@ const TabBar = ({
     (state) => Boolean(paneId) && getTopCornerPaneGroup(state.root, "start").id === paneId,
   );
   // In a window without a title row, the top row of tab bars is where the window is dragged.
+  const mergedTitleRow = useMergedTitleRow();
   const isWindowTopRow = usePaneStore(
-    (state) => MERGED_TITLE_ROW && Boolean(paneId) && isPaneInTopRow(state.root, paneId ?? ""),
+    (state) => mergedTitleRow && Boolean(paneId) && isPaneInTopRow(state.root, paneId ?? ""),
   );
   const paneBufferIds = pane?.bufferIds ?? null;
   // In the pane's tab order; buffers no pane shows only appear in the pane-less bar.

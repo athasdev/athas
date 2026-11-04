@@ -1,14 +1,15 @@
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 import { createSelectors } from "@/utils/zustand-selectors";
+import { getProjectToolView } from "../services/dock-pane-registry";
 import type { DockLayout, DockOwner, DockPaneId } from "../types/dock.types";
 
 /** Owners whose dock is kept across restarts, most recently used first. */
 const MAX_REMEMBERED_LAYOUTS = 300;
 export const DEFAULT_DOCK_WIDTH = 380;
 export const MIN_DOCK_WIDTH = 260;
-/** A project shown without a session opens on its files, as the sidebar did. */
-export const DEFAULT_PROJECT_PANES: readonly DockPaneId[] = ["view:files"];
+/** A project shown without a session starts with an empty dock; its tools live in the sidebar. */
+export const DEFAULT_PROJECT_PANES: readonly DockPaneId[] = [];
 
 const EMPTY_SESSION_LAYOUT: DockLayout = {
   panes: [],
@@ -21,6 +22,15 @@ const EMPTY_PROJECT_LAYOUT: DockLayout = {
   ...EMPTY_SESSION_LAYOUT,
   panes: [...DEFAULT_PROJECT_PANES],
 };
+
+/** Drops project tool panes a dock kept from when project tools opened there. */
+function withoutProjectTools(layout: DockLayout): DockLayout {
+  const panes = layout.panes.filter((pane) => getProjectToolView(pane) === null);
+  if (panes.length === layout.panes.length) return layout;
+  const maximized =
+    layout.maximized && getProjectToolView(layout.maximized) === null ? layout.maximized : null;
+  return { ...layout, panes, maximized };
+}
 
 export function getDockOwnerKey(owner: DockOwner): string {
   return `${owner.kind}:${owner.id}`;
@@ -259,7 +269,7 @@ const useDockLayoutStoreBase = create<DockLayoutStoreState>()(
           layouts: Object.fromEntries(
             Object.entries(persisted?.layouts ?? {}).map(([key, layout]) => [
               key,
-              { ...EMPTY_SESSION_LAYOUT, ...layout },
+              withoutProjectTools({ ...EMPTY_SESSION_LAYOUT, ...layout }),
             ]),
           ),
           width: Math.max(MIN_DOCK_WIDTH, persisted?.width ?? DEFAULT_DOCK_WIDTH),

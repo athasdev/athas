@@ -44,13 +44,14 @@ const dropdownSource = readFileSync(
 );
 
 describe("title bar controls", () => {
-  it("leads the title bar with the sidebar toggle, then back and forward, with no branch picker", () => {
+  it("leads the title bar with the sidebar toggle, back and forward, then the project switcher", () => {
     const toggleIndex = titleLeadingSource.indexOf("<Toggle");
     const navigationIndex = titleLeadingSource.indexOf("<TabHistoryNavigation />");
+    const switcherIndex = titleLeadingSource.indexOf("<TitleProjectSwitcher />");
 
     expect(toggleIndex).toBeGreaterThan(-1);
     expect(navigationIndex).toBeGreaterThan(toggleIndex);
-    expect(titleLeadingSource).not.toContain("ProjectSwitcher");
+    expect(switcherIndex).toBeGreaterThan(navigationIndex);
     expect(titleLeadingSource).not.toContain("GitBranchManager");
     expect(titleLeadingSource).toContain('useCommandShortcut("workbench.toggleSidebar")');
     expect(workbenchSidebarSource).toContain("<SidebarProjects />");

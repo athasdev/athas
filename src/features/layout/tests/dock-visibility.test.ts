@@ -13,21 +13,21 @@ beforeEach(() => {
 
 describe("dock visibility", () => {
   it("puts a project's dock away and brings it back as it was", () => {
+    useDockLayoutStore.getState().actions.open(project, "terminal");
     expect(isDockShown(project)).toBe(true);
     toggleDock();
     expect(useDockLayoutStore.getState().hidden).toBe(true);
     expect(isDockShown(project)).toBe(false);
     toggleDock();
     expect(useDockLayoutStore.getState().hidden).toBe(false);
-    expect(panes(project)).toEqual(["view:files"]);
+    expect(panes(project)).toEqual(["terminal"]);
   });
 
-  it("brings back an emptied project dock on Files", () => {
-    useDockLayoutStore.getState().actions.close(project, "view:files");
+  it("leaves an empty project dock away, since project tools live in the sidebar", () => {
     expect(isDockShown(project)).toBe(false);
     toggleDock();
-    expect(panes(project)).toEqual(["view:files"]);
-    expect(isDockShown(project)).toBe(true);
+    expect(panes(project)).toEqual([]);
+    expect(isDockShown(project)).toBe(false);
   });
 
   it("shows a session's dock for its details even with no tool open", () => {

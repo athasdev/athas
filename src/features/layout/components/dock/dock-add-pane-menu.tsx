@@ -15,7 +15,6 @@ import {
   DropdownMenuTrigger,
 } from "@/ui/dropdown";
 import { PlusIcon } from "@/ui/icons";
-import { useProjectTools } from "./project-tools";
 
 const alwaysAvailable = () => true;
 
@@ -51,12 +50,8 @@ function SessionPaneItem({ owner, pane }: { owner: DockOwner; pane: DockPaneDefi
   return <PaneItem owner={owner} pane={pane.id} title={pane.title} icon={pane.icon} />;
 }
 
-/**
- * The `+` in the dock: every tool the owner's dock can hold, checked while it is open. A session's
- * dock lists its own tools first, then the project's.
- */
+/** The `+` in the dock: every tool the owner's dock can hold, checked while it is open. */
 export function DockAddPaneMenu({ owner }: { owner: DockOwner }) {
-  const projectTools = useProjectTools();
   const sessionPanes = getDockPanes().filter(
     (pane) => pane.scope === "any" || owner.kind === "session",
   );
@@ -78,18 +73,6 @@ export function DockAddPaneMenu({ owner }: { owner: DockOwner }) {
             ))}
           </DropdownMenuGroup>
         ) : null}
-        <DropdownMenuGroup>
-          <DropdownMenuLabel>Project</DropdownMenuLabel>
-          {projectTools.map((tool) => (
-            <PaneItem
-              key={tool.paneId}
-              owner={owner}
-              pane={tool.paneId}
-              title={tool.title}
-              icon={tool.icon}
-            />
-          ))}
-        </DropdownMenuGroup>
       </DropdownMenuContent>
     </DropdownMenu>
   );
