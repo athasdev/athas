@@ -60,7 +60,7 @@ export function SettingBlock({ className, ...props }: ComponentProps<"div">) {
 }
 
 const settingRowVariants = cva(
-  "flex min-h-11 w-full min-w-0 max-w-full items-center justify-between gap-6 py-2.5 pr-3 select-none transition-colors duration-fast focus:outline-none rounded-md data-[settings-search-active=true]:bg-primary-soft max-[640px]:flex-col max-[640px]:items-stretch max-[640px]:gap-2 @max-[640px]/settings:flex-col @max-[640px]/settings:items-stretch @max-[640px]/settings:gap-2",
+  "flex min-h-11 w-full min-w-0 max-w-full items-center justify-between gap-6 py-2.5 pr-3 select-none transition-colors duration-fast focus:outline-none rounded-md data-[settings-search-active=true]:bg-primary-soft max-sm:flex-col max-sm:items-stretch max-sm:gap-2 @max-[640px]/settings:flex-col @max-[640px]/settings:items-stretch @max-[640px]/settings:gap-2",
   {
     variants: {
       /** `nested` indents a row that only applies when the row above it is on. */
@@ -74,7 +74,7 @@ const settingRowVariants = cva(
 );
 
 const settingControlVariants = cva(
-  "font-sans ui-text-sm min-w-0 max-w-full shrink-0 select-auto max-[640px]:w-full max-[640px]:shrink max-[640px]:[&>div]:flex-wrap max-[640px]:[&>input]:w-full max-[640px]:[&>textarea]:w-full @max-[640px]/settings:w-full @max-[640px]/settings:shrink @max-[640px]/settings:[&>div]:flex-wrap @max-[640px]/settings:[&>input]:w-full @max-[640px]/settings:[&>textarea]:w-full",
+  "font-sans ui-text-sm min-w-0 max-w-full shrink-0 select-auto max-sm:w-full max-sm:shrink max-sm:[&>div]:flex-wrap max-sm:[&>input]:w-full max-sm:[&>textarea]:w-full @max-[640px]/settings:w-full @max-[640px]/settings:shrink @max-[640px]/settings:[&>div]:flex-wrap @max-[640px]/settings:[&>input]:w-full @max-[640px]/settings:[&>textarea]:w-full",
   {
     variants: {
       /**

@@ -187,8 +187,8 @@ export function createWebsiteApi(fetchImpl: Fetch) {
       const payload = await request(
         `/api/cloud-workspaces/branches?repo=${encodeURIComponent(repo)}`,
       );
-      const branches = (Array.isArray(payload.branches) ? payload.branches : []).flatMap(
-        (branch) => (isRecord(branch) && typeof branch.name === "string" ? [branch.name] : []),
+      const branches = (Array.isArray(payload.branches) ? payload.branches : []).flatMap((branch) =>
+        isRecord(branch) && typeof branch.name === "string" ? [branch.name] : [],
       );
       return { defaultBranch: stringOrNull(payload.defaultBranch), branches };
     },
