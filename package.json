@@ -201,9 +201,9 @@
     "zod": "^4.6.6"
   },
   "engines": {
+    "bun": ">=1.3.14",
     "node": "24.x"
   },
-  "packageManager": "bun@1.3.14",
   "trustedDependencies": [
     "nucleo-ui-fill-18",
     "nucleo-ui-outline-18"

@@ -9,7 +9,7 @@
 ## Setup And Validation
 
 - Always use Bun for repo scripts and package management.
-- Required environment: Bun `1.3.2`, Node.js `22+`, and Rust.
+- Required environment: Bun `1.3.14` or newer, Node.js `22+`, and Rust.
 - Install dependencies with `bun install`.
 - Start the app with `bun dev`.
 - Use `bun smoke alpha` or `bun smoke prod` for quick local smoke tests of packaged app launches.
