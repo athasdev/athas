@@ -301,6 +301,11 @@ async function rejectHunks(chatId: string, entry: AgentEditEntry, hunks: AgentEd
     if (removesFile) {
       useFileWatcherStore.getState().actions.markPendingSave(entry.path);
       await getWorkspaceResourceProvider(entry.path).deleteText(entry.path, entry.current);
+      emitGitChanged({
+        filePath: entry.path,
+        scopes: ["working-tree"],
+        source: "agent-edit-review",
+      });
       if (getAgentEditEntries(chatId)[entry.path]) return;
       const latestBuffer = findEditorBuffer(entry.path);
       if (

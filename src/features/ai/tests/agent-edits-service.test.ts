@@ -27,6 +27,7 @@ const mocks = vi.hoisted(() => ({
   writeFile: vi.fn(),
   deleteFileOrDirectory: vi.fn(),
   recordCheckpointAgentWrite: vi.fn(),
+  emitGitChanged: vi.fn(),
   currentTurn: null as string | null,
 }));
 
@@ -70,7 +71,7 @@ vi.mock("@/features/file-system/stores/file-watcher.store", () => ({
     }),
   },
 }));
-vi.mock("@/features/git/events/git-events", () => ({ emitGitChanged: vi.fn() }));
+vi.mock("@/features/git/events/git-events", () => ({ emitGitChanged: mocks.emitGitChanged }));
 vi.mock("@/utils/toast", () => ({ showToast: mocks.showToast }));
 vi.mock("@/ui/dialog", () => ({ showConfirmDialog: mocks.showConfirmDialog }));
 
@@ -109,6 +110,7 @@ describe("agent edits service", () => {
       mocks.showToast,
       mocks.showConfirmDialog,
       mocks.recordCheckpointAgentWrite,
+      mocks.emitGitChanged,
     ]) {
       mock.mockReset();
     }
@@ -358,6 +360,11 @@ describe("agent edits service", () => {
 
     expect(mocks.disk.has(PATH)).toBe(false);
     expect(entry()).toBeUndefined();
+    expect(mocks.emitGitChanged).toHaveBeenCalledWith({
+      filePath: PATH,
+      scopes: ["working-tree"],
+      source: "agent-edit-review",
+    });
   });
 
   it("deletes a created file with unsaved edits only after the user confirms", async () => {

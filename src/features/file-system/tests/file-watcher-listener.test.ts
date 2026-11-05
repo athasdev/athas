@@ -159,6 +159,36 @@ describe("file watcher listener", () => {
     await handleFileChange({ path: "/repo/a.ts", event_type: "reloaded" });
 
     expect(mocks.reloadBufferFromDisk).not.toHaveBeenCalled();
+    expect(mocks.emitGitChanged).not.toHaveBeenCalled();
+  });
+
+  it("refreshes Git status after an agent writes a file that is not open", async () => {
+    await handleFileChange({ path: "/repo/a.ts", event_type: "reloaded", agent_write_id: 7 });
+
+    expect(mocks.reloadBufferFromDisk).not.toHaveBeenCalled();
+    expect(mocks.emitGitChanged).toHaveBeenCalledWith({
+      filePath: "/repo/a.ts",
+      scopes: ["working-tree"],
+      source: "agent-write",
+    });
+  });
+
+  it("refreshes Git status when an agent creates or deletes a file", async () => {
+    vi.useFakeTimers();
+    try {
+      await handleFileChange({ path: "/repo/new.ts", event_type: "opened", agent_write_id: 8 });
+      await handleFileChange({ path: "/repo/old.ts", event_type: "deleted" });
+      await vi.advanceTimersByTimeAsync(300);
+    } finally {
+      vi.useRealTimers();
+    }
+
+    expect(mocks.emitGitChanged).toHaveBeenCalledWith(
+      expect.objectContaining({ filePath: "/repo/new.ts", source: "agent-write" }),
+    );
+    expect(mocks.emitGitChanged).toHaveBeenCalledWith(
+      expect.objectContaining({ filePath: "/repo/old.ts", scopes: ["working-tree"] }),
+    );
   });
 
   describe("watcher batches", () => {
@@ -189,6 +219,39 @@ describe("file watcher listener", () => {
       expect(mocks.refreshDirectory).toHaveBeenCalledTimes(1);
       expect(mocks.refreshDirectory).toHaveBeenCalledWith("/repo");
       expect(mocks.reloadBufferFromDisk).toHaveBeenCalledWith("buffer-1");
+    });
+
+    it("refreshes Git status once for changes to files that are not open", async () => {
+      await deliver({
+        root: "/repo",
+        changes: [
+          { path: "/repo/a.ts", kind: "modified", is_dir: false },
+          { path: "/repo/b.ts", kind: "modified", is_dir: false },
+          { path: "/repo/c.ts", kind: "created", is_dir: false },
+        ],
+        git_changed: false,
+        rescan: false,
+      });
+
+      expect(mocks.emitGitChanged).toHaveBeenCalledOnce();
+      expect(mocks.emitGitChanged).toHaveBeenCalledWith({
+        repoPath: "/repo",
+        scopes: ["working-tree"],
+        source: "external-file-change",
+      });
+    });
+
+    it("leaves Git status to the save when a batch only echoes our own saves", async () => {
+      mocks.pendingSaves.add("/repo/a.ts");
+
+      await deliver({
+        root: "/repo",
+        changes: [{ path: "/repo/a.ts", kind: "modified", is_dir: false }],
+        git_changed: false,
+        rescan: false,
+      });
+
+      expect(mocks.emitGitChanged).not.toHaveBeenCalled();
     });
 
     it("applies a batch to the workspace that owns its root", async () => {

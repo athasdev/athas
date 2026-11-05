@@ -73,37 +73,34 @@ function scheduleDirectoryRefresh(workspaceId: string, directoryPath: string) {
  * back what it read from the buffer) it is simply marked saved, otherwise the user's edits stay
  * and a notice offers to reload.
  */
-async function syncOpenBuffer(
-  workspaceId: string,
-  path: string,
-): Promise<"not-open" | "synced" | "kept-unsaved"> {
+async function syncOpenBuffer(workspaceId: string, path: string): Promise<void> {
   const bufferState = useBufferStore.getStore(workspaceId).getState();
   const buffer = getBufferByPath(bufferState.buffers, path);
   if (!buffer) {
-    return "not-open";
+    return;
   }
 
   if (buffer.type !== "editor" || !buffer.isDirty) {
     await bufferState.actions.reloadBufferFromDisk(buffer.id);
-    return "synced";
+    return;
   }
 
   const diskContent = await readFileContent(path).catch(() => null);
   if (diskContent === null) {
-    return "kept-unsaved";
+    return;
   }
   // The user may have saved or closed the file while the disk was read.
   const current = getBufferByPath(useBufferStore.getStore(workspaceId).getState().buffers, path);
   if (current?.type !== "editor") {
-    return "not-open";
+    return;
   }
   if (!current.isDirty) {
     await bufferState.actions.reloadBufferFromDisk(current.id);
-    return "synced";
+    return;
   }
   if (readBufferText(current) === diskContent) {
     bufferState.actions.markBufferDirty(current.id, false);
-    return "synced";
+    return;
   }
 
   showToast({
@@ -122,37 +119,49 @@ async function syncOpenBuffer(
       },
     },
   });
-  return "kept-unsaved";
 }
 
-export async function handleFileChange(
+/**
+ * Applies one file change to the file tree and open editors. Returns whether the change can move
+ * Git status: every change except the echo of our own save, which reports itself to Git.
+ */
+async function applyFileChange(
   { path, event_type, agent_write_id }: FileChangeEvent,
-  workspaceId = workspaceRuntimeRegistry.getActiveWorkspaceId(),
-) {
+  workspaceId: string,
+): Promise<boolean> {
   invalidateFileTreeGitIgnoreCache(path);
 
   emitAppEvent("file:external-change", { path, agentWriteId: agent_write_id });
 
+  const isOwnSave = useFileWatcherStore.getStore(workspaceId).getState().pendingSaves.has(path);
+
   if (event_type === "deleted" || event_type === "opened") {
     // Computed here rather than over IPC: bursts of watcher events each paid a round trip.
     scheduleDirectoryRefresh(workspaceId, getDirName(path));
-    return;
+    return !isOwnSave;
   }
 
-  const fileWatcherState = useFileWatcherStore.getStore(workspaceId).getState();
-  if (fileWatcherState.pendingSaves.has(path)) {
-    return;
+  if (isOwnSave) {
+    return false;
   }
 
-  const outcome = await syncOpenBuffer(workspaceId, path);
-  if (outcome === "not-open") {
+  await syncOpenBuffer(workspaceId, path);
+  return true;
+}
+
+/** Handles one `file-changed` event: an agent write or delete, reported file by file. */
+export async function handleFileChange(
+  change: FileChangeEvent,
+  workspaceId = workspaceRuntimeRegistry.getActiveWorkspaceId(),
+) {
+  if (!(await applyFileChange(change, workspaceId))) {
     return;
   }
 
   emitGitChanged({
-    filePath: path,
+    filePath: change.path,
     scopes: ["working-tree"],
-    source: "external-file-change",
+    source: change.agent_write_id === undefined ? "external-file-change" : "agent-write",
   });
 }
 
@@ -168,9 +177,9 @@ export async function handleWorkspaceFileChanges(batch: WorkspaceFileChanges) {
     scheduleDirectoryRefresh(workspaceId, batch.root);
   }
 
-  await Promise.all(
+  const outcomes = await Promise.all(
     batch.changes.map((change) =>
-      handleFileChange(
+      applyFileChange(
         { path: change.path, event_type: EVENT_TYPE_BY_KIND[change.kind] },
         workspaceId,
       ),
@@ -181,6 +190,14 @@ export async function handleWorkspaceFileChanges(batch: WorkspaceFileChanges) {
     emitGitChanged({
       repoPath: batch.root,
       scopes: ["working-tree", "history", "refs", "stashes"],
+      source: "external-file-change",
+    });
+  } else if (outcomes.some(Boolean)) {
+    // One refresh for the whole batch: a burst of writes to files that are not open in an
+    // editor still changes Git status.
+    emitGitChanged({
+      repoPath: batch.root,
+      scopes: ["working-tree"],
       source: "external-file-change",
     });
   }
