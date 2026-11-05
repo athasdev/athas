@@ -45,6 +45,20 @@ function isToolOnlyMessage(message: Message | null | undefined) {
   );
 }
 
+/**
+ * The prompt the scroller may pin to the top. Only the latest one is an anchor: the scroller
+ * jumps to any anchor it has not pinned yet when a commit swaps rows one for one (a retry drops
+ * the failed reply and adds a new one), and older prompts loaded with the chat never were.
+ */
+function findLatestScrollAnchorId(messages: Message[] | undefined) {
+  if (!messages) return null;
+  for (let index = messages.length - 1; index >= 0; index--) {
+    const message = messages[index];
+    if (message && (message.role === "user" || isChatTerminalCommand(message))) return message.id;
+  }
+  return null;
+}
+
 /** The message at `index` when it is still there, else wherever it moved. */
 function findMessage(messages: Message[] | undefined, index: number, messageId: string) {
   const atIndex = messages?.[index];
@@ -58,6 +72,7 @@ interface ChatTimelineMessageProps {
   messageId: string;
   messageIndex: number;
   isLastMessage: boolean;
+  isScrollAnchor: boolean;
   searchQuery: string;
   isActiveSearchMatch: boolean;
   canEditUserMessages: boolean;
@@ -77,6 +92,7 @@ const ChatTimelineMessage = memo(function ChatTimelineMessage({
   messageId,
   messageIndex,
   isLastMessage,
+  isScrollAnchor,
   searchQuery,
   isActiveSearchMatch,
   canEditUserMessages,
@@ -99,7 +115,11 @@ const ChatTimelineMessage = memo(function ChatTimelineMessage({
 
   if (isChatTerminalCommand(message)) {
     return (
-      <MessageScrollerItem messageId={message.id} scrollAnchor data-ai-message-id={message.id}>
+      <MessageScrollerItem
+        messageId={message.id}
+        scrollAnchor={isScrollAnchor}
+        data-ai-message-id={message.id}
+      >
         <ChatTerminalCommand message={message} />
       </MessageScrollerItem>
     );
@@ -118,7 +138,7 @@ const ChatTimelineMessage = memo(function ChatTimelineMessage({
       rendering={
         normalizedSearchQuery || message.isStreaming || isLastMessage ? "eager" : "deferred"
       }
-      scrollAnchor={message.role === "user"}
+      scrollAnchor={isScrollAnchor}
       data-ai-message-id={message.id}
       className={cn(
         // A prompt opens a turn with room above it; the agent's reply sits close beneath it,
@@ -188,6 +208,9 @@ export const ChatMessages = memo(function ChatMessages({
           toMs(message.timestamp),
         ) ?? EMPTY_TIMESTAMPS,
     ),
+  );
+  const latestScrollAnchorId = useAIChatStore((state) =>
+    findLatestScrollAnchorId(resolvedChatId ? state.messagesByChat[resolvedChatId] : undefined),
   );
   const isStreaming = useAIChatStore((state) =>
     Boolean(
@@ -264,6 +287,7 @@ export const ChatMessages = memo(function ChatMessages({
             messageId={item.message.id}
             messageIndex={index}
             isLastMessage={isLastMessage}
+            isScrollAnchor={item.message.id === latestScrollAnchorId}
             searchQuery={searchQuery}
             isActiveSearchMatch={item.message.id === activeSearchMessageId}
             canEditUserMessages={canEditUserMessages}

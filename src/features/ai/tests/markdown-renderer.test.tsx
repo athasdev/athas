@@ -233,6 +233,48 @@ describe("markdown renderer", () => {
     ]);
   });
 
+  it("keeps the numbering of ordered lists split by bullet lists", async () => {
+    await render(
+      [
+        "1. **Trackpad**",
+        "- Mechanism",
+        "- Compliance",
+        "2. **System**",
+        "- Settings",
+        "",
+        "3. **Keyboard**",
+        "4. Shortcuts",
+      ].join("\n"),
+    );
+
+    const lists = [...container.querySelectorAll("ol")];
+    expect(lists.map((list) => list.start)).toEqual([1, 2, 3]);
+    expect(lists[0]?.hasAttribute("start")).toBe(false);
+    expect(lists.map((list) => list.querySelectorAll("li").length)).toEqual([1, 1, 2]);
+    expect(container.querySelectorAll("ul li")).toHaveLength(3);
+  });
+
+  it("renders br tags in table cells as line breaks without allowing other HTML", async () => {
+    await render(
+      [
+        "| Gesture | Action |",
+        "| --- | --- |",
+        "| 1. Corner mute<br>(Double-tap corner to mute Mac) | a<br/>b<BR />c |",
+        "| <b>bold</b> | `<br>` |",
+      ].join("\n"),
+    );
+
+    const cells = [...container.querySelectorAll("td")];
+    expect(cells[0]?.querySelectorAll("br")).toHaveLength(1);
+    expect(cells[0]?.textContent).toBe("1. Corner mute(Double-tap corner to mute Mac)");
+    expect(cells[1]?.querySelectorAll("br")).toHaveLength(2);
+    expect(cells[1]?.textContent).toBe("abc");
+    expect(container.querySelector("b")).toBeNull();
+    expect(cells[2]?.textContent).toBe("<b>bold</b>");
+    expect(cells[3]?.querySelector("br")).toBeNull();
+    expect(cells[3]?.querySelector("code")?.textContent).toBe("<br>");
+  });
+
   it("does not treat an invalid separator as a table", async () => {
     await render("| a | b |\n| -- | x |");
 

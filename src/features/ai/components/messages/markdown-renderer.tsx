@@ -271,6 +271,13 @@ function renderInlineFormatting(text: string): React.ReactNode {
   };
 
   while (remaining.length > 0) {
+    const lineBreakMatch = remaining.match(/^<br\s*\/?>/i);
+    if (lineBreakMatch) {
+      elements.push(<br key={getInlineKey("br", lineBreakMatch[0])} />);
+      remaining = remaining.slice(lineBreakMatch[0].length);
+      continue;
+    }
+
     // Inline code
     const codeMatch = remaining.match(/^`([^`]+)`/);
     if (codeMatch) {
@@ -353,7 +360,7 @@ function renderInlineFormatting(text: string): React.ReactNode {
     }
 
     // Find next special character or consume all remaining text
-    const nextSpecial = remaining.search(/[`~*[\]]|https?:\/\//);
+    const nextSpecial = remaining.search(/[`~*[\]]|https?:\/\/|<br\s*\/?>/i);
     if (nextSpecial === -1) {
       elements.push(<span key={getInlineKey("text", remaining)}>{remaining}</span>);
       break;
@@ -380,7 +387,7 @@ function renderContent(text: string): React.ReactNode[] {
   let codeBlockLanguage = "";
   let codeBlockContent: string[] = [];
   let codeBlockStartLine = 0;
-  let currentList: { type: "ol" | "ul"; items: string[] } | null = null;
+  let currentList: { type: "ol" | "ul"; items: string[]; start: number } | null = null;
   let currentListStartLine = 0;
   let currentParagraph: string[] = [];
   let currentParagraphStartLine = 0;
@@ -404,7 +411,10 @@ function renderContent(text: string): React.ReactNode[] {
     if (currentList && currentList.items.length > 0) {
       if (currentList.type === "ol") {
         elements.push(
-          <ol key={`ol-${currentListStartLine}`}>
+          <ol
+            key={`ol-${currentListStartLine}`}
+            start={currentList.start === 1 ? undefined : currentList.start}
+          >
             {currentList.items.map((item, idx) => (
               <li key={idx}>{renderInlineFormatting(item)}</li>
             ))}
@@ -504,7 +514,7 @@ function renderContent(text: string): React.ReactNode[] {
       flushParagraph();
       if (currentList?.type !== "ol") {
         flushList();
-        currentList = { type: "ol", items: [] };
+        currentList = { type: "ol", items: [], start: Number.parseInt(numberedMatch[1], 10) };
         currentListStartLine = i;
       }
       currentList.items.push(numberedMatch[2]);
@@ -517,7 +527,7 @@ function renderContent(text: string): React.ReactNode[] {
       flushParagraph();
       if (currentList?.type !== "ul") {
         flushList();
-        currentList = { type: "ul", items: [] };
+        currentList = { type: "ul", items: [], start: 1 };
         currentListStartLine = i;
       }
       currentList.items.push(bulletMatch[1]);

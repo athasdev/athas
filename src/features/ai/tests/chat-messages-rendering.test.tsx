@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { act } from "react";
+import { act, memo } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
@@ -37,14 +37,26 @@ vi.mock("@/features/ai/services/ai-chat-history-service", () => ({
 }));
 vi.mock("@/ui/message-scroller", () => ({
   MessageScrollerContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  MessageScrollerItem: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  MessageScrollerItem: ({
+    children,
+    messageId,
+    scrollAnchor,
+  }: {
+    children: React.ReactNode;
+    messageId?: string;
+    scrollAnchor?: boolean;
+  }) => (
+    <div data-message-id={messageId} data-scroll-anchor={scrollAnchor ? "true" : "false"}>
+      {children}
+    </div>
+  ),
   useMessageScroller: () => ({ scrollToMessage: () => undefined }),
 }));
 vi.mock("@/features/ai/components/chat/chat-message", () => ({
-  ChatMessage: ({ message }: { message: Message }) => {
+  ChatMessage: memo(function ChatMessage({ message }: { message: Message }) {
     renders.set(message.id, (renders.get(message.id) ?? 0) + 1);
     return <p>{message.content}</p>;
-  },
+  }),
 }));
 vi.mock("@/features/ai/components/chat/agent-shortcuts", () => ({ AgentShortcuts: () => null }));
 vi.mock("@/features/ai/components/chat/acp-inline-event", () => ({ AcpInlineEvent: () => null }));
@@ -118,6 +130,39 @@ describe("chat transcript rendering", () => {
     expect(timelineBuilds.count).toBe(builds + 1);
     expect(container.textContent).toContain("More");
     expect(renders.get("prompt")).toBe(1);
+  });
+
+  it("anchors only the latest prompt so a retry does not scroll to an older one", async () => {
+    const anchors = () =>
+      [...container.querySelectorAll('[data-scroll-anchor="true"]')].map((element) =>
+        element.getAttribute("data-message-id"),
+      );
+    await act(async () => {
+      const { actions } = useAIChatStore.getState();
+      actions.updateMessage("a", "reply", { content: "Done", isStreaming: false });
+      actions.addMessage("a", { id: "second", role: "user", content: "Again", timestamp: at });
+      actions.addMessage("a", {
+        id: "failed",
+        role: "assistant",
+        content: "[ERROR_BLOCK]\ntitle: Could not connect\n[/ERROR_BLOCK]",
+        timestamp: at,
+      });
+    });
+    expect(anchors()).toEqual(["second"]);
+
+    await act(async () => {
+      const { actions } = useAIChatStore.getState();
+      actions.replaceUserMessage("a", "second", "Again");
+      actions.addMessage("a", {
+        id: "retry",
+        role: "assistant",
+        content: "",
+        timestamp: at,
+        isStreaming: true,
+      });
+    });
+    expect(container.querySelector('[data-message-id="failed"]')).toBeNull();
+    expect(anchors()).toEqual(["second"]);
   });
 
   it("ignores updates to other chats", async () => {
