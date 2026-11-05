@@ -358,6 +358,27 @@ jobs:
           RUSTFLAGS: ${{ matrix.rustflags }}
         run: bun tauri build ${{ matrix.args }}
 
+      # A library found through pkg-config on the runner (such as Homebrew's liblzma) links
+      # dynamically and is missing on users' Macs, so the app fails to launch. Only system
+      # libraries may be linked.
+      - name: Check macOS binary links only system libraries (macOS only)
+        if: matrix.os == 'macos'
+        shell: bash
+        run: |
+          set -euo pipefail
+          binary="$(find "${{ matrix.bundle_path }}/macos" -path '*.app/Contents/MacOS/*' -type f -perm -u+x | head -n 1)"
+          if [[ -z "$binary" ]]; then
+            echo "No macOS app binary found under ${{ matrix.bundle_path }}/macos" >&2
+            exit 1
+          fi
+          foreign="$(otool -L "$binary" | tail -n +2 | awk '{print $1}' | grep -vE '^(/System/|/usr/lib/)' || true)"
+          if [[ -n "$foreign" ]]; then
+            echo "$binary links libraries that users' Macs do not have:" >&2
+            echo "$foreign" >&2
+            exit 1
+          fi
+          echo "$binary links only system libraries."
+
       - name: Package Linux tarball (Linux only)
         if: matrix.os == 'linux'
         run: |

@@ -18,7 +18,7 @@ tempfile = "3.20.0"
 url = "2.5"
 walkdir = "2.5.0"
 which = "7.0"
-xz2 = "0.1"
+xz2 = { version = "0.1", features = ["static"] }
 zip = "9"
 specta = { version = "=2.0.0-rc.25", features = ["derive", "serde_json"] }
 
