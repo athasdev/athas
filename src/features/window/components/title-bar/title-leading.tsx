@@ -47,12 +47,8 @@ export function TitleLeading({
     const container = containerRef.current;
     if (!merged || sidebarShown || !container) {
       root.style.removeProperty("--athas-title-leading-end");
-      root.style.removeProperty("--athas-title-leading-offset");
       return;
     }
-    // A full-screen pane starts at the window edge, not after the activity bar.
-    if (overFullscreen) root.style.setProperty("--athas-title-leading-offset", "0px");
-    else root.style.removeProperty("--athas-title-leading-offset");
     const publish = () =>
       root.style.setProperty(
         "--athas-title-leading-end",
@@ -64,9 +60,8 @@ export function TitleLeading({
     return () => {
       observer.disconnect();
       root.style.removeProperty("--athas-title-leading-end");
-      root.style.removeProperty("--athas-title-leading-offset");
     };
-  }, [merged, overFullscreen, sidebarShown]);
+  }, [merged, sidebarShown]);
 
   return (
     <ControlSizeProvider size={IS_MAC ? "sm" : "lg"}>

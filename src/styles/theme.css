@@ -64,12 +64,9 @@
   /* The activity bar down the left edge: one rail control plus room either side. */
   --spacing-activity-bar: calc(var(--athas-rail-control-size) + 0.5rem);
   /* Room the top-left pane header leaves for the window controls and sidebar toggle while the
-     sidebar is hidden; the title row overlay keeps --athas-title-leading-end current. The pane
-     starts after the activity bar, except a full-screen pane, which sets the offset to 0. */
-  --spacing-title-leading: calc(
-    var(--athas-title-leading-end, 0px) - var(--athas-workbench-gap) -
-      var(--athas-title-leading-offset, var(--spacing-activity-bar))
-  );
+     sidebar is hidden; the title row overlay keeps --athas-title-leading-end current. The activity
+     bar goes with the sidebar, so that pane starts at the window edge. */
+  --spacing-title-leading: calc(var(--athas-title-leading-end, 0px) - var(--athas-workbench-gap));
   --spacing-chrome-control: var(--athas-chrome-control-height);
   /* Pads one line of composer text to the height of the buttons beside it (h-7), so a single
      line, and the last line of many, centres on them. */

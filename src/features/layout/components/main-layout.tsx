@@ -130,8 +130,6 @@ export function MainLayout() {
   const dockOwner = useDockOwner();
   const dockCoversCentre = useDockCoversCentre(dockOwner);
   const renderedSidebarVisible = isSidebarVisible && !responsiveLayout.narrow;
-  // The window controls sit on the sidebar's top row; with no sidebar under them they get a title
-  // row of their own, so they never straddle the activity bar and the centre.
   const mergedTitleRow = useMergedTitleRow();
   const fullscreenMode = useWorkbenchFullscreenMode();
   const sidebarOverlayOpen = useWorkbenchSidebarStore.use.overlayOpen() && responsiveLayout.narrow;
@@ -357,7 +355,13 @@ export function MainLayout() {
               className="absolute inset-x-0 top-0 h-workbench"
             />
           ) : null}
-          <ActivityBar narrow={responsiveLayout.narrow} titleRow={mergedTitleRow} />
+          {/* The activity bar goes with the sidebar; a narrow window keeps it, since there the
+              sidebar floats instead of taking a column. */}
+          <ActivityBar
+            narrow={responsiveLayout.narrow}
+            titleRow={mergedTitleRow}
+            hidden={!renderedSidebarVisible && !responsiveLayout.narrow}
+          />
           <ResizablePane hidden={!renderedSidebarVisible}>
             <WorkbenchSidebar titleRow={mergedTitleRow} />
           </ResizablePane>

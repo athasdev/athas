@@ -10,6 +10,7 @@ import { Button } from "@/ui/button";
 import { ControlSizeProvider } from "@/ui/control-size";
 import { ChatBubbleTextIcon, IconContext } from "@/ui/icons";
 import { OverlaySideProvider } from "@/ui/overlay-side";
+import { cn } from "@/utils/cn";
 import { useProjectTools } from "../dock/project-tools";
 
 const SOLID_ICON = { filled: true };
@@ -45,7 +46,16 @@ function ActivityItem({
  * The column down the left edge that picks what the sidebar shows: the agents, then every project
  * tool. Picking the view that already shows puts the sidebar away.
  */
-export function ActivityBar({ narrow, titleRow }: { narrow: boolean; titleRow: boolean }) {
+export function ActivityBar({
+  narrow,
+  titleRow,
+  hidden = false,
+}: {
+  narrow: boolean;
+  titleRow: boolean;
+  /** Folds away with the sidebar, at the same pace, so the centre moves once. */
+  hidden?: boolean;
+}) {
   const tools = useProjectTools();
   const aiEnabled = useSettingsStore((state) => state.settings.coreFeatures.aiChat);
   const activeView = useWorkbenchSidebarStore.use.activeView();
@@ -56,8 +66,13 @@ export function ActivityBar({ narrow, titleRow }: { narrow: boolean; titleRow: b
   return (
     <nav
       aria-label="Activity bar"
+      aria-hidden={hidden || undefined}
+      inert={hidden}
       data-slot="activity-bar"
-      className="flex h-full w-activity-bar shrink-0 select-none flex-col items-center"
+      className={cn(
+        "flex h-full shrink-0 select-none flex-col items-center overflow-hidden transition-[width] duration-fast ease-smooth motion-reduce:transition-none",
+        hidden ? "w-0" : "w-activity-bar",
+      )}
     >
       {titleRow ? (
         <div aria-hidden data-tauri-drag-region className="h-pane-header w-full shrink-0" />
