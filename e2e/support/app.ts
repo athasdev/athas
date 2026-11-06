@@ -12,6 +12,7 @@ export const UI_TIMEOUT = 15_000;
 export const FILE_TREE = By.css('[role="tree"][aria-label="File Explorer"]');
 export const EDITOR_LINES = By.css(".cm-editor .cm-content");
 const WORKBENCH = By.css('[data-slot="workbench-island"]');
+const FILES_ACTIVITY = By.css('[data-slot="activity-bar"] button[aria-label="Files"]');
 const PALETTE_INPUT = By.css('input[placeholder="Search commands and actions..."]');
 
 export function treeItem(name: string) {
@@ -112,6 +113,11 @@ export async function waitForWorkbench() {
 
 export async function waitForProjectTree() {
   await waitForWorkbench();
+  // The sidebar opens on Agents; show Files from the activity bar like a user would.
+  await waitForDisplayed(FILES_ACTIVITY, "The activity bar never showed Files");
+  if ((await attribute(FILES_ACTIVITY, "aria-pressed")) !== "true") {
+    await click(FILES_ACTIVITY);
+  }
   // The project root row can come up collapsed; expand it like a user would.
   const root = treeItem(path.basename(workspaceDir));
   const readme = treeItem("README.md");
