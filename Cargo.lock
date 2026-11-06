@@ -572,7 +572,7 @@ dependencies = [
 
 [[package]]
 name = "athas"
-version = "0.18.0-beta.1"
+version = "0.18.0-beta.2"
 dependencies = [
  "anyhow",
  "async-trait",
