@@ -60,13 +60,12 @@ jobs:
       - name: Validate JavaScript toolchain requirements
         run: |
           nix develop --no-write-lock-file --command bun -e '
-            const { packageManager, engines } = require("./package.json");
-            const minimumBun = packageManager.split("@")[1];
+            const { engines } = require("./package.json");
             const node = Bun.spawnSync(["node", "--version"]);
             const nodeVersion = node.stdout.toString().trim().replace(/^v/, "");
             if (node.exitCode !== 0 ||
-                !Bun.semver.satisfies(Bun.version, ">=" + minimumBun) ||
+                !Bun.semver.satisfies(Bun.version, engines.bun) ||
                 !Bun.semver.satisfies(nodeVersion, engines.node)) {
-              throw new Error(`Expected Bun >=${minimumBun} and Node ${engines.node}; got Bun ${Bun.version} and Node ${nodeVersion}`);
+              throw new Error(`Expected Bun ${engines.bun} and Node ${engines.node}; got Bun ${Bun.version} and Node ${nodeVersion}`);
             }
           '

@@ -41,8 +41,9 @@ the libraries through Nix's setup hook without a manual `PKG_CONFIG_PATH`.
 
 Rust follows `rust-toolchain.toml` (currently nightly), with rust-analyzer from the
 same toolchain. `flake.lock` pins the Nixpkgs and Rust overlay revisions, so the
-shell stays reproducible between updates. CI checks Bun against the minimum
-version in `package.json` and Node against its `engines.node` requirement.
+shell stays reproducible between updates. CI checks Bun against the
+`engines.bun` minimum in `package.json` and Node against its `engines.node`
+requirement.
 
 ## Validation and updates
 
