@@ -11,10 +11,9 @@ describe("file tree store", () => {
     workspaceRuntimeRegistry.activateWorkspace({ id: "ws", name: "R", path: "/r" });
   });
 
-  it("keeps expanded and selected rows under a renamed directory", () => {
+  it("keeps expanded rows under a renamed directory", () => {
     const { actions } = useFileTreeStore.getState();
     actions.setExpandedPaths(new Set(["/r", "/r/src", "/r/src/nested", "/r/srcx"]));
-    actions.selectFile("/r/src/nested/a.ts");
 
     actions.relocatePath("/r/src", "/r/core");
 
@@ -22,7 +21,6 @@ describe("file tree store", () => {
     expect([...state.expandedPaths]).toEqual(["/r", "/r/core", "/r/core/nested", "/r/srcx"]);
     expect(state.actions.isExpanded("/r/core/nested")).toBe(true);
     expect(state.actions.isExpanded("/r/src")).toBe(false);
-    expect([...state.selectedFiles]).toEqual(["/r/core/nested/a.ts"]);
   });
 
   it("leaves state untouched when nothing is under the moved path", () => {
@@ -33,5 +31,14 @@ describe("file tree store", () => {
     actions.relocatePath("/r/src", "/r/core");
 
     expect(useFileTreeStore.getState()).toBe(before);
+  });
+
+  it("forgets a deleted folder and everything expanded under it", () => {
+    const { actions } = useFileTreeStore.getState();
+    actions.setExpandedPaths(new Set(["/r", "/r/src", "/r/src/nested", "/r/srcx"]));
+
+    actions.forgetPath("/r/src");
+
+    expect([...useFileTreeStore.getState().expandedPaths]).toEqual(["/r", "/r/srcx"]);
   });
 });

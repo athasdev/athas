@@ -568,3 +568,112 @@ export function getStickyAncestorRows(
     (row): row is VisibleFileTreeRow => row !== null,
   );
 }
+
+/** The index of the row's parent row, or -1 for a top-level row. */
+export function getFileTreeParentRowIndex(
+  rows: readonly VisibleFileTreeRow[],
+  rowIndex: number,
+): number {
+  if (rowIndex < 0 || rowIndex >= rows.length) return -1;
+  return getParentRowIndexes(rows)[rowIndex] ?? -1;
+}
+
+interface FileTreeRowPositions {
+  /** 1-based position of each row among its siblings. */
+  positionInSet: Int32Array;
+  /** Number of siblings, the row included, of each row. */
+  setSize: Int32Array;
+}
+
+const rowPositionsCache = new WeakMap<readonly VisibleFileTreeRow[], FileTreeRowPositions>();
+
+/**
+ * Sibling positions for `aria-posinset` and `aria-setsize`: the tree only renders the rows in view,
+ * so assistive technology cannot count the siblings itself.
+ */
+export function getFileTreeRowPositions(rows: readonly VisibleFileTreeRow[]): FileTreeRowPositions {
+  const cached = rowPositionsCache.get(rows);
+  if (cached) return cached;
+
+  const parents = getParentRowIndexes(rows);
+  const positionInSet = new Int32Array(rows.length);
+  const setSize = new Int32Array(rows.length);
+  // Children counts keyed by parent row index, with the top level at index rows.length.
+  const childCounts = new Int32Array(rows.length + 1);
+  for (let index = 0; index < rows.length; index++) {
+    const parent = parents[index] < 0 ? rows.length : parents[index];
+    childCounts[parent] += 1;
+    positionInSet[index] = childCounts[parent];
+  }
+  for (let index = 0; index < rows.length; index++) {
+    setSize[index] = childCounts[parents[index] < 0 ? rows.length : parents[index]];
+  }
+
+  const positions = { positionInSet, setSize };
+  rowPositionsCache.set(rows, positions);
+  return positions;
+}
+
+/**
+ * The row to put keyboard focus on for a path: the path's own row; else, when the row went away
+ * from an open folder (deleted, moved, filtered), the row now at the last focused index; else the
+ * nearest ancestor still shown (its folder was collapsed).
+ */
+export function resolveFileTreeFocusIndex(
+  rows: readonly VisibleFileTreeRow[],
+  getIndex: (path: string) => number | undefined,
+  path: string | undefined,
+  fallbackIndex = -1,
+): number {
+  if (rows.length === 0 || !path) return -1;
+  const index = getIndex(path);
+  if (index !== undefined) return index;
+
+  let ancestor = stripTrailingSeparators(path);
+  while (true) {
+    const separator = Math.max(ancestor.lastIndexOf("/"), ancestor.lastIndexOf("\\"));
+    if (separator <= 0) break;
+    ancestor = ancestor.slice(0, separator);
+    const ancestorIndex = getIndex(ancestor);
+    if (ancestorIndex === undefined) continue;
+    // An open ancestor means the row itself went away; the row now in its place is closer.
+    if (rows[ancestorIndex]?.isExpanded && fallbackIndex > ancestorIndex) {
+      return Math.min(fallbackIndex, rows.length - 1);
+    }
+    return ancestorIndex;
+  }
+  if (fallbackIndex < 0) return -1;
+  return Math.min(fallbackIndex, rows.length - 1);
+}
+
+function stripTrailingSeparators(path: string): string {
+  return path.length > 1 ? path.replace(/[\\/]+$/, "") : path;
+}
+
+/**
+ * The next row whose name starts with the typed prefix, searching forward from `startIndex` and
+ * wrapping around. A prefix of one repeated character steps through the rows starting with it.
+ */
+export function findFileTreeRowByPrefix(
+  rows: readonly VisibleFileTreeRow[],
+  prefix: string,
+  currentIndex: number,
+): number {
+  const normalizedPrefix = prefix.toLowerCase();
+  if (!normalizedPrefix || rows.length === 0) return -1;
+
+  const isRepeatedCharacter = [...normalizedPrefix].every(
+    (character) => character === normalizedPrefix[0],
+  );
+  const searchPrefix = isRepeatedCharacter ? normalizedPrefix[0]! : normalizedPrefix;
+  // A fresh or cycling search moves past the current row; a longer prefix may still match it.
+  const startOffset = isRepeatedCharacter ? 1 : 0;
+  const start = Math.max(0, currentIndex);
+
+  for (let offset = 0; offset < rows.length; offset++) {
+    const index = (start + startOffset + offset) % rows.length;
+    const row = rows[index]!;
+    if ((row.displayName ?? row.file.name).toLowerCase().startsWith(searchPrefix)) return index;
+  }
+  return -1;
+}

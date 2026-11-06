@@ -44,7 +44,12 @@ export const useFffSearch = (
     fffSearchFiles(trimmedQuery, currentRootPaths, limit)
       .then((results) => {
         if (cancelled) return;
-        setSearchState({ key: searchKey, hits: results, error: null });
+        // The command can answer null (an index that is not ready); consumers iterate the hits.
+        setSearchState({
+          key: searchKey,
+          hits: Array.isArray(results) ? results : [],
+          error: null,
+        });
       })
       .catch((error) => {
         if (cancelled) return;

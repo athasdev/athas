@@ -113,4 +113,36 @@ describe("file tree git status lookup", () => {
       ),
     ).toBeNull();
   });
+
+  test("colors everything inside a folder Git reports as untracked as a whole", () => {
+    const lookup = createFileTreeGitStatusLookup({
+      branch: "main",
+      ahead: 0,
+      behind: 0,
+      files: [gitFile("src/new-feature/", "untracked"), gitFile("src/app.ts", "modified")],
+    });
+    const untracked = { colorClassName: "text-git-untracked", label: "Untracked" };
+
+    expect(
+      getFileTreeEntryGitStatusDecoration(
+        fileEntry("/workspace/src/new-feature", true),
+        "/workspace",
+        lookup,
+      ),
+    ).toEqual(untracked);
+    expect(
+      getFileTreeEntryGitStatusDecoration(
+        fileEntry("/workspace/src/new-feature/deep/index.ts"),
+        "/workspace",
+        lookup,
+      ),
+    ).toEqual(untracked);
+    expect(
+      getFileTreeEntryGitStatusDecoration(
+        fileEntry("/workspace/src/new-feature-sibling.ts"),
+        "/workspace",
+        lookup,
+      ),
+    ).toBeNull();
+  });
 });

@@ -182,7 +182,9 @@ pub async fn ssh_rename_path(
       .ok_or("Connection not found")?;
 
    let command = format!(
-      "mkdir -p \"$(dirname {target})\" && mv {source} {target}",
+      "if {{ [ -e {target} ] || [ -L {target} ]; }} && ! [ {source} -ef {target} ]; then echo \
+       'Target path already exists' >&2; exit 1; fi; mkdir -p \"$(dirname {target})\" && mv -- \
+       {source} {target}",
       source = shell_quote(&source_path),
       target = shell_quote(&target_path),
    );

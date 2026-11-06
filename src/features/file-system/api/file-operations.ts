@@ -2,6 +2,7 @@ import type { FileEntry } from "../types/app.types";
 import { joinPath } from "@/utils/path-helpers";
 import {
   getSymlinkInfo,
+  localPathExists,
   createDirectory as platformCreateDirectory,
   deletePath as platformDeletePath,
   readDirectory as platformReadDirectory,
@@ -36,6 +37,10 @@ export async function createNewFile(directoryPath: string, fileName: string): Pr
   }
 
   const filePath = joinPath(directoryPath, fileName);
+  // Writing an empty file over one that is not loaded in the tree would erase it.
+  if (await localPathExists(filePath)) {
+    throw new Error(`${fileName} already exists`);
+  }
   await writeFileContent(filePath, "");
   return filePath;
 }

@@ -3,10 +3,11 @@ import { getVisibleFileTreeRowKey } from "../hooks/use-file-explorer-visible-row
 import { getFileTreeRowHeight } from "../lib/file-tree-row";
 
 describe("getFileTreeRowHeight", () => {
-  test("tracks the configured UI font size", () => {
-    expect(getFileTreeRowHeight(10)).toBe(23.5);
-    expect(getFileTreeRowHeight(15)).toBe(30.25);
-    expect(getFileTreeRowHeight(24)).toBe(42.4);
+  test("tracks the configured UI font size in whole pixels", () => {
+    expect(getFileTreeRowHeight(10)).toBe(24);
+    expect(getFileTreeRowHeight(13)).toBe(28);
+    expect(getFileTreeRowHeight(15)).toBe(30);
+    expect(getFileTreeRowHeight(24)).toBe(42);
   });
 });
 

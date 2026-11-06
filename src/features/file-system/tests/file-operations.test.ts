@@ -2,14 +2,19 @@ import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
 
 const readDirectoryMock = vi.fn();
 const getSymlinkInfoMock = vi.fn();
+const { localPathExistsMock, writeFileMock } = vi.hoisted(() => ({
+  localPathExistsMock: vi.fn(),
+  writeFileMock: vi.fn(),
+}));
 
 vi.mock("../api/file-system-api", () => ({
   createDirectory: vi.fn(),
   deletePath: vi.fn(),
   getSymlinkInfo: getSymlinkInfoMock,
+  localPathExists: localPathExistsMock,
   readDirectory: readDirectoryMock,
   readFile: vi.fn(),
-  writeFile: vi.fn(),
+  writeFile: writeFileMock,
 }));
 
 vi.mock("../stores/file-system.store", () => ({
@@ -81,5 +86,19 @@ describe("file operations", () => {
         symlinkTarget: "../shared",
       },
     ]);
+  });
+
+  it("never empties a file that already exists when creating one with its name", async () => {
+    const { createNewFile } = await import("../api/file-operations");
+    localPathExistsMock.mockResolvedValueOnce(true);
+
+    await expect(createNewFile("/workspace/src", "index.ts")).rejects.toThrow(
+      "index.ts already exists",
+    );
+    expect(writeFileMock).not.toHaveBeenCalled();
+
+    localPathExistsMock.mockResolvedValueOnce(false);
+    await expect(createNewFile("/workspace/src", "new.ts")).resolves.toBe("/workspace/src/new.ts");
+    expect(writeFileMock).toHaveBeenCalledWith("/workspace/src/new.ts", "");
   });
 });

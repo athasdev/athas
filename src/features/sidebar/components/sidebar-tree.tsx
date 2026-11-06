@@ -163,6 +163,8 @@ export const SidebarTree = forwardRef<HTMLDivElement, SidebarTreeProps>(function
 
 type SidebarTreeRowProps = Omit<React.ComponentPropsWithoutRef<"button">, "children"> & {
   active?: boolean;
+  /** Marks the row keyboard focus is on when the tree, not the row, holds DOM focus. */
+  focused?: boolean;
   depth?: number;
   indentSize?: number;
   baseIndent?: number;
@@ -188,6 +190,7 @@ export const SidebarTreeRow = forwardRef<HTMLButtonElement, SidebarTreeRowProps>
   function SidebarTreeRow(
     {
       active = false,
+      focused = false,
       depth = 0,
       indentSize = SIDEBAR_TREE_INDENT_SIZE,
       baseIndent = SIDEBAR_TREE_BASE_INDENT,
@@ -247,6 +250,7 @@ export const SidebarTreeRow = forwardRef<HTMLButtonElement, SidebarTreeRowProps>
           className={cn(
             "font-sans ui-text-sm flex w-full min-w-0 flex-1 select-none items-center whitespace-nowrap rounded-chrome border border-transparent bg-transparent text-left text-foreground outline-none transition-colors duration-fast ease-smooth focus-visible:border-primary gap-1.5 px-1.5 py-1 leading-row",
             active && "bg-selected",
+            focused && "border-primary",
             action && "pr-0",
             className,
           )}

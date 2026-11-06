@@ -37,6 +37,7 @@ const mocks = vi.hoisted(() => ({
     renamePath: vi.fn(),
   },
   copyFile: vi.fn(),
+  exists: vi.fn<(path: string) => Promise<boolean>>(async () => false),
   revealItemInDir: vi.fn(),
   showAlertDialog: vi.fn(),
   showPromptDialog: vi.fn(),
@@ -60,6 +61,7 @@ vi.mock("@tauri-apps/api/path", async (importOriginal) => ({
 vi.mock("@tauri-apps/plugin-fs", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@tauri-apps/plugin-fs")>()),
   copyFile: mocks.copyFile,
+  exists: mocks.exists,
 }));
 vi.mock("@tauri-apps/plugin-opener", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@tauri-apps/plugin-opener")>()),
@@ -331,7 +333,7 @@ describe("creating entries", () => {
       await fs().handleCreateNewFileInDirectory(root, name);
 
       expect(mocks.showAlertDialog).toHaveBeenCalledWith(
-        "Invalid file name: path traversal and special characters are not allowed",
+        expect.stringMatching(/^Invalid file name: /),
         "New File",
       );
       expect(mocks.mutations.createFile).not.toHaveBeenCalled();
@@ -780,5 +782,173 @@ describe("resetWorkspace", () => {
     });
     expect(buffers().buffers).toHaveLength(0);
     expect(tree().getExpandedPaths().size).toBe(0);
+  });
+});
+
+describe("file tree edge cases", () => {
+  it("rejects invalid rename names without touching the disk", async () => {
+    setWorkspace([{ ...file(`${root}/a.ts`), isRenaming: true }]);
+
+    for (const name of ["", "  ", "..", "a/b.ts", " padded.ts"]) {
+      await fs().handleRenamePath(`${root}/a.ts`, name);
+    }
+
+    expect(mocks.mutations.renamePath).not.toHaveBeenCalled();
+    expect(toast.error).toHaveBeenCalledTimes(5);
+    expect(entry(`${root}/a.ts`)).toMatchObject({ isRenaming: false });
+  });
+
+  it("ends rename mode without a rename when the name did not change", async () => {
+    setWorkspace([{ ...file(`${root}/a.ts`), isRenaming: true }]);
+
+    await fs().handleRenamePath(`${root}/a.ts`, "a.ts");
+
+    expect(mocks.mutations.renamePath).not.toHaveBeenCalled();
+    expect(entry(`${root}/a.ts`)).toMatchObject({ isRenaming: false });
+  });
+
+  it("refuses to rename onto an existing sibling but allows a case-only rename", async () => {
+    setWorkspace([{ ...file(`${root}/a.ts`), isRenaming: true }, file(`${root}/b.ts`)]);
+
+    await fs().handleRenamePath(`${root}/a.ts`, "b.ts");
+    expect(mocks.mutations.renamePath).not.toHaveBeenCalled();
+    expect(toast.error).toHaveBeenCalledWith("Could not rename a.ts", {
+      description: "b.ts already exists.",
+    });
+
+    mocks.mutations.renamePath.mockResolvedValue(`${root}/A.ts`);
+    await fs().handleRenamePath(`${root}/a.ts`, "A.ts");
+    expect(mocks.mutations.renamePath).toHaveBeenCalledWith(`${root}/a.ts`, "A.ts");
+    expect(entry(`${root}/A.ts`)).toMatchObject({ name: "A.ts" });
+  });
+
+  it("reports a failed rename", async () => {
+    setWorkspace([{ ...file(`${root}/a.ts`), isRenaming: true }]);
+    mocks.mutations.renamePath.mockRejectedValue(new Error("Target path already exists"));
+
+    await fs().handleRenamePath(`${root}/a.ts`, "c.ts");
+
+    expect(toast.error).toHaveBeenCalledWith("Could not rename a.ts", {
+      description: "Target path already exists",
+    });
+  });
+
+  it("moves a renamed entry to its sorted place and follows open files inside a folder", async () => {
+    setWorkspace([dir(`${root}/b`, [file(`${root}/b/x.ts`)]), dir(`${root}/c`, [])]);
+    openTextBuffer(`${root}/b/x.ts`);
+    useFileSystemStore.setState({
+      projectFilesCache: { path: root, files: [], timestamp: Date.now() },
+    });
+    mocks.mutations.renamePath.mockResolvedValue(`${root}/d`);
+
+    await fs().handleRenamePath(`${root}/b`, "d");
+
+    expect(entry(root)?.children?.map((child) => child.name)).toEqual(["c", "d"]);
+    expect(entry(`${root}/d/x.ts`)).toBeDefined();
+    expect(getBufferByPath(buffers().buffers, `${root}/d/x.ts`)).toBeDefined();
+    expect(fs().projectFilesCache).toBeUndefined();
+  });
+
+  it("closes the open files inside a deleted folder and forgets its expanded state", async () => {
+    setWorkspace([dir(`${root}/src`, [file(`${root}/src/a.ts`)]), file(`${root}/b.ts`)]);
+    openTextBuffer(`${root}/src/a.ts`);
+    openTextBuffer(`${root}/b.ts`);
+    tree().setExpandedPaths(new Set([`${root}/src`]));
+    mocks.mutations.deletePath.mockResolvedValue(undefined);
+
+    await fs().handleDeletePath(`${root}/src`, true);
+
+    expect(getBufferByPath(buffers().buffers, `${root}/src/a.ts`)).toBeNull();
+    expect(getBufferByPath(buffers().buffers, `${root}/b.ts`)).toBeDefined();
+    expect(tree().isExpanded(`${root}/src`)).toBe(false);
+  });
+
+  it("never deletes a workspace folder and reports failed deletes", async () => {
+    setWorkspace([file(`${root}/a.ts`)]);
+
+    await fs().handleDeletePath(root, true);
+    expect(mocks.mutations.deletePath).not.toHaveBeenCalled();
+    expect(toast.error).toHaveBeenCalledTimes(1);
+
+    mocks.mutations.deletePath.mockRejectedValue(new Error("busy"));
+    await fs().handleDeletePath(`${root}/a.ts`, false);
+    expect(toast.error).toHaveBeenLastCalledWith("Could not delete a.ts", { description: "busy" });
+    expect(entry(`${root}/a.ts`)).toBeDefined();
+  });
+
+  it("does not duplicate over a file that is on disk but not in the tree", async () => {
+    setWorkspace([file(`${root}/index.ts`)]);
+    mocks.exists.mockImplementation(async (path: string) => path === `${root}/index_copy.ts`);
+
+    await fs().handleDuplicatePath(`${root}/index.ts`);
+
+    expect(mocks.copyFile).toHaveBeenCalledWith(`${root}/index.ts`, `${root}/index_copy_1.ts`);
+    mocks.exists.mockImplementation(async () => false);
+  });
+
+  it("reports a failed duplicate", async () => {
+    setWorkspace([file(`${root}/index.ts`)]);
+    mocks.copyFile.mockRejectedValueOnce(new Error("disk full"));
+
+    await fs().handleDuplicatePath(`${root}/index.ts`);
+
+    expect(toast.error).toHaveBeenCalledWith("Could not duplicate index.ts", {
+      description: "disk full",
+    });
+    expect(entry(`${root}/index_copy.ts`)).toBeUndefined();
+  });
+
+  it("treats a drop into the same folder as no move and refuses a folder into itself", async () => {
+    setWorkspace([dir(`${root}/src`, [dir(`${root}/src/lib`, [])]), file(`${root}/a.ts`)]);
+
+    await fs().handleFileMove(`${root}/a.ts`, `${root}/a.ts`);
+    expect(mocks.mutations.movePath).not.toHaveBeenCalled();
+
+    await expect(fs().handleFileMove(`${root}/src`, `${root}/src/lib/src`)).rejects.toThrow(
+      "A folder cannot be moved into itself.",
+    );
+    expect(mocks.mutations.movePath).not.toHaveBeenCalled();
+  });
+
+  it("validates new folder names and creates nested folders one at a time", async () => {
+    setWorkspace([]);
+    mocks.mutations.createDirectory.mockImplementation(
+      async (parent: string, name: string) => `${parent}/${name}`,
+    );
+
+    await fs().handleCreateNewFolderInDirectory(root, "../outside");
+    expect(mocks.mutations.createDirectory).not.toHaveBeenCalled();
+    expect(mocks.showAlertDialog).toHaveBeenCalledWith(
+      expect.stringMatching(/^Invalid folder name: /),
+      "New Folder",
+    );
+
+    await fs().handleCreateNewFolderInDirectory(root, "a/b");
+    expect(mocks.mutations.createDirectory).toHaveBeenNthCalledWith(1, root, "a");
+    expect(mocks.mutations.createDirectory).toHaveBeenNthCalledWith(2, `${root}/a`, "b");
+    expect(entry(`${root}/a/b`)).toMatchObject({ isDir: true });
+  });
+
+  it("reads a collapsed folder again when it opens after a skipped refresh", async () => {
+    setWorkspace([dir(`${root}/src`, [file(`${root}/src/old.ts`)])]);
+    mocks.readWorkspaceDirectoryEntries.mockResolvedValue([file(`${root}/src/new.ts`)]);
+
+    await fs().refreshDirectory(`${root}/src`);
+    expect(mocks.readWorkspaceDirectoryEntries).not.toHaveBeenCalled();
+
+    await fs().toggleFolder(`${root}/src`);
+    await vi.waitFor(() => expect(entry(`${root}/src/new.ts`)).toBeDefined());
+    expect(entry(`${root}/src/old.ts`)).toBeUndefined();
+  });
+
+  it("keeps links marked as links when a folder is refreshed", async () => {
+    setWorkspace([]);
+    mocks.readWorkspaceDirectoryEntries.mockResolvedValue([
+      { ...file(`${root}/link`), isSymlink: true, symlinkTarget: "../elsewhere" },
+    ]);
+
+    await fs().refreshDirectory(root);
+
+    expect(entry(`${root}/link`)).toMatchObject({ isSymlink: true, symlinkTarget: "../elsewhere" });
   });
 });

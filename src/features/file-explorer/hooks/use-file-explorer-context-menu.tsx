@@ -22,11 +22,14 @@ import {
   WarningIcon,
   XIcon,
 } from "@/ui/icons";
+import { stat } from "@tauri-apps/plugin-fs";
 import { showSystemSharePicker, toggleQuickLookPreview } from "@/utils/local-files";
 import { useCallback, useMemo, useState } from "react";
 import { writeClipboardText } from "@/utils/clipboard";
+import { readBufferText } from "@/features/editor/services/buffer-text";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
-import { readFile as readTextFile, writeFile } from "@/features/file-system/api/file-system-api";
+import { writeFile } from "@/features/file-system/api/file-system-api";
+import { getWorkspaceResourceProvider } from "@/features/file-system/services/workspace-resource-provider";
 import {
   buildEnvTemplateContent,
   ENV_TEMPLATE_TARGETS,
@@ -35,6 +38,12 @@ import {
 import { openLocalHistoryForPath } from "@/features/local-history/services/open-local-history";
 import { useFileClipboardStore } from "@/features/file-explorer/stores/file-explorer-clipboard.store";
 import { useFileTreeStore } from "@/features/file-explorer/stores/file-explorer-tree.store";
+import { pasteFileClipboard } from "@/features/file-explorer/services/paste-file-clipboard";
+import { getSelectionActionTargets } from "@/features/file-explorer/utils/file-tree-selection";
+import { useGlobalSearchSessionStore } from "@/features/global-search/stores/global-search-session.store";
+import { keymapRegistry } from "@/features/keymaps/services/keymap-registry";
+import { parseRemotePath } from "@/features/remote/services/remote-path";
+import { parseWslPath } from "@/features/wsl/services/wsl-path";
 import type { ContextMenuState } from "@/features/file-system/types/app.types";
 import { Button } from "@/ui/button";
 import { ContextMenuPopup, createContextMenuGroups } from "@/ui/context-menu";
@@ -42,7 +51,7 @@ import { menuSeparator, type MenuItem } from "@/ui/dropdown";
 import Dialog from "@/ui/dialog";
 import { toast } from "sonner";
 import { getBaseName, getDirName, getRelativePath, joinPath } from "@/utils/path-helpers";
-import { IS_MAC } from "@/utils/platform";
+import { IS_MAC, IS_WINDOWS } from "@/utils/platform";
 
 interface UseFileExplorerContextMenuOptions {
   rootFolderPath?: string;
@@ -62,7 +71,9 @@ interface UseFileExplorerContextMenuOptions {
   onRemoveFolderFromWorkspace?: (path: string) => void;
   isWorkspaceRootPath?: (path: string) => boolean;
   canRemoveWorkspaceRootPath?: (path: string) => boolean;
-  onDeleteRequested: (candidate: { path: string; isDir: boolean }) => void;
+  onDeleteRequested: (candidates: Array<{ path: string; isDir: boolean }>) => void;
+  /** The rows selected together, when more than one is; actions on one of them apply to all. */
+  getSelectedEntries?: () => Array<{ path: string; isDir: boolean }> | null;
   onStartInlineEditing: (path: string, isFolder: boolean) => void;
   onOpenAllFilesInDirectory: (directoryPath: string) => Promise<void>;
 }
@@ -97,6 +108,45 @@ function formatFileSize(sizeHeader: string | null): string {
   return `${value.toFixed(value >= 10 ? 1 : 2)} ${units[unitIndex]}`;
 }
 
+const REVEAL_LABEL = IS_MAC
+  ? "Reveal in Finder"
+  : IS_WINDOWS
+    ? "Reveal in File Explorer"
+    : "Open Containing Folder";
+
+function readEntryText(path: string): Promise<string> {
+  const openBuffer = useBufferStore
+    .getState()
+    .buffers.find((buffer) => buffer.path === path && buffer.type === "editor");
+  if (openBuffer) return Promise.resolve(readBufferText(openBuffer));
+  return getWorkspaceResourceProvider(path).readText(path);
+}
+
+/** The path a user would paste into a shell on the machine that holds the file. */
+function getCopyablePath(path: string): string {
+  return parseRemotePath(path)?.remotePath ?? path;
+}
+
+async function readFileSize(path: string): Promise<string> {
+  if (parseRemotePath(path) || parseWslPath(path)) return "Unknown";
+  try {
+    const info = await stat(path);
+    return formatFileSize(String(info.size));
+  } catch {
+    return "Unknown";
+  }
+}
+
+async function copyTextToClipboard(text: string, what: string) {
+  try {
+    await writeClipboardText(text);
+  } catch (error) {
+    toast.error(`Could not copy ${what}`, {
+      description: error instanceof Error ? error.message : String(error),
+    });
+  }
+}
+
 export function useFileExplorerContextMenu({
   rootFolderPath,
   onFileSelect,
@@ -113,6 +163,7 @@ export function useFileExplorerContextMenu({
   isWorkspaceRootPath,
   canRemoveWorkspaceRootPath,
   onDeleteRequested,
+  getSelectedEntries,
   onStartInlineEditing,
   onOpenAllFilesInDirectory,
 }: UseFileExplorerContextMenuOptions) {
@@ -139,7 +190,7 @@ export function useFileExplorerContextMenu({
 
         let targetExists = false;
         try {
-          await readTextFile(targetPath);
+          await readEntryText(targetPath);
           targetExists = true;
           if (!options?.overwrite) {
             setEnvOverwriteDialog({ sourcePath, targetFileName });
@@ -147,7 +198,7 @@ export function useFileExplorerContextMenu({
           }
         } catch {}
 
-        const sourceContent = await readTextFile(sourcePath);
+        const sourceContent = await readEntryText(sourcePath);
         const templateContent = buildEnvTemplateContent(sourceContent);
         const createdPath = targetExists
           ? targetPath
@@ -185,19 +236,18 @@ export function useFileExplorerContextMenu({
     e.preventDefault();
     e.stopPropagation();
 
-    let x = e.pageX;
-    let y = e.pageY;
-    const menuWidth = 250;
-    const menuHeight = 400;
-
-    if (x + menuWidth > window.innerWidth) x = window.innerWidth - menuWidth;
-    if (y + menuHeight > window.innerHeight) y = window.innerHeight - menuHeight;
-
-    setContextMenu({ x, y, path: filePath, isDir });
+    // The menu keeps itself on screen; clamping here moved it away from the pointer and broke
+    // keyboard invocation, which is recognized by the event's own coordinates.
+    setContextMenu({ x: e.clientX, y: e.clientY, path: filePath, isDir });
   }, []);
 
   const contextMenuItems = useMemo<MenuItem[]>(() => {
     if (!contextMenu) return [];
+    const targets = getSelectionActionTargets(
+      { path: contextMenu.path, isDir: contextMenu.isDir },
+      getSelectedEntries?.(),
+    );
+    const clipboardEntries = targets.map((target) => ({ path: target.path, is_dir: target.isDir }));
 
     const items: MenuItem[] = [];
 
@@ -217,12 +267,16 @@ export function useFileExplorerContextMenu({
             if (onCreateNewFolderInDirectory) onStartInlineEditing(contextMenu.path, true);
           },
         },
-        {
-          id: "upload-files",
-          label: "Upload Files",
-          icon: <UploadIcon />,
-          onClick: () => onUploadFile?.(contextMenu.path),
-        },
+        ...(onUploadFile
+          ? [
+              {
+                id: "upload-files",
+                label: "Upload Files",
+                icon: <UploadIcon />,
+                onClick: () => onUploadFile(contextMenu.path),
+              },
+            ]
+          : []),
         {
           id: "refresh",
           label: "Refresh",
@@ -274,7 +328,14 @@ export function useFileExplorerContextMenu({
           id: "find-in-folder",
           label: "Find in Folder",
           icon: <SearchIcon />,
-          onClick: () => {},
+          onClick: () => {
+            const relativePath = getRelativePath(contextMenu.path, rootFolderPath);
+            const isInsideRoot = Boolean(rootFolderPath) && relativePath !== contextMenu.path;
+            useGlobalSearchSessionStore
+              .getState()
+              .actions.setIncludeQuery(isInsideRoot && relativePath ? `${relativePath}/**` : "");
+            void keymapRegistry.executeCommand("workbench.showGlobalSearch");
+          },
         },
       );
 
@@ -308,18 +369,23 @@ export function useFileExplorerContextMenu({
           icon: <CopyIcon />,
           onClick: async () => {
             try {
-              const response = await fetch(contextMenu.path);
-              if (!response.ok) throw new Error(`Failed to read file: ${response.status}`);
-              const content = await response.text();
-              await writeClipboardText(content);
-            } catch {}
+              await writeClipboardText(await readEntryText(contextMenu.path));
+            } catch (error) {
+              toast.error(`Could not copy the contents of ${fileName}`, {
+                description: error instanceof Error ? error.message : String(error),
+              });
+            }
           },
         },
         {
           id: "duplicate-file",
           label: "Duplicate",
           icon: <FileTextIcon />,
-          onClick: () => onDuplicatePath?.(contextMenu.path),
+          onClick: () => {
+            for (const target of targets) {
+              if (!target.isDir) onDuplicatePath?.(target.path);
+            }
+          },
         },
         {
           id: "local-history",
@@ -330,7 +396,9 @@ export function useFileExplorerContextMenu({
         ...(canCreateEnvTemplate
           ? [
               menuSeparator("sep-env-template"),
-              ...ENV_TEMPLATE_TARGETS.map((target, index) => ({
+              ...ENV_TEMPLATE_TARGETS.filter(
+                (target) => target.fileName.toLowerCase() !== fileName.toLowerCase(),
+              ).map((target, index) => ({
                 id: target.id,
                 label: target.label,
                 icon: index === 0 ? <FilePlusIcon /> : menuIconSpacer,
@@ -343,14 +411,9 @@ export function useFileExplorerContextMenu({
           label: "Properties",
           icon: <InfoIcon />,
           onClick: async () => {
-            const fileName = getBaseName(contextMenu.path, "");
-            const extension = fileName.includes(".") ? fileName.split(".").pop() : undefined;
-            let size = "Unknown";
-
-            try {
-              const stats = await fetch(`file://${contextMenu.path}`, { method: "HEAD" });
-              size = formatFileSize(stats.headers.get("content-length"));
-            } catch {}
+            const extension =
+              fileName.lastIndexOf(".") > 0 ? fileName.slice(fileName.lastIndexOf(".") + 1) : "";
+            const size = await readFileSize(contextMenu.path);
 
             setPropertiesDialog({
               fileName,
@@ -372,49 +435,40 @@ export function useFileExplorerContextMenu({
         id: "copy-path",
         label: "Copy Path",
         icon: <LinkIcon />,
-        onClick: async () => {
-          try {
-            await writeClipboardText(contextMenu.path);
-          } catch {}
-        },
+        onClick: () => copyTextToClipboard(getCopyablePath(contextMenu.path), "the path"),
       },
       {
         id: "copy-relative-path",
         label: "Copy Relative Path",
         icon: <FileTextIcon />,
-        onClick: async () => {
-          try {
-            const relativePath = getRelativePath(contextMenu.path, rootFolderPath);
-            await writeClipboardText(relativePath);
-          } catch {}
-        },
+        onClick: () =>
+          copyTextToClipboard(
+            getRelativePath(contextMenu.path, rootFolderPath) || ".",
+            "the relative path",
+          ),
       },
       {
         id: "copy",
         label: "Copy",
         icon: <CopyIcon />,
-        onClick: () =>
-          clipboardActions.copy([{ path: contextMenu.path, is_dir: contextMenu.isDir }]),
+        onClick: () => clipboardActions.copy(clipboardEntries),
       },
       {
         id: "cut",
         label: "Cut",
         icon: <ScissorsIcon />,
-        onClick: () =>
-          clipboardActions.cut([{ path: contextMenu.path, is_dir: contextMenu.isDir }]),
+        onClick: () => clipboardActions.cut(clipboardEntries),
       },
     );
 
-    if (clipboard && contextMenu.isDir) {
+    if (clipboard) {
+      // On a file, paste lands next to it, as the tree's paste shortcut does.
+      const pasteTarget = contextMenu.isDir ? contextMenu.path : getDirName(contextMenu.path);
       items.push({
         id: "paste",
         label: "Paste",
         icon: <ClipboardIcon />,
-        onClick: () => {
-          clipboardActions.paste(contextMenu.path).then(() => {
-            onRefreshDirectory?.(contextMenu.path, { force: true });
-          });
-        },
+        onClick: () => void pasteFileClipboard(pasteTarget),
       });
     }
 
@@ -453,16 +507,9 @@ export function useFileExplorerContextMenu({
         },
         {
           id: "reveal",
-          label: "Reveal in Finder",
+          label: REVEAL_LABEL,
           icon: <EyeIcon />,
-          onClick: () => {
-            if (onRevealInFinder) onRevealInFinder(contextMenu.path);
-            else if (window.electron) window.electron.shell.showItemInFolder(contextMenu.path);
-            else {
-              const parentDir = getDirName(contextMenu.path);
-              window.open(`file://${parentDir}`, "_blank");
-            }
-          },
+          onClick: () => onRevealInFinder?.(contextMenu.path),
         },
         { id: "sep-end", separator: true },
         {
@@ -470,13 +517,13 @@ export function useFileExplorerContextMenu({
           label: "Delete",
           icon: <TrashIcon />,
           tone: "destructive",
-          onClick: () => onDeleteRequested({ path: contextMenu.path, isDir: contextMenu.isDir }),
+          onClick: () => onDeleteRequested(targets),
         },
       );
     } else {
       items.push({
         id: "reveal",
-        label: "Reveal in Finder",
+        label: REVEAL_LABEL,
         icon: <EyeIcon />,
         onClick: () => onRevealInFinder?.(contextMenu.path),
       });
@@ -492,6 +539,7 @@ export function useFileExplorerContextMenu({
     onCreateNewFolderInDirectory,
     onCreateNewFileInDirectory,
     onDeleteRequested,
+    getSelectedEntries,
     onDuplicatePath,
     onFileSelect,
     onGenerateImage,

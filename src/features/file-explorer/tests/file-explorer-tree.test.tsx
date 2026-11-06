@@ -11,6 +11,7 @@ import type { FileEntry } from "@/features/file-system/types/app.types";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { workspaceRuntimeRegistry } from "@/features/workspace/services/workspace-runtime-registry";
 import { emitAppEvent } from "@/utils/app-events";
+import { IS_MAC } from "@/utils/platform";
 import { FileExplorerTree } from "../components/file-explorer-tree";
 
 const native = vi.hoisted(() => {
@@ -62,6 +63,7 @@ const initialTree = (): FileEntry[] => [
 let root: Root;
 let container: HTMLDivElement;
 let currentFiles: FileEntry[];
+let setHarnessFiles: (files: FileEntry[]) => void;
 const handlers = {
   onFileSelect: vi.fn(),
   onFileOpen: vi.fn(),
@@ -84,6 +86,7 @@ function Harness({
 }) {
   const [tree, setTree] = useState(files);
   currentFiles = tree;
+  setHarnessFiles = setTree;
   return (
     <FileExplorerTree
       files={tree}
@@ -126,6 +129,20 @@ const menuItem = (label: string) =>
   [...document.querySelectorAll<HTMLElement>('[role="menuitem"]')].find(
     (item) => item.textContent?.trim() === label,
   )!;
+
+const selectedRowPaths = () =>
+  [...tree().querySelectorAll<HTMLElement>('[id^="file-tree-row-"][aria-selected="true"]')].map(
+    (element) => element.getAttribute("data-file-path"),
+  );
+
+async function setSetting<K extends keyof ReturnType<typeof useSettingsStore.getState>["settings"]>(
+  name: K,
+  value: ReturnType<typeof useSettingsStore.getState>["settings"][K],
+) {
+  await act(async () => {
+    useSettingsStore.setState((state) => ({ settings: { ...state.settings, [name]: value } }));
+  });
+}
 
 async function key(key: string, init: KeyboardEventInit = {}) {
   await act(async () => {
@@ -280,7 +297,8 @@ describe("file explorer tree", () => {
     vi.spyOn(commands, "clipboardGet").mockResolvedValue(null as never);
     await key("v", { metaKey: true });
     await flush();
-    expect(handlers.onRefreshDirectory).toHaveBeenCalledWith("/repo", { force: true });
+    // Pasting refreshes through the workspace's file system store (see paste-file-clipboard).
+    expect(commands.clipboardPaste).toHaveBeenCalledWith("/repo");
     expect(useFileClipboardStore.getState().clipboard).toBeNull();
   });
 
@@ -586,5 +604,177 @@ describe("file explorer tree", () => {
     await act(async () => checkbox("Hidden Files").click());
     await act(async () => checkbox("Gitignored Files").click());
     expect(rowLabels()).toContain("/repo/dist");
+  });
+
+  it("selects several rows with modifier clicks and Shift+arrows and acts on all of them", async () => {
+    const modifier = IS_MAC ? { metaKey: true } : { ctrlKey: true };
+    await render();
+    await act(async () => row("/repo/.env").click());
+    await act(async () => {
+      fireEvent.click(row("/repo/README.md"), modifier);
+    });
+    expect(selectedRowPaths()).toEqual(["/repo/.env", "/repo/README.md"]);
+    expect(tree().getAttribute("aria-multiselectable")).toBe("true");
+    expect(handlers.onFileSelect).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      fireEvent.click(row("/repo/dist"), { shiftKey: true });
+    });
+    expect(selectedRowPaths()).toEqual([
+      "/repo/dist",
+      "/repo/src",
+      "/repo/.env",
+      "/repo/.gitignore",
+      "/repo/README.md",
+    ]);
+
+    await key("ArrowDown", { shiftKey: true });
+    await key("ArrowDown", { shiftKey: true });
+    expect(activeRowPath()).toBe("/repo/.env");
+    expect(selectedRowPaths()).toEqual(["/repo/.env", "/repo/.gitignore", "/repo/README.md"]);
+
+    await key("c", { metaKey: true });
+    expect(useFileClipboardStore.getState().clipboard?.entries).toEqual([
+      { path: "/repo/.env", is_dir: false },
+      { path: "/repo/.gitignore", is_dir: false },
+      { path: "/repo/README.md", is_dir: false },
+    ]);
+
+    await key("Delete");
+    expect(within(document.body).getByText(/delete these 3 items\?/)).toBeTruthy();
+    await act(async () => within(document.body).getByRole("button", { name: "Delete" }).click());
+    await flush();
+    expect(handlers.onDeletePath.mock.calls).toEqual([
+      ["/repo/.env", false],
+      ["/repo/.gitignore", false],
+      ["/repo/README.md", false],
+    ]);
+
+    await key("Escape");
+    expect(selectedRowPaths()).toEqual([activeRowPath()]);
+  });
+
+  it("deletes the focused row from the keyboard but never the project root", async () => {
+    await render();
+    await act(async () => tree().focus());
+    await key("Delete");
+    expect(within(document.body).queryByText(/Are you sure/)).toBeNull();
+
+    await key("End");
+    await key("Delete");
+    expect(within(document.body).getByText(/delete the file "README.md"/)).toBeTruthy();
+  });
+
+  it("pages, jumps to typed names and keeps focus on a nearby row when its row goes away", async () => {
+    await render();
+    await act(async () => tree().focus());
+    await key("PageDown");
+    expect(activeRowPath()).toBe("/repo/README.md");
+    await key("PageUp");
+    expect(activeRowPath()).toBe("/repo");
+
+    await key("r");
+    expect(activeRowPath()).toBe("/repo/README.md");
+    await key("s");
+    await flush(800);
+    await key("s");
+    expect(activeRowPath()).toBe("/repo/src");
+
+    await key("ArrowRight");
+    await key("ArrowDown");
+    expect(activeRowPath()).toBe("/repo/src/index.ts");
+    await act(async () => useFileTreeStore.getState().actions.toggleFolder("/repo/src"));
+    expect(activeRowPath()).toBe("/repo/src");
+
+    await key("End");
+    expect(activeRowPath()).toBe("/repo/README.md");
+    const files = initialTree();
+    files[0].children = files[0].children!.filter((entry) => entry.name !== "README.md");
+    await act(async () => setHarnessFiles(files));
+    expect(activeRowPath()).toBe("/repo/.gitignore");
+  });
+
+  it("moves Left to the parent row of a compacted folder", async () => {
+    await setSetting("compactFoldersInFileTree", true);
+    await render({
+      files: [
+        file("/repo", [
+          file("/repo/a", [file("/repo/a/b", [file("/repo/a/b/deep.ts")])]),
+          file("/repo/z.ts"),
+        ]),
+      ],
+    });
+    await act(async () => row("/repo/a").click());
+    await act(async () => row("/repo/a/b").click());
+    expect(rowLabels()).toEqual(["/repo", "/repo/a/b", "/repo/a/b/deep.ts", "/repo/z.ts"]);
+    await act(async () => row("/repo/a/b/deep.ts").click());
+    await key("ArrowLeft");
+    expect(activeRowPath()).toBe("/repo/a/b");
+    await key("ArrowLeft");
+    expect(rowLabels()).toEqual(["/repo", "/repo/a/b", "/repo/z.ts"]);
+    await key("ArrowLeft");
+    expect(activeRowPath()).toBe("/repo");
+    await setSetting("compactFoldersInFileTree", false);
+  });
+
+  it("describes rows to assistive technology", async () => {
+    await render();
+    const src = row("/repo/src");
+    expect(src.getAttribute("role")).toBe("treeitem");
+    expect(src.getAttribute("aria-level")).toBe("2");
+    expect(src.getAttribute("aria-expanded")).toBe("false");
+    expect(src.getAttribute("aria-posinset")).toBe("2");
+    expect(src.getAttribute("aria-setsize")).toBe("5");
+    expect(row("/repo").getAttribute("aria-setsize")).toBe("1");
+    expect(row("/repo/README.md").getAttribute("title")).toBe("README.md");
+  });
+
+  it("shows the empty state when a hidden root folder has nothing in it", async () => {
+    await setSetting("hideRootFolderInFileTree", true);
+    await render({ files: [file("/repo", [])] });
+    expect(within(container).getByText("Folder is empty")).toBeTruthy();
+    await setSetting("hideRootFolderInFileTree", false);
+  });
+
+  it("ignores keys pressed in the preferences menu", async () => {
+    await render();
+    await act(async () => tree().focus());
+    await key("ArrowDown");
+    expect(activeRowPath()).toBe("/repo/dist");
+    await act(async () =>
+      within(container).getByRole("button", { name: "File explorer preferences" }).click(),
+    );
+    await flush();
+    const menu = document.querySelector<HTMLElement>('[role="menu"]')!;
+    await act(async () => {
+      fireEvent.keyDown(menu, { key: "ArrowDown" });
+      fireEvent.keyDown(menu, { key: "End" });
+    });
+    expect(activeRowPath()).toBe("/repo/dist");
+  });
+
+  it("opens and closes folders inside filter results and moves from the filter into the tree", async () => {
+    vi.spyOn(commands, "fffSearchFiles").mockResolvedValue([
+      { path: "/repo/src/index.ts", name: "index.ts", relative_path: "src/index.ts", score: 1 },
+    ] as never);
+    await render();
+    await act(async () => emitAppEvent("file-tree:open-search"));
+    const input = within(container).getByRole("textbox", { name: "Filter files" });
+    await act(async () => {
+      fireEvent.change(input, { target: { value: "index" } });
+    });
+    await flush(150);
+    expect(rowLabels()).toEqual(["/repo", "/repo/src", "/repo/src/index.ts"]);
+
+    await act(async () => row("/repo/src").click());
+    expect(rowLabels()).toEqual(["/repo", "/repo/src"]);
+    await act(async () => row("/repo/src").click());
+    expect(rowLabels()).toEqual(["/repo", "/repo/src", "/repo/src/index.ts"]);
+
+    await act(async () => input.focus());
+    await act(async () => {
+      fireEvent.keyDown(input, { key: "ArrowDown" });
+    });
+    expect(document.activeElement).toBe(tree());
   });
 });

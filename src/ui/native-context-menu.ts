@@ -1,3 +1,4 @@
+import { getIdentifier } from "@tauri-apps/api/app";
 import { LogicalPosition } from "@tauri-apps/api/dpi";
 import {
   type CheckMenuItemOptions,
@@ -40,15 +41,48 @@ const SELECTION_GRACE_MS = 150;
 /** The native menu outlives the grace a little, so a slow item event still finds its handler. */
 const RELEASE_DELAY_MS = 2000;
 
+/** The e2e build's bundle identifier ends with this (see `src-tauri/tauri.e2e.conf.json`). */
+const AUTOMATION_IDENTIFIER_SUFFIX = ".e2e";
+
 let nativeMenusUnavailable = false;
 let activeMenu: Menu | null = null;
+let automationCheck: Promise<boolean> | null = null;
+
+function isTauriWebview() {
+  // The flag Tauri's webview sets, read directly (as `isTauri()` does) so modules that mock the
+  // core API don't need to provide it.
+  return Boolean((globalThis as { isTauri?: boolean }).isTauri);
+}
+
+/**
+ * Whether a WebDriver session drives this window. WebDriver only sees the page, so an OS menu
+ * would be invisible to it: the e2e build and any automated browser keep menus in the page.
+ */
+export function isDrivenByAutomation(): Promise<boolean> {
+  if (typeof navigator !== "undefined" && navigator.webdriver) return Promise.resolve(true);
+  automationCheck ??= (async () => {
+    try {
+      return (await getIdentifier()).endsWith(AUTOMATION_IDENTIFIER_SUFFIX);
+    } catch {
+      return false;
+    }
+  })();
+  return automationCheck;
+}
+
+if (isTauriWebview()) {
+  void isDrivenByAutomation().then((automated) => {
+    if (automated) nativeMenusUnavailable = true;
+  });
+}
 
 /** Whether right-click menus can be drawn by the OS: the desktop app, outside tests and the web build. */
 export function canUseNativeContextMenu(): boolean {
-  // The flag Tauri's webview sets, read directly (as `isTauri()` does) so modules that mock the
-  // core API don't need to provide it.
   return (
-    !IS_WEB && !nativeMenusUnavailable && Boolean((globalThis as { isTauri?: boolean }).isTauri)
+    !IS_WEB &&
+    !nativeMenusUnavailable &&
+    isTauriWebview() &&
+    !(typeof navigator !== "undefined" && navigator.webdriver)
   );
 }
 
@@ -187,6 +221,11 @@ export async function showNativeContextMenu({
       if (selectedMenu) setTimeout(() => releaseMenu(selectedMenu), 0);
     }
   };
+
+  if (await isDrivenByAutomation()) {
+    nativeMenusUnavailable = true;
+    return false;
+  }
 
   try {
     menu = await Menu.new({ items: toNativeMenuItems(entries, select) });

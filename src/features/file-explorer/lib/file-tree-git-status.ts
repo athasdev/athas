@@ -10,6 +10,11 @@ export interface FileTreeGitStatusDecoration {
 export interface FileTreeGitStatusLookup {
   files: Map<string, FileTreeGitStatusDecoration>;
   directories: Map<string, FileTreeGitStatusDecoration>;
+  /**
+   * Folders Git reports as a whole (`new-folder/`) instead of file by file, such as an
+   * untracked folder. Everything under them shares their status.
+   */
+  wholeDirectories: Map<string, FileTreeGitStatusDecoration>;
 }
 
 const gitStatusPriority: Record<GitFile["status"], number> = {
@@ -50,13 +55,18 @@ export function getFileTreeGitStatusDecoration(
 export function createFileTreeGitStatusLookup(gitStatus: GitStatus): FileTreeGitStatusLookup {
   const files = new Map<string, FileTreeGitStatusDecoration>();
   const directories = new Map<string, FileTreeGitStatusDecoration>();
+  const wholeDirectories = new Map<string, FileTreeGitStatusDecoration>();
   const directoryPriorities = new Map<string, number>();
 
   for (const gitFile of gitStatus.files) {
     const statusDecoration = getFileTreeGitStatusDecoration(gitFile);
     if (!statusDecoration) continue;
 
-    files.set(gitFile.path, statusDecoration);
+    if (gitFile.path.endsWith("/")) {
+      wholeDirectories.set(gitFile.path.replace(/\/+$/, ""), statusDecoration);
+    } else {
+      files.set(gitFile.path, statusDecoration);
+    }
 
     const segments = gitFile.path.split("/");
     let currentPath = "";
@@ -71,7 +81,21 @@ export function createFileTreeGitStatusLookup(gitStatus: GitStatus): FileTreeGit
     }
   }
 
-  return { files, directories };
+  return { files, directories, wholeDirectories };
+}
+
+function findWholeDirectoryStatus(
+  relativePath: string,
+  lookup: FileTreeGitStatusLookup,
+): FileTreeGitStatusDecoration | null {
+  if (lookup.wholeDirectories.size === 0) return null;
+  let separatorIndex = relativePath.indexOf("/");
+  while (separatorIndex > 0) {
+    const status = lookup.wholeDirectories.get(relativePath.slice(0, separatorIndex));
+    if (status) return status;
+    separatorIndex = relativePath.indexOf("/", separatorIndex + 1);
+  }
+  return null;
 }
 
 export function getFileTreeEntryGitStatusDecoration(
@@ -87,8 +111,13 @@ export function getFileTreeEntryGitStatusDecoration(
   const fileStatus = lookup.files.get(relativePath);
   if (fileStatus) return fileStatus;
 
+  const insideWholeDirectory = findWholeDirectoryStatus(relativePath, lookup);
+  if (insideWholeDirectory) return insideWholeDirectory;
+
   if (file.isDir) {
-    return lookup.directories.get(relativePath) || null;
+    return (
+      lookup.wholeDirectories.get(relativePath) || lookup.directories.get(relativePath) || null
+    );
   }
 
   return null;

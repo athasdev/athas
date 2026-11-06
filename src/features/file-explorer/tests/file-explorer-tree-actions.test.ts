@@ -23,22 +23,6 @@ describe("file explorer tree state", () => {
     expect(tree().initializedRootPaths).toEqual(["/repo"]);
   });
 
-  it("selects one entry, or toggles entries when multi-selecting", () => {
-    actions().selectFile("/repo/a.ts");
-    actions().selectFile("/repo/b.ts", true);
-    actions().selectFile("/repo/c.ts", true);
-    actions().selectFile("/repo/b.ts", true);
-
-    expect([...tree().selectedFiles]).toEqual(["/repo/a.ts", "/repo/c.ts"]);
-    expect(actions().isSelected("/repo/b.ts")).toBe(false);
-
-    actions().selectFile("/repo/d.ts");
-    expect([...tree().selectedFiles]).toEqual(["/repo/d.ts"]);
-
-    actions().clearSelection();
-    expect(tree().selectedFiles.size).toBe(0);
-  });
-
   it("expands every ancestor of a path on POSIX and Windows", () => {
     actions().expandToPath("/repo/src/lib/util.ts");
     actions().expandToPath("C:\\work\\src\\main.rs");

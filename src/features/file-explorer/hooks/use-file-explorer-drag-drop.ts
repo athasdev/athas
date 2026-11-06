@@ -10,10 +10,20 @@ import {
 import { getDirName, getPathSeparator, joinPath } from "@/utils/path-helpers";
 import { IS_MAC } from "@/utils/platform";
 import { emitAppEvent } from "@/utils/app-events";
+import { getSelectionActionTargets } from "@/features/file-explorer/utils/file-tree-selection";
+
+interface DraggedItem {
+  path: string;
+  name: string;
+  isDir: boolean;
+}
 
 interface DragState {
   isDragging: boolean;
-  draggedItem: { path: string; name: string; isDir: boolean } | null;
+  /** The row the drag started on. */
+  draggedItem: DraggedItem | null;
+  /** Everything being dragged: the selection when the row is part of it, else the row. */
+  draggedItems: DraggedItem[];
   dragOverPath: string | null;
   dragOverIsDir: boolean;
 }
@@ -21,9 +31,19 @@ interface DragState {
 const initialDragState: DragState = {
   isDragging: false,
   draggedItem: null,
+  draggedItems: [],
   dragOverPath: null,
   dragOverIsDir: false,
 };
+
+/** Whether dropping on `path` would put a dragged entry onto itself or inside itself. */
+export function isInvalidDropTarget(path: string, draggedItems: readonly DraggedItem[]): boolean {
+  return draggedItems.some(
+    (item) =>
+      item.path === path ||
+      (item.isDir && path.startsWith(item.path + getPathSeparator(item.path))),
+  );
+}
 
 type FileMoveHandler = (oldPath: string, newPath: string) => void | Promise<void>;
 
@@ -118,7 +138,10 @@ export function useFileExplorerDragDrop(
         color: var(--foreground);
         box-shadow: var(--shadow-popover);
       `;
-      preview.textContent = dragState.draggedItem?.name || "";
+      preview.textContent =
+        dragState.draggedItems.length > 1
+          ? `${dragState.draggedItems.length} items`
+          : dragState.draggedItem?.name || "";
       document.body.appendChild(preview);
       dragPreviewRef.current = preview;
       placeDragPreview();
@@ -130,7 +153,12 @@ export function useFileExplorerDragDrop(
         dragPreviewRef.current = null;
       }
     };
-  }, [dragState.isDragging, dragState.draggedItem?.name, placeDragPreview]);
+  }, [
+    dragState.isDragging,
+    dragState.draggedItem?.name,
+    dragState.draggedItems.length,
+    placeDragPreview,
+  ]);
 
   useEffect(() => {
     if (!dragState.isDragging) return;
@@ -154,8 +182,7 @@ export function useFileExplorerDragDrop(
         const draggedItem = dragState.draggedItem;
 
         if (path && draggedItem && path !== draggedItem.path) {
-          const separator = getPathSeparator(draggedItem.path);
-          const isDropIntoSelf = draggedItem.isDir && path.startsWith(draggedItem.path + separator);
+          const isDropIntoSelf = isInvalidDropTarget(path, dragState.draggedItems);
           const nextDragOverPath = isDropIntoSelf ? null : path;
           const nextDragOverIsDir = isDropIntoSelf ? false : isDir;
 
@@ -196,7 +223,8 @@ export function useFileExplorerDragDrop(
       const isOverAIContextDropTarget =
         elementUnder?.closest("[data-ai-context-drop-target]") !== null;
 
-      if (isOverAIContextDropTarget && dragState.draggedItem) {
+      const isSingleDrag = dragState.draggedItems.length <= 1;
+      if (isOverAIContextDropTarget && dragState.draggedItem && isSingleDrag) {
         dispatchSidebarResourceDropOnAI({
           type: "file",
           path: dragState.draggedItem.path,
@@ -210,7 +238,13 @@ export function useFileExplorerDragDrop(
       }
 
       // If dropping on a pane (not in file tree), dispatch event for pane to handle
-      if (isOverPane && !isOverFileTree && dragState.draggedItem && !dragState.draggedItem.isDir) {
+      if (
+        isOverPane &&
+        !isOverFileTree &&
+        isSingleDrag &&
+        dragState.draggedItem &&
+        !dragState.draggedItem.isDir
+      ) {
         emitAppEvent("file-tree:drop-on-pane", {
           path: dragState.draggedItem.path,
           name: dragState.draggedItem.name,
@@ -225,7 +259,6 @@ export function useFileExplorerDragDrop(
       }
 
       if (dragState.dragOverPath && dragState.draggedItem) {
-        const { path: sourcePath, name: sourceName } = dragState.draggedItem;
         let targetPath = dragState.dragOverPath;
 
         if (targetPath === "__ROOT__") {
@@ -241,14 +274,22 @@ export function useFileExplorerDragDrop(
           targetPath = getDirName(targetPath) || rootFolderPath || "";
         }
 
-        const newPath = joinPath(targetPath, sourceName);
-
-        try {
-          await executeFileExplorerMove(sourcePath, newPath, onFileMove);
-        } catch (error) {
-          console.error("Failed to move file:", error);
-          const message = error instanceof Error ? error.message : String(error);
-          onMoveError?.(`Failed to move ${sourceName}: ${message}`);
+        if (!isInvalidDropTarget(targetPath, dragState.draggedItems)) {
+          for (const { path: sourcePath, name: sourceName } of dragState.draggedItems) {
+            // Dropping an entry into the folder it is already in leaves it where it is.
+            if (getDirName(sourcePath) === targetPath) continue;
+            try {
+              await executeFileExplorerMove(
+                sourcePath,
+                joinPath(targetPath, sourceName),
+                onFileMove,
+              );
+            } catch (error) {
+              console.error("Failed to move file:", error);
+              const message = error instanceof Error ? error.message : String(error);
+              onMoveError?.(`Failed to move ${sourceName}: ${message}`);
+            }
+          }
         }
       }
 
@@ -280,9 +321,14 @@ export function useFileExplorerDragDrop(
     setDragOver,
   ]);
 
-  const startDrag = useCallback((e: React.MouseEvent, file: FileEntry) => {
+  const startDrag = useCallback((e: React.MouseEvent, file: FileEntry, selection?: FileEntry[]) => {
     e.preventDefault();
     e.stopPropagation();
+    const draggedItems = getSelectionActionTargets(file, selection).map((entry) => ({
+      path: entry.path,
+      name: entry.name,
+      isDir: entry.isDir,
+    }));
 
     if (IS_MAC && e.altKey) {
       void startNativeFileDrag(file.path, file.name).catch((error) => {
@@ -294,6 +340,7 @@ export function useFileExplorerDragDrop(
     setDragState({
       isDragging: true,
       draggedItem: { path: file.path, name: file.name, isDir: file.isDir },
+      draggedItems,
       dragOverPath: null,
       dragOverIsDir: false,
     });

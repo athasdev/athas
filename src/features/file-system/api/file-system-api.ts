@@ -8,6 +8,7 @@ import { stripTrailingPathSeparators } from "@/utils/path-helpers";
 import { IS_LINUX } from "@/utils/platform";
 import {
   BaseDirectory,
+  exists,
   mkdir,
   readFile as readBinaryFile,
   readDir,
@@ -70,6 +71,15 @@ export async function writeFile(path: string, content: string): Promise<void> {
 
   await commands.writeLocalFile(path, content);
   invalidateFileTreeGitIgnoreCache(path);
+}
+
+/**
+ * Whether a local path exists. WSL paths are not checked here and report `null`; their writes
+ * run inside the distribution.
+ */
+export async function localPathExists(path: string): Promise<boolean | null> {
+  if (parseWslPath(path)) return null;
+  return await exists(path);
 }
 
 /**

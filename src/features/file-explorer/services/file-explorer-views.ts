@@ -11,6 +11,7 @@ export function registerFileExplorerViews() {
     icon: createElement(FilesIcon),
     order: 70,
     component: FileExplorerPane,
+    getProps: ({ focusRequest }) => ({ focusRequest }),
     HeaderActions: FileExplorerHeaderActions,
   });
 }

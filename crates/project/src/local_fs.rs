@@ -147,16 +147,47 @@ fn display_link_target(
       .into_owned()
 }
 
-/// Renames `source` to a `target` that must not exist yet.
+/// Renames `source` to a `target` that must not exist yet. A case-only rename (`readme.md` to
+/// `README.md`) is allowed on case-insensitive disks, where the target "exists" as the source.
 pub fn rename_path(source: &Path, target: &Path) -> Result<(), String> {
    if !source.exists() {
       return Err("Source path does not exist".to_string());
    }
-   if target.exists() {
+   if target.exists() && !is_case_only_rename_of_same_entry(source, target) {
       return Err("Target path already exists".to_string());
    }
 
    fs::rename(source, target).map_err(|e| format!("Failed to rename file: {}", e))
+}
+
+fn is_case_only_rename_of_same_entry(source: &Path, target: &Path) -> bool {
+   let (Some(source_name), Some(target_name)) = (source.file_name(), target.file_name()) else {
+      return false;
+   };
+   if source.parent() != target.parent() || source_name == target_name {
+      return false;
+   }
+   if source_name.to_string_lossy().to_lowercase() != target_name.to_string_lossy().to_lowercase() {
+      return false;
+   }
+   is_same_entry(source, target)
+}
+
+#[cfg(unix)]
+fn is_same_entry(left: &Path, right: &Path) -> bool {
+   use std::os::unix::fs::MetadataExt;
+   match (fs::symlink_metadata(left), fs::symlink_metadata(right)) {
+      (Ok(left), Ok(right)) => left.dev() == right.dev() && left.ino() == right.ino(),
+      _ => false,
+   }
+}
+
+#[cfg(not(unix))]
+fn is_same_entry(left: &Path, right: &Path) -> bool {
+   match (fs::canonicalize(left), fs::canonicalize(right)) {
+      (Ok(left), Ok(right)) => left == right,
+      _ => false,
+   }
 }
 
 /// Moves a file or directory to a new, not yet existing path in an existing directory, copying
@@ -206,7 +237,13 @@ fn move_by_copy(source: &Path, target: &Path, rename_err: &std::io::Error) -> Re
 pub fn copy_dir_all(src: &Path, dst: &Path) -> Result<(), String> {
    fs::create_dir_all(dst).map_err(|e| format!("Failed to create directory: {}", e))?;
 
-   for entry in WalkDir::new(src).min_depth(1) {
+   // Copying a folder into itself creates `dst` inside `src`; walking into it would copy the
+   // copy again without end.
+   let walker = WalkDir::new(src)
+      .min_depth(1)
+      .into_iter()
+      .filter_entry(|entry| entry.path() != dst);
+   for entry in walker {
       let entry = entry.map_err(|e| format!("Failed to read entry: {}", e))?;
       let src_path = entry.path();
       let relative_path = src_path

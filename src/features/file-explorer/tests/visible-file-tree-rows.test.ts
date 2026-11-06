@@ -8,8 +8,12 @@ import {
   createVisibleFileTreeRowsCache,
   filterFileTreeEntries,
   filterFileTreeForFffHits,
+  findFileTreeRowByPrefix,
+  getFileTreeParentRowIndex,
+  getFileTreeRowPositions,
   getGuideAncestorRows,
   getStickyAncestorRows,
+  resolveFileTreeFocusIndex,
 } from "../lib/visible-file-tree-rows";
 
 const tree = [
@@ -476,5 +480,59 @@ describe("filterFileTreeForFffHits", () => {
     expect(Array.from(result.matchedPaths)).toEqual(["/root/src/generated/new-file.ts"]);
     expect(result.orderedMatchedPaths).toEqual(["/root/src/generated/new-file.ts"]);
     expect(result.matchCount).toBe(1);
+  });
+});
+
+describe("file tree row navigation helpers", () => {
+  const entry = (path: string, children?: FileEntry[]): FileEntry => ({
+    name: path.split("/").pop()!,
+    path,
+    isDir: Boolean(children),
+    ...(children ? { children } : {}),
+  });
+  const files = [
+    entry("/p", [
+      entry("/p/app", [entry("/p/app/main.ts"), entry("/p/app/menu.ts")]),
+      entry("/p/lib", [entry("/p/lib/a.ts")]),
+      entry("/p/readme.md"),
+    ]),
+  ];
+  const rows = buildVisibleFileTreeRows(files, new Set(["/p", "/p/app"]));
+  const index = createVisibleFileTreeRowIndex(rows);
+  const paths = rows.map((row) => row.file.path);
+
+  test("counts siblings and finds parents by depth", () => {
+    const positions = getFileTreeRowPositions(rows);
+    expect(paths).toEqual([
+      "/p",
+      "/p/app",
+      "/p/app/main.ts",
+      "/p/app/menu.ts",
+      "/p/lib",
+      "/p/readme.md",
+    ]);
+    expect([...positions.positionInSet]).toEqual([1, 1, 1, 2, 2, 3]);
+    expect([...positions.setSize]).toEqual([1, 3, 2, 2, 3, 3]);
+    expect(getFileTreeParentRowIndex(rows, 3)).toBe(1);
+    expect(getFileTreeParentRowIndex(rows, 0)).toBe(-1);
+    expect(getFileTreeParentRowIndex(rows, 99)).toBe(-1);
+  });
+
+  test("keeps focus near a row that went away", () => {
+    expect(resolveFileTreeFocusIndex(rows, index.get, "/p/lib")).toBe(4);
+    expect(resolveFileTreeFocusIndex(rows, index.get, "/p/lib/a.ts", 4)).toBe(4);
+    expect(resolveFileTreeFocusIndex(rows, index.get, "/p/app/deleted.ts", 3)).toBe(3);
+    expect(resolveFileTreeFocusIndex(rows, index.get, "/p/gone.md", 9)).toBe(5);
+    expect(resolveFileTreeFocusIndex(rows, index.get, undefined, 2)).toBe(-1);
+    expect(resolveFileTreeFocusIndex([], index.get, "/p", 2)).toBe(-1);
+  });
+
+  test("finds rows by a typed prefix and cycles on a repeated letter", () => {
+    expect(findFileTreeRowByPrefix(rows, "m", 0)).toBe(2);
+    expect(findFileTreeRowByPrefix(rows, "m", 2)).toBe(3);
+    expect(findFileTreeRowByPrefix(rows, "mm", 3)).toBe(2);
+    expect(findFileTreeRowByPrefix(rows, "me", 2)).toBe(3);
+    expect(findFileTreeRowByPrefix(rows, "READ", 0)).toBe(5);
+    expect(findFileTreeRowByPrefix(rows, "zzz", 0)).toBe(-1);
   });
 });

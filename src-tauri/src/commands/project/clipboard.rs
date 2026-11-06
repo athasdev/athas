@@ -162,6 +162,17 @@ pub async fn clipboard_paste(
                return Err("Cannot move a directory into itself".to_string());
             }
 
+            // Cutting and pasting into the folder the entry is already in leaves it in place
+            // instead of renaming it to a copy.
+            if raw_dest == source {
+               pasted.push(PastedEntry {
+                  source_path: entry.path.clone(),
+                  destination_path: entry.path.clone(),
+                  is_dir: entry.is_dir,
+               });
+               continue;
+            }
+
             let dest = generate_unique_path(&raw_dest);
 
             // Try rename first (fast for same filesystem)

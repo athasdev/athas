@@ -41,6 +41,7 @@
     "fs:allow-read-file",
     "fs:allow-read-dir",
     "fs:allow-exists",
+    "fs:allow-stat",
     "fs:allow-mkdir",
     "fs:allow-remove",
     "fs:allow-write-file",

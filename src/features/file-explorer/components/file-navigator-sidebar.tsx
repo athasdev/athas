@@ -179,6 +179,7 @@ const FileNavigatorNodeRow = memo(function FileNavigatorNodeRow({
   collapsedNodeIds,
   onToggle,
   compactRows,
+  forceExpanded,
 }: {
   node: PathTreeNode<FileNavigatorItem>;
   depth: number;
@@ -187,19 +188,21 @@ const FileNavigatorNodeRow = memo(function FileNavigatorNodeRow({
   collapsedNodeIds: ReadonlySet<string>;
   onToggle: (nodeId: string) => void;
   compactRows?: boolean;
+  /** While filtering, every folder holding a match stays open, whatever was collapsed before. */
+  forceExpanded?: boolean;
 }) {
   if (node.type === "branch") {
     const compacted = compactPathTreeBranch(node);
     const branch = compacted.branch;
-    const expanded = !collapsedNodeIds.has(branch.id);
+    const expanded = forceExpanded || !collapsedNodeIds.has(branch.id);
 
     return (
       <div>
         <SidebarTreeRow
           depth={depth}
           expanded={expanded}
-          onToggle={() => onToggle(branch.id)}
-          onClick={() => onToggle(branch.id)}
+          onToggle={forceExpanded ? undefined : () => onToggle(branch.id)}
+          onClick={forceExpanded ? undefined : () => onToggle(branch.id)}
           label={compacted.label}
           leading={
             <ThemedFileIcon
@@ -223,6 +226,7 @@ const FileNavigatorNodeRow = memo(function FileNavigatorNodeRow({
                 collapsedNodeIds={collapsedNodeIds}
                 onToggle={onToggle}
                 compactRows={compactRows}
+                forceExpanded={forceExpanded}
               />
             ))
           : null}
@@ -238,6 +242,7 @@ const FileNavigatorNodeRow = memo(function FileNavigatorNodeRow({
       depth={depth}
       onClick={() => onSelect(item.key)}
       active={isSelected}
+      data-file-navigator-key={item.key}
       title={item.path}
       reserveDisclosureSpace
       label={node.name}
@@ -274,6 +279,8 @@ export const FileNavigatorSidebar = memo(function FileNavigatorSidebar({
   const [parentWidth, setParentWidth] = useState<number>();
   const [isResizing, setIsResizing] = useState(false);
   const [collapsedNodeIds, setCollapsedNodeIds] = useState<Set<string>>(() => new Set());
+  const stopResizeRef = useRef<(() => void) | null>(null);
+  useEffect(() => () => stopResizeRef.current?.(), []);
   useEffect(() => {
     setSearchQuery("");
   }, [searchResetKey]);
@@ -353,11 +360,11 @@ export const FileNavigatorSidebar = memo(function FileNavigatorSidebar({
   });
 
   useEffect(() => {
-    if (viewMode !== "flat" || !selectedKey) return;
+    if (!selectedKey) return;
     const selectedIndex = flatItemIndexByKey.get(selectedKey);
-    if (selectedIndex === undefined) return;
+    if (viewMode === "flat" && selectedIndex === undefined) return;
 
-    if (shouldVirtualizeFlatItems) {
+    if (viewMode === "flat" && selectedIndex !== undefined && shouldVirtualizeFlatItems) {
       flatItemVirtualizer.scrollToIndex(selectedIndex, { align: "auto", behavior: "auto" });
       return;
     }
@@ -371,7 +378,14 @@ export const FileNavigatorSidebar = memo(function FileNavigatorSidebar({
     });
 
     return () => cancelAnimationFrame(frame);
-  }, [flatItemIndexByKey, flatItemVirtualizer, selectedKey, shouldVirtualizeFlatItems, viewMode]);
+  }, [
+    flatItemIndexByKey,
+    flatItemVirtualizer,
+    selectedKey,
+    shouldVirtualizeFlatItems,
+    tree,
+    viewMode,
+  ]);
 
   const navigatorLayout = getFileNavigatorLayout(preferredWidth, parentWidth);
 
@@ -401,15 +415,20 @@ export const FileNavigatorSidebar = memo(function FileNavigatorSidebar({
       };
 
       const handlePointerUp = () => {
+        stopResizeRef.current = null;
         setIsResizing(false);
         document.removeEventListener("pointermove", handlePointerMove);
         document.removeEventListener("pointerup", handlePointerUp);
+        document.removeEventListener("pointercancel", handlePointerUp);
         document.body.style.cursor = "";
         document.body.style.userSelect = "";
       };
 
+      stopResizeRef.current?.();
+      stopResizeRef.current = handlePointerUp;
       document.addEventListener("pointermove", handlePointerMove);
       document.addEventListener("pointerup", handlePointerUp);
+      document.addEventListener("pointercancel", handlePointerUp);
       document.body.style.cursor = "col-resize";
       document.body.style.userSelect = "none";
     },
@@ -533,6 +552,7 @@ export const FileNavigatorSidebar = memo(function FileNavigatorSidebar({
                 collapsedNodeIds={collapsedNodeIds}
                 onToggle={handleToggleNode}
                 compactRows={compactRows}
+                forceExpanded={searchQuery.trim().length > 0}
               />
             ))}
           </SidebarTree>

@@ -24,7 +24,10 @@ import "../styles/file-tree.css";
 
 export interface FileExplorerViewportHandle {
   focus: () => void;
+  /** How many rows Page Up and Page Down move by. */
+  getPageRowCount: () => number;
   getScrollTop: () => number;
+  isFocused: () => boolean;
   scrollToIndex: (index: number, alignment?: FileTreeScrollAlignment) => boolean;
   setScrollTop: (scrollTop: number) => void;
 }
@@ -120,9 +123,22 @@ export const FileExplorerViewport = forwardRef<
     };
   }, [scheduleLayoutUpdate, updateLayout]);
 
+  // A new row height (the UI font size changed) keeps the same row at the top of the tree instead
+  // of the same pixel offset, which would land somewhere else in the list.
+  const previousRowHeightRef = useRef(rowHeight);
   useLayoutEffect(() => {
     const element = scrollRef.current;
     if (!element) return;
+
+    const previousRowHeight = previousRowHeightRef.current;
+    previousRowHeightRef.current = rowHeight;
+    if (previousRowHeight !== rowHeight && previousRowHeight > 0) {
+      const contentScrollTop = Math.max(0, element.scrollTop - FILE_TREE_VIEWPORT_PADDING);
+      element.scrollTop =
+        contentScrollTop > 0
+          ? FILE_TREE_VIEWPORT_PADDING + (contentScrollTop / previousRowHeight) * rowHeight
+          : element.scrollTop;
+    }
 
     const maxScrollTop = Math.max(
       0,
@@ -149,7 +165,16 @@ export const FileExplorerViewport = forwardRef<
   useImperativeHandle(
     forwardedRef,
     () => ({
-      focus: () => scrollRef.current?.focus(),
+      focus: () => scrollRef.current?.focus({ preventScroll: true }),
+      getPageRowCount: () => {
+        const element = scrollRef.current;
+        if (!element || rowHeight <= 0) return 1;
+        return Math.max(1, Math.floor(element.clientHeight / rowHeight) - 1);
+      },
+      isFocused: () => {
+        const element = scrollRef.current;
+        return Boolean(element && document.activeElement === element);
+      },
       getScrollTop: () => scrollRef.current?.scrollTop ?? 0,
       scrollToIndex: (index, alignment = "nearest") => {
         const element = scrollRef.current;
@@ -205,9 +230,10 @@ export const FileExplorerViewport = forwardRef<
     <div className={cn("file-tree-container relative flex min-h-0 flex-col", className)}>
       <div
         ref={scrollRef}
-        // The gutter stays reserved so rows keep their width whether or not the tree overflows.
+        // The gutter stays reserved so rows keep their width whether or not the tree overflows. Focus
+        // shows on the focused row rather than around the whole list.
         data-file-tree-scroller=""
-        className="relative min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-none scroll-auto font-sans [overflow-anchor:none] scrollbar-gutter-stable"
+        className="relative min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-none scroll-auto font-sans outline-none [overflow-anchor:none] scrollbar-gutter-stable"
         style={
           {
             "--file-tree-row-height": `${rowHeight}px`,

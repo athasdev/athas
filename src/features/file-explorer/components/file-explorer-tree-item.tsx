@@ -54,6 +54,9 @@ interface FileExplorerTreeItemProps {
   showIndentGuides: boolean;
   isExpanded: boolean;
   isActive: boolean;
+  isFocused: boolean;
+  positionInSet?: number;
+  setSize?: number;
   isCut: boolean;
   isDragOver: boolean;
   isDragging: boolean;
@@ -100,6 +103,9 @@ function FileExplorerTreeItemComponent({
   showIndentGuides,
   isExpanded,
   isActive,
+  isFocused,
+  positionInSet,
+  setSize,
   isCut,
   isDragOver,
   isDragging,
@@ -140,6 +146,7 @@ function FileExplorerTreeItemComponent({
     window.clearTimeout(directorySizeTimerRef.current);
     directorySizeTimerRef.current = null;
   };
+  const label = displayName ?? file.name;
   const formattedDirectorySize = directorySize === null ? null : formatFileSize(directorySize);
   const guideLevels = Array.from({ length: depth }, (_, level) => level);
   const renderTreeGuides = () =>
@@ -227,6 +234,9 @@ function FileExplorerTreeItemComponent({
     <SidebarTreeRow
       id={rowId}
       active={isActive}
+      focused={isFocused}
+      aria-posinset={positionInSet}
+      aria-setsize={setSize}
       depth={depth}
       indentSize={indentSize}
       baseIndent={FILE_TREE_BASE_INDENT}
@@ -243,7 +253,11 @@ function FileExplorerTreeItemComponent({
       data-file-path={file.path}
       data-is-dir={file.isDir}
       data-path={file.path}
-      title={file.isSymlink && file.symlinkTarget ? `Symlink to: ${file.symlinkTarget}` : undefined}
+      title={
+        file.isSymlink && file.symlinkTarget
+          ? `${label} - Symlink to: ${file.symlinkTarget}`
+          : label
+      }
       className={cn(
         "group/file-tree-row box-border h-full max-w-full justify-start overflow-hidden",
         isDragOver && "border-2! border-dashed! border-primary! bg-primary-soft!",
@@ -264,7 +278,7 @@ function FileExplorerTreeItemComponent({
       }
       label={
         <span className={cn("select-none whitespace-nowrap", gitStatusDecoration?.colorClassName)}>
-          {renderHighlightedLabel(displayName ?? file.name, searchQuery)}
+          {renderHighlightedLabel(label, searchQuery)}
         </span>
       }
       trailing={
@@ -293,6 +307,9 @@ export const FileExplorerTreeItem = memo(
     prev.showIndentGuides === next.showIndentGuides &&
     prev.isExpanded === next.isExpanded &&
     prev.isActive === next.isActive &&
+    prev.isFocused === next.isFocused &&
+    prev.positionInSet === next.positionInSet &&
+    prev.setSize === next.setSize &&
     prev.isCut === next.isCut &&
     prev.isDragOver === next.isDragOver &&
     prev.isDragging === next.isDragging &&

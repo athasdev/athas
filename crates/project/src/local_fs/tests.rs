@@ -145,6 +145,46 @@ fn renames_only_onto_free_paths() {
 }
 
 #[test]
+fn renames_an_entry_to_a_different_case_of_its_own_name() {
+   let (_dir, root) = temp_root();
+   fs::write(root.join("readme.md"), "text").unwrap();
+   fs::write(root.join("Other.md"), "other").unwrap();
+
+   // On a case-insensitive disk the target "exists" as the source itself.
+   rename_path(&root.join("readme.md"), &root.join("README.md")).unwrap();
+   let names: Vec<String> = fs::read_dir(&root)
+      .unwrap()
+      .map(|entry| entry.unwrap().file_name().to_string_lossy().into_owned())
+      .collect();
+   assert!(names.contains(&"README.md".to_string()), "{names:?}");
+   assert!(!names.contains(&"readme.md".to_string()), "{names:?}");
+   assert_eq!(fs::read_to_string(root.join("README.md")).unwrap(), "text");
+
+   // A different entry is never replaced, whatever the case.
+   if root.join("other.md").exists() {
+      assert_eq!(
+         rename_path(&root.join("README.md"), &root.join("other.md")).unwrap_err(),
+         "Target path already exists"
+      );
+   }
+}
+
+#[test]
+fn copies_a_directory_into_itself_once() {
+   let (_dir, root) = temp_root();
+   fs::create_dir_all(root.join("dir/inner")).unwrap();
+   fs::write(root.join("dir/inner/a.txt"), "a").unwrap();
+
+   copy_dir_all(&root.join("dir"), &root.join("dir/dir")).unwrap();
+
+   assert_eq!(
+      fs::read_to_string(root.join("dir/dir/inner/a.txt")).unwrap(),
+      "a"
+   );
+   assert!(!root.join("dir/dir/dir").exists());
+}
+
+#[test]
 fn moves_files_and_directories_with_validation() {
    let (_dir, root) = temp_root();
    fs::create_dir_all(root.join("dir/inner")).unwrap();

@@ -10,7 +10,7 @@ import { useFileTreeStore } from "../stores/file-explorer-tree.store";
 import type { SidebarViewHeaderProps } from "@/features/layout/services/sidebar-view-registry";
 import { useProjectStore } from "@/features/workspace/stores/project.store";
 
-function FileExplorerPaneComponent() {
+function FileExplorerPaneComponent({ focusRequest = 0 }: { focusRequest?: number }) {
   const setFiles = useFileSystemStore((state) => state.setFiles);
   const handleCreateNewFolderInDirectory = useFileSystemStore(
     (state) => state.handleCreateNewFolderInDirectory,
@@ -54,6 +54,7 @@ function FileExplorerPaneComponent() {
           onRevealInFinder={handleRevealInFolder}
           onFileMove={handleFileMove}
           onDuplicatePath={handleDuplicatePath}
+          focusRequest={focusRequest}
         />
       )}
 

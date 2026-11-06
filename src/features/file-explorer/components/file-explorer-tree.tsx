@@ -12,7 +12,16 @@ import {
   XIcon,
 } from "@/ui/icons";
 import type React from "react";
-import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import {
+  memo,
+  useCallback,
+  useEffect,
+  useId,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { toast } from "sonner";
 import { useDebounce } from "use-debounce";
 import { useShallow } from "zustand/react/shallow";
@@ -23,8 +32,12 @@ import {
   collectFileTreeSearchHits,
   filterFileTreeEntries,
   filterFileTreeForFffHits,
+  findFileTreeRowByPrefix,
+  getFileTreeParentRowIndex,
+  getFileTreeRowPositions,
   getGuideAncestorRows,
   getStickyAncestorRows,
+  resolveFileTreeFocusIndex,
   type FileTreeFilterCache,
   type FilterFileTreeForSearchResult,
 } from "@/features/file-explorer/lib/visible-file-tree-rows";
@@ -80,6 +93,8 @@ import {
   stripTrailingPathSeparators,
 } from "@/utils/path-helpers";
 import { useFileExplorerContextMenu } from "../hooks/use-file-explorer-context-menu";
+import { pasteFileClipboard } from "../services/paste-file-clipboard";
+import { withoutNestedEntries } from "../utils/file-tree-selection";
 import { useFileExplorerDragDrop } from "../hooks/use-file-explorer-drag-drop";
 import { useFileExplorerSync } from "../hooks/use-file-explorer-sync";
 import {
@@ -88,6 +103,7 @@ import {
 } from "../hooks/use-file-explorer-visible-rows";
 import { getFileTreeSubtreeEnds } from "@/features/file-explorer/lib/file-tree-viewport";
 import { FileExplorerViewport, type FileExplorerViewportHandle } from "./file-explorer-viewport";
+import type { FileTreeScrollAlignment } from "@/features/file-explorer/lib/file-tree-viewport";
 import { FileExplorerTreeItem } from "./file-explorer-tree-item";
 import type { FileTreeGuideTarget } from "./file-explorer-tree-item";
 import { useProjectStore } from "@/features/workspace/stores/project.store";
@@ -134,6 +150,8 @@ interface FileExplorerTreeProps {
   onRevealInFinder?: (path: string) => void;
   onUploadFile?: (directoryPath: string) => void;
   onFileMove?: (oldPath: string, newPath: string) => void | Promise<void>;
+  /** Moves keyboard focus into the tree each time it changes, after the first value. */
+  focusRequest?: number;
 }
 
 interface FileExplorerAlertDialogState {
@@ -152,7 +170,29 @@ interface ResolvedFileTreeSearch {
 
 const FILE_TREE_SEARCH_DEBOUNCE_DELAY = 80;
 const FILE_TREE_SEARCH_RESULT_LIMIT = 500;
-const getFileTreeRowId = (path: string) => `file-tree-row-${path.replace(/[^a-zA-Z0-9_-]/g, "_")}`;
+/** How long typed characters keep adding to one type-to-find prefix. */
+const TYPE_TO_FIND_RESET_MS = 750;
+/** Each tree's last scroll offset per project root, so switching back or reopening the pane keeps it. */
+const scrollTopByRootPath = new Map<string, number>();
+
+// Ids must stay unique per path and free of whitespace, since aria-activedescendant refers to them.
+const getFileTreeRowId = (treeId: string, path: string) =>
+  `file-tree-row-${treeId}-${path.replace(/[^a-zA-Z0-9-]/g, (character) => `_${character.charCodeAt(0).toString(16)}_`)}`;
+
+/** Menus and dialogs portal out of the tree but still bubble their React events through it. */
+const isEventInsideTree = (event: React.SyntheticEvent) =>
+  event.currentTarget.contains(event.target as Node | null);
+
+/** Selected paths without the ones inside another selected folder, which go along with it. */
+function getTopLevelPaths(paths: readonly string[]): string[] {
+  return paths.filter(
+    (path) =>
+      !paths.some(
+        (other) =>
+          other !== path && (path.startsWith(`${other}/`) || path.startsWith(`${other}\\`)),
+      ),
+  );
+}
 
 /** The tree without the unsaved new-item row, keeping every branch that did not contain one. */
 function removeNewItemsFromTree(items: FileEntry[]): FileEntry[] {
@@ -192,11 +232,12 @@ function FileExplorerTreeComponent({
   onRevealInFinder,
   onUploadFile,
   onFileMove,
+  focusRequest = 0,
 }: FileExplorerTreeProps) {
-  const [deleteCandidate, setDeleteCandidate] = useState<{
+  const [deleteCandidates, setDeleteCandidates] = useState<Array<{
     path: string;
     isDir: boolean;
-  } | null>(null);
+  }> | null>(null);
   const [alertDialog, setAlertDialog] = useState<FileExplorerAlertDialogState | null>(null);
   const [openAllFilesDialog, setOpenAllFilesDialog] = useState<OpenAllFilesDialogState | null>(
     null,
@@ -206,10 +247,30 @@ function FileExplorerTreeComponent({
   const [editingValue, setEditingValue] = useState("");
   const [focusedPath, setFocusedPath] = useState<string | undefined>(activePath);
   const [hasTreeFocus, setHasTreeFocus] = useState(false);
+  // The focused row gets a ring once the keyboard moves it; a pointer press hides the ring again.
+  const [isKeyboardFocusVisible, setIsKeyboardFocusVisible] = useState(false);
+  // More than one selected row; a single selection is the focused or active row itself.
+  const [multiSelection, setMultiSelection] = useState<ReadonlySet<string> | null>(null);
+  const selectionAnchorPathRef = useRef<string | undefined>(undefined);
+  const lastKeyboardIndexRef = useRef(-1);
+  const typeToFindRef = useRef({ prefix: "", timestamp: 0 });
+  const pendingCollapseRevealPathRef = useRef<string | null>(null);
+  const pendingScrollRestoreRef = useRef<number | null>(null);
+  // Read from scroll events: by the time a project switch commits, the new rows may already have
+  // clamped the scroller.
+  const lastScrollTopRef = useRef(0);
+  const treeId = useId().replace(/[^a-zA-Z0-9-]/g, "");
+  const getRowId = useCallback((path: string) => getFileTreeRowId(treeId, path), [treeId]);
+  // Folders opened or closed by hand while a filter is shown, for that filter query only.
+  const [searchExpansionToggles, setSearchExpansionToggles] = useState<{
+    query: string;
+    paths: ReadonlySet<string>;
+  } | null>(null);
   const [treeSearchOpen, setTreeSearchOpen] = useState(false);
   const [treeSearchQuery, setTreeSearchQuery] = useState("");
   const [debouncedTreeSearchQuery] = useDebounce(treeSearchQuery, FILE_TREE_SEARCH_DEBOUNCE_DELAY);
   const viewportRef = useRef<FileExplorerViewportHandle>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const lastResolvedTreeSearchRef = useRef<ResolvedFileTreeSearch | null>(null);
   const searchScrollTopRef = useRef<number | null>(null);
@@ -509,7 +570,20 @@ function FileExplorerTreeComponent({
     : currentResolvedTreeSearch;
   const displayedTreeSearchResult = displayedTreeSearch?.result;
   const displayedFiles = displayedTreeSearchResult?.files ?? filteredFiles;
-  const displayedExpandedPaths = displayedTreeSearchResult?.expandedPaths;
+  const activeSearchExpansionToggles =
+    displayedTreeSearch && searchExpansionToggles?.query === displayedTreeSearch.query
+      ? searchExpansionToggles.paths
+      : null;
+  const displayedExpandedPaths = useMemo(() => {
+    const searchExpandedPaths = displayedTreeSearchResult?.expandedPaths;
+    if (!searchExpandedPaths || !activeSearchExpansionToggles) return searchExpandedPaths;
+    const next = new Set(searchExpandedPaths);
+    for (const path of activeSearchExpansionToggles) {
+      if (next.has(path)) next.delete(path);
+      else next.add(path);
+    }
+    return next;
+  }, [activeSearchExpansionToggles, displayedTreeSearchResult]);
 
   useEffect(() => {
     if (!isTreeSearchActive) {
@@ -568,7 +642,54 @@ function FileExplorerTreeComponent({
     consumeRevealRequest(revealRequest.id);
   }, [consumeRevealRequest, revealRequest, visibleRowIndexByPath]);
   const keyboardPath = focusedPath || activePath;
-  const highlightedPath = hasTreeFocus ? keyboardPath : activePath;
+  const keyboardIndex = resolveFileTreeFocusIndex(
+    visibleRows,
+    visibleRowIndexByPath.get,
+    keyboardPath,
+    lastKeyboardIndexRef.current,
+  );
+  const keyboardRowPath = keyboardIndex >= 0 ? visibleRows[keyboardIndex]?.file.path : undefined;
+  const highlightedPath = hasTreeFocus ? keyboardRowPath : activePath;
+  const rowPositions = useMemo(() => getFileTreeRowPositions(visibleRows), [visibleRows]);
+
+  useEffect(() => {
+    if (keyboardIndex >= 0) lastKeyboardIndexRef.current = keyboardIndex;
+  }, [keyboardIndex]);
+
+  // A folder closed from its sticky header or an indent guide sits above the view; without this the
+  // tree keeps its offset and shows whatever rows now follow, far from the folder.
+  useLayoutEffect(() => {
+    const path = pendingCollapseRevealPathRef.current;
+    if (!path) return;
+    const index = visibleRowIndexByPath.get(path);
+    if (index === undefined || visibleRows[index]?.isExpanded) return;
+    pendingCollapseRevealPathRef.current = null;
+    viewportRef.current?.scrollToIndex(index, "nearest");
+  }, [visibleRowIndexByPath, visibleRows]);
+
+  useLayoutEffect(() => {
+    if (!rootFolderPath) return;
+    const viewport = viewportRef.current;
+    const savedScrollTop = scrollTopByRootPath.get(rootFolderPath) ?? 0;
+    lastScrollTopRef.current = savedScrollTop;
+    if (savedScrollTop > 0) {
+      pendingScrollRestoreRef.current = savedScrollTop;
+    } else {
+      pendingScrollRestoreRef.current = null;
+      viewport?.setScrollTop(0);
+    }
+    return () => {
+      pendingScrollRestoreRef.current = null;
+      scrollTopByRootPath.set(rootFolderPath, lastScrollTopRef.current);
+    };
+  }, [rootFolderPath]);
+
+  useLayoutEffect(() => {
+    const savedScrollTop = pendingScrollRestoreRef.current;
+    if (savedScrollTop === null || visibleRows.length === 0) return;
+    pendingScrollRestoreRef.current = null;
+    viewportRef.current?.setScrollTop(savedScrollTop);
+  }, [visibleRows]);
 
   useEffect(() => {
     if (!hasTreeFocus) {
@@ -720,6 +841,11 @@ function FileExplorerTreeComponent({
   const finishInlineEditing = (item: FileEntry, newName: string) => {
     if (!onUpdateFiles) return;
 
+    if (item.isRenaming && !newName.trim()) {
+      onRenamePath?.(item.path);
+      return;
+    }
+
     if (newName.trim()) {
       let parentPath = stripTrailingPathSeparators(item.path);
       if (!parentPath && rootFolderPath) parentPath = rootFolderPath;
@@ -773,13 +899,38 @@ function FileExplorerTreeComponent({
   // again on each scroll frame.
   const inlineEditingRef = useRef({ finishInlineEditing, cancelInlineEditing });
   inlineEditingRef.current = { finishInlineEditing, cancelInlineEditing };
+  // The name field unmounts once it is done, which drops focus to the page; it goes back to the
+  // tree unless the field was left by moving focus somewhere else.
+  const returnFocusAfterInlineEdit = useCallback((nextFocusedPath?: string) => {
+    if (nextFocusedPath) setFocusedPath(nextFocusedPath);
+    requestAnimationFrame(() => {
+      const activeElement = document.activeElement;
+      if (
+        !activeElement ||
+        activeElement === document.body ||
+        containerRef.current?.contains(activeElement)
+      ) {
+        viewportRef.current?.focus();
+      }
+    });
+  }, []);
   const handleInlineEditSubmit = useCallback(
-    (value: string, file: FileEntry) => inlineEditingRef.current.finishInlineEditing(file, value),
-    [],
+    (value: string, file: FileEntry) => {
+      inlineEditingRef.current.finishInlineEditing(file, value);
+      const name = value.trim();
+      const parentPath = file.isRenaming
+        ? getDirName(file.path)
+        : stripTrailingPathSeparators(file.path) || rootFolderPath;
+      returnFocusAfterInlineEdit(name && parentPath ? joinPath(parentPath, name) : undefined);
+    },
+    [returnFocusAfterInlineEdit, rootFolderPath],
   );
   const handleInlineEditCancel = useCallback(
-    (file: FileEntry) => inlineEditingRef.current.cancelInlineEditing(file),
-    [],
+    (file: FileEntry) => {
+      inlineEditingRef.current.cancelInlineEditing(file);
+      returnFocusAfterInlineEdit(file.isRenaming ? file.path : undefined);
+    },
+    [returnFocusAfterInlineEdit],
   );
 
   const openPathInTab = useCallback(
@@ -946,16 +1097,42 @@ function FileExplorerTreeComponent({
     }
   }, [openAllFilesDialog, openFilePathsInTabs]);
 
+  const deletePaths = useCallback(
+    async (candidates: Array<{ path: string; isDir: boolean }>) => {
+      for (const candidate of candidates) {
+        try {
+          await Promise.resolve(onDeletePath?.(candidate.path, candidate.isDir));
+        } catch (error) {
+          toast.error(`Could not delete ${getPathBaseName(candidate.path)}`, {
+            description: error instanceof Error ? error.message : String(error),
+          });
+        }
+      }
+    },
+    [onDeletePath],
+  );
+
   const handleDeleteRequested = useCallback(
-    (candidate: { path: string; isDir: boolean }) => {
+    (candidates: Array<{ path: string; isDir: boolean }>) => {
+      if (candidates.length === 0) return;
       if (fileTreeSettings.confirmBeforeFileDelete) {
-        setDeleteCandidate(candidate);
+        setDeleteCandidates(candidates);
         return;
       }
 
-      void Promise.resolve(onDeletePath?.(candidate.path, candidate.isDir));
+      void deletePaths(candidates);
     },
-    [fileTreeSettings.confirmBeforeFileDelete, onDeletePath],
+    [deletePaths, fileTreeSettings.confirmBeforeFileDelete],
+  );
+
+  const getSelectedEntries = useCallback(
+    () =>
+      multiSelection
+        ? visibleRows
+            .filter((row) => multiSelection.has(row.file.path))
+            .map((row) => ({ path: row.file.path, isDir: row.file.isDir }))
+        : null,
+    [multiSelection, visibleRows],
   );
 
   const { setContextMenu, handleContextMenu, contextMenuElement } = useFileExplorerContextMenu({
@@ -979,6 +1156,7 @@ function FileExplorerTreeComponent({
     canRemoveWorkspaceRootPath: (path) =>
       path !== rootFolderPath && workspaceRootPaths.includes(path),
     onDeleteRequested: handleDeleteRequested,
+    getSelectedEntries,
     onStartInlineEditing: startInlineEditing,
     onOpenAllFilesInDirectory: handleOpenAllFilesInDirectory,
   });
@@ -1018,23 +1196,122 @@ function FileExplorerTreeComponent({
 
   const toggleDirectory = useCallback(
     async (path: string) => {
+      const index = visibleRowIndexByPath.get(path);
+      const row = index === undefined ? undefined : visibleRows[index];
+      if (row?.isExpanded) pendingCollapseRevealPathRef.current = path;
+
+      // Filtered rows take their open folders from the filter, so a folder opened or closed there
+      // is tracked for the filter instead of in the tree's own expanded folders.
+      if (displayedTreeSearch && displayedExpandedPaths) {
+        const query = displayedTreeSearch.query;
+        setSearchExpansionToggles((current) => {
+          const paths = new Set(current?.query === query ? current.paths : []);
+          if (paths.has(path)) paths.delete(path);
+          else paths.add(path);
+          return { query, paths };
+        });
+        if (
+          row &&
+          !row.isExpanded &&
+          !row.file.children &&
+          !useFileTreeStore.getState().actions.isExpanded(path)
+        ) {
+          await Promise.resolve(onFileSelect(path, true));
+        }
+        return;
+      }
+
       await Promise.resolve(onFileSelect(path, true));
     },
-    [onFileSelect],
+    [displayedExpandedPaths, displayedTreeSearch, onFileSelect, visibleRowIndexByPath, visibleRows],
   );
+
+  const clearMultiSelection = useCallback((anchorPath?: string) => {
+    setMultiSelection(null);
+    selectionAnchorPathRef.current = anchorPath;
+  }, []);
+
+  const selectRangeTo = useCallback(
+    (targetIndex: number) => {
+      const anchorPath = selectionAnchorPathRef.current ?? keyboardRowPath;
+      const anchorIndex =
+        (anchorPath ? visibleRowIndexByPath.get(anchorPath) : undefined) ??
+        (keyboardIndex >= 0 ? keyboardIndex : targetIndex);
+      selectionAnchorPathRef.current = visibleRows[anchorIndex]?.file.path;
+      const from = Math.min(anchorIndex, targetIndex);
+      const to = Math.max(anchorIndex, targetIndex);
+      if (from === to) {
+        setMultiSelection(null);
+        return;
+      }
+      const paths = new Set<string>();
+      for (let index = from; index <= to; index++) {
+        const path = visibleRows[index]?.file.path;
+        if (path) paths.add(path);
+      }
+      setMultiSelection(paths);
+    },
+    [keyboardIndex, keyboardRowPath, visibleRowIndexByPath, visibleRows],
+  );
+
+  const toggleRowSelection = useCallback(
+    (path: string) => {
+      const base =
+        multiSelection ??
+        (highlightedPath && visibleRowIndexByPath.get(highlightedPath) !== undefined
+          ? new Set([highlightedPath])
+          : new Set<string>());
+      const next = new Set(base);
+      if (next.has(path)) next.delete(path);
+      else next.add(path);
+      selectionAnchorPathRef.current = path;
+      setMultiSelection(next.size > 1 ? next : null);
+      setFocusedPath(next.has(path) || next.size === 0 ? path : [...next][0]);
+    },
+    [highlightedPath, multiSelection, visibleRowIndexByPath],
+  );
+
+  /** The rows a keyboard action applies to: the selection when the focused row is part of it. */
+  const getActionTargets = useCallback((): FileEntry[] => {
+    const focusedRow = keyboardIndex >= 0 ? visibleRows[keyboardIndex] : undefined;
+    if (!focusedRow) return [];
+    if (!multiSelection?.has(focusedRow.file.path)) return [focusedRow.file];
+    return withoutNestedEntries(
+      visibleRows.filter((row) => multiSelection.has(row.file.path)).map((row) => row.file),
+    );
+  }, [keyboardIndex, multiSelection, visibleRows]);
 
   const handleContainerClick = useCallback(
     (e: React.MouseEvent) => {
+      if (!isEventInsideTree(e)) return;
+      const target = e.target as HTMLElement | null;
+      if (target?.closest("input, textarea")) return;
       const t = getTargetItem(e.target);
+      viewportRef.current?.focus();
       if (!t) {
         e.preventDefault();
         e.stopPropagation();
         setFocusedPath(undefined);
+        clearMultiSelection();
         updateActivePath?.("");
         return;
       }
       e.preventDefault();
       e.stopPropagation();
+
+      const isToggleModifier = IS_MAC ? e.metaKey : e.ctrlKey;
+      if (e.shiftKey || isToggleModifier) {
+        if (e.shiftKey) {
+          const targetIndex = visibleRowIndexByPath.get(t.path);
+          if (targetIndex !== undefined) selectRangeTo(targetIndex);
+          setFocusedPath(t.path);
+        } else {
+          toggleRowSelection(t.path);
+        }
+        return;
+      }
+
+      clearMultiSelection(t.path);
       if (!t.isDir) {
         fileOpenBenchmark.ensureStarted(t.path, "explorer-click");
         fileOpenBenchmark.mark(t.path, "explorer-click");
@@ -1048,11 +1325,22 @@ function FileExplorerTreeComponent({
         void Promise.resolve(onFileSelect(t.path, false));
       }
     },
-    [onFileSelect, toggleDirectory, updateActivePath, pathToFile],
+    [
+      clearMultiSelection,
+      onFileSelect,
+      pathToFile,
+      selectRangeTo,
+      toggleDirectory,
+      toggleRowSelection,
+      updateActivePath,
+      visibleRowIndexByPath,
+    ],
   );
 
   const handleContainerDoubleClick = useCallback(
     (e: React.MouseEvent) => {
+      if (!isEventInsideTree(e)) return;
+      if (e.shiftKey || e.metaKey || e.ctrlKey) return;
       const t = getTargetItem(e.target);
       if (!t) return;
       e.preventDefault();
@@ -1072,8 +1360,10 @@ function FileExplorerTreeComponent({
 
   const handleContainerContextMenu = useCallback(
     (e: React.MouseEvent) => {
+      if (!isEventInsideTree(e)) return;
       const t = getTargetItem(e.target);
       if (t) {
+        if (!multiSelection?.has(t.path)) clearMultiSelection(t.path);
         handleContextMenu(e, t.path, t.isDir);
         return;
       }
@@ -1082,7 +1372,7 @@ function FileExplorerTreeComponent({
         handleContextMenu(e, rootFolderPath, true);
       }
     },
-    [handleContextMenu, pathToFile, rootFolderPath],
+    [clearMultiSelection, handleContextMenu, multiSelection, pathToFile, rootFolderPath],
   );
 
   const handleContainerMouseDown = useCallback(
@@ -1102,12 +1392,15 @@ function FileExplorerTreeComponent({
         const dx = e.clientX - pressed.x;
         const dy = e.clientY - pressed.y;
         if (Math.hypot(dx, dy) > 5) {
-          startDrag(e, pressed.file);
+          const selection = multiSelection
+            ? visibleRows.filter((row) => multiSelection.has(row.file.path)).map((row) => row.file)
+            : undefined;
+          startDrag(e, pressed.file, selection);
           pressedRowRef.current = null;
         }
       }
     },
-    [dragState.isDragging, startDrag],
+    [dragState.isDragging, multiSelection, startDrag, visibleRows],
   );
 
   const releasePressedRow = useCallback(() => {
@@ -1120,20 +1413,21 @@ function FileExplorerTreeComponent({
   };
 
   const handleDeleteConfirm = useCallback(async () => {
-    if (!deleteCandidate) return;
+    if (!deleteCandidates) return;
 
     setIsDeletingPath(true);
     try {
-      await Promise.resolve(onDeletePath?.(deleteCandidate.path, deleteCandidate.isDir));
-    } catch (error) {
-      toast.error(`Could not delete ${getPathBaseName(deleteCandidate.path)}`, {
-        description: error instanceof Error ? error.message : String(error),
-      });
+      await deletePaths(deleteCandidates);
     } finally {
-      setDeleteCandidate(null);
+      setDeleteCandidates(null);
       setIsDeletingPath(false);
+      clearMultiSelection();
     }
-  }, [deleteCandidate, onDeletePath]);
+  }, [clearMultiSelection, deleteCandidates, deletePaths]);
+
+  useEffect(() => {
+    if (focusRequest > 0) viewportRef.current?.focus();
+  }, [focusRequest]);
 
   useEffect(() => {
     if (!activePath || !fileOpenBenchmark.has(activePath)) return;
@@ -1147,8 +1441,239 @@ function FileExplorerTreeComponent({
     return () => cancelAnimationFrame(rafId);
   }, [activePath]);
 
+  const focusRow = (index: number, alignment: FileTreeScrollAlignment = "nearest") => {
+    const path = visibleRows[index]?.file.path;
+    if (!path) return;
+    setFocusedPath(path);
+    viewportRef.current?.scrollToIndex(index, alignment);
+  };
+
+  /** Moves keyboard focus to a row; with Shift the selection grows from its anchor to the row. */
+  const moveFocusTo = (
+    index: number,
+    extendSelection: boolean,
+    alignment: FileTreeScrollAlignment = "nearest",
+  ) => {
+    const path = visibleRows[index]?.file.path;
+    if (!path) return;
+    if (extendSelection) selectRangeTo(index);
+    else clearMultiSelection(path);
+    focusRow(index, alignment);
+  };
+
+  const requestDelete = (targets: FileEntry[]) => {
+    const candidates = getTopLevelPaths(targets.map((target) => target.path)).flatMap((path) => {
+      const target = targets.find((entry) => entry.path === path);
+      return target && !workspaceRootPaths.includes(path) ? [{ path, isDir: target.isDir }] : [];
+    });
+    if (candidates.length === 0) return;
+    if (fileTreeSettings.confirmBeforeFileDelete) {
+      setDeleteCandidates(candidates);
+      return;
+    }
+    void deletePaths(candidates);
+  };
+
+  const findRowByTypedCharacter = (character: string) => {
+    const now = Date.now();
+    const typed = typeToFindRef.current;
+    const prefix =
+      now - typed.timestamp > TYPE_TO_FIND_RESET_MS ? character : `${typed.prefix}${character}`;
+    typeToFindRef.current = { prefix, timestamp: now };
+    return findFileTreeRowByPrefix(visibleRows, prefix, keyboardIndex);
+  };
+
+  const handleTreeKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (!isEventInsideTree(e)) return;
+    const mod = e.metaKey || e.ctrlKey;
+    if (mod && !e.altKey && e.key.toLowerCase() === "f") {
+      e.preventDefault();
+      e.stopPropagation();
+      setTreeSearchOpen(true);
+      return;
+    }
+    // Fields and the filter bar's buttons handle their own keys.
+    const control = (e.target as HTMLElement).closest(
+      "input, textarea, select, button, a, [contenteditable]",
+    );
+    if (control && control.getAttribute("role") !== "treeitem") return;
+    if (!mod && !e.altKey && !e.shiftKey && e.key === "/") {
+      e.preventDefault();
+      e.stopPropagation();
+      setTreeSearchOpen(true);
+      return;
+    }
+    if (e.nativeEvent.isComposing) return;
+    setIsKeyboardFocusVisible(true);
+
+    const curIndex = keyboardIndex === -1 ? 0 : keyboardIndex;
+    const currentRow = visibleRows[curIndex];
+    const current = currentRow?.file;
+    const isDir = current?.isDir;
+    const clipboardActions = useFileClipboardStore.getState().actions;
+    if (mod && !e.altKey && current) {
+      const key = e.key.toLowerCase();
+      if (key === "c" || key === "x") {
+        e.preventDefault();
+        const entries = getActionTargets().map((entry) => ({
+          path: entry.path,
+          is_dir: entry.isDir,
+        }));
+        void (key === "c" ? clipboardActions.copy(entries) : clipboardActions.cut(entries));
+        return;
+      }
+      if (key === "v") {
+        e.preventDefault();
+        const targetDir = isDir ? current.path : getDirName(current.path);
+        if (targetDir && useFileClipboardStore.getState().clipboard) {
+          void pasteFileClipboard(targetDir);
+        }
+        return;
+      }
+      if (key === "a") {
+        e.preventDefault();
+        if (visibleRows.length > 1) {
+          setMultiSelection(new Set(visibleRows.map((row) => row.file.path)));
+        }
+        return;
+      }
+      if (IS_MAC && e.metaKey && e.key === "Backspace") {
+        e.preventDefault();
+        requestDelete(getActionTargets());
+        return;
+      }
+      if (e.key === "ArrowDown" && IS_MAC && e.metaKey && !isDir) {
+        e.preventDefault();
+        void Promise.resolve(onFileOpen?.(current.path, false));
+        return;
+      }
+    }
+    if (mod || e.altKey) return;
+
+    switch (e.key) {
+      case "Escape": {
+        e.preventDefault();
+        e.stopPropagation();
+        setContextMenu(null);
+        clearMultiSelection(keyboardRowPath);
+        viewportRef.current?.focus();
+        break;
+      }
+      case "ArrowDown": {
+        e.preventDefault();
+        moveFocusTo(
+          keyboardIndex === -1 ? 0 : Math.min(visibleRows.length - 1, curIndex + 1),
+          e.shiftKey,
+        );
+        break;
+      }
+      case "ArrowUp": {
+        e.preventDefault();
+        moveFocusTo(keyboardIndex === -1 ? 0 : Math.max(0, curIndex - 1), e.shiftKey);
+        break;
+      }
+      case "PageDown":
+      case "PageUp": {
+        e.preventDefault();
+        const pageRows = viewportRef.current?.getPageRowCount() ?? 1;
+        const next =
+          e.key === "PageDown"
+            ? Math.min(visibleRows.length - 1, curIndex + pageRows)
+            : Math.max(0, curIndex - pageRows);
+        moveFocusTo(next, e.shiftKey);
+        break;
+      }
+      case "Home": {
+        e.preventDefault();
+        moveFocusTo(0, e.shiftKey, "start");
+        break;
+      }
+      case "End": {
+        e.preventDefault();
+        moveFocusTo(visibleRows.length - 1, e.shiftKey, "end");
+        break;
+      }
+      case "ArrowRight": {
+        if (!currentRow || e.shiftKey) break;
+        e.preventDefault();
+        if (!isDir) break;
+        if (!currentRow.isExpanded) {
+          void toggleDirectory(currentRow.file.path);
+          break;
+        }
+        const child = visibleRows[curIndex + 1];
+        if (child && child.depth === currentRow.depth + 1) moveFocusTo(curIndex + 1, false);
+        break;
+      }
+      case "ArrowLeft": {
+        if (!currentRow || e.shiftKey) break;
+        e.preventDefault();
+        if (isDir && currentRow.isExpanded) {
+          void toggleDirectory(currentRow.file.path);
+          break;
+        }
+        const parentIndex = getFileTreeParentRowIndex(visibleRows, curIndex);
+        if (parentIndex >= 0) moveFocusTo(parentIndex, false);
+        break;
+      }
+      case "Enter": {
+        if (!current || e.shiftKey) break;
+        e.preventDefault();
+        if (isDir) {
+          void toggleDirectory(current.path);
+        } else {
+          void Promise.resolve(onFileOpen?.(current.path, false));
+        }
+        break;
+      }
+      case " ": {
+        if (!current || e.shiftKey) break;
+        // Space while typing a name is part of the name.
+        if (Date.now() - typeToFindRef.current.timestamp <= TYPE_TO_FIND_RESET_MS) {
+          e.preventDefault();
+          const index = findRowByTypedCharacter(" ");
+          if (index >= 0) moveFocusTo(index, false);
+          break;
+        }
+        e.preventDefault();
+        if (isDir) {
+          void toggleDirectory(current.path);
+          break;
+        }
+        if (!IS_MAC) {
+          void Promise.resolve(onFileSelect(current.path, false));
+          break;
+        }
+        e.stopPropagation();
+        void toggleQuickLookPreview(current.path).catch((error) => {
+          console.error("Failed to toggle Quick Look:", error);
+        });
+        break;
+      }
+      case "F2": {
+        if (!current || e.shiftKey) break;
+        e.preventDefault();
+        onRenamePath?.(current.path);
+        break;
+      }
+      case "Delete": {
+        if (!current) break;
+        e.preventDefault();
+        requestDelete(getActionTargets());
+        break;
+      }
+      default: {
+        if (e.key.length !== 1 || !current) break;
+        const index = findRowByTypedCharacter(e.key);
+        e.preventDefault();
+        if (index >= 0) moveFocusTo(index, false);
+      }
+    }
+  };
+
   return (
     <div
+      ref={containerRef}
       className={cn(
         "group/file-explorer relative flex min-h-0 min-w-0 flex-1 select-none flex-col overflow-hidden px-0 pb-(--app-scrollbar-size)",
         dragState.dragOverPath === "__ROOT__" &&
@@ -1163,158 +1688,7 @@ function FileExplorerTreeComponent({
           setHasTreeFocus(false);
         }
       }}
-      onKeyDown={(e) => {
-        const mod = e.metaKey || e.ctrlKey;
-        if (mod && e.key.toLowerCase() === "f") {
-          e.preventDefault();
-          e.stopPropagation();
-          setTreeSearchOpen(true);
-          return;
-        }
-        if (!mod && !e.altKey && !e.shiftKey && e.key === "/") {
-          e.preventDefault();
-          e.stopPropagation();
-          setTreeSearchOpen(true);
-          return;
-        }
-        // Let inputs handle their own keys
-        const tag = (e.target as HTMLElement).tagName;
-        if (tag === "INPUT" || tag === "TEXTAREA" || (e.target as HTMLElement).isContentEditable) {
-          return;
-        }
-        const index = keyboardPath ? (visibleRowIndexByPath.get(keyboardPath) ?? -1) : -1;
-        const curIndex = index === -1 ? 0 : index;
-        const current = visibleRows[curIndex]?.file;
-        const isDir = visibleRows[curIndex]?.file.isDir;
-        const clipboardActions = useFileClipboardStore.getState().actions;
-        if (mod && current) {
-          if (e.key === "c") {
-            e.preventDefault();
-            void clipboardActions.copy([{ path: current.path, is_dir: !!isDir }]);
-            return;
-          }
-          if (e.key === "x") {
-            e.preventDefault();
-            void clipboardActions.cut([{ path: current.path, is_dir: !!isDir }]);
-            return;
-          }
-          if (e.key === "v") {
-            e.preventDefault();
-            const sep = current.path.includes("\\") ? "\\" : "/";
-            const targetDir = isDir ? current.path : current.path.split(sep).slice(0, -1).join(sep);
-            if (targetDir && useFileClipboardStore.getState().clipboard) {
-              void clipboardActions.paste(targetDir).then(() => {
-                onRefreshDirectory?.(targetDir, { force: true });
-              });
-            }
-            return;
-          }
-        }
-        switch (e.key) {
-          case "Escape": {
-            e.preventDefault();
-            e.stopPropagation();
-            setContextMenu(null);
-            viewportRef.current?.focus();
-            break;
-          }
-          case "ArrowDown": {
-            e.preventDefault();
-            const next = Math.min(visibleRows.length - 1, curIndex + 1);
-            const p = visibleRows[next]?.file.path;
-            if (p) {
-              setFocusedPath(p);
-              viewportRef.current?.scrollToIndex(next, "nearest");
-            }
-            break;
-          }
-          case "ArrowUp": {
-            e.preventDefault();
-            const prev = Math.max(0, curIndex - 1);
-            const p = visibleRows[prev]?.file.path;
-            if (p) {
-              setFocusedPath(p);
-              viewportRef.current?.scrollToIndex(prev, "nearest");
-            }
-            break;
-          }
-          case "Home": {
-            e.preventDefault();
-            if (visibleRows[0]) {
-              setFocusedPath(visibleRows[0].file.path);
-              viewportRef.current?.scrollToIndex(0, "start");
-            }
-            break;
-          }
-          case "End": {
-            e.preventDefault();
-            if (visibleRows.length) {
-              const last = visibleRows.length - 1;
-              setFocusedPath(visibleRows[last].file.path);
-              viewportRef.current?.scrollToIndex(last, "end");
-            }
-            break;
-          }
-          case "ArrowRight": {
-            if (!current) break;
-            e.preventDefault();
-            if (isDir) {
-              const expanded = useFileTreeStore.getState().actions.isExpanded(current.path);
-              if (!expanded) {
-                void toggleDirectory(current.path);
-              } else {
-                const child = visibleRows[curIndex + 1];
-                if (child && child.depth === visibleRows[curIndex].depth + 1) {
-                  setFocusedPath(child.file.path);
-                  viewportRef.current?.scrollToIndex(curIndex + 1, "nearest");
-                }
-              }
-            }
-            break;
-          }
-          case "ArrowLeft": {
-            if (!current) break;
-            e.preventDefault();
-            if (isDir && useFileTreeStore.getState().actions.isExpanded(current.path)) {
-              void toggleDirectory(current.path);
-            } else {
-              const sep = current.path.includes("\\") ? "\\" : "/";
-              const parentPath = current.path.split(sep).slice(0, -1).join(sep);
-              const parentIdx = visibleRowIndexByPath.get(parentPath) ?? -1;
-              if (parentIdx >= 0) {
-                setFocusedPath(parentPath);
-                viewportRef.current?.scrollToIndex(parentIdx, "nearest");
-              }
-            }
-            break;
-          }
-          case "Enter": {
-            if (!current) break;
-            e.preventDefault();
-            if (isDir) {
-              void toggleDirectory(current.path);
-            } else {
-              void Promise.resolve(onFileOpen?.(current.path, false));
-            }
-            break;
-          }
-          case " ": {
-            if (!IS_MAC || !current || isDir || mod || e.altKey || e.shiftKey) break;
-            e.preventDefault();
-            e.stopPropagation();
-            void toggleQuickLookPreview(current.path).catch((error) => {
-              console.error("Failed to toggle Quick Look:", error);
-            });
-            break;
-          }
-          case "F2": {
-            if (!current) break;
-            e.preventDefault();
-            onRenamePath?.(current.path);
-            break;
-          }
-        }
-      }}
+      onKeyDown={handleTreeKeyDown}
       onDragOver={(e) => {
         e.preventDefault();
         e.dataTransfer.dropEffect = dragState.draggedItem ? "move" : "copy";
@@ -1323,7 +1697,10 @@ function FileExplorerTreeComponent({
       onClick={handleContainerClick}
       onDoubleClick={handleContainerDoubleClick}
       onContextMenu={handleContainerContextMenu}
-      onMouseDown={handleContainerMouseDown}
+      onMouseDown={(event) => {
+        setIsKeyboardFocusVisible(false);
+        handleContainerMouseDown(event);
+      }}
       onMouseMove={handleContainerMouseMove}
       onMouseUp={releasePressedRow}
       onMouseLeave={releasePressedRow}
@@ -1355,6 +1732,12 @@ function FileExplorerTreeComponent({
               e.preventDefault();
               e.stopPropagation();
               navigateTreeSearchMatch(e.shiftKey ? -1 : 1);
+              return;
+            }
+            if (e.key === "ArrowDown" && visibleRows.length > 0) {
+              e.preventDefault();
+              e.stopPropagation();
+              viewportRef.current?.focus();
             }
           }}
           actionsLabel="File explorer controls"
@@ -1556,8 +1939,12 @@ function FileExplorerTreeComponent({
         role="tree"
         aria-label="File Explorer"
         aria-busy={isTreeSearchSearching}
-        aria-activedescendant={highlightedPath ? getFileTreeRowId(highlightedPath) : undefined}
+        aria-activedescendant={keyboardRowPath ? getRowId(keyboardRowPath) : undefined}
+        aria-multiselectable="true"
         tabIndex={0}
+        onScroll={(event) => {
+          lastScrollTopRef.current = event.currentTarget.scrollTop;
+        }}
         rowCount={visibleRows.length}
         rowHeight={rowHeight}
         getRowKey={(index) => getVisibleFileTreeRowKey(visibleRows, index)}
@@ -1572,7 +1959,7 @@ function FileExplorerTreeComponent({
                 action={{ label: "Open Folder", onClick: handleOpenFolder }}
               />
             </div>
-          ) : displayedFiles.length === 0 ? (
+          ) : visibleRows.length === 0 ? (
             <div className="absolute inset-0 flex items-center justify-center">
               <EmptyState
                 layout="sidebar"
@@ -1625,7 +2012,18 @@ function FileExplorerTreeComponent({
               showFolderArrows={fileTreeSettings.showFolderArrowsInFileTree}
               showIndentGuides={fileTreeSettings.showIndentGuidesInFileTree}
               isExpanded={row.isExpanded}
-              isActive={highlightedPath === row.file.path}
+              isActive={
+                multiSelection
+                  ? multiSelection.has(row.file.path)
+                  : highlightedPath === row.file.path
+              }
+              isFocused={
+                hasTreeFocus &&
+                (isKeyboardFocusVisible || multiSelection !== null) &&
+                keyboardRowPath === row.file.path
+              }
+              positionInSet={rowPositions.positionInSet[index]}
+              setSize={rowPositions.setSize[index]}
               isCut={cutFilePaths.has(row.file.path)}
               isDragOver={dragState.dragOverPath === row.file.path}
               isDragging={dragState.isDragging}
@@ -1634,7 +2032,7 @@ function FileExplorerTreeComponent({
               onSubmit={handleInlineEditSubmit}
               onCancel={handleInlineEditCancel}
               getGitStatusDecoration={getGitStatusDecoration}
-              rowId={placement === "list" ? getFileTreeRowId(row.file.path) : undefined}
+              rowId={placement === "list" ? getRowId(row.file.path) : undefined}
               searchQuery={displayedTreeSearch?.query}
             />
           );
@@ -1687,17 +2085,23 @@ function FileExplorerTreeComponent({
           </p>
         </Dialog>
       )}
-      {deleteCandidate && (
+      {deleteCandidates && (
         <Dialog
-          title={deleteCandidate.isDir ? "Delete Folder" : "Delete File"}
+          title={
+            deleteCandidates.length > 1
+              ? "Delete Items"
+              : deleteCandidates[0]?.isDir
+                ? "Delete Folder"
+                : "Delete File"
+          }
           icon={WarningIcon}
           onClose={() => {
-            if (!isDeletingPath) setDeleteCandidate(null);
+            if (!isDeletingPath) setDeleteCandidates(null);
           }}
           footer={
             <>
               <Button
-                onClick={() => setDeleteCandidate(null)}
+                onClick={() => setDeleteCandidates(null)}
                 disabled={isDeletingPath}
                 variant="default"
               >
@@ -1715,9 +2119,11 @@ function FileExplorerTreeComponent({
           }
         >
           <p className="text-foreground ui-text-base">
-            {deleteCandidate.isDir
-              ? `Are you sure you want to delete the folder "${getPathBaseName(deleteCandidate.path)}" and all its contents? This action cannot be undone.`
-              : `Are you sure you want to delete the file "${getPathBaseName(deleteCandidate.path)}"? This action cannot be undone.`}
+            {deleteCandidates.length > 1
+              ? `Are you sure you want to delete these ${deleteCandidates.length} items${deleteCandidates.some((candidate) => candidate.isDir) ? ", including everything in the selected folders" : ""}? This action cannot be undone.`
+              : deleteCandidates[0]?.isDir
+                ? `Are you sure you want to delete the folder "${getPathBaseName(deleteCandidates[0].path)}" and all its contents? This action cannot be undone.`
+                : `Are you sure you want to delete the file "${getPathBaseName(deleteCandidates[0]?.path ?? "")}"? This action cannot be undone.`}
           </p>
         </Dialog>
       )}

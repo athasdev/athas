@@ -1,5 +1,5 @@
 import { basename, dirname, extname } from "@tauri-apps/api/path";
-import { copyFile } from "@tauri-apps/plugin-fs";
+import { copyFile, exists } from "@tauri-apps/plugin-fs";
 import { revealItemInDir } from "@tauri-apps/plugin-opener";
 import { immer } from "zustand/middleware/immer";
 import type { StoreApi } from "zustand";
@@ -64,9 +64,11 @@ import {
   getDirName,
   getFolderName,
   joinPath,
+  stripTrailingPathSeparators,
 } from "@/utils/path-helpers";
 import type { FileEntry } from "../types/app.types";
 import type { FsActions, FsState } from "../types/interface.types";
+import { getFileEntryNameError, parseNewEntryPath } from "../utils/file-entry-name";
 import { readDirectoryContents } from "../api/file-operations";
 import {
   addFileToTree,
@@ -662,6 +664,9 @@ const scheduleInactiveWorkspacePrewarm = () => {
 const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemStoreState> => {
   let latestFileOpenRequestId = 0;
   let latestTreeRevealRequestId = 0;
+  // Collapsed folders skip watcher refreshes and keep their cached children; they are read
+  // again the next time they open, so changes made on disk meanwhile show up.
+  const staleDirectoryPaths = new Set<string>();
   let latestSubtreePreloadRequestId = 0;
   let pendingSessionBuffers: BufferSession[] = [];
   let resumePendingSessionRestore: (() => void) | null = null;
@@ -1603,6 +1608,7 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
               return;
             }
 
+            staleDirectoryPaths.delete(path);
             const updatedFiles = updateFileInTree(get().files, path, (item) => ({
               ...item,
               children: childEntries,
@@ -1614,6 +1620,11 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
             });
           }
           uiActions.toggleFolder(path);
+          if (staleDirectoryPaths.has(path)) {
+            void get()
+              .refreshDirectory(path)
+              .catch((error) => console.error(`Failed to refresh ${path}:`, error));
+          }
           // Preload deeper children in background for snappier navigation
           get()
             .preloadSubtree(path, 2, 80)
@@ -1820,28 +1831,13 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
             })) ?? undefined;
           if (!fileName) return;
         }
-        // Split the input path into parts
-        const parts = fileName.split("/").filter(Boolean);
-        // Validate input
-        if (parts.length === 0) {
-          await showAlertDialog("Invalid file name", "New File");
+        const parsed = parseNewEntryPath(fileName, dirPath);
+        if ("error" in parsed) {
+          await showAlertDialog(`Invalid file name: ${parsed.error}`, "New File");
           return;
         }
-
+        const parts = parsed.segments;
         const finalFileName = parts.pop()!;
-
-        // Block path traversal and illegal separators
-        const hasIllegalCharacters = (segment: string) =>
-          segment === ".." || segment === "." || segment.includes("\\") || segment.includes("/");
-
-        // Check all directory parts AND the final filename
-        if (parts.some(hasIllegalCharacters) || hasIllegalCharacters(finalFileName)) {
-          await showAlertDialog(
-            "Invalid file name: path traversal and special characters are not allowed",
-            "New File",
-          );
-          return;
-        }
 
         let currentPath = dirPath;
         // Create intermediate folders if they don't exist
@@ -1919,11 +1915,44 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
           if (!folderName) return;
         }
 
-        return get().createDirectory(dirPath, folderName);
+        const parsed = parseNewEntryPath(folderName, dirPath);
+        if ("error" in parsed) {
+          await showAlertDialog(`Invalid folder name: ${parsed.error}`, "New Folder");
+          return;
+        }
+
+        try {
+          let currentPath = dirPath;
+          for (const segment of parsed.segments) {
+            const potentialPath = joinPath(currentPath, segment);
+            const existing = findFileInTree(get().files, potentialPath);
+            if (existing?.isDir) {
+              currentPath = potentialPath;
+              continue;
+            }
+            if (existing) throw new Error(`${segment} already exists.`);
+            currentPath = await get().createDirectory(currentPath, segment);
+          }
+          return currentPath;
+        } catch (error) {
+          console.error("Failed to create folder:", error);
+          await showAlertDialog(
+            `Failed to create folder: ${error instanceof Error ? error.message : String(error)}`,
+            "New Folder",
+          );
+          return;
+        }
       },
 
       handleDeletePath: async (targetPath: string, _isDirectory: boolean) => {
-        return get().deleteFile(targetPath);
+        try {
+          await get().deleteFile(targetPath);
+        } catch (error) {
+          console.error("Failed to delete path:", error);
+          toast.error(`Could not delete ${getBaseName(targetPath, targetPath)}`, {
+            description: error instanceof Error ? error.message : String(error),
+          });
+        }
       },
 
       refreshDirectory: async (directoryPath: string, options?: { force?: boolean }) => {
@@ -1941,8 +1970,10 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
           useFileTreeStore.getStore(workspaceId).getState().actions.isExpanded(directoryPath);
 
         if (!isExpanded && !options?.force) {
+          staleDirectoryPaths.add(directoryPath);
           return;
         }
+        staleDirectoryPaths.delete(directoryPath);
 
         const entries = (
           await readWorkspaceDirectoryEntries(
@@ -1975,9 +2006,16 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
       },
 
       handleFileMove: async (oldPath: string, newPath: string) => {
+        if (oldPath === newPath) return;
         const movedFile = findFileInTree(get().files, oldPath);
         if (!movedFile) {
           return;
+        }
+        if (movedFile.isDir && isPathInsideTreeEntry(newPath, oldPath)) {
+          throw new Error("A folder cannot be moved into itself.");
+        }
+        if (findFileInTree(get().files, newPath)) {
+          throw new Error(`${getBaseName(newPath, newPath)} already exists in that folder.`);
         }
 
         await getWorkspaceEntryMutationProvider(oldPath).movePath(oldPath, newPath);
@@ -2210,14 +2248,24 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
       },
 
       deleteFile: async (path: string) => {
+        const normalizedPath = stripTrailingPathSeparators(path);
+        if (
+          getWorkspaceFolderPaths(workspaceId).some(
+            (folderPath) => stripTrailingPathSeparators(folderPath) === normalizedPath,
+          )
+        ) {
+          throw new Error("A workspace folder cannot be deleted from the file tree.");
+        }
         const entry = findFileInTree(get().files, path);
         await getWorkspaceEntryMutationProvider(path).deletePath(path, !!entry?.isDir);
         invalidateFileTreeGitIgnoreCache(entry?.isDir ? undefined : path);
 
+        // A deleted folder takes the files open from inside it along.
         const { buffers, actions } = useBufferStore.getStore(workspaceId).getState();
         buffers
-          .filter((buffer) => buffer.path === path)
+          .filter((buffer) => buffer.path === path || isPathInsideTreeEntry(buffer.path, path))
           .forEach((buffer) => actions.closeBuffer(buffer.id));
+        useFileTreeStore.getStore(workspaceId).getState().actions.forgetPath(path);
 
         // Invalidate git diff cache for deleted file
         const { rootFolderPath } = project();
@@ -2228,6 +2276,7 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
         set((state) => {
           state.files = removeFileFromTree(state.files, path);
           state.filesVersion++;
+          state.projectFilesCache = undefined;
         });
       },
 
@@ -2248,127 +2297,177 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
       },
 
       handleDuplicatePath: async (path: string) => {
-        const remoteInfo = parseRemotePath(path);
-        if (remoteInfo) {
-          const fileEntry = findFileInTree(get().files, path);
-          if (!fileEntry) return;
+        const duplicate = async () => {
+          const remoteInfo = parseRemotePath(path);
+          if (remoteInfo) {
+            const fileEntry = findFileInTree(get().files, path);
+            if (!fileEntry) return;
 
-          const remotePath = remoteInfo.remotePath;
-          const pathParts = remotePath.split("/");
-          const base = pathParts.pop() || "";
-          const dir = pathParts.join("/") || "/";
+            const remotePath = remoteInfo.remotePath;
+            const pathParts = remotePath.split("/");
+            const base = pathParts.pop() || "";
+            const dir = pathParts.join("/") || "/";
 
-          let counter = 0;
-          let finalName = "";
-          let finalPath = "";
+            let counter = 0;
+            let finalName = "";
+            let finalPath = "";
 
-          do {
-            finalName = getDuplicateName(base, counter);
-            finalPath = dir === "/" ? `/${finalName}` : `${dir}/${finalName}`;
-            counter++;
-          } while (findFileInTree(get().files, `remote://${remoteInfo.connectionId}${finalPath}`));
-
-          await commands.sshCopyPath(
-            remoteInfo.connectionId,
-            remoteInfo.remotePath,
-            finalPath,
-            fileEntry.isDir,
-          );
-
-          const newEntry: FileEntry = {
-            name: finalName,
-            path: `remote://${remoteInfo.connectionId}${finalPath}`,
-            isDir: fileEntry.isDir,
-            children: fileEntry.isDir ? [] : undefined,
-          };
-
-          set((state) => {
-            state.files = addFileToTree(
-              state.files,
-              `remote://${remoteInfo.connectionId}${dir === "/" ? "/" : dir}`,
-              newEntry,
+            do {
+              finalName = getDuplicateName(base, counter);
+              finalPath = dir === "/" ? `/${finalName}` : `${dir}/${finalName}`;
+              counter++;
+            } while (
+              findFileInTree(get().files, `remote://${remoteInfo.connectionId}${finalPath}`)
             );
-            state.filesVersion++;
-          });
-          return;
-        }
 
-        const wslInfo = parseWslPath(path);
-        if (wslInfo) {
-          const fileEntry = findFileInTree(get().files, path);
-          if (!fileEntry) return;
+            await commands.sshCopyPath(
+              remoteInfo.connectionId,
+              remoteInfo.remotePath,
+              finalPath,
+              fileEntry.isDir,
+            );
 
-          const pathParts = wslInfo.linuxPath.split("/");
-          const base = pathParts.pop() || "";
-          const dir = pathParts.join("/") || "/";
+            const newEntry: FileEntry = {
+              name: finalName,
+              path: `remote://${remoteInfo.connectionId}${finalPath}`,
+              isDir: fileEntry.isDir,
+              children: fileEntry.isDir ? [] : undefined,
+            };
+
+            set((state) => {
+              state.files = addFileToTree(
+                state.files,
+                `remote://${remoteInfo.connectionId}${dir === "/" ? "/" : dir}`,
+                newEntry,
+              );
+              state.filesVersion++;
+            });
+            return;
+          }
+
+          const wslInfo = parseWslPath(path);
+          if (wslInfo) {
+            const fileEntry = findFileInTree(get().files, path);
+            if (!fileEntry) return;
+
+            const pathParts = wslInfo.linuxPath.split("/");
+            const base = pathParts.pop() || "";
+            const dir = pathParts.join("/") || "/";
+
+            let counter = 0;
+            let finalName = "";
+            let finalLinuxPath = "";
+            let finalPath = "";
+
+            do {
+              finalName = getDuplicateName(base, counter);
+              finalLinuxPath = dir === "/" ? `/${finalName}` : `${dir}/${finalName}`;
+              finalPath = buildWslPath(wslInfo.distro, finalLinuxPath);
+              counter++;
+            } while (findFileInTree(get().files, finalPath));
+
+            await commands.wslCopyPath(
+              wslInfo.distro,
+              wslInfo.linuxPath,
+              finalLinuxPath,
+              fileEntry.isDir,
+            );
+
+            const newEntry: FileEntry = {
+              name: finalName,
+              path: finalPath,
+              isDir: fileEntry.isDir,
+              children: fileEntry.isDir ? [] : undefined,
+              isSymlink: fileEntry.isSymlink,
+              symlinkTarget: fileEntry.symlinkTarget,
+            };
+
+            set((state) => {
+              state.files = addFileToTree(state.files, buildWslPath(wslInfo.distro, dir), newEntry);
+              state.filesVersion++;
+            });
+            return;
+          }
+
+          const dir = await dirname(path);
+          const base = await basename(path);
+
+          const originalFile = findFileInTree(get().files, path);
+          if (!originalFile) return;
 
           let counter = 0;
           let finalName = "";
-          let finalLinuxPath = "";
           let finalPath = "";
 
+          // The tree can miss entries (filtered or not loaded), and copying over one replaces it.
           do {
             finalName = getDuplicateName(base, counter);
-            finalLinuxPath = dir === "/" ? `/${finalName}` : `${dir}/${finalName}`;
-            finalPath = buildWslPath(wslInfo.distro, finalLinuxPath);
+            finalPath = joinPath(dir, finalName);
             counter++;
-          } while (findFileInTree(get().files, finalPath));
+          } while (findFileInTree(get().files, finalPath) || (await exists(finalPath)));
 
-          await commands.wslCopyPath(
-            wslInfo.distro,
-            wslInfo.linuxPath,
-            finalLinuxPath,
-            fileEntry.isDir,
-          );
+          await copyFile(path, finalPath);
 
-          const newEntry: FileEntry = {
+          const newFile: FileEntry = {
             name: finalName,
             path: finalPath,
-            isDir: fileEntry.isDir,
-            children: fileEntry.isDir ? [] : undefined,
-            isSymlink: fileEntry.isSymlink,
-            symlinkTarget: fileEntry.symlinkTarget,
+            isDir: false,
           };
 
           set((state) => {
-            state.files = addFileToTree(state.files, buildWslPath(wslInfo.distro, dir), newEntry);
+            state.files = addFileToTree(state.files, dir, newFile);
             state.filesVersion++;
+            state.projectFilesCache = undefined;
           });
-          return;
-        }
-
-        const dir = await dirname(path);
-        const base = await basename(path);
-
-        const originalFile = findFileInTree(get().files, path);
-        if (!originalFile) return;
-
-        let counter = 0;
-        let finalName = "";
-        let finalPath = "";
-
-        do {
-          finalName = getDuplicateName(base, counter);
-          finalPath = joinPath(dir, finalName);
-          counter++;
-        } while (findFileInTree(get().files, finalPath));
-
-        await copyFile(path, finalPath);
-
-        const newFile: FileEntry = {
-          name: finalName,
-          path: finalPath,
-          isDir: false,
         };
 
-        set((state) => {
-          state.files = addFileToTree(state.files, dir, newFile);
-          state.filesVersion++;
-        });
+        try {
+          await duplicate();
+        } catch (error) {
+          console.error("Failed to duplicate path:", error);
+          toast.error(`Could not duplicate ${getBaseName(path, path)}`, {
+            description: error instanceof Error ? error.message : String(error),
+          });
+        }
       },
 
       handleRenamePath: async (path: string, newName?: string) => {
-        if (newName) {
+        const endRename = () =>
+          set((state) => {
+            state.files = updateFileInTree(state.files, path, (item) => ({
+              ...item,
+              isRenaming: false,
+            }));
+            state.filesVersion++;
+          });
+
+        if (newName !== undefined) {
+          const currentName = getBaseName(path, "");
+          const parentPath = getDirName(path);
+          const nameError = getFileEntryNameError(newName, parentPath);
+          if (nameError) {
+            toast.error(`Could not rename ${currentName}`, { description: nameError });
+            endRename();
+            return;
+          }
+          if (newName === currentName) {
+            endRename();
+            return;
+          }
+          // A case-only rename names the same entry on case-insensitive disks; let the backend
+          // decide. Any other existing sibling would be overwritten or moved into.
+          const siblingPath = joinPath(parentPath, newName);
+          if (
+            newName.toLowerCase() !== currentName.toLowerCase() &&
+            findFileInTree(get().files, siblingPath)
+          ) {
+            toast.error(`Could not rename ${currentName}`, {
+              description: `${newName} already exists.`,
+            });
+            endRename();
+            return;
+          }
+
           try {
             const targetPath = await getWorkspaceEntryMutationProvider(path).renamePath(
               path,
@@ -2382,24 +2481,34 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
               invalidateFileTreeGitIgnoreCache(targetPath);
             }
 
+            const renamed = findFileInTree(get().files, path);
             set((state) => {
-              state.files = updateFileInTree(state.files, path, (item) => ({
-                ...relocateFileEntry(item, targetPath, newName),
-                isRenaming: false,
-              }));
+              let files = state.files;
+              if (renamed) {
+                // Remove and add again so the entry takes its sorted place under the new name.
+                files = removeFileFromTree(files, path);
+                files = addFileToTree(files, parentPath, {
+                  ...relocateFileEntry(renamed, targetPath, newName),
+                  isRenaming: false,
+                });
+              }
+              state.files = files;
               state.filesVersion++;
+              state.projectFilesCache = undefined;
             });
 
             relocateOpenPaths(workspaceId, path, targetPath);
+            const { rootFolderPath } = project();
+            if (rootFolderPath) {
+              gitDiffCache.invalidate(rootFolderPath, path);
+              gitDiffCache.invalidate(rootFolderPath, targetPath);
+            }
           } catch (error) {
             console.error("Failed to rename file:", error);
-            set((state) => {
-              state.files = updateFileInTree(state.files, path, (item) => ({
-                ...item,
-                isRenaming: false,
-              }));
-              state.filesVersion++;
+            toast.error(`Could not rename ${currentName}`, {
+              description: error instanceof Error ? error.message : String(error),
             });
+            endRename();
           }
         } else {
           set((state) => {

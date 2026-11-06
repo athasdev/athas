@@ -214,12 +214,16 @@ export function updateDirectoryContents(
 
       const createEntry = (entry: any): FileEntry => {
         const existingChild = preserveStates ? existingChildrenMap.get(entry.path) : undefined;
+        const isSymlink = entry.is_symlink ?? entry.isSymlink;
+        const symlinkTarget = entry.target ?? entry.symlinkTarget;
         return {
           name: entry.name || "Unknown",
           path: entry.path,
-          isDir: entry.is_dir || false,
+          isDir: entry.is_dir ?? entry.isDir ?? false,
           expanded: existingChild?.expanded || false,
           children: existingChild?.children || undefined,
+          // Refreshes keep links marked as links, so their icon and target tooltip survive.
+          ...(isSymlink ? { isSymlink: true, symlinkTarget: symlinkTarget ?? undefined } : {}),
         };
       };
 
@@ -236,8 +240,8 @@ export function updateDirectoryContents(
           existingChild.isNewItem === undefined &&
           existingChild.ignored === undefined &&
           existingChild.isRenaming === undefined &&
-          existingChild.isSymlink === undefined &&
-          existingChild.symlinkTarget === undefined
+          existingChild.isSymlink === nextEntry.isSymlink &&
+          existingChild.symlinkTarget === nextEntry.symlinkTarget
         );
       };
 

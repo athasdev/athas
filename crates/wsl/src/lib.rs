@@ -563,7 +563,9 @@ pub fn rename_path(distro: &str, source_path: &str, target_path: &str) -> Result
          "--exec",
          "sh",
          "-lc",
-         r#"mkdir -p "$(dirname "$2")" && mv -- "$1" "$2""#,
+         // `mv` would replace an existing file or move into an existing folder; only the
+         // source itself (a case-only rename on a case-insensitive mount) may already be there.
+         r#"if { [ -e "$2" ] || [ -L "$2" ]; } && ! [ "$1" -ef "$2" ]; then echo "Target path already exists" >&2; exit 1; fi; mkdir -p "$(dirname "$2")" && mv -- "$1" "$2""#,
          "athas-rename-path",
          &source,
          &target,

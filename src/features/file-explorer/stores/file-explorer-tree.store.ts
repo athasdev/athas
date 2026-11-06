@@ -7,7 +7,6 @@ import { createWorkspaceScopedStore } from "@/features/workspace/stores/create-w
 
 interface FileTreeState {
   expandedFolders: Set<string>;
-  selectedFiles: Set<string>;
   expandedPaths: Set<string>;
   initializedRootPaths: string[];
 }
@@ -31,7 +30,6 @@ const createFileTreeStore = () =>
       combine(
         {
           expandedFolders: new Set<string>(),
-          selectedFiles: new Set<string>(),
           expandedPaths: new Set<string>(),
           initializedRootPaths: [],
         } as FileTreeState,
@@ -60,27 +58,6 @@ const createFileTreeStore = () =>
               });
             },
 
-            selectFile: (path: string, multiSelect = false) => {
-              set((state) => {
-                if (multiSelect) {
-                  if (state.selectedFiles.has(path)) {
-                    state.selectedFiles.delete(path);
-                  } else {
-                    state.selectedFiles.add(path);
-                  }
-                } else {
-                  state.selectedFiles.clear();
-                  state.selectedFiles.add(path);
-                }
-              });
-            },
-
-            clearSelection: () => {
-              set((state) => {
-                state.selectedFiles.clear();
-              });
-            },
-
             setExpandedPaths: (paths: Set<string>) => {
               set((state) => {
                 state.expandedPaths = paths;
@@ -94,10 +71,6 @@ const createFileTreeStore = () =>
 
             isExpanded: (path: string) => {
               return get().expandedFolders.has(path);
-            },
-
-            isSelected: (path: string) => {
-              return get().selectedFiles.has(path);
             },
 
             expandToPath: (targetPath: string) => {
@@ -134,15 +107,27 @@ const createFileTreeStore = () =>
               const state = get();
               const expandedFolders = relocate(state.expandedFolders);
               const expandedPaths = relocate(state.expandedPaths);
-              const selectedFiles = relocate(state.selectedFiles);
               if (
                 expandedFolders === state.expandedFolders &&
-                expandedPaths === state.expandedPaths &&
-                selectedFiles === state.selectedFiles
+                expandedPaths === state.expandedPaths
               ) {
                 return;
               }
-              set({ expandedFolders, expandedPaths, selectedFiles });
+              set({ expandedFolders, expandedPaths });
+            },
+
+            /**
+             * Drops what is kept for a deleted entry and everything under it, so a new entry
+             * created later under the same name does not come back expanded.
+             */
+            forgetPath: (path: string) => {
+              set((state) => {
+                for (const paths of [state.expandedFolders, state.expandedPaths]) {
+                  for (const candidate of Array.from(paths)) {
+                    if (isPathWithinFolder(candidate, path)) paths.delete(candidate);
+                  }
+                }
+              });
             },
 
             collapseAll: () => {
