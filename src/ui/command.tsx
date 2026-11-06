@@ -571,12 +571,17 @@ export const CommandItemRow = ({
   <CommandItem {...props}>
     {icon ? <CommandItemIcon>{icon}</CommandItemIcon> : null}
     <CommandItemContent className={cn(contentLayout === "inline" && "flex items-center gap-1.5")}>
-      <CommandItemTitle>{title}</CommandItemTitle>
+      {/* Inline, the title keeps its width and the description gives way, ending in an ellipsis. */}
+      <CommandItemTitle className={cn(contentLayout === "inline" && "max-w-full shrink-0")}>
+        {title}
+      </CommandItemTitle>
       {description ? (
         <CommandItemDescription
           className={cn(
             contentLayout === "inline" &&
-              "mt-0 flex min-w-0 shrink items-center gap-1.5 text-muted-foreground",
+              (typeof description === "string"
+                ? "mt-0 min-w-0 shrink"
+                : "mt-0 flex min-w-0 shrink items-center gap-1.5 text-muted-foreground"),
           )}
         >
           {description}

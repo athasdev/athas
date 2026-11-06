@@ -97,8 +97,7 @@ export const SlashCommandDropdown = React.memo(function SlashCommandDropdown({
               role="option"
               aria-selected={index === selectedIndex}
               tabIndex={index === selectedIndex ? 0 : -1}
-              icon={<span>/</span>}
-              title={command.name}
+              title={`/${command.name}`}
               description={command.description}
               accessory={
                 command.input?.hint ? (
