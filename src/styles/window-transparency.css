@@ -26,6 +26,8 @@ html:is(.platform-macos, .platform-windows):not([data-window-transparency="disab
   --athas-glass-hover: color-mix(in srgb, var(--foreground) 9%, transparent);
   --athas-glass-active: color-mix(in srgb, var(--foreground) 16%, transparent);
   --athas-navigation-material: color-mix(in srgb, var(--surface) 74%, transparent);
+  /* Sticky headers on the see-through sidebar: nearly the theme background, over a blur. */
+  --athas-glass-sticky-bg: color-mix(in srgb, var(--background) 82%, transparent);
 }
 
 html:is(.platform-macos, .platform-windows):not(
@@ -41,6 +43,7 @@ html:is(.platform-macos, .platform-windows):not(
   --athas-glass-hover: color-mix(in srgb, var(--foreground) 7%, transparent);
   --athas-glass-active: color-mix(in srgb, var(--foreground) 13%, transparent);
   --athas-navigation-material: color-mix(in srgb, var(--surface) 80%, transparent);
+  --athas-glass-sticky-bg: color-mix(in srgb, var(--background) 86%, transparent);
 }
 
 html:is(.platform-macos, .platform-windows):not([data-window-transparency="disabled"])
@@ -85,6 +88,17 @@ html.platform-windows:not([data-window-transparency="disabled"])
 html:is(.platform-macos, .platform-windows):not([data-window-transparency="disabled"])
   [data-plane="page"] {
   --background: transparent;
+}
+
+/* The sidebar's background is see-through, so a sticky header (a section title, a list header)
+   would let the rows scrolling under it show through. It gets a frosted fill instead: the rows
+   blur away under it while it still reads as part of the sidebar. */
+html:is(.platform-macos, .platform-windows):not([data-window-transparency="disabled"])
+  [data-plane="page"]
+  .sticky {
+  background-color: var(--athas-glass-sticky-bg) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(1.3);
+  backdrop-filter: blur(20px) saturate(1.3);
 }
 
 /* Islands (the centre, every dock pane, the bottom pane) are one raised, opaque surface, so a
