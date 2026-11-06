@@ -443,13 +443,17 @@ describe("deleting, moving and renaming", () => {
     expect(entry(`${root}/a.ts`)).toMatchObject({ name: "a.ts", isRenaming: false });
   });
 
-  it("toggles rename mode when no new name is given", async () => {
+  it("starts rename mode without a name, even when asked twice, and ends it on the same name", async () => {
     setWorkspace([file(`${root}/a.ts`)]);
 
     await fs().handleRenamePath(`${root}/a.ts`);
     expect(entry(`${root}/a.ts`)?.isRenaming).toBe(true);
 
+    // A menu item or shortcut firing twice must not close the field again.
     await fs().handleRenamePath(`${root}/a.ts`);
+    expect(entry(`${root}/a.ts`)?.isRenaming).toBe(true);
+
+    await fs().handleRenamePath(`${root}/a.ts`, "a.ts");
     expect(entry(`${root}/a.ts`)?.isRenaming).toBe(false);
   });
 });

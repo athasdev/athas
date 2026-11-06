@@ -2511,11 +2511,12 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
             endRename();
           }
         } else {
+          // Starts renaming. It never toggles: a menu item or shortcut fired twice must leave the
+          // field open. Renaming to the current name ends it.
           set((state) => {
-            state.files = updateFileInTree(state.files, path, (item) => ({
-              ...item,
-              isRenaming: !item.isRenaming,
-            }));
+            state.files = updateFileInTree(state.files, path, (item) =>
+              item.isRenaming ? item : { ...item, isRenaming: true },
+            );
             state.filesVersion++;
           });
         }

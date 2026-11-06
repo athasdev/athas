@@ -86,6 +86,7 @@ import { cn } from "@/utils/cn";
 import { frontendTrace } from "@/utils/frontend-trace";
 import { IS_MAC } from "@/utils/platform";
 import {
+  getBaseName,
   getDirName,
   getRelativePath,
   joinPath,
@@ -842,7 +843,7 @@ function FileExplorerTreeComponent({
     if (!onUpdateFiles) return;
 
     if (item.isRenaming && !newName.trim()) {
-      onRenamePath?.(item.path);
+      onRenamePath?.(item.path, getBaseName(item.path, ""));
       return;
     }
 
@@ -887,7 +888,7 @@ function FileExplorerTreeComponent({
     if (!onUpdateFiles) return;
 
     if (file.isRenaming) {
-      onRenamePath?.(file.path);
+      onRenamePath?.(file.path, getBaseName(file.path, ""));
       return;
     }
 

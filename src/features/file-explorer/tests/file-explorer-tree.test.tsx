@@ -468,7 +468,8 @@ describe("file explorer tree", () => {
         key: "Escape",
       });
     });
-    expect(handlers.onRenamePath).toHaveBeenCalledExactlyOnceWith("/repo/README.md");
+    // Renaming to the current name ends rename mode; a bare call would start it again.
+    expect(handlers.onRenamePath).toHaveBeenCalledExactlyOnceWith("/repo/README.md", "README.md");
   });
 
   it("asks before deleting and deletes on confirmation", async () => {
