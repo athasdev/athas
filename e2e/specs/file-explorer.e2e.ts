@@ -97,6 +97,9 @@ describe("file explorer", () => {
 
     await waitForPath(["src", CREATED], true, `${CREATED} was never created on disk`);
     await waitForDisplayed(treeItem(CREATED), `${CREATED} never appeared in the file tree`);
+    // A new file also opens in the editor, which takes focus once it loads. Let it finish, or
+    // it can take focus from the rename field the next spec opens.
+    await waitForDisplayed(editorTab(CREATED), `${CREATED} never opened in the editor`);
   });
 
   e2eTest("renames a file from its context menu", async () => {
