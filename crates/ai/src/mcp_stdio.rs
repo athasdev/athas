@@ -275,7 +275,7 @@ mod tests {
    #[tokio::test]
    async fn relays_lines_both_ways_and_stops() {
       let (listener, mut events) = channel();
-      let server = config("/bin/cat", &[], &[]);
+      let server = config("cat", &[], &[]);
       start_mcp_stdio("relay", &server, None, listener)
          .await
          .unwrap();
