@@ -31,10 +31,12 @@ const UNSAVED_DIALOG_XPATH = '//*[@role="dialog"][.//*[normalize-space()="Unsave
 const UNSAVED_DIALOG = By.xpath(UNSAVED_DIALOG_XPATH);
 const DONT_SAVE = By.xpath(`${UNSAVED_DIALOG_XPATH}//button[normalize-space()="Don't Save"]`);
 const NOTES_LINES = ["Athas e2e notes", "second line"];
-const ACTIVE_LINE = By.css(".cm-editor .cm-content .cm-activeLine");
-const ACTIVE_LINE_NUMBER = By.css(".cm-editor .cm-lineNumbers .cm-activeLineGutter");
-const GO_TO_LINE_INPUT = By.css('.cm-editor .cm-goto-line input[name="line"]');
-const EDITOR_CONTENT = By.css(".cm-editor .cm-content");
+// The editor in front; tabs that lost focus keep theirs mounted in an inert, hidden layer.
+const FRONT_EDITOR = '.cm-editor:not([data-pane-surface-layer="hidden"] *)';
+const ACTIVE_LINE = By.css(`${FRONT_EDITOR} .cm-content .cm-activeLine`);
+const ACTIVE_LINE_NUMBER = By.css(`${FRONT_EDITOR} .cm-lineNumbers .cm-activeLineGutter`);
+const GO_TO_LINE_INPUT = By.css(`${FRONT_EDITOR} .cm-goto-line input[name="line"]`);
+const EDITOR_CONTENT = By.css(`${FRONT_EDITOR} .cm-content`);
 
 /** Every rendered line of the visible editor, in order. */
 async function editorLines() {

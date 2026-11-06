@@ -10,7 +10,10 @@ export const STARTUP_TIMEOUT = 60_000;
 export const UI_TIMEOUT = 15_000;
 
 export const FILE_TREE = By.css('[role="tree"][aria-label="File Explorer"]');
-export const EDITOR_LINES = By.css(".cm-editor .cm-content");
+/** The editor in front: tabs that lost focus keep theirs mounted in an inert, hidden layer. */
+export const EDITOR_LINES = By.css(
+  `.cm-editor:not([data-pane-surface-layer="hidden"] *) .cm-content`,
+);
 const WORKBENCH = By.css('[data-slot="workbench-island"]');
 const FILES_ACTIVITY = By.css('[data-slot="activity-bar"] button[aria-label="Files"]');
 const PALETTE_INPUT = By.css('input[placeholder="Search commands and actions..."]');

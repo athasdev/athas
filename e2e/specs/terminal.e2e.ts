@@ -9,6 +9,7 @@ import {
   click,
   countVisible,
   elementRect,
+  hover,
   fileContains,
   pressShortcut,
   runPaletteCommand,
@@ -174,6 +175,9 @@ describe("integrated terminal", () => {
     );
 
     await click(EXIT_FULL_SCREEN);
+    // The pane's secondary actions only show while the pointer is over the pane, and leaving full
+    // screen moves the pane out from under the pointer.
+    await hover(TERMINAL);
     await waitForDisplayed(ENTER_FULL_SCREEN, "The terminal did not leave full screen");
     await waitUntil(
       async () => (await elementRect(TERMINAL)).height < fullScreenHeight,
