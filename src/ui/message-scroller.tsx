@@ -41,7 +41,11 @@ function MessageScrollerViewport({
       data-slot="message-scroller-viewport"
       className={cn(
         "scrollbar-none size-full min-h-0 min-w-0 overflow-y-auto overscroll-none contain-content",
-        fadeEdges && "scroll-fade-y scroll-fade-4",
+        // The fade follows the scroller's own `data-scrollable` state instead of the scroll-driven
+        // animation `scroll-fade-y` ships with: that animation restyles the whole message list
+        // whenever the scroll range changes, which is every streamed token.
+        fadeEdges &&
+          "scroll-fade-y scroll-fade-4 animate-none data-[scrollable~=end]:[--scroll-fade-b:var(--_scroll-fade-size-b)] data-[scrollable~=start]:[--scroll-fade-t:var(--_scroll-fade-size-t)]",
         className,
       )}
       {...props}
