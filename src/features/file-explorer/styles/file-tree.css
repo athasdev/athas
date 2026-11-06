@@ -1,0 +1,10 @@
+/* Rows under the sticky folder headers are masked out: on a see-through sidebar the headers have
+   no fill of their own, so the rows scrolling beneath them would show through. The sticky stack
+   keeps --file-tree-sticky-height current on the scroller. */
+[data-file-tree-scroller] {
+  mask-image: linear-gradient(
+    to bottom,
+    transparent var(--file-tree-sticky-height, 0px),
+    black var(--file-tree-sticky-height, 0px)
+  );
+}

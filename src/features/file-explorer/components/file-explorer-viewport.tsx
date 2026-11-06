@@ -20,6 +20,7 @@ import {
   type FileTreeScrollAlignment,
 } from "@/features/file-explorer/lib/file-tree-viewport";
 import { cn } from "@/utils/cn";
+import "../styles/file-tree.css";
 
 export interface FileExplorerViewportHandle {
   focus: () => void;
@@ -204,7 +205,9 @@ export const FileExplorerViewport = forwardRef<
     <div className={cn("file-tree-container relative flex min-h-0 flex-col", className)}>
       <div
         ref={scrollRef}
-        className="relative min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-none scroll-auto scrollbar-gutter-both font-sans [overflow-anchor:none]"
+        // The gutter stays reserved so rows keep their width whether or not the tree overflows.
+        data-file-tree-scroller=""
+        className="relative min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-none scroll-auto font-sans [overflow-anchor:none] scrollbar-gutter-stable"
         style={
           {
             "--file-tree-row-height": `${rowHeight}px`,
@@ -308,7 +311,7 @@ function FileTreeStickyHeaders({
   }, [scrollRef]);
   const scrollTop = useSyncExternalStore(scrollOffset.subscribe, scrollOffset.getSnapshot, () => 0);
 
-  // Match the rows' horizontal box, which the scrollbar gutters inset on both sides.
+  // Match the rows' horizontal box, which the scrollbar gutter insets.
   useLayoutEffect(() => {
     const scroller = scrollRef.current;
     const content = contentRef.current;
@@ -363,6 +366,20 @@ function FileTreeStickyHeaders({
       }),
     [getStickyAncestors, getSubtreeEnd, rowCount, rowHeight, scrollTop, viewportHeight],
   );
+
+  // The scroller masks out what lies under the stack, so the stack needs no opaque fill.
+  useLayoutEffect(() => {
+    const scroller = scrollRef.current;
+    if (!scroller) return;
+    scroller.style.setProperty("--file-tree-sticky-height", `${sticky.height}px`);
+  }, [scrollRef, sticky.height]);
+
+  useLayoutEffect(() => {
+    const scroller = scrollRef.current;
+    return () => {
+      scroller?.style.removeProperty("--file-tree-sticky-height");
+    };
+  }, [scrollRef]);
 
   return (
     <div
