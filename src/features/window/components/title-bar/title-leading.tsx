@@ -26,9 +26,12 @@ import { IS_MAC, IS_WEB } from "@/utils/platform";
 export function TitleLeading({
   merged = false,
   narrow = false,
+  overFullscreen = false,
   sidebarShown = true,
 }: {
   merged?: boolean;
+  /** Floats over a full-screen pane, in its top header row. */
+  overFullscreen?: boolean;
   /** A narrow window, where the sidebar floats over the centre instead of taking a column. */
   narrow?: boolean;
   sidebarShown?: boolean;
@@ -44,8 +47,12 @@ export function TitleLeading({
     const container = containerRef.current;
     if (!merged || sidebarShown || !container) {
       root.style.removeProperty("--athas-title-leading-end");
+      root.style.removeProperty("--athas-title-leading-offset");
       return;
     }
+    // A full-screen pane starts at the window edge, not after the activity bar.
+    if (overFullscreen) root.style.setProperty("--athas-title-leading-offset", "0px");
+    else root.style.removeProperty("--athas-title-leading-offset");
     const publish = () =>
       root.style.setProperty(
         "--athas-title-leading-end",
@@ -57,8 +64,9 @@ export function TitleLeading({
     return () => {
       observer.disconnect();
       root.style.removeProperty("--athas-title-leading-end");
+      root.style.removeProperty("--athas-title-leading-offset");
     };
-  }, [merged, sidebarShown]);
+  }, [merged, overFullscreen, sidebarShown]);
 
   return (
     <ControlSizeProvider size={IS_MAC ? "sm" : "lg"}>
@@ -69,6 +77,7 @@ export function TitleLeading({
         className={cn(
           "absolute left-0 flex min-w-0 items-center pl-title-bar-leading",
           merged ? "top-workbench z-30 h-pane-header max-w-[50%]" : "inset-y-0 z-10 max-w-[50%]",
+          overFullscreen && "z-10050",
           IS_MAC ? "gap-0.5" : "gap-1",
         )}
       >

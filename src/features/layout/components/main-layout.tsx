@@ -28,7 +28,10 @@ import { frontendTrace } from "@/utils/frontend-trace";
 import { recordStartupMilestone } from "@/features/bootstrap/services/startup-performance";
 import { useBootstrapPhaseReached } from "@/features/bootstrap/stores/bootstrap-phase.store";
 import { getInternalTabDragData } from "@/features/tabs/services/internal-tab-drag";
-import { WorkbenchFullscreenRootContext } from "@/ui/workbench-fullscreen-surface";
+import {
+  useWorkbenchFullscreenMode,
+  WorkbenchFullscreenRootContext,
+} from "@/ui/workbench-fullscreen-surface";
 import TitleBarWithSettings from "../../window/components/title-bar/title-bar";
 import { TitleLeading } from "../../window/components/title-bar/title-leading";
 import { ResizablePane } from "./resizable-pane";
@@ -130,6 +133,7 @@ export function MainLayout() {
   // The window controls sit on the sidebar's top row; with no sidebar under them they get a title
   // row of their own, so they never straddle the activity bar and the centre.
   const mergedTitleRow = useMergedTitleRow();
+  const fullscreenMode = useWorkbenchFullscreenMode();
   const sidebarOverlayOpen = useWorkbenchSidebarStore.use.overlayOpen() && responsiveLayout.narrow;
   const { setOverlayOpen } = useWorkbenchSidebarStore.use.actions();
   const clearCentre = useIsEmptySessionInFront();
@@ -399,7 +403,8 @@ export function MainLayout() {
           <TitleLeading
             merged
             narrow={responsiveLayout.narrow}
-            sidebarShown={renderedSidebarVisible}
+            overFullscreen={fullscreenMode === "header"}
+            sidebarShown={renderedSidebarVisible && fullscreenMode !== "header"}
           />
         ) : null}
 

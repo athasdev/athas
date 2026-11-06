@@ -1,5 +1,6 @@
 import { memo, useEffect, useMemo, useState } from "react";
 import { WorkbenchFullscreenSurface } from "@/ui/workbench-fullscreen-surface";
+import { MERGED_TITLE_ROW } from "@/features/window/services/title-row";
 import { workspaceRuntimeRegistry } from "@/features/workspace/services/workspace-runtime-registry";
 import { WorkspaceStoreScopeContext } from "@/features/workspace/stores/create-workspace-scoped-store";
 import { useWorkspaceTabsStore } from "@/features/workspace/stores/workspace-tabs.store";
@@ -43,7 +44,7 @@ const SplitViewRoot = memo(function SplitViewRoot({
       </div>
 
       {activeSurface && fullscreenPane && (
-        <WorkbenchFullscreenSurface>
+        <WorkbenchFullscreenSurface windowControlsInHeader={MERGED_TITLE_ROW}>
           <PaneContainer pane={fullscreenPane} />
         </WorkbenchFullscreenSurface>
       )}

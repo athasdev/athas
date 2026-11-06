@@ -117,7 +117,6 @@ const TabBar = ({
   disablePaneActions = false,
 }: TabBarProps) => {
   // Get everything from stores
-  const fullscreenPaneId = usePaneStore.use.fullscreenPaneId();
   const { closePane, togglePaneFullscreen, setPaneLocked } = usePaneStore.use.actions();
 
   // Only this pane: the pane store compares selections deeply, so tab switches in other panes
@@ -137,9 +136,13 @@ const TabBar = ({
   );
   // In a window without a title row, the top row of tab bars is where the window is dragged.
   const mergedTitleRow = useMergedTitleRow();
-  const isWindowTopRow = usePaneStore(
-    (state) => mergedTitleRow && Boolean(paneId) && isPaneInTopRow(state.root, paneId ?? ""),
-  );
+  const fullscreenPaneId = usePaneStore.use.fullscreenPaneId();
+  // A full-screen pane is the window's only top row, and its tab bar leads it.
+  const isFullscreenTopRow = mergedTitleRow && Boolean(paneId) && fullscreenPaneId === paneId;
+  const isWindowTopRow =
+    usePaneStore(
+      (state) => mergedTitleRow && Boolean(paneId) && isPaneInTopRow(state.root, paneId ?? ""),
+    ) || isFullscreenTopRow;
   const paneBufferIds = pane?.bufferIds ?? null;
   // In the pane's tab order; buffers no pane shows only appear in the pane-less bar.
   const buffers = useBufferStore(
@@ -703,7 +706,9 @@ const TabBar = ({
           onWheel={handleWheel}
           data-tauri-drag-region={isWindowTopRow || undefined}
         >
-          {isWindowTopRow && isTopStartPane ? <PaneHeaderLeadingSpace /> : null}
+          {isWindowTopRow && (isTopStartPane || isFullscreenTopRow) ? (
+            <PaneHeaderLeadingSpace />
+          ) : null}
           <SortableContext items={sortedBufferIds} strategy={horizontalListSortingStrategy}>
             <TabStrip ref={tabStripRef} data-tauri-drag-region={isWindowTopRow || undefined}>
               {sortedBuffers.map((buffer, index) => (
