@@ -17,6 +17,7 @@ const WSL_LOCALHOST_SERVER: &str = "wsl.localhost";
 const WSL_LEGACY_SERVER: &str = "wsl$";
 const WSLENV: &str = "WSLENV";
 const GIT_PROBE_RETRY_INTERVAL: Duration = Duration::from_secs(60);
+const HOST_WSL_TIMEOUT: Duration = Duration::from_secs(5);
 #[cfg(windows)]
 const CREATE_NO_WINDOW: u32 = 0x0800_0000;
 
@@ -684,10 +685,32 @@ pub fn resolve_windows_path(path: &str) -> Result<String, String> {
 fn run_host_wsl(args: &[&str]) -> Result<CommandOutput, String> {
    let mut command = Command::new(WSL_EXE);
    command.args(args);
+   command.stdin(Stdio::null()).stdout(Stdio::piped()).stderr(Stdio::piped());
    hide_console_window(&mut command);
-   let output = command
-      .output()
+
+   let mut child = command
+      .spawn()
       .map_err(|e| format!("Failed to run {WSL_EXE}: {e}"))?;
+
+   let deadline = Instant::now() + HOST_WSL_TIMEOUT;
+   loop {
+      match child.try_wait() {
+         Ok(Some(_)) => break,
+         Ok(None) => {
+            if Instant::now() >= deadline {
+               let _ = child.kill();
+               let _ = child.wait();
+               return Err(format!("{WSL_EXE} timed out after {HOST_WSL_TIMEOUT:?}"));
+            }
+            std::thread::sleep(Duration::from_millis(50));
+         }
+         Err(e) => return Err(format!("Failed to wait for {WSL_EXE}: {e}")),
+      }
+   }
+
+   let output = child
+      .wait_with_output()
+      .map_err(|e| format!("Failed to read {WSL_EXE} output: {e}"))?;
 
    Ok(CommandOutput {
       status_success: output.status.success(),
