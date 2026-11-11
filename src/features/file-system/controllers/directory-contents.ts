@@ -1,4 +1,5 @@
 import type { FileEntry } from "../types/app.types";
+import { pathStartsWithRoot } from "@/utils/path-helpers";
 import { isPathInsideTreeEntry, sortFileEntries } from "../services/file-tree-utils";
 
 const OS_GENERATED_FILE_PATTERNS: string[] = [
@@ -224,6 +225,7 @@ export function updateDirectoryContents(
           children: existingChild?.children || undefined,
           // Refreshes keep links marked as links, so their icon and target tooltip survive.
           ...(isSymlink ? { isSymlink: true, symlinkTarget: symlinkTarget ?? undefined } : {}),
+          ...(entry.ignored ? { ignored: true } : {}),
         };
       };
 
@@ -238,7 +240,7 @@ export function updateDirectoryContents(
           existingChild.children === nextEntry.children &&
           existingChild.isEditing === undefined &&
           existingChild.isNewItem === undefined &&
-          existingChild.ignored === undefined &&
+          existingChild.ignored === nextEntry.ignored &&
           existingChild.isRenaming === undefined &&
           existingChild.isSymlink === nextEntry.isSymlink &&
           existingChild.symlinkTarget === nextEntry.symlinkTarget
@@ -280,4 +282,19 @@ export function updateDirectoryContents(
     }
   }
   return "missing";
+}
+
+/** Directories at or under `directoryPath` whose children are loaded in the tree. */
+export function collectLoadedDirectoryPaths(files: FileEntry[], directoryPath: string): string[] {
+  const paths: string[] = [];
+  const visit = (entries: FileEntry[]) => {
+    for (const entry of entries) {
+      if (!entry.isDir || !entry.children) continue;
+      const isInside = pathStartsWithRoot(entry.path, directoryPath);
+      if (isInside) paths.push(entry.path);
+      if (isInside || pathStartsWithRoot(directoryPath, entry.path)) visit(entry.children);
+    }
+  };
+  visit(files);
+  return paths;
 }

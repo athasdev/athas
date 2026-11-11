@@ -37,6 +37,23 @@ describe("web workbench backend", () => {
     expect(await invoke("plugin:fs|read_dir", { path: `${SAMPLE_ROOT}/.athas/rules` })).toEqual([]);
   });
 
+  it("reports the sample files its .gitignore excludes", async () => {
+    const { invoke } = createSample();
+
+    expect(
+      await invoke("local_ignored_entry_names", {
+        directory: SAMPLE_ROOT,
+        workspaceRoot: SAMPLE_ROOT,
+      }),
+    ).toEqual([".env.local"]);
+    expect(
+      await invoke("local_ignored_entry_names", {
+        directory: `${SAMPLE_ROOT}/src`,
+        workspaceRoot: SAMPLE_ROOT,
+      }),
+    ).toEqual([]);
+  });
+
   it("lists no WSL distributions, so the project picker opens", async () => {
     const { invoke } = createSample();
     expect(await invoke("wsl_list_distributions")).toEqual([]);

@@ -359,7 +359,6 @@ describe("collectFileTreeSearchHits", () => {
 describe("filterFileTreeEntries", () => {
   const baseOptions = {
     isAlwaysHidden: () => false,
-    isGitIgnored: () => false,
     isHiddenName: () => false,
     isUserHidden: () => false,
     showGitignoredFiles: true,
@@ -387,28 +386,29 @@ describe("filterFileTreeEntries", () => {
     expect(result[0]!.children?.[0].children?.[0].children?.[0].children).toEqual([]);
   });
 
-  test("decorates ignored entries without cloning unaffected siblings", () => {
-    const sibling = {
-      name: "package.json",
-      path: "/root/package.json",
+  test("keeps ignored entries as they are unless gitignored files are hidden", () => {
+    const ignoredSibling = {
+      name: "debug.log",
+      path: "/root/debug.log",
       isDir: false,
+      ignored: true,
     };
-    const files = [{ ...tree[0]!, children: [...(tree[0]!.children ?? []), sibling] }];
-    const result = filterFileTreeEntries(files, {
-      ...baseOptions,
-      isGitIgnored: (path) => path === sibling.path,
-    });
+    const files = [{ ...tree[0]!, children: [...(tree[0]!.children ?? []), ignoredSibling] }];
 
-    expect(result[0]).not.toBe(files[0]);
-    expect(result[0]!.children?.[0]).toBe(files[0]!.children?.[0]);
-    expect(result[0]!.children?.[1]).toEqual({ ...sibling, ignored: true, children: undefined });
+    expect(filterFileTreeEntries(files, baseOptions)).toBe(files);
+
+    const hidden = filterFileTreeEntries(files, { ...baseOptions, showGitignoredFiles: false });
+    expect(hidden[0]!.children?.map((child) => child.path)).toEqual(
+      tree[0]!.children?.map((child) => child.path),
+    );
+    expect(hidden[0]!.children?.[0]).toBe(files[0]!.children?.[0]);
   });
 
   test("filters only the directories that changed when given a cache", () => {
     const checkedPaths: string[] = [];
     const options = {
       ...baseOptions,
-      isGitIgnored: (path: string) => {
+      isUserHidden: (path: string) => {
         checkedPaths.push(path);
         return false;
       },

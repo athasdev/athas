@@ -14,7 +14,6 @@ import { detectLanguageFromFileName } from "@/features/editor/services/language-
 import { getBufferByPath } from "@/features/editor/stores/buffer-index";
 import { fileOpenBenchmark } from "@/features/editor/services/file-open-benchmark";
 import { getLineSlice } from "@/features/editor/services/large-file";
-import { invalidateFileTreeGitIgnoreCache } from "@/features/file-explorer/services/file-tree-gitignore";
 import { getAncestorDirectoryPaths } from "@/features/file-explorer/services/file-explorer-tree-utils";
 import { useFileTreeStore } from "@/features/file-explorer/stores/file-explorer-tree.store";
 import { getGitStatus } from "@/features/git/api/git-status-api";
@@ -71,6 +70,11 @@ import type { FsActions, FsState } from "../types/interface.types";
 import { getFileEntryNameError, parseNewEntryPath } from "../utils/file-entry-name";
 import { readDirectoryContents } from "../api/file-operations";
 import {
+  markIgnoredEntries,
+  markIgnoredEntriesIn,
+  readIgnoredEntryNames,
+} from "../api/ignored-entries";
+import {
   addFileToTree,
   findFileInTree,
   isPathInsideTreeEntry,
@@ -97,6 +101,10 @@ import {
   inspectFileOpenResource,
   readFileOpenText,
 } from "../services/file-open-resource";
+import {
+  notifyIgnoreRuleFileChanged,
+  notifyIgnoreRulesChanged,
+} from "../services/ignore-rule-changes";
 import { restoreWorkspaceSessionBuffer } from "../services/workspace-session-buffer-restore";
 import { restoreWorkspaceSessionFolders } from "../services/workspace-session-folder-restore";
 import { prepareWorkspaceClose } from "../services/workspace-close-guard";
@@ -249,6 +257,16 @@ const syncFffWorkspace = async (workspaceId: string): Promise<void> => {
   } catch (error) {
     console.error("[fff] workspace sync failed:", error);
   }
+};
+
+// The watcher drops events for ignored paths, so no later refresh would set this flag.
+const markIgnoredIfExcluded = async (
+  entry: FileEntry,
+  parentPath: string,
+  workspaceRoot: string,
+): Promise<FileEntry> => {
+  const ignoredNames = await readIgnoredEntryNames(parentPath, workspaceRoot);
+  return markIgnoredEntries([entry], ignoredNames)[0];
 };
 
 const readWorkspaceRootEntry = async (path: string): Promise<FileEntry> => {
@@ -506,7 +524,7 @@ const openLocalWorkspace = async (
       const projectName = getFolderName(path);
       const readDirectoryStartedAt = performance.now();
       logWorkspaceOpenStep("start", "readDirectoryContents", path);
-      const entries = await readDirectoryContents(path);
+      const entries = await markIgnoredEntriesIn(path, path, readDirectoryContents(path));
       logWorkspaceOpenStep("end", "readDirectoryContents", path, readDirectoryStartedAt);
 
       return {
@@ -1986,6 +2004,7 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
           is_dir: entry.isDir,
           is_symlink: entry.isSymlink,
           target: entry.symlinkTarget,
+          ignored: entry.ignored,
         }));
 
         set((state) => {
@@ -1995,8 +2014,8 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
             state.filesVersion++;
           }
         });
-        if (options?.force || parseRemotePath(directoryPath) || parseWslPath(directoryPath)) {
-          invalidateFileTreeGitIgnoreCache();
+        if (options?.force) {
+          notifyIgnoreRulesChanged(directoryPath);
         }
       },
 
@@ -2019,12 +2038,8 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
         }
 
         await getWorkspaceEntryMutationProvider(oldPath).movePath(oldPath, newPath);
-        if (movedFile.isDir) {
-          invalidateFileTreeGitIgnoreCache();
-        } else {
-          invalidateFileTreeGitIgnoreCache(oldPath);
-          invalidateFileTreeGitIgnoreCache(newPath);
-        }
+        notifyIgnoreRuleFileChanged(oldPath);
+        notifyIgnoreRulesChanged(getDirName(newPath));
 
         // Remove from old location
         let updatedFiles = removeFileFromTree(get().files, oldPath);
@@ -2208,13 +2223,13 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
           directoryPath,
           fileName,
         );
-        invalidateFileTreeGitIgnoreCache(filePath);
+        notifyIgnoreRuleFileChanged(filePath);
 
-        const newFile: FileEntry = {
-          name: fileName,
-          path: filePath,
-          isDir: false,
-        };
+        const newFile = await markIgnoredIfExcluded(
+          { name: fileName, path: filePath, isDir: false },
+          directoryPath,
+          project().rootFolderPath ?? directoryPath,
+        );
 
         set((state) => {
           state.files = addFileToTree(state.files, directoryPath, newFile);
@@ -2232,12 +2247,11 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
           folderName,
         );
 
-        const newFolder: FileEntry = {
-          name: folderName,
-          path: folderPath,
-          isDir: true,
-          children: [],
-        };
+        const newFolder = await markIgnoredIfExcluded(
+          { name: folderName, path: folderPath, isDir: true, children: [] },
+          parentPath,
+          project().rootFolderPath ?? parentPath,
+        );
 
         set((state) => {
           state.files = addFileToTree(state.files, parentPath, newFolder);
@@ -2258,7 +2272,7 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
         }
         const entry = findFileInTree(get().files, path);
         await getWorkspaceEntryMutationProvider(path).deletePath(path, !!entry?.isDir);
-        invalidateFileTreeGitIgnoreCache(entry?.isDir ? undefined : path);
+        notifyIgnoreRuleFileChanged(path);
 
         // A deleted folder takes the files open from inside it along.
         const { buffers, actions } = useBufferStore.getStore(workspaceId).getState();
@@ -2473,13 +2487,8 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
               path,
               newName,
             );
-            const renamedEntry = findFileInTree(get().files, path);
-            if (renamedEntry?.isDir) {
-              invalidateFileTreeGitIgnoreCache();
-            } else {
-              invalidateFileTreeGitIgnoreCache(path);
-              invalidateFileTreeGitIgnoreCache(targetPath);
-            }
+            notifyIgnoreRuleFileChanged(path);
+            notifyIgnoreRulesChanged(getDirName(targetPath));
 
             const renamed = findFileInTree(get().files, path);
             set((state) => {

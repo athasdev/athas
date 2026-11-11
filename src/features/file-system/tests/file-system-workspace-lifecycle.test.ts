@@ -347,6 +347,22 @@ describe("remote and WSL workspaces", () => {
     expect(tabs().projectTabs).toEqual([]);
   });
 
+  it("marks the root entries the workspace's ignore files exclude", async () => {
+    vi.spyOn(commands, "localIgnoredEntryNames").mockResolvedValue(["README.md"]);
+
+    await fs().handleOpenFolderByPath("/work/app");
+
+    expect(commands.localIgnoredEntryNames).toHaveBeenCalledWith("/work/app", "/work/app");
+    const [rootEntry] = fs().files;
+    expect(
+      rootEntry.children?.map(({ name, ignored }) => ({ name, ignored: ignored ?? false })),
+    ).toEqual([
+      { name: ".git", ignored: false },
+      { name: "src", ignored: false },
+      { name: "README.md", ignored: true },
+    ]);
+  });
+
   it("opens WSL paths through the WSL reader and records them as recents", async () => {
     vi.spyOn(commands, "wslReadDirectory").mockResolvedValue([
       { name: "project", path: "/home/me/project", is_dir: true },

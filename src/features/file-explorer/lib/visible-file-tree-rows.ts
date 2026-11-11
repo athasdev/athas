@@ -34,7 +34,6 @@ interface FilterFileTreeForFffHitsOptions {
 
 interface FilterFileTreeEntriesOptions {
   isAlwaysHidden: (name: string) => boolean;
-  isGitIgnored: (path: string, isDir: boolean) => boolean;
   isHiddenName: (name: string) => boolean;
   isUserHidden: (path: string, isDir: boolean) => boolean;
   showGitignoredFiles: boolean;
@@ -60,8 +59,6 @@ export function filterFileTreeEntries(
   const filteredItems: FileEntry[] = [];
 
   for (const item of files) {
-    const ignored = options.isGitIgnored(item.path, item.isDir);
-
     if (options.isAlwaysHidden(item.name) || options.isUserHidden(item.path, item.isDir)) {
       changed = true;
       continue;
@@ -72,7 +69,7 @@ export function filterFileTreeEntries(
       continue;
     }
 
-    if (!options.showGitignoredFiles && ignored) {
+    if (!options.showGitignoredFiles && item.ignored) {
       changed = true;
       continue;
     }
@@ -80,16 +77,9 @@ export function filterFileTreeEntries(
     const filteredChildren = item.children
       ? filterFileTreeEntries(item.children, options, cache)
       : undefined;
-    const childrenChanged = filteredChildren !== item.children;
-    const ignoredChanged = item.ignored !== ignored && (ignored || item.ignored !== undefined);
-
-    if (childrenChanged || ignoredChanged) {
+    if (filteredChildren !== item.children) {
       changed = true;
-      filteredItems.push({
-        ...item,
-        ignored,
-        children: filteredChildren,
-      });
+      filteredItems.push({ ...item, children: filteredChildren });
       continue;
     }
 

@@ -3,7 +3,7 @@
 //! debounce window.
 
 mod batch;
-mod ignore_rules;
+pub(crate) mod ignore_rules;
 mod types;
 
 use anyhow::{Context, Result, bail};

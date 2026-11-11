@@ -2,10 +2,13 @@ import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
 
 const readDirectoryMock = vi.fn();
 const getSymlinkInfoMock = vi.fn();
-const { localPathExistsMock, writeFileMock } = vi.hoisted(() => ({
+const { invokeMock, localPathExistsMock, writeFileMock } = vi.hoisted(() => ({
+  invokeMock: vi.fn(),
   localPathExistsMock: vi.fn(),
   writeFileMock: vi.fn(),
 }));
+
+vi.mock("@tauri-apps/api/core", () => ({ invoke: invokeMock }));
 
 vi.mock("../api/file-system-api", () => ({
   createDirectory: vi.fn(),
@@ -29,6 +32,19 @@ describe("file operations", () => {
   beforeEach(() => {
     readDirectoryMock.mockReset();
     getSymlinkInfoMock.mockReset();
+    invokeMock.mockReset().mockResolvedValue([]);
+  });
+
+  it("lists a directory without reading its ignore rules", async () => {
+    readDirectoryMock.mockResolvedValue([
+      { name: "dist", path: "/workspace/dist", is_dir: true, is_symlink: false },
+    ]);
+    const { readDirectoryContents } = await import("../api/file-operations");
+
+    await expect(readDirectoryContents("/workspace")).resolves.toEqual([
+      { name: "dist", path: "/workspace/dist", isDir: true, children: undefined },
+    ]);
+    expect(invokeMock).not.toHaveBeenCalledWith("local_ignored_entry_names", expect.anything());
   });
 
   it("uses readDir symlink metadata instead of probing every entry", async () => {

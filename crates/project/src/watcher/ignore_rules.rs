@@ -119,6 +119,7 @@ pub struct IgnoreRules {
    root: PathBuf,
    per_directory: HashMap<PathBuf, Option<Arc<Gitignore>>>,
    repository: Option<Arc<(Gitignore, Gitignore)>>,
+   global_excludes: bool,
 }
 
 impl IgnoreRules {
@@ -127,6 +128,16 @@ impl IgnoreRules {
          root: root.into(),
          per_directory: HashMap::new(),
          repository: None,
+         global_excludes: true,
+      }
+   }
+
+   /// Rules for a root whose global excludes file is not the one this process's git config
+   /// names, such as a WSL distribution reached from Windows.
+   pub fn without_global_excludes(root: impl Into<PathBuf>) -> Self {
+      Self {
+         global_excludes: false,
+         ..Self::new(root)
       }
    }
 
@@ -136,16 +147,35 @@ impl IgnoreRules {
       self.repository = None;
    }
 
-   /// Whether `relative` (relative to the root) is ignored, checking the ignore files of every
-   /// directory from the deepest one up to the root, then `.git/info/exclude` and the global
-   /// excludes file.
+   /// Whether `relative` (relative to the root) is ignored: it or one of its parent directories
+   /// is excluded by the ignore files of the directories above it (the deepest one deciding),
+   /// then by `.git/info/exclude` and the global excludes file.
    pub fn is_ignored(&mut self, relative: &Path, is_dir: bool) -> bool {
+      let parents: Vec<PathBuf> = relative
+         .ancestors()
+         .skip(1)
+         .filter(|parent| !parent.as_os_str().is_empty())
+         .map(Path::to_path_buf)
+         .collect();
+      // Git never descends into an excluded directory, so a `!pattern` below it cannot bring a
+      // path back.
+      for parent in parents.iter().rev() {
+         if self.is_excluded(parent, true) {
+            return true;
+         }
+      }
+      self.is_excluded(relative, is_dir)
+   }
+
+   /// Matches `relative` itself, never its parents: `Gitignore::matched_path_or_any_parents`
+   /// also tests the matcher's own directory as an empty path, which `/**/` matches.
+   fn is_excluded(&mut self, relative: &Path, is_dir: bool) -> bool {
       let absolute = self.root.join(relative);
       let mut directory = relative.parent().map(Path::to_path_buf);
 
       while let Some(current) = directory {
          if let Some(matcher) = self.matcher_for(&current) {
-            let matched = matcher.matched_path_or_any_parents(&absolute, is_dir);
+            let matched = matcher.matched(&absolute, is_dir);
             if matched.is_ignore() {
                return true;
             }
@@ -158,7 +188,7 @@ impl IgnoreRules {
 
       let repository = self.repository_matchers();
       for matcher in [&repository.0, &repository.1] {
-         let matched = matcher.matched_path_or_any_parents(&absolute, is_dir);
+         let matched = matcher.matched(&absolute, is_dir);
          if matched.is_ignore() {
             return true;
          }
@@ -217,7 +247,11 @@ impl IgnoreRules {
          );
       }
       let exclude = exclude.build().unwrap_or_else(|_| Gitignore::empty());
-      let (global, _) = GitignoreBuilder::new(&self.root).build_global();
+      let global = if self.global_excludes {
+         GitignoreBuilder::new(&self.root).build_global().0
+      } else {
+         Gitignore::empty()
+      };
 
       let matchers = Arc::new((exclude, global));
       self.repository = Some(matchers.clone());
@@ -307,6 +341,24 @@ mod tests {
       );
       rules.invalidate();
       assert!(rules.is_ignored(Path::new("data.watchtest"), false));
+   }
+
+   #[test]
+   fn matches_globstar_directories_and_excluded_parents_like_git() {
+      let temp = tempfile::tempdir().unwrap();
+      let root = temp.path();
+      std::fs::create_dir_all(root.join("build")).unwrap();
+      std::fs::create_dir_all(root.join("sub/nested")).unwrap();
+      std::fs::write(root.join(".gitignore"), "build/\n").unwrap();
+      std::fs::write(root.join("build/.gitignore"), "!keep.log\n").unwrap();
+      std::fs::write(root.join("sub/.gitignore"), "/**/\n").unwrap();
+
+      let mut rules = IgnoreRules::without_global_excludes(root);
+      assert!(rules.is_ignored(Path::new("build/keep.log"), false));
+      assert!(rules.is_ignored(Path::new("sub/nested"), true));
+      assert!(rules.is_ignored(Path::new("sub/nested/file.rs"), false));
+      assert!(!rules.is_ignored(Path::new("sub/notes.md"), false));
+      assert!(!rules.is_ignored(Path::new("sub/.gitignore"), false));
    }
 
    #[test]
