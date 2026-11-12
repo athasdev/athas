@@ -1,3 +1,4 @@
+import ignore from "ignore";
 import type { FffIndexedFile, FffSearchHit, SearchOptions } from "@/bindings/commands";
 import {
   type MemoryFileSystem,
@@ -101,6 +102,24 @@ export function createWebBackend({ home, fs, git, appVersion }: WebBackendOption
     if (expected === null || expected === undefined) return;
     const current = fs.exists(path) ? fs.readText(path) : null;
     if (current !== expected) throw new Error(`${path} changed on disk. Read it again first.`);
+  }
+
+  /** The sample project only has a root `.gitignore`, so that is the one file read here. */
+  function ignoredEntryNames(directoryArg: unknown, rootArg: unknown) {
+    const root = normalizePath(rootArg);
+    const directory = normalizePath(directoryArg);
+    const gitignore = `${root}/.gitignore`;
+    if (!fs.exists(gitignore) || (directory !== root && !directory.startsWith(`${root}/`))) {
+      return [];
+    }
+    const rules = ignore().add(fs.readText(gitignore));
+    return fs
+      .list(directory)
+      .filter(({ name, isDirectory }) => {
+        const relative = `${directory}/${name}`.slice(root.length + 1);
+        return rules.ignores(isDirectory ? `${relative}/` : relative);
+      })
+      .map(({ name }) => name);
   }
 
   function indexedFiles(rootPaths: unknown): FffIndexedFile[] {
@@ -224,6 +243,7 @@ export function createWebBackend({ home, fs, git, appVersion }: WebBackendOption
       return null;
     },
     read_local_file: (args) => toBytes(fs.readText(args?.path)),
+    local_ignored_entry_names: (args) => ignoredEntryNames(args?.directory, args?.workspaceRoot),
     write_local_file: (args) => {
       fs.writeText(args?.path, String(args?.content ?? ""));
       return null;

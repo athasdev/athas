@@ -35,6 +35,52 @@ describe("workspace resource provider", () => {
     expect(readDirectoryContents).toHaveBeenCalledWith("/workspace", "/workspace");
   });
 
+  it("marks the local entries the workspace's ignore files exclude", async () => {
+    readDirectoryContents.mockResolvedValue([
+      { name: "dist", path: "/workspace/web/dist", isDir: true },
+      { name: "src", path: "/workspace/web/src", isDir: true },
+    ]);
+    invoke.mockResolvedValue(["dist"]);
+
+    const entries = await readWorkspaceDirectoryEntries("/workspace/web", "/workspace");
+
+    expect(invoke).toHaveBeenCalledWith("local_ignored_entry_names", {
+      directory: "/workspace/web",
+      workspaceRoot: "/workspace",
+    });
+    expect(entries.map(({ name, ignored }) => ({ name, ignored }))).toEqual([
+      { name: "dist", ignored: true },
+      { name: "src", ignored: undefined },
+    ]);
+  });
+
+  it("lists a directory whose ignore rules cannot be read", async () => {
+    readDirectoryContents.mockResolvedValue([
+      { name: "dist", path: "/workspace/dist", isDir: true },
+    ]);
+    invoke.mockRejectedValue(new Error("Permission denied"));
+
+    await expect(readWorkspaceDirectoryEntries("/workspace")).resolves.toEqual([
+      { name: "dist", path: "/workspace/dist", isDir: true },
+    ]);
+  });
+
+  it("lists directories for search and context readers without reading ignore rules", async () => {
+    readDirectoryContents.mockResolvedValue([]);
+    invoke.mockResolvedValue([]);
+
+    await getWorkspaceResourceProvider("/workspace").readDirectory("/workspace", "/workspace");
+    await getWorkspaceResourceProvider("wsl://Ubuntu/home/me/app").readDirectory(
+      "wsl://Ubuntu/home/me/app",
+      "wsl://Ubuntu/home/me",
+    );
+    await readWorkspaceDirectoryEntries("remote://connection-1/repo");
+
+    const commandsCalled = invoke.mock.calls.map(([command]) => command);
+    expect(commandsCalled).not.toContain("local_ignored_entry_names");
+    expect(commandsCalled).not.toContain("wsl_ignored_entry_names");
+  });
+
   it("reads local text and bytes through the existing filesystem adapters", async () => {
     readFileContent.mockResolvedValue("local text");
     readLocalFileBytes.mockResolvedValue(Uint8Array.from([108, 111, 99, 97, 108]));
@@ -131,6 +177,31 @@ describe("workspace resource provider", () => {
     expect(invoke).toHaveBeenCalledWith("wsl_read_directory", {
       distro: "Ubuntu",
       path: "/home/me",
+    });
+  });
+
+  it("marks WSL entries the workspace's ignore files exclude", async () => {
+    invoke.mockImplementation(async (command: string) => {
+      if (command === "wsl_ignored_entry_names") return ["dist"];
+      return [
+        { name: "dist", path: "wsl://Ubuntu/home/me/app/dist", is_dir: true, size: 0 },
+        { name: "src", path: "wsl://Ubuntu/home/me/app/src", is_dir: true, size: 0 },
+      ];
+    });
+
+    const entries = await readWorkspaceDirectoryEntries(
+      "wsl://Ubuntu/home/me/app",
+      "wsl://Ubuntu/home/me",
+    );
+
+    expect(entries.map(({ name, ignored }) => ({ name, ignored }))).toEqual([
+      { name: "dist", ignored: true },
+      { name: "src", ignored: undefined },
+    ]);
+    expect(invoke).toHaveBeenCalledWith("wsl_ignored_entry_names", {
+      distro: "Ubuntu",
+      directory: "/home/me/app",
+      workspaceRoot: "/home/me",
     });
   });
 

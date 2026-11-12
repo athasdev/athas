@@ -3,14 +3,15 @@
 //! debounce window.
 
 mod batch;
-mod ignore_rules;
+mod path_class;
 mod types;
 
+use crate::ignore_rules::GitIgnoreRules;
 use anyhow::{Context, Result, bail};
 use batch::{PendingEvents, build_batch, collect_window, touches_root};
-pub use ignore_rules::ALWAYS_IGNORED_DIRS;
-use ignore_rules::{IgnoreRules, PathClass, classify};
 use notify::{Config, EventKindMask, RecommendedWatcher, RecursiveMode, Watcher};
+pub use path_class::ALWAYS_IGNORED_DIRS;
+use path_class::{PathClass, classify};
 use std::{
    collections::{BTreeMap, BTreeSet},
    path::{Path, PathBuf},
@@ -51,7 +52,7 @@ const PER_DIRECTORY_WATCHES: bool = cfg!(target_os = "linux");
 struct RootEntry {
    canonical: PathBuf,
    subscribers: BTreeSet<Subscriber>,
-   rules: IgnoreRules,
+   rules: GitIgnoreRules,
    /// OS-level watches registered for this root. Empty while an enclosing root covers it.
    os_watches: Vec<PathBuf>,
 }
@@ -119,7 +120,7 @@ impl FileWatcher {
       state.roots.insert(
          root.to_path_buf(),
          RootEntry {
-            rules: IgnoreRules::new(&canonical),
+            rules: GitIgnoreRules::new(&canonical),
             canonical,
             subscribers: BTreeSet::from([subscriber]),
             os_watches: Vec::new(),
@@ -341,7 +342,10 @@ fn watch_new_directory(state: &mut State, root: &Path, directory: &Path) {
    }
 }
 
-fn watch_targets(canonical_root: &Path, rules: &mut IgnoreRules) -> Vec<(PathBuf, RecursiveMode)> {
+fn watch_targets(
+   canonical_root: &Path,
+   rules: &mut GitIgnoreRules,
+) -> Vec<(PathBuf, RecursiveMode)> {
    if !PER_DIRECTORY_WATCHES {
       return vec![(canonical_root.to_path_buf(), RecursiveMode::Recursive)];
    }
@@ -350,7 +354,7 @@ fn watch_targets(canonical_root: &Path, rules: &mut IgnoreRules) -> Vec<(PathBuf
 
 fn per_directory_targets(
    canonical_root: &Path,
-   rules: &mut IgnoreRules,
+   rules: &mut GitIgnoreRules,
 ) -> Vec<(PathBuf, RecursiveMode)> {
    let mut targets: Vec<(PathBuf, RecursiveMode)> =
       worktree_directories(canonical_root, canonical_root, rules)
@@ -386,7 +390,7 @@ fn per_directory_targets(
 fn worktree_directories(
    canonical_root: &Path,
    start: &Path,
-   rules: &mut IgnoreRules,
+   rules: &mut GitIgnoreRules,
 ) -> Vec<PathBuf> {
    let mut directories = Vec::new();
    let mut stack = vec![start.to_path_buf()];
@@ -529,13 +533,14 @@ mod tests {
       }
       std::fs::write(root.join(".gitignore"), "coverage/\n").unwrap();
 
-      let targets: BTreeSet<PathBuf> = per_directory_targets(&root, &mut IgnoreRules::new(&root))
-         .into_iter()
-         .map(|(path, mode)| {
-            assert_eq!(mode, RecursiveMode::NonRecursive);
-            path.strip_prefix(&root).unwrap().to_path_buf()
-         })
-         .collect();
+      let targets: BTreeSet<PathBuf> =
+         per_directory_targets(&root, &mut GitIgnoreRules::new(&root))
+            .into_iter()
+            .map(|(path, mode)| {
+               assert_eq!(mode, RecursiveMode::NonRecursive);
+               path.strip_prefix(&root).unwrap().to_path_buf()
+            })
+            .collect();
 
       let expected: BTreeSet<PathBuf> = [
          "",

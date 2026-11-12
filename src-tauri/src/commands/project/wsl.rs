@@ -1,5 +1,6 @@
 use super::fs::FileBytes;
 use athas_wsl::{WslDistribution, WslFileEntry, WslSymlinkInfo};
+use std::path::Path;
 use tauri::command;
 
 #[command]
@@ -18,6 +19,28 @@ pub fn wsl_get_home_dir(distro: String) -> Result<String, String> {
 #[specta::specta]
 pub fn wsl_read_directory(distro: String, path: String) -> Result<Vec<WslFileEntry>, String> {
    athas_wsl::read_directory(&distro, &path)
+}
+
+/// Reads the ignore files through the distribution's `\\wsl.localhost` share. The global
+/// excludes file is skipped: the one this process would find belongs to the Windows user.
+#[command]
+#[specta::specta]
+pub async fn wsl_ignored_entry_names(
+   distro: String,
+   directory: String,
+   workspace_root: String,
+) -> Result<Vec<String>, String> {
+   tauri::async_runtime::spawn_blocking(move || {
+      let flavor = athas_wsl::resolve_unc_flavor(&distro);
+      let directory = athas_wsl::wsl_path_to_windows_unc(&distro, &directory, flavor);
+      let root = athas_wsl::wsl_path_to_windows_unc(&distro, &workspace_root, flavor);
+      athas_project::ignored_entries::ignored_entry_names_without_global_excludes(
+         Path::new(&root),
+         Path::new(&directory),
+      )
+   })
+   .await
+   .map_err(|error| format!("Ignored entries task failed: {error}"))?
 }
 
 #[command]

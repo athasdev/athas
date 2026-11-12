@@ -32,6 +32,8 @@ export const commands = {
     __TAURI_INVOKE<null>("delete_local_file_checked", { path, expectedContent }),
   getLocalDirectorySize: (path: string) =>
     __TAURI_INVOKE<number>("get_local_directory_size", { path }),
+  localIgnoredEntryNames: (directory: string, workspaceRoot: string) =>
+    __TAURI_INVOKE<string[]>("local_ignored_entry_names", { directory, workspaceRoot }),
   /**
    *  Allow `path` to be served through the asset protocol. Directories are
    *  allowed recursively; files are allowed individually.
@@ -764,6 +766,12 @@ export const commands = {
   wslGetHomeDir: (distro: string) => __TAURI_INVOKE<string>("wsl_get_home_dir", { distro }),
   wslReadDirectory: (distro: string, path: string) =>
     __TAURI_INVOKE<WslFileEntry[]>("wsl_read_directory", { distro, path }),
+  /**
+   *  Reads the ignore files through the distribution's `\\wsl.localhost` share. The global
+   *  excludes file is skipped: the one this process would find belongs to the Windows user.
+   */
+  wslIgnoredEntryNames: (distro: string, directory: string, workspaceRoot: string) =>
+    __TAURI_INVOKE<string[]>("wsl_ignored_entry_names", { distro, directory, workspaceRoot }),
   wslReadFile: (distro: string, filePath: string) =>
     __TAURI_INVOKE<string>("wsl_read_file", { distro, filePath }),
   wslReadFileBytes: (distro: string, filePath: string) =>

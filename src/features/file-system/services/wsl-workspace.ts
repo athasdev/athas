@@ -8,6 +8,7 @@ interface WslDirectoryEntry {
   size: number;
   is_symlink: boolean;
   target?: string | null;
+  ignored?: boolean;
 }
 
 interface WslWorkspaceTree {
@@ -35,6 +36,7 @@ export function buildWslWorkspaceTree(
     children: entry.is_dir ? [] : undefined,
     isSymlink: entry.is_symlink,
     symlinkTarget: entry.target ?? undefined,
+    ...(entry.ignored ? { ignored: true } : {}),
   }));
   const projectName = getWslProjectName(distro, linuxPath);
 

@@ -1,9 +1,10 @@
 import { readFile as readLocalFileBytes } from "@tauri-apps/plugin-fs";
 import { commands } from "@/bindings/commands";
-import { invalidateFileTreeGitIgnoreCache } from "@/features/file-explorer/services/file-tree-gitignore";
 import { buildRemoteEntryPath, parseRemotePath } from "@/features/remote/services/remote-path";
 import { parseWslPath } from "@/features/wsl/services/wsl-path";
 import { readDirectoryContents, readFileContent } from "../api/file-operations";
+import { markIgnoredEntriesIn } from "../api/ignored-entries";
+import { notifyIgnoreRuleFileChanged } from "./ignore-rule-changes";
 import { sortFileEntries } from "./file-tree-utils";
 import type { FileEntry } from "../types/app.types";
 
@@ -41,7 +42,7 @@ const localWorkspaceResourceProvider: WorkspaceResourceProvider = {
         expectedContent === null ? null : await digestText(expectedContent),
         content,
       );
-      invalidateFileTreeGitIgnoreCache(path);
+      notifyIgnoreRuleFileChanged(path);
       return;
     }
     const { writeFile } = await import("../api/file-system-api");
@@ -49,7 +50,7 @@ const localWorkspaceResourceProvider: WorkspaceResourceProvider = {
   },
   async deleteText(path, expectedContent) {
     await commands.deleteLocalFileChecked(path, expectedContent);
-    invalidateFileTreeGitIgnoreCache(path);
+    notifyIgnoreRuleFileChanged(path);
   },
   readBytes: readLocalFileBytes,
 };
@@ -95,7 +96,6 @@ const remoteWorkspaceResourceProvider: WorkspaceResourceProvider = {
         expectedContent,
       );
     }
-    invalidateFileTreeGitIgnoreCache(path);
   },
   async deleteText(path, expectedContent) {
     const remoteInfo = parseRemotePath(path);
@@ -105,7 +105,6 @@ const remoteWorkspaceResourceProvider: WorkspaceResourceProvider = {
       remoteInfo.remotePath,
       expectedContent,
     );
-    invalidateFileTreeGitIgnoreCache(path);
   },
   async readBytes() {
     return null;
@@ -152,13 +151,13 @@ const wslWorkspaceResourceProvider: WorkspaceResourceProvider = {
         expectedContent,
       );
     }
-    invalidateFileTreeGitIgnoreCache(path);
+    notifyIgnoreRuleFileChanged(path);
   },
   async deleteText(path, expectedContent) {
     const wslInfo = parseWslPath(path);
     if (!wslInfo) throw new Error(`Invalid WSL workspace path: ${path}`);
     await commands.wslDeleteFileChecked(wslInfo.distro, wslInfo.linuxPath, expectedContent);
-    invalidateFileTreeGitIgnoreCache(path);
+    notifyIgnoreRuleFileChanged(path);
   },
   async readBytes(path) {
     const wslInfo = parseWslPath(path);
@@ -183,6 +182,16 @@ export function getWorkspaceResourceProvider(path: string): WorkspaceResourcePro
   return localWorkspaceResourceProvider;
 }
 
+/**
+ * Lists a directory for the file tree, with the entries the workspace's ignore files exclude
+ * marked. Other readers, such as search and AI context, call a provider's `readDirectory`
+ * directly instead: they either do not use the flag or apply their own rules, and should not pay
+ * for this lookup.
+ */
 export function readWorkspaceDirectoryEntries(path: string, workspaceRoot = path) {
-  return getWorkspaceResourceProvider(path).readDirectory(path, workspaceRoot);
+  return markIgnoredEntriesIn(
+    path,
+    workspaceRoot,
+    getWorkspaceResourceProvider(path).readDirectory(path, workspaceRoot),
+  );
 }

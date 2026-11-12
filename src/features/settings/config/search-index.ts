@@ -342,7 +342,8 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     tab: "file-explorer",
     section: "Display",
     label: "Respect .gitignore",
-    description: "Hide files matched by root and nested .gitignore files",
+    description:
+      "Hide files matched by .gitignore and .ignore files, .git/info/exclude, and the global excludes file",
     keywords: ["gitignore", ".gitignore", "ignored", "git", "files", "visibility", "exclude"],
   },
   {

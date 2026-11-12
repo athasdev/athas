@@ -11,8 +11,8 @@ vi.mock("@tauri-apps/plugin-fs", () => ({
   remove: vi.fn(),
   writeTextFile: mocks.writeTextFile,
 }));
-vi.mock("@/features/file-explorer/services/file-tree-gitignore", () => ({
-  invalidateFileTreeGitIgnoreCache: mocks.invalidate,
+vi.mock("@/features/file-system/services/ignore-rule-changes", () => ({
+  notifyIgnoreRuleFileChanged: mocks.invalidate,
 }));
 
 describe("platform text writes", () => {

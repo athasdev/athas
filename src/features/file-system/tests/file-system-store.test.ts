@@ -28,6 +28,7 @@ vi.hoisted(() => {
 
 const mocks = vi.hoisted(() => ({
   readWorkspaceDirectoryEntries: vi.fn(),
+  readIgnoredEntryNames: vi.fn<() => Promise<ReadonlySet<string>>>(),
   mutations: {
     kind: "local" as const,
     createFile: vi.fn(),
@@ -75,6 +76,10 @@ vi.mock("@/ui/dialog", async (importOriginal) => ({
 vi.mock("../services/workspace-resource-provider", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../services/workspace-resource-provider")>()),
   readWorkspaceDirectoryEntries: mocks.readWorkspaceDirectoryEntries,
+}));
+vi.mock("../api/ignored-entries", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../api/ignored-entries")>()),
+  readIgnoredEntryNames: mocks.readIgnoredEntryNames,
 }));
 vi.mock("../services/workspace-entry-mutation-provider", () => ({
   getWorkspaceEntryMutationProvider: () => mocks.mutations,
@@ -142,6 +147,7 @@ beforeEach(() => {
   vi.spyOn(toast, "success").mockImplementation(() => "");
   vi.spyOn(toast, "warning").mockImplementation(() => "");
   mocks.readFileOpenText.mockResolvedValue("");
+  mocks.readIgnoredEntryNames.mockResolvedValue(new Set());
   mocks.ensureWorkspaceFileSearch.mockImplementation(async (paths: string[]) => paths);
 });
 
@@ -323,6 +329,26 @@ describe("creating entries", () => {
     expect(mocks.mutations.createFile).toHaveBeenCalledWith(`${root}/src/utils`, "math.ts");
     expect(entry(`${root}/src/utils/math.ts`)).toMatchObject({ isDir: false });
     expect(getBufferByPath(buffers().buffers, `${root}/src/utils/math.ts`)).toBeDefined();
+  });
+
+  it("marks a new file or folder ignored when the ignore files exclude it", async () => {
+    setWorkspace([dir(`${root}/src`, [])]);
+    mocks.mutations.createDirectory.mockImplementation(
+      async (parent: string, name: string) => `${parent}/${name}`,
+    );
+    mocks.mutations.createFile.mockImplementation(
+      async (parent: string, name: string) => `${parent}/${name}`,
+    );
+    mocks.readIgnoredEntryNames.mockResolvedValue(new Set(["debug.log", "logs"]));
+
+    await fs().createFile(`${root}/src`, "debug.log");
+    await fs().createFile(`${root}/src`, "main.ts");
+    await fs().createDirectory(`${root}/src`, "logs");
+
+    expect(mocks.readIgnoredEntryNames).toHaveBeenCalledWith(`${root}/src`, root);
+    expect(entry(`${root}/src/debug.log`)?.ignored).toBe(true);
+    expect(entry(`${root}/src/main.ts`)?.ignored).toBeUndefined();
+    expect(entry(`${root}/src/logs`)?.ignored).toBe(true);
   });
 
   it.each(["../escape.ts", "src/../../escape.ts", "./a.ts", "a\\b.ts"])(
@@ -954,5 +980,24 @@ describe("file tree edge cases", () => {
     await fs().refreshDirectory(root);
 
     expect(entry(`${root}/link`)).toMatchObject({ isSymlink: true, symlinkTarget: "../elsewhere" });
+  });
+
+  it("updates which entries are ignored when a folder is refreshed", async () => {
+    setWorkspace([file(`${root}/debug.log`), file(`${root}/notes.md`)]);
+    mocks.readWorkspaceDirectoryEntries.mockResolvedValue([
+      { ...file(`${root}/debug.log`), ignored: true },
+      file(`${root}/notes.md`),
+    ]);
+
+    await fs().refreshDirectory(root);
+    expect(entry(`${root}/debug.log`)?.ignored).toBe(true);
+    expect(entry(`${root}/notes.md`)?.ignored).toBeUndefined();
+
+    mocks.readWorkspaceDirectoryEntries.mockResolvedValue([
+      file(`${root}/debug.log`),
+      file(`${root}/notes.md`),
+    ]);
+    await fs().refreshDirectory(root);
+    expect(entry(`${root}/debug.log`)?.ignored).toBeUndefined();
   });
 });

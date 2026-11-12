@@ -347,6 +347,22 @@ describe("remote and WSL workspaces", () => {
     expect(tabs().projectTabs).toEqual([]);
   });
 
+  it("marks the root entries the workspace's ignore files exclude", async () => {
+    vi.spyOn(commands, "localIgnoredEntryNames").mockResolvedValue(["README.md"]);
+
+    await fs().handleOpenFolderByPath("/work/app");
+
+    expect(commands.localIgnoredEntryNames).toHaveBeenCalledWith("/work/app", "/work/app");
+    const [rootEntry] = fs().files;
+    expect(
+      rootEntry.children?.map(({ name, ignored }) => ({ name, ignored: ignored ?? false })),
+    ).toEqual([
+      { name: ".git", ignored: false },
+      { name: "src", ignored: false },
+      { name: "README.md", ignored: true },
+    ]);
+  });
+
   it("opens WSL paths through the WSL reader and records them as recents", async () => {
     vi.spyOn(commands, "wslReadDirectory").mockResolvedValue([
       { name: "project", path: "/home/me/project", is_dir: true },
@@ -358,6 +374,25 @@ describe("remote and WSL workspaces", () => {
     expect(commands.wslReadDirectory).toHaveBeenCalledWith("Ubuntu", "/home/me");
     expect(project().rootFolderPath).toBe("wsl://Ubuntu/home/me");
     expect(useRecentFoldersStore.getState().recentFolders[0]?.path).toBe("wsl://Ubuntu/home/me");
+  });
+
+  it("marks the WSL root entries the workspace's ignore files exclude", async () => {
+    vi.spyOn(commands, "wslReadDirectory").mockResolvedValue([
+      { name: "dist", path: "/home/me/dist", is_dir: true },
+      { name: "src", path: "/home/me/src", is_dir: true },
+    ] as never);
+    vi.spyOn(commands, "wslIgnoredEntryNames").mockResolvedValue(["dist"]);
+
+    await fs().handleOpenFolderByPath("wsl://Ubuntu/home/me");
+
+    expect(commands.wslIgnoredEntryNames).toHaveBeenCalledWith("Ubuntu", "/home/me", "/home/me");
+    const [rootEntry] = fs().files;
+    expect(
+      rootEntry.children?.map(({ name, ignored }) => ({ name, ignored: ignored ?? false })),
+    ).toEqual([
+      { name: "dist", ignored: true },
+      { name: "src", ignored: false },
+    ]);
   });
 
   it("reports WSL read failures", async () => {

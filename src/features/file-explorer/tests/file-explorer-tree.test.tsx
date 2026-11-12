@@ -25,19 +25,17 @@ const native = vi.hoisted(() => {
   return {
     directories: new Map<string, Array<{ path: string; is_dir?: boolean }>>(),
     readDirectoryFails: false,
-    gitignore: "dist/\n",
   };
 });
 
 vi.mock("@/features/file-system/api/file-system-api", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/features/file-system/api/file-system-api")>()),
-  readFile: async (path: string) => {
-    if (path === "/repo/.gitignore") return native.gitignore;
-    throw new Error("missing");
-  },
   readDirectory: async (path: string) => {
     if (native.readDirectoryFails) throw new Error("EACCES");
-    return native.directories.get(path) ?? [];
+    return (native.directories.get(path) ?? []).map((entry) => ({
+      name: entry.path.split("/").pop(),
+      ...entry,
+    }));
   },
 }));
 
@@ -53,7 +51,7 @@ const file = (path: string, children?: FileEntry[]): FileEntry => ({
 const initialTree = (): FileEntry[] => [
   file("/repo", [
     file("/repo/src", [file("/repo/src/index.ts"), file("/repo/src/util.ts")]),
-    file("/repo/dist", [file("/repo/dist/bundle.js")]),
+    { ...file("/repo/dist", [{ ...file("/repo/dist/bundle.js"), ignored: true }]), ignored: true },
     file("/repo/.env"),
     file("/repo/.gitignore"),
     file("/repo/README.md"),
@@ -173,7 +171,6 @@ beforeEach(() => {
   });
   native.directories.clear();
   native.readDirectoryFails = false;
-  native.gitignore = "dist/\n";
   useFileClipboardStore.setState({ clipboard: null });
   vi.spyOn(commands, "clipboardSet").mockResolvedValue(null as never);
   Element.prototype.getAnimations = () => [];
@@ -521,10 +518,12 @@ describe("file explorer tree", () => {
       { path: "/repo/.DS_Store" },
       { path: "/repo/debug.log" },
       { path: "/repo/README.md" },
-      { path: "" },
     ]);
     native.directories.set("/repo/src", [{ path: "/repo/src/index.ts" }]);
     native.directories.set("/repo/dist", [{ path: "/repo/dist/bundle.js" }]);
+    vi.spyOn(commands, "localIgnoredEntryNames").mockImplementation(async (directory) =>
+      directory === "/repo" ? ["dist"] : [],
+    );
     await render();
     await flush();
     await openContextMenu("/repo");

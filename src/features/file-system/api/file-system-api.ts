@@ -2,7 +2,7 @@ import { homeDir } from "@tauri-apps/api/path";
 import { open } from "@tauri-apps/plugin-dialog";
 import { commands } from "@/bindings/commands";
 import { useLinuxFolderPickerStore } from "@/features/file-system/stores/linux-folder-picker.store";
-import { invalidateFileTreeGitIgnoreCache } from "@/features/file-explorer/services/file-tree-gitignore";
+import { notifyIgnoreRuleFileChanged } from "@/features/file-system/services/ignore-rule-changes";
 import { parseWslPath } from "@/features/wsl/services/wsl-path";
 import { stripTrailingPathSeparators } from "@/utils/path-helpers";
 import { IS_LINUX } from "@/utils/platform";
@@ -65,12 +65,12 @@ export async function writeFile(path: string, content: string): Promise<void> {
   const wslInfo = parseWslPath(path);
   if (wslInfo) {
     await commands.wslWriteFile(wslInfo.distro, wslInfo.linuxPath, content);
-    invalidateFileTreeGitIgnoreCache(path);
+    notifyIgnoreRuleFileChanged(path);
     return;
   }
 
   await commands.writeLocalFile(path, content);
-  invalidateFileTreeGitIgnoreCache(path);
+  notifyIgnoreRuleFileChanged(path);
 }
 
 /**

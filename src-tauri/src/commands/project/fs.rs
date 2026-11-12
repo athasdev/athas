@@ -37,6 +37,21 @@ pub async fn get_local_directory_size(path: String) -> Result<u64, String> {
 
 #[command]
 #[specta::specta]
+pub async fn local_ignored_entry_names(
+   directory: String,
+   workspace_root: String,
+) -> Result<Vec<String>, String> {
+   tauri::async_runtime::spawn_blocking(move || {
+      let directory = resolve_local_path(&directory)?;
+      let root = resolve_local_path(&workspace_root)?;
+      athas_project::ignored_entries::ignored_entry_names(&root, &directory)
+   })
+   .await
+   .map_err(|error| format!("Ignored entries task failed: {error}"))?
+}
+
+#[command]
+#[specta::specta]
 pub async fn read_local_file(path: String) -> Result<FileBytes, String> {
    let short_path = Path::new(&path)
       .file_name()

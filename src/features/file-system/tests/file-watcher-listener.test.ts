@@ -1,6 +1,12 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
-import { handleFileChange, handleWorkspaceFileChanges } from "../services/file-watcher-listener";
+import type { FileEntry } from "../types/app.types";
+import {
+  cleanupFileWatcherListener,
+  handleFileChange,
+  handleWorkspaceFileChanges,
+  initializeFileWatcherListener,
+} from "../services/file-watcher-listener";
 
 const mocks = vi.hoisted(() => ({
   buffers: [] as Array<Record<string, unknown>>,
@@ -13,6 +19,7 @@ const mocks = vi.hoisted(() => ({
   pendingSaves: new Set<string>(),
   refreshedWorkspaces: [] as string[],
   workspaceRoots: [] as Array<{ workspaceId: string; rootFolderPath: string }>,
+  loadedFiles: [] as FileEntry[],
 }));
 
 vi.mock("@tauri-apps/api/event", () => ({ listen: vi.fn() }));
@@ -38,11 +45,13 @@ vi.mock("@/features/workspace/services/workspace-runtime-registry", () => ({
   workspaceRuntimeRegistry: {
     getActiveWorkspaceId: () => "ws",
     hasWorkspace: () => true,
-    getExistingStoreEntries: () =>
-      mocks.workspaceRoots.map(({ workspaceId, rootFolderPath }) => ({
-        workspaceId,
-        store: { getState: () => ({ rootFolderPath, workspaceFolders: [] }) },
-      })),
+    getExistingStoreEntries: (key: string) =>
+      key === "file-system"
+        ? [{ workspaceId: "ws", store: { getState: () => ({ files: mocks.loadedFiles }) } }]
+        : mocks.workspaceRoots.map(({ workspaceId, rootFolderPath }) => ({
+            workspaceId,
+            store: { getState: () => ({ rootFolderPath, workspaceFolders: [] }) },
+          })),
   },
 }));
 vi.mock("../api/file-operations", () => ({
@@ -85,6 +94,7 @@ describe("file watcher listener", () => {
     mocks.pendingSaves.clear();
     mocks.refreshedWorkspaces = [];
     mocks.workspaceRoots = [];
+    mocks.loadedFiles = [];
     for (const mock of [
       mocks.reloadBufferFromDisk,
       mocks.markBufferDirty,
@@ -276,6 +286,37 @@ describe("file watcher listener", () => {
       expect(mocks.emitGitChanged).toHaveBeenCalledWith(
         expect.objectContaining({ repoPath: "/repo", scopes: expect.arrayContaining(["refs"]) }),
       );
+    });
+
+    it("re-lists the loaded folders under a changed ignore file", async () => {
+      const folder = (path: string, children?: FileEntry[]): FileEntry => ({
+        name: path.slice(path.lastIndexOf("/") + 1),
+        path,
+        isDir: true,
+        children,
+      });
+      mocks.loadedFiles = [
+        folder("/repo", [
+          folder("/repo/web", [folder("/repo/web/src", []), folder("/repo/web/dist")]),
+          folder("/repo/docs", []),
+        ]),
+      ];
+
+      await initializeFileWatcherListener();
+      try {
+        await deliver({
+          root: "/repo",
+          changes: [{ path: "/repo/web/.gitignore", kind: "modified", is_dir: false }],
+          git_changed: false,
+          rescan: false,
+        });
+      } finally {
+        await cleanupFileWatcherListener();
+      }
+
+      expect(mocks.refreshDirectory).toHaveBeenCalledTimes(2);
+      expect(mocks.refreshDirectory).toHaveBeenCalledWith("/repo/web");
+      expect(mocks.refreshDirectory).toHaveBeenCalledWith("/repo/web/src");
     });
 
     it("re-reads the whole root after a rescan", async () => {

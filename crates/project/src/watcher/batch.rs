@@ -1,7 +1,8 @@
 use super::{
-   ignore_rules::{IgnoreRules, PathClass, classify, is_ignore_file},
+   path_class::{PathClass, classify},
    types::{WorkspaceFileChange, WorkspaceFileChangeKind, WorkspaceFileChanges},
 };
+use crate::ignore_rules::{GitIgnoreRules, is_ignore_file};
 use notify::{Event, EventKind, event::ModifyKind};
 use std::{
    collections::HashMap,
@@ -150,7 +151,7 @@ pub fn build_batch(
    pending: &PendingEvents,
    root: &Path,
    canonical_root: &Path,
-   rules: &mut IgnoreRules,
+   rules: &mut GitIgnoreRules,
    max_changes: usize,
 ) -> WorkspaceFileChanges {
    let mut batch = WorkspaceFileChanges {
@@ -275,7 +276,7 @@ mod tests {
       }
       assert_eq!(pending.len(), 2);
 
-      let batch = build_batch(&pending, &root, &root, &mut IgnoreRules::new(&root), 100);
+      let batch = build_batch(&pending, &root, &root, &mut GitIgnoreRules::new(&root), 100);
       assert!(batch.rescan);
    }
 
@@ -289,7 +290,7 @@ mod tests {
          pending.record(&modified(&path));
       }
 
-      let batch = build_batch(&pending, &root, &root, &mut IgnoreRules::new(&root), 3);
+      let batch = build_batch(&pending, &root, &root, &mut GitIgnoreRules::new(&root), 3);
       assert!(batch.rescan);
       assert!(batch.changes.is_empty());
    }
@@ -323,7 +324,7 @@ mod tests {
       pending.record(&modified(&root.join(".git/HEAD")));
       pending.record(&modified(Path::new("/somewhere/else.rs")));
 
-      let batch = build_batch(&pending, &root, &root, &mut IgnoreRules::new(&root), 100);
+      let batch = build_batch(&pending, &root, &root, &mut GitIgnoreRules::new(&root), 100);
 
       let path = |p: &PathBuf| p.to_string_lossy().into_owned();
       assert_eq!(
@@ -353,7 +354,7 @@ mod tests {
          &pending,
          spelled,
          &canonical,
-         &mut IgnoreRules::new(&canonical),
+         &mut GitIgnoreRules::new(&canonical),
          100,
       );
 
@@ -367,7 +368,7 @@ mod tests {
    #[test]
    fn a_changed_ignore_file_applies_within_the_same_window() {
       let (_temp, root) = canonical_tempdir();
-      let mut rules = IgnoreRules::new(&root);
+      let mut rules = GitIgnoreRules::new(&root);
       let generated = root.join("generated.ts");
       std::fs::write(&generated, "x").unwrap();
       assert!(!rules.is_ignored(Path::new("generated.ts"), false));
@@ -462,6 +463,6 @@ mod tests {
       .unwrap();
       assert!(!pending.is_empty());
       let root = Path::new("/w");
-      assert!(build_batch(&pending, root, root, &mut IgnoreRules::new(root), 10).rescan);
+      assert!(build_batch(&pending, root, root, &mut GitIgnoreRules::new(root), 10).rescan);
    }
 }

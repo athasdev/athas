@@ -7,16 +7,22 @@ import {
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { getBufferByPath } from "@/features/editor/stores/buffer-index";
 import { emitGitChanged } from "@/features/git/events/git-events";
-import { invalidateFileTreeGitIgnoreCache } from "@/features/file-explorer/services/file-tree-gitignore";
 import { showToast } from "@/utils/toast";
 import { workspaceRuntimeRegistry } from "@/features/workspace/services/workspace-runtime-registry";
 import { readFileContent } from "../api/file-operations";
+import { collectLoadedDirectoryPaths } from "../controllers/directory-contents";
+import type { FileEntry } from "../types/app.types";
 import { useFileSystemStore } from "../stores/file-system.store";
 import { useFileWatcherStore } from "../stores/file-watcher.store";
 import {
   cancelFileWatcherRefreshes,
   scheduleFileWatcherRefresh,
 } from "./file-watcher-refresh-scheduler";
+import {
+  notifyIgnoreRuleFileChanged,
+  notifyIgnoreRulesChanged,
+  subscribeToIgnoreRuleChanges,
+} from "./ignore-rule-changes";
 import { getDirName } from "@/utils/path-helpers";
 import { readBufferText } from "@/features/editor/services/buffer-text";
 import { emitAppEvent } from "@/utils/app-events";
@@ -31,6 +37,7 @@ interface FileChangeEvent {
 
 let unlistenFileChanged: UnlistenFn | null = null;
 let unlistenWorkspaceChanges: UnlistenFn | null = null;
+let unsubscribeIgnoreRuleChanges: (() => void) | null = null;
 
 const EVENT_TYPE_BY_KIND: Record<WorkspaceFileChangeKind, FileChangeEvent["event_type"]> = {
   created: "opened",
@@ -65,6 +72,17 @@ function scheduleDirectoryRefresh(workspaceId: string, directoryPath: string) {
 
     await useFileSystemStore.getStore(workspaceId).getState().refreshDirectory(directoryPath);
   });
+}
+
+/** Re-lists every loaded directory under `directoryPath`, so their ignored entries are current. */
+function refreshIgnoredEntries(directoryPath: string) {
+  for (const { workspaceId, store } of workspaceRuntimeRegistry.getExistingStoreEntries<{
+    files: FileEntry[];
+  }>("file-system")) {
+    for (const path of collectLoadedDirectoryPaths(store.getState().files, directoryPath)) {
+      scheduleDirectoryRefresh(workspaceId, path);
+    }
+  }
 }
 
 /**
@@ -129,7 +147,7 @@ async function applyFileChange(
   { path, event_type, agent_write_id }: FileChangeEvent,
   workspaceId: string,
 ): Promise<boolean> {
-  invalidateFileTreeGitIgnoreCache(path);
+  notifyIgnoreRuleFileChanged(path);
 
   emitAppEvent("file:external-change", { path, agentWriteId: agent_write_id });
 
@@ -173,8 +191,8 @@ export async function handleWorkspaceFileChanges(batch: WorkspaceFileChanges) {
   const workspaceId = findWorkspaceForRoot(batch.root);
 
   if (batch.rescan) {
-    invalidateFileTreeGitIgnoreCache(batch.root);
     scheduleDirectoryRefresh(workspaceId, batch.root);
+    notifyIgnoreRulesChanged(batch.root);
   }
 
   const outcomes = await Promise.all(
@@ -206,6 +224,8 @@ export async function handleWorkspaceFileChanges(batch: WorkspaceFileChanges) {
 export async function initializeFileWatcherListener() {
   await cleanupFileWatcherListener();
 
+  unsubscribeIgnoreRuleChanges = subscribeToIgnoreRuleChanges(refreshIgnoredEntries);
+
   // Agent writes still report each file on its own; the project watcher sends batches.
   unlistenFileChanged = await listen<FileChangeEvent>("file-changed", (event) =>
     handleFileChange(event.payload),
@@ -218,6 +238,8 @@ export async function initializeFileWatcherListener() {
 
 export async function cleanupFileWatcherListener() {
   cancelFileWatcherRefreshes();
+  unsubscribeIgnoreRuleChanges?.();
+  unsubscribeIgnoreRuleChanges = null;
 
   for (const unlisten of [unlistenFileChanged, unlistenWorkspaceChanges]) {
     try {

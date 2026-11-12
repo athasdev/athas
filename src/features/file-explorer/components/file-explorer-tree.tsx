@@ -47,18 +47,9 @@ import {
   type FileTreeGitStatusDecoration,
   type FileTreeGitStatusLookup,
 } from "@/features/file-explorer/lib/file-tree-git-status";
-import {
-  collectGitIgnoreFileReferences,
-  getCachedFileTreeGitIgnoreRules,
-  invalidateFileTreeGitIgnoreCache,
-  isPathGitIgnoredByFileTreeRules,
-  readFileTreeGitIgnoreContents,
-  subscribeToFileTreeGitIgnoreCacheInvalidation,
-  type FileTreeGitIgnoreRules,
-} from "@/features/file-explorer/services/file-tree-gitignore";
 import { fileOpenBenchmark } from "@/features/editor/services/file-open-benchmark";
 import { findFileInTree } from "@/features/file-system/services/file-tree-utils";
-import { readDirectory, readFile } from "@/features/file-system/api/file-system-api";
+import { readWorkspaceDirectoryEntries } from "@/features/file-system/services/workspace-resource-provider";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import type { FileEntry } from "@/features/file-system/types/app.types";
 import { useFffSearch } from "@/features/file-search/hooks/use-fff-search";
@@ -278,8 +269,6 @@ function FileExplorerTreeComponent({
   const wasTreeSearchActiveRef = useRef(false);
   const documentRef = useRef<Document>(document);
 
-  const [gitIgnoreRules, setGitIgnoreRules] = useState<FileTreeGitIgnoreRules | null>(null);
-  const [gitIgnoreCacheVersion, setGitIgnoreCacheVersion] = useState(0);
   const workspaceGitStatus = useGitStore((state) => state.workspaceGitStatus);
   const currentWorkspaceRepoPath = useGitStore((state) => state.currentWorkspaceRepoPath);
 
@@ -398,69 +387,10 @@ function FileExplorerTreeComponent({
     [getWorkspaceRootForPath, userIgnore],
   );
 
-  // Every tree update produces a new references array, but the ignore files only need reading
-  // again when the set of them changes or one of them is edited.
-  const collectedGitIgnoreFileReferences = useMemo(
-    () => collectGitIgnoreFileReferences(files, rootFolderPath),
-    [files, rootFolderPath],
-  );
-  const gitIgnoreFileReferencesKey = collectedGitIgnoreFileReferences
-    .map((reference) => reference.path)
-    .join("\n");
-  const gitIgnoreFileReferencesRef = useRef(collectedGitIgnoreFileReferences);
-  gitIgnoreFileReferencesRef.current = collectedGitIgnoreFileReferences;
-
-  useEffect(
-    () =>
-      subscribeToFileTreeGitIgnoreCacheInvalidation((path) => {
-        if (!rootFolderPath || (path && !pathStartsWithRoot(path, rootFolderPath))) return;
-        setGitIgnoreCacheVersion((version) => version + 1);
-      }),
-    [rootFolderPath],
-  );
-
-  useEffect(() => {
-    invalidateFileTreeGitIgnoreCache();
-  }, [rootFolderPath]);
-
-  useEffect(() => {
-    let cancelled = false;
-    const gitIgnoreFileReferences = gitIgnoreFileReferencesRef.current;
-
-    const loadGitignore = async () => {
-      if (!rootFolderPath) {
-        setGitIgnoreRules(null);
-        return;
-      }
-
-      const ignoreFiles = await readFileTreeGitIgnoreContents(gitIgnoreFileReferences, readFile);
-
-      if (!cancelled) {
-        setGitIgnoreRules(getCachedFileTreeGitIgnoreRules(rootFolderPath, ignoreFiles));
-      }
-    };
-
-    loadGitignore();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [gitIgnoreCacheVersion, gitIgnoreFileReferencesKey, rootFolderPath]);
-
   const gitStatus =
     currentWorkspaceRepoPath && currentWorkspaceRepoPath === rootFolderPath
       ? workspaceGitStatus
       : null;
-
-  const isGitIgnored = useCallback(
-    (fullPath: string, isDir: boolean): boolean => {
-      if (!gitIgnoreRules || !rootFolderPath) return false;
-      if (getWorkspaceRootForPath(fullPath) !== rootFolderPath) return false;
-
-      return isPathGitIgnoredByFileTreeRules(gitIgnoreRules, fullPath, isDir);
-    },
-    [getWorkspaceRootForPath, gitIgnoreRules, rootFolderPath],
-  );
 
   const gitStatusDecorationLookup = useMemo(() => {
     const startedAt = performance.now();
@@ -492,7 +422,6 @@ function FileExplorerTreeComponent({
     () => ({
       options: {
         isAlwaysHidden: isAlwaysHiddenFileName,
-        isGitIgnored,
         isHiddenName: isHiddenFileTreeName,
         isUserHidden,
         showGitignoredFiles: fileTreeSettings.showGitignoredFilesInFileTree,
@@ -501,7 +430,6 @@ function FileExplorerTreeComponent({
       cache: new WeakMap() as FileTreeFilterCache,
     }),
     [
-      isGitIgnored,
       isUserHidden,
       fileTreeSettings.showGitignoredFilesInFileTree,
       fileTreeSettings.showHiddenFilesInFileTree,
@@ -981,16 +909,14 @@ function FileExplorerTreeComponent({
         const currentBatch = stack.slice(stackCursor, batchEnd);
         stackCursor = batchEnd;
         const directoryEntries = await Promise.all(
-          currentBatch.map((currentPath) => readDirectory(currentPath)),
+          currentBatch.map((currentPath) =>
+            readWorkspaceDirectoryEntries(currentPath, rootFolderPath ?? directoryPath),
+          ),
         );
 
         for (const entries of directoryEntries) {
-          for (const entry of entries as Array<{
-            path: string;
-            is_dir?: boolean;
-          }>) {
-            if (!entry.path) continue;
-            const isDir = !!entry.is_dir;
+          for (const entry of entries) {
+            const isDir = entry.isDir;
             const entryName = getPathBaseName(entry.path);
 
             if (isAlwaysHiddenFileName(entryName)) {
@@ -1005,10 +931,7 @@ function FileExplorerTreeComponent({
               continue;
             }
 
-            if (
-              !fileTreeSettings.showGitignoredFilesInFileTree &&
-              isGitIgnored(entry.path, isDir)
-            ) {
+            if (!fileTreeSettings.showGitignoredFilesInFileTree && entry.ignored) {
               continue;
             }
 
@@ -1028,7 +951,7 @@ function FileExplorerTreeComponent({
     },
     [
       isUserHidden,
-      isGitIgnored,
+      rootFolderPath,
       fileTreeSettings.showGitignoredFilesInFileTree,
       fileTreeSettings.showHiddenFilesInFileTree,
     ],
