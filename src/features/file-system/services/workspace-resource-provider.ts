@@ -184,8 +184,9 @@ export function getWorkspaceResourceProvider(path: string): WorkspaceResourcePro
 
 /**
  * Lists a directory for the file tree, with the entries the workspace's ignore files exclude
- * marked. Searches and context readers call a provider's `readDirectory` directly instead: they
- * apply ignore rules themselves and should not pay for this lookup.
+ * marked. Other readers, such as search and AI context, call a provider's `readDirectory`
+ * directly instead: they either do not use the flag or apply their own rules, and should not pay
+ * for this lookup.
  */
 export function readWorkspaceDirectoryEntries(path: string, workspaceRoot = path) {
   return markIgnoredEntriesIn(

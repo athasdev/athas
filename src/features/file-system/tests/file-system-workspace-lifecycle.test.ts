@@ -376,6 +376,25 @@ describe("remote and WSL workspaces", () => {
     expect(useRecentFoldersStore.getState().recentFolders[0]?.path).toBe("wsl://Ubuntu/home/me");
   });
 
+  it("marks the WSL root entries the workspace's ignore files exclude", async () => {
+    vi.spyOn(commands, "wslReadDirectory").mockResolvedValue([
+      { name: "dist", path: "/home/me/dist", is_dir: true },
+      { name: "src", path: "/home/me/src", is_dir: true },
+    ] as never);
+    vi.spyOn(commands, "wslIgnoredEntryNames").mockResolvedValue(["dist"]);
+
+    await fs().handleOpenFolderByPath("wsl://Ubuntu/home/me");
+
+    expect(commands.wslIgnoredEntryNames).toHaveBeenCalledWith("Ubuntu", "/home/me", "/home/me");
+    const [rootEntry] = fs().files;
+    expect(
+      rootEntry.children?.map(({ name, ignored }) => ({ name, ignored: ignored ?? false })),
+    ).toEqual([
+      { name: "dist", ignored: true },
+      { name: "src", ignored: false },
+    ]);
+  });
+
   it("reports WSL read failures", async () => {
     vi.spyOn(commands, "wslReadDirectory").mockRejectedValue("distro stopped");
 

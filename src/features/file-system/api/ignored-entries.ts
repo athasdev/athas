@@ -2,7 +2,6 @@ import { commands } from "@/bindings/commands";
 import { parseRemotePath } from "@/features/remote/services/remote-path";
 import { parseWslPath } from "@/features/wsl/services/wsl-path";
 import { logger } from "@/utils/logger";
-import type { FileEntry } from "../types/app.types";
 
 const NO_IGNORED_NAMES: ReadonlySet<string> = new Set();
 
@@ -37,10 +36,15 @@ export async function readIgnoredEntryNames(
   }
 }
 
-export function markIgnoredEntries(
-  entries: FileEntry[],
+interface IgnorableEntry {
+  name: string;
+  ignored?: boolean;
+}
+
+export function markIgnoredEntries<T extends IgnorableEntry>(
+  entries: T[],
   ignoredNames: ReadonlySet<string>,
-): FileEntry[] {
+): T[] {
   if (ignoredNames.size === 0) return entries;
   return entries.map((entry) =>
     ignoredNames.has(entry.name) ? { ...entry, ignored: true } : entry,
@@ -48,11 +52,11 @@ export function markIgnoredEntries(
 }
 
 /** Marks the entries of `directoryPath` the file tree shows dimmed or hides as ignored. */
-export async function markIgnoredEntriesIn(
+export async function markIgnoredEntriesIn<T extends IgnorableEntry>(
   directoryPath: string,
   workspaceRoot: string,
-  entries: Promise<FileEntry[]>,
-): Promise<FileEntry[]> {
+  entries: Promise<T[]>,
+): Promise<T[]> {
   const [listed, ignoredNames] = await Promise.all([
     entries,
     readIgnoredEntryNames(directoryPath, workspaceRoot),

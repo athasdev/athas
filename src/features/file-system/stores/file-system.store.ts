@@ -1244,12 +1244,13 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
 
         try {
           const normalizedLinuxPath = linuxPath || "/";
-          const entries = await commands.wslReadDirectory(distro, normalizedLinuxPath);
-          const { wslPath, wrappedFileTree } = buildWslWorkspaceTree(
-            distro,
-            normalizedLinuxPath,
-            entries,
+          const wslPath = buildWslPath(distro, normalizedLinuxPath);
+          const entries = await markIgnoredEntriesIn(
+            wslPath,
+            wslPath,
+            commands.wslReadDirectory(distro, normalizedLinuxPath),
           );
+          const { wrappedFileTree } = buildWslWorkspaceTree(distro, normalizedLinuxPath, entries);
           const projectName = getWslProjectName(distro, normalizedLinuxPath);
           const activeProjectId = applyNonLocalWorkspaceState(
             workspaceId,
