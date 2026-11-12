@@ -1,5 +1,6 @@
 pub mod file_mutations;
 pub mod ide_recents;
+pub mod ignore_rules;
 pub mod ignored_entries;
 pub mod local_fs;
 pub mod path_guard;

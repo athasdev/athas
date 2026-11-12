@@ -1,11 +1,11 @@
-use crate::watcher::ignore_rules::IgnoreRules;
+use crate::ignore_rules::GitIgnoreRules;
 use std::{fs, path::Path};
 
 /// Names of the entries of `directory` that the ignore files of `root` exclude: `.gitignore` and
 /// `.ignore` files from `directory` up to `root`, `.git/info/exclude`, and the global excludes
 /// file. Empty when `directory` is outside `root`.
 pub fn ignored_entry_names(root: &Path, directory: &Path) -> Result<Vec<String>, String> {
-   collect_ignored_entry_names(IgnoreRules::new(root), root, directory)
+   collect_ignored_entry_names(GitIgnoreRules::new(root), root, directory)
 }
 
 /// Like [`ignored_entry_names`] without the global excludes file, for a root on another system
@@ -14,11 +14,15 @@ pub fn ignored_entry_names_without_global_excludes(
    root: &Path,
    directory: &Path,
 ) -> Result<Vec<String>, String> {
-   collect_ignored_entry_names(IgnoreRules::without_global_excludes(root), root, directory)
+   collect_ignored_entry_names(
+      GitIgnoreRules::without_global_excludes(root),
+      root,
+      directory,
+   )
 }
 
 fn collect_ignored_entry_names(
-   mut rules: IgnoreRules,
+   mut rules: GitIgnoreRules,
    root: &Path,
    directory: &Path,
 ) -> Result<Vec<String>, String> {
@@ -129,7 +133,7 @@ mod tests {
    #[test]
    fn keeps_valid_rules_around_a_malformed_line() {
       let temp = tree(&[
-         (".gitignore", "valid.out\nbad[\n\\#literal-hash\n"),
+         (".gitignore", "valid.out\n[z-a]\n\\#literal-hash\n"),
          ("valid.out", ""),
          ("#literal-hash", ""),
          ("kept.txt", ""),

@@ -1,3 +1,4 @@
+use athas_project::ignore_rules::{IgnoreScope, ScopeMatch};
 use regex::{Regex, RegexBuilder};
 use serde::{Deserialize, Serialize};
 use std::{
@@ -23,11 +24,14 @@ const MAX_EDITS: usize = 64;
 
 const AI_IGNORE_FILES: [&str; 3] = [".athasignore", ".aiignore", ".cursorignore"];
 
-struct AiIgnore(Vec<ignore::gitignore::Gitignore>);
+/// The root's AI ignore files, one scope each, so a `!pattern` in one file cannot bring back
+/// what another excludes. A file that is linked, too large, unreadable, or holds a line that
+/// does not compile fails the load: the rules must never be dropped silently.
+struct AiIgnore(Vec<IgnoreScope>);
 
 impl AiIgnore {
    fn load(root: &Path) -> Result<Self, String> {
-      let mut matchers = Vec::new();
+      let mut scopes = Vec::new();
       for name in AI_IGNORE_FILES {
          let path = root.join(name);
          let metadata = match fs::symlink_metadata(&path) {
@@ -40,21 +44,20 @@ impl AiIgnore {
                "{name} must be a regular text file smaller than 256 KiB."
             ));
          }
-         let mut builder = ignore::gitignore::GitignoreBuilder::new(root);
-         if let Some(error) = builder.add(&path) {
-            return Err(format!("Could not read {name}: {error}"));
-         }
-         matchers.push(builder.build().map_err(|error| error.to_string())?);
+         let mut builder = IgnoreScope::builder(root);
+         builder
+            .add(&path)
+            .map_err(|error| format!("Could not read {name}: {error}"))?;
+         scopes.extend(builder.build()?);
       }
-      Ok(Self(matchers))
+      Ok(Self(scopes))
    }
 
    fn excludes(&self, path: &Path, is_dir: bool) -> bool {
-      self.0.iter().any(|matcher| {
-         matcher
-            .matched_path_or_any_parents(path, is_dir)
-            .is_ignore()
-      })
+      self
+         .0
+         .iter()
+         .any(|scope| scope.matched_path_or_parents(path, is_dir) == ScopeMatch::Ignore)
    }
 }
 
@@ -731,6 +734,19 @@ mod tests {
       assert!(read_workspace_file(root, ".env").is_err());
       fs::write(dir.path().join(".athasignore"), "[z-a]\n").unwrap();
       assert!(read_workspace_file(root, "a.ts").is_err());
+   }
+
+   #[test]
+   fn excludes_only_folders_for_a_globstar_folder_pattern() {
+      let dir = tempfile::tempdir().unwrap();
+      let root = dir.path().to_str().unwrap();
+      fs::write(dir.path().join(".aiignore"), "/**/\n").unwrap();
+      fs::create_dir(dir.path().join("src")).unwrap();
+      fs::write(dir.path().join("readme.md"), "top").unwrap();
+      fs::write(dir.path().join("src/lib.rs"), "nested").unwrap();
+
+      assert!(read_workspace_file(root, "readme.md").is_ok());
+      assert!(read_workspace_file(root, "src/lib.rs").is_err());
    }
 
    #[cfg(unix)]
