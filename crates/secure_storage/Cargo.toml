@@ -1,0 +1,17 @@
+[package]
+name = "secure_storage"
+edition.workspace = true
+version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lib]
+path = "src/secure_storage.rs"
+
+[dependencies]
+paths = { path = "../paths" }
+serde_json.workspace = true
+dirs = "6"
+log = "0.4"
+tempfile = "3"
+keyring = { version = "3.6.3", features = ["apple-native", "windows-native", "sync-secret-service", "crypto-rust"] }

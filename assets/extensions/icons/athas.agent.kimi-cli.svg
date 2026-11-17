@@ -1,0 +1,5 @@
+<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" data-brand="kimi-cli">
+  <rect x="0.75" y="0.75" width="22.5" height="22.5" rx="5.5" fill="#090A0C" stroke="#2A2C31" stroke-width="1.5" />
+  <path d="M6.5 6.25V17.75M6.5 13.25L15.25 6.25M10.5 10L17.25 17.75" stroke="#F7F7F8" stroke-width="3.25" stroke-linecap="square" stroke-linejoin="miter" />
+  <circle cx="18" cy="6" r="2.25" fill="#1688F8" />
+</svg>

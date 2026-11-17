@@ -1,0 +1,30 @@
+[package]
+name = "diagnostics_panel"
+edition.workspace = true
+version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lib]
+path = "src/diagnostics_panel.rs"
+
+[dependencies]
+# Line previews from open editors.
+workbench_api = { path = "../workbench_api" }
+paths = { path = "../paths" }
+gpui.workspace = true
+anyhow.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+theme = { path = "../theme" }
+ui = { path = "../ui" }
+lsp_client = { path = "../lsp_client" }
+notifications = { path = "../notifications" }
+# Problems by file under sticky headers, with the file navigator.
+multibuffer = { path = "../multibuffer" }
+
+[target.'cfg(not(target_family = "wasm"))'.dependencies]
+dirs = "6"
+
+[dev-dependencies]
+gpui = { workspace = true, features = ["test-support"] }

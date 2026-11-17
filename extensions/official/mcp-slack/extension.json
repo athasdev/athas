@@ -1,0 +1,33 @@
+{
+  "$schema": "https://athas.dev/schemas/extension.json",
+  "id": "athas.mcp.slack",
+  "name": "slack",
+  "displayName": "Slack",
+  "version": "1.0.0",
+  "description": "Channels, threads and messages in Slack",
+  "publisher": "Athas",
+  "categories": ["Integration"],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/athasdev/athas/tree/master/extensions/official/mcp-slack"
+  },
+  "icon": "icon.svg",
+  "contributes": {
+    "mcpServers": [
+      {
+        "id": "slack",
+        "name": "Slack",
+        "description": "Channels, threads and messages in Slack",
+        "group": "work",
+        "setupNote": "Set SLACK_MCP_XOXP_TOKEN to a Slack user token.",
+        "config": {
+          "transport": "stdio",
+          "command": "npx",
+          "args": ["-y", "slack-mcp-server@latest", "--transport", "stdio"],
+          "env": ["SLACK_MCP_XOXP_TOKEN"]
+        }
+      }
+    ]
+  }
+}

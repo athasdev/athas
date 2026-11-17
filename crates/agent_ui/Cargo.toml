@@ -1,0 +1,79 @@
+[package]
+name = "agent_ui"
+edition.workspace = true
+version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lib]
+path = "src/agent_ui.rs"
+
+[dependencies]
+paths = { path = "../paths" }
+web-time = "1"
+gpui.workspace = true
+anyhow.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+ai_mcp = { path = "../ai_mcp" }
+ai_providers = { path = "../ai_providers" }
+ai_tools = { path = "../ai_tools" }
+account = { path = "../account" }
+extensions = { path = "../extensions" }
+# Checks the views the built-in agent shows with show_view.
+extension_host = { path = "../extension_host" }
+lsp_client = { path = "../lsp_client" }
+keymap = { path = "../keymap" }
+notifications = { path = "../notifications" }
+onboarding = { path = "../onboarding" }
+settings = { path = "../settings" }
+theme = { path = "../theme" }
+ui = { path = "../ui" }
+workspace = { path = "../workspace" }
+workbench_api = { path = "../workbench_api" }
+# Files and folders dragged from the file tree onto the composer.
+file_tree = { path = "../file_tree" }
+# Syntax colours of the inline edit's preview lines.
+editor = { path = "../editor" }
+# A step's one-file change opens in the Source Control diff tab (`tool_diff.rs`).
+git_diff = { path = "../git_diff" }
+# The pull request of a session's branch (`pull_request.rs`), natively or through the server relay.
+github_panel = { path = "../github_panel" }
+# Recent files and the shared file index for @-mentions.
+palette = { path = "../palette" }
+# The ACP wire types only; the JSON-RPC connection is this crate's own (`acp/rpc.rs`), so it runs
+# on GPUI's executors and a remote transport can stand in for the agent process.
+agent-client-protocol-schema = { version = "=1.9.1", default-features = false, features = ["unstable_end_turn_token_usage"] }
+base64 = "0.22"
+chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
+futures = "0.3"
+pulldown-cmark = { version = "0.13", default-features = false }
+unicode-segmentation = "1"
+
+[target.'cfg(not(target_family = "wasm"))'.dependencies]
+# Athas's checked writes for review undo and checkpoint restore: refusing a file changed since it
+# was read, through symlinks, keeping a BOM.
+athas_project = { package = "athas-project", path = "../../core/project" }
+# The managed Node.js runtime npm agents install and run with when the machine has no Node.js or
+# Bun, shared with the language tools (`<data dir>/runtimes`).
+athas-runtime = { path = "../../core/runtime" }
+tooling = { path = "../tooling" }
+dirs = "6"
+libc = "0.2"
+# Agent download builds: verified, then unpacked (`agent_registry::binary`).
+bzip2 = "0.6"
+flate2 = "1"
+sha2 = "0.10"
+tar = "0.4"
+ureq = { version = "3.5", default-features = false, features = ["rustls"] }
+zip = "9"
+
+# Voice input: Speech and AVFoundation through the Objective-C runtime (`voice.rs`).
+[target.'cfg(target_os = "macos")'.dependencies]
+block2 = "0.6"
+objc2 = "0.6"
+
+[dev-dependencies]
+gpui = { workspace = true, features = ["test-support"] }
+ai_providers = { path = "../ai_providers", features = ["test-support"] }
+tempfile = "3"

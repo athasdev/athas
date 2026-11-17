@@ -1,0 +1,33 @@
+{
+  "$schema": "https://athas.dev/schemas/extension.json",
+  "id": "athas.mcp.postgres",
+  "name": "postgres",
+  "displayName": "Postgres",
+  "version": "1.0.0",
+  "description": "Query and inspect a PostgreSQL database",
+  "publisher": "Athas",
+  "categories": ["Integration"],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/athasdev/athas/tree/master/extensions/official/mcp-postgres"
+  },
+  "icon": "icon.svg",
+  "contributes": {
+    "mcpServers": [
+      {
+        "id": "postgres",
+        "name": "Postgres",
+        "description": "Query and inspect a PostgreSQL database",
+        "group": "data",
+        "setupNote": "Set DATABASE_URI to the connection string. Restricted mode keeps it read-only.",
+        "config": {
+          "transport": "stdio",
+          "command": "uvx",
+          "args": ["postgres-mcp", "--access-mode=restricted"],
+          "env": ["DATABASE_URI"]
+        }
+      }
+    ]
+  }
+}

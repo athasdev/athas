@@ -1,7 +1,0 @@
-{
-  "protocolVersion": 1,
-  "ok": false,
-  "error": {
-    "message": "Database sidecar panic: simulated provider panic"
-  }
-}

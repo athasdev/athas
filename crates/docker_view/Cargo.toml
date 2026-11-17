@@ -1,0 +1,29 @@
+[package]
+name = "docker_view"
+edition.workspace = true
+version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lib]
+path = "src/docker_view.rs"
+
+[dependencies]
+gpui.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+theme = { path = "../theme" }
+ui = { path = "../ui" }
+palette = { path = "../palette" }
+workbench_api = { path = "../workbench_api" }
+notifications = { path = "../notifications" }
+futures = "0.3"
+web-time = "1"
+
+# On the web the workspace server runs the CLI (`relay`); the browser compiles the crate's types
+# from their sources (`build.rs`).
+[target.'cfg(not(target_family = "wasm"))'.dependencies]
+# The old app's Docker backend: drives the `docker` CLI with tokio (no Tauri dependency).
+athas-docker = { path = "../../core/docker" }
+# The crate's futures need a tokio reactor; GPUI's executor is not tokio.
+tokio = { version = "1", features = ["rt-multi-thread", "process", "time"] }

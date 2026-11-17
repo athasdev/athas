@@ -1,0 +1,70 @@
+[package]
+name = "workbench"
+edition.workspace = true
+version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lib]
+path = "src/workbench.rs"
+
+[features]
+# DuckDB files in the database view: `cargo build -p athas --features duckdb` (builds its C++ engine).
+duckdb = ["database_view/duckdb"]
+
+[dependencies]
+gpui.workspace = true
+anyhow.workspace = true
+serde_json.workspace = true
+theme = { path = "../theme" }
+ui = { path = "../ui" }
+workspace = { path = "../workspace" }
+file_tree = { path = "../file_tree" }
+git_panel = { path = "../git_panel" }
+terminal_view = { path = "../terminal_view" }
+palette = { path = "../palette" }
+settings = { path = "../settings" }
+settings_ui = { path = "../settings_ui" }
+keymap = { path = "../keymap" }
+editor = { path = "../editor" }
+viewer = { path = "../viewer" }
+agent_ui = { path = "../agent_ui" }
+# The model the Git panel asks for commit messages.
+ai_providers = { path = "../ai_providers" }
+claude_ide = { path = "../claude_ide" }
+search_panel = { path = "../search_panel" }
+notifications = { path = "../notifications" }
+run_actions = { path = "../run_actions" }
+onboarding = { path = "../onboarding" }
+local_history = { path = "../local_history" }
+workbench_api = { path = "../workbench_api" }
+extensions = { path = "../extensions" }
+extensions_ui = { path = "../extensions_ui" }
+debugger_ui = { path = "../debugger_ui" }
+dap = { path = "../dap" }
+lsp_client = { path = "../lsp_client" }
+diagnostics_panel = { path = "../diagnostics_panel" }
+outline_panel = { path = "../outline_panel" }
+account = { path = "../account" }
+collaboration = { path = "../collaboration" }
+git_diff = { path = "../git_diff" }
+# On the web its calls go to the workspace server (`athas_web` installs the relay).
+github_panel = { path = "../github_panel" }
+# Native pages on the desktop, frames over the canvas on the web.
+browser_view = { path = "../browser_view" }
+
+[target.'cfg(not(target_family = "wasm"))'.dependencies]
+# Views over local services.
+database_view = { path = "../database_view" }
+docker_view = { path = "../docker_view" }
+remote = { path = "../remote", features = ["editor", "git_panel", "terminal_view"] }
+wsl = { path = "../wsl" }
+previews = { path = "../previews" }
+dirs = "6"
+# New Project clones with the same git command the old app ran.
+athas_version_control = { package = "athas-version-control", path = "../../core/version-control" }
+
+# On the web the database and Docker views run on the workspace server (`relay`).
+[target.'cfg(target_family = "wasm")'.dependencies]
+database_view = { path = "../database_view", default-features = false }
+docker_view = { path = "../docker_view" }

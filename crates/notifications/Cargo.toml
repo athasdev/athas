@@ -1,0 +1,27 @@
+[package]
+name = "notifications"
+edition.workspace = true
+version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lib]
+path = "src/notifications.rs"
+
+[dependencies]
+gpui.workspace = true
+anyhow.workspace = true
+theme = { path = "../theme" }
+ui = { path = "../ui" }
+palette = { path = "../palette" }
+workspace = { path = "../workspace" }
+settings = { path = "../settings" }
+chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
+
+# Banners through `UNUserNotificationCenter` in the app bundle (`native.rs`), so a click focuses Athas.
+[target.'cfg(target_os = "macos")'.dependencies]
+block2 = "0.6"
+objc2 = "0.6"
+
+[dev-dependencies]
+gpui = { workspace = true, features = ["test-support"] }

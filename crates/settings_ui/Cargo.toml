@@ -1,0 +1,56 @@
+[package]
+name = "settings_ui"
+edition.workspace = true
+version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lib]
+path = "src/settings_ui.rs"
+
+[dependencies]
+paths = { path = "../paths" }
+web-time = "1"
+gpui.workspace = true
+anyhow.workspace = true
+serde_json.workspace = true
+settings = { path = "../settings" }
+theme = { path = "../theme" }
+ui = { path = "../ui" }
+keymap = { path = "../keymap" }
+notifications = { path = "../notifications" }
+account = { path = "../account" }
+collaboration = { path = "../collaboration" }
+agent_ui = { path = "../agent_ui" }
+workbench_api = { path = "../workbench_api" }
+palette = { path = "../palette" }
+extensions_ui = { path = "../extensions_ui" }
+extensions = { path = "../extensions" }
+terminal_view = { path = "../terminal_view" }
+telemetry = { path = "../telemetry" }
+cli = { path = "../cli" }
+serde = { workspace = true }
+workspace = { path = "../workspace" }
+uuid = { version = "1", features = ["v4"] }
+
+# On the web, GitHub Account shows the workspace server's credential through its relay.
+github_panel = { path = "../github_panel" }
+
+[target.'cfg(not(target_family = "wasm"))'.dependencies]
+athas-github = { path = "../../core/github" }
+# Athas's project crate reads the recent projects other editors keep.
+athas_project = { package = "athas-project", path = "../../core/project" }
+logging = { path = "../logging" }
+remote = { path = "../remote" }
+wsl = { path = "../wsl" }
+file_tree = { path = "../file_tree" }
+dirs = "6"
+
+# Agent Notifications asks macOS for permission when switched on.
+[target.'cfg(target_os = "macos")'.dependencies]
+objc2 = "0.6"
+block2 = "0.6"
+
+[dev-dependencies]
+tempfile = "3"
+gpui = { workspace = true, features = ["test-support"] }

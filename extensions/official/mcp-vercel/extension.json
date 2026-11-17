@@ -1,0 +1,30 @@
+{
+  "$schema": "https://athas.dev/schemas/extension.json",
+  "id": "athas.mcp.vercel",
+  "name": "vercel",
+  "displayName": "Vercel",
+  "version": "1.0.0",
+  "description": "Projects, deployments and build logs on Vercel",
+  "publisher": "Athas",
+  "categories": ["Integration"],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/athasdev/athas/tree/master/extensions/official/mcp-vercel"
+  },
+  "icon": "icon.svg",
+  "contributes": {
+    "mcpServers": [
+      {
+        "id": "vercel",
+        "name": "Vercel",
+        "description": "Projects, deployments and build logs on Vercel",
+        "group": "developer",
+        "config": {
+          "transport": "http",
+          "url": "https://mcp.vercel.com"
+        }
+      }
+    ]
+  }
+}

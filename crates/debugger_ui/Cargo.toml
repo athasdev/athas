@@ -1,0 +1,26 @@
+[package]
+name = "debugger_ui"
+edition.workspace = true
+version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lib]
+path = "src/debugger_ui.rs"
+
+[dependencies]
+gpui.workspace = true
+anyhow.workspace = true
+serde_json.workspace = true
+dap = { path = "../dap" }
+keymap = { path = "../keymap" }
+lsp_client = { path = "../lsp_client" }
+palette = { path = "../palette" }
+theme = { path = "../theme" }
+ui = { path = "../ui" }
+
+[dev-dependencies]
+gpui = { workspace = true, features = ["test-support"] }
+gpui_platform = { workspace = true, features = ["test-support"] }
+dap = { path = "../dap", features = ["test-support"] }
+image = { version = "0.25", default-features = false, features = ["png"] }

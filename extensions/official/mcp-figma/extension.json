@@ -1,0 +1,30 @@
+{
+  "$schema": "https://athas.dev/schemas/extension.json",
+  "id": "athas.mcp.figma",
+  "name": "figma",
+  "displayName": "Figma",
+  "version": "1.0.0",
+  "description": "Design context from Figma files, frames and components",
+  "publisher": "Athas",
+  "categories": ["Integration"],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/athasdev/athas/tree/master/extensions/official/mcp-figma"
+  },
+  "icon": "icon.svg",
+  "contributes": {
+    "mcpServers": [
+      {
+        "id": "figma",
+        "name": "Figma",
+        "description": "Design context from Figma files, frames and components",
+        "group": "popular",
+        "config": {
+          "transport": "http",
+          "url": "https://mcp.figma.com/mcp"
+        }
+      }
+    ]
+  }
+}

@@ -1,0 +1,20 @@
+[package]
+name = "outline_panel"
+edition.workspace = true
+version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lib]
+path = "src/outline_panel.rs"
+
+[dependencies]
+gpui.workspace = true
+anyhow.workspace = true
+theme = { path = "../theme" }
+ui = { path = "../ui" }
+workbench_api = { path = "../workbench_api" }
+lsp_client = { path = "../lsp_client" }
+editor = { path = "../editor" }
+palette = { path = "../palette" }
+settings = { path = "../settings" }

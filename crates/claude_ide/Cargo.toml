@@ -1,0 +1,31 @@
+[package]
+name = "claude_ide"
+edition.workspace = true
+version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lib]
+path = "src/claude_ide.rs"
+
+[dependencies]
+gpui.workspace = true
+serde_json.workspace = true
+agent_ui = { path = "../agent_ui" }
+lsp_client = { path = "../lsp_client" }
+settings = { path = "../settings" }
+theme = { path = "../theme" }
+ui = { path = "../ui" }
+workbench_api = { path = "../workbench_api" }
+futures = "0.3"
+
+# The old app's IDE server (MCP over a localhost WebSocket, the lock file, auth); it runs on tokio.
+[target.'cfg(not(target_family = "wasm"))'.dependencies]
+athas-claude-ide = { path = "../../core/claude-ide" }
+tokio = { version = "1", features = ["rt-multi-thread", "time"] }
+
+[dev-dependencies]
+tempfile = "3"
+tokio = { version = "1", features = ["macros", "net", "rt-multi-thread", "sync", "time"] }
+tokio-tungstenite = { version = "0.27", default-features = false, features = ["handshake"] }
+futures-util = { version = "0.3", default-features = false, features = ["sink", "std"] }

@@ -1,0 +1,69 @@
+[package]
+name = "browser_view"
+edition.workspace = true
+version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lib]
+path = "src/browser_view.rs"
+
+[features]
+default = ["webview"]
+# Native pages: a wry webview placed over the tab. Desktop only; without it the tab draws its
+# chrome around a placeholder.
+webview = ["dep:wry", "dep:objc2", "dep:objc2-app-kit", "dep:objc2-foundation", "dep:objc2-web-kit", "dep:block2", "dep:windows"]
+# Page developer tools in release builds; debug builds always have them.
+devtools = ["wry?/devtools"]
+
+[dependencies]
+paths = { path = "../paths" }
+gpui.workspace = true
+anyhow.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+theme = { path = "../theme" }
+ui = { path = "../ui" }
+keymap = { path = "../keymap" }
+workbench_api = { path = "../workbench_api" }
+notifications = { path = "../notifications" }
+editor = { path = "../editor" }
+viewer = { path = "../viewer" }
+account = { path = "../account" }
+futures = "0.3"
+regex = "1"
+url = "2.5"
+sha2 = "0.10"
+web-time = "1"
+# The old app's browser crate: which navigations a tab follows, the page bridge script, profiles
+# and the cut-out geometry.
+athas-browser = { path = "../../core/browser" }
+
+[target.'cfg(not(target_family = "wasm"))'.dependencies]
+dirs = "6"
+# The same rustls-only reqwest build the account client uses.
+reqwest = { version = "0.12", default-features = false, features = ["blocking", "json", "rustls-tls", "rustls-tls-native-roots"] }
+
+# The web build lays pages over the canvas as frames.
+[target.'cfg(target_family = "wasm")'.dependencies]
+wasm-bindgen = "0.2"
+web-sys = { version = "0.3", features = ["CssStyleDeclaration", "Document", "Element", "History", "HtmlElement", "HtmlIFrameElement", "Window"] }
+
+# The same wry the old app ran its browser tabs on. Linux would need GTK running beside GPUI.
+[target.'cfg(any(target_os = "macos", target_os = "windows"))'.dependencies]
+wry = { version = "0.57", default-features = false, features = ["os-webview"], optional = true }
+
+# Page pictures and rounded corners; the versions wry uses.
+[target.'cfg(target_os = "macos")'.dependencies]
+block2 = { version = "0.6", optional = true }
+objc2 = { version = "0.6", optional = true }
+objc2-app-kit = { version = "0.3", default-features = false, features = ["std", "NSBitmapImageRep", "NSImage", "NSImageRep", "NSResponder", "NSView"], optional = true }
+objc2-foundation = { version = "0.3", default-features = false, features = ["std", "NSData", "NSDictionary", "NSError", "NSProcessInfo"], optional = true }
+objc2-web-kit = { version = "0.3", default-features = false, features = ["std", "block2", "objc2-app-kit", "WKSnapshotConfiguration", "WKWebView"], optional = true }
+
+# Window regions that cut pages around workbench UI; the version wry uses.
+[target.'cfg(target_os = "windows")'.dependencies]
+windows = { version = "0.62", features = ["Win32_Foundation", "Win32_Graphics_Gdi", "Win32_UI_HiDpi"], optional = true }
+
+[dev-dependencies]
+tempfile = "3"

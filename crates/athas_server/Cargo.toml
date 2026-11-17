@@ -1,0 +1,41 @@
+[package]
+name = "athas_server"
+edition.workspace = true
+version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lib]
+path = "src/athas_server.rs"
+
+[[bin]]
+name = "athas-server"
+path = "src/main.rs"
+
+[features]
+duckdb = ["database_view/duckdb"]
+
+[dependencies]
+anyhow.workspace = true
+serde_json.workspace = true
+web_protocol = { path = "../web_protocol" }
+# The workbench's own file system: the same reads, moves and watcher the desktop tree uses.
+file_tree = { path = "../file_tree" }
+# The PTY the desktop terminal runs its shells on.
+portable-pty = "0.9"
+tungstenite = "0.27"
+httparse = "1"
+ignore = "0.4"
+regex = "1"
+serde.workspace = true
+# `github.*` calls GitHub with the old app's client; git2 reads the repository's remotes.
+athas-github = { path = "../../core/github" }
+git2 = { version = "0.20", default-features = false, features = ["vendored-libgit2"] }
+# `database.*` and `docker.*` run the desktop views' own engines.
+database_view = { path = "../database_view" }
+docker_view = { path = "../docker_view" }
+# The AI draft prompt's status and diff summaries.
+github_panel = { path = "../github_panel" }
+
+[dev-dependencies]
+tempfile = "3"

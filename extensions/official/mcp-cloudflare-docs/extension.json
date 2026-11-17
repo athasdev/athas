@@ -1,0 +1,30 @@
+{
+  "$schema": "https://athas.dev/schemas/extension.json",
+  "id": "athas.mcp.cloudflare-docs",
+  "name": "cloudflare-docs",
+  "displayName": "Cloudflare Docs",
+  "version": "1.0.0",
+  "description": "Search the Cloudflare developer documentation",
+  "publisher": "Athas",
+  "categories": ["Integration"],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/athasdev/athas/tree/master/extensions/official/mcp-cloudflare-docs"
+  },
+  "icon": "icon.svg",
+  "contributes": {
+    "mcpServers": [
+      {
+        "id": "cloudflare-docs",
+        "name": "Cloudflare Docs",
+        "description": "Search the Cloudflare developer documentation",
+        "group": "developer",
+        "config": {
+          "transport": "http",
+          "url": "https://docs.mcp.cloudflare.com/mcp"
+        }
+      }
+    ]
+  }
+}

@@ -1,0 +1,31 @@
+{
+  "$schema": "https://athas.dev/schemas/extension.json",
+  "id": "athas.mcp.sequential-thinking",
+  "name": "sequential-thinking",
+  "displayName": "Sequential Thinking",
+  "version": "1.0.0",
+  "description": "Work through a problem in revisable steps",
+  "publisher": "Athas",
+  "categories": ["Integration"],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/athasdev/athas/tree/master/extensions/official/mcp-sequential-thinking"
+  },
+  "icon": "icon.svg",
+  "contributes": {
+    "mcpServers": [
+      {
+        "id": "sequential-thinking",
+        "name": "Sequential Thinking",
+        "description": "Work through a problem in revisable steps",
+        "group": "data",
+        "config": {
+          "transport": "stdio",
+          "command": "npx",
+          "args": ["-y", "@modelcontextprotocol/server-sequential-thinking"]
+        }
+      }
+    ]
+  }
+}

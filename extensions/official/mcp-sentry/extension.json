@@ -1,0 +1,30 @@
+{
+  "$schema": "https://athas.dev/schemas/extension.json",
+  "id": "athas.mcp.sentry",
+  "name": "sentry",
+  "displayName": "Sentry",
+  "version": "1.0.0",
+  "description": "Errors, issues and releases from Sentry",
+  "publisher": "Athas",
+  "categories": ["Integration"],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/athasdev/athas/tree/master/extensions/official/mcp-sentry"
+  },
+  "icon": "icon.svg",
+  "contributes": {
+    "mcpServers": [
+      {
+        "id": "sentry",
+        "name": "Sentry",
+        "description": "Errors, issues and releases from Sentry",
+        "group": "popular",
+        "config": {
+          "transport": "http",
+          "url": "https://mcp.sentry.dev/mcp"
+        }
+      }
+    ]
+  }
+}

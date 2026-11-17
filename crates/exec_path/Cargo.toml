@@ -1,0 +1,14 @@
+[package]
+name = "exec_path"
+edition.workspace = true
+version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lib]
+path = "src/exec_path.rs"
+
+[dependencies]
+libc = "0.2"
+tempfile = "3"
+which = "7.0"

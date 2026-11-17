@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, height=device-height, initial-scale=1.0, user-scalable=0" />
+        <title>Athas</title>
+        <style>
+            html,
+            body {
+                margin: 0;
+                height: 100%;
+                overflow: hidden;
+                background: #1e1e1e;
+            }
+            @media (prefers-color-scheme: light) {
+                html,
+                body {
+                    background: #ffffff;
+                }
+            }
+            canvas {
+                display: block;
+                width: 100%;
+                height: 100%;
+                touch-action: none;
+                outline: none;
+                -webkit-user-select: none;
+                user-select: none;
+            }
+        </style>
+    </head>
+    <body>
+        <script type="module">
+            import init from "./athas_web.js";
+            init();
+        </script>
+    </body>
+</html>

@@ -1,0 +1,57 @@
+[package]
+name = "github_panel"
+edition.workspace = true
+version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lib]
+path = "src/github_panel.rs"
+
+[features]
+# The headless snapshot example (`cargo run -p github_panel --example github_snapshot --features snapshot`).
+snapshot = ["dep:gpui_platform", "dep:image", "gpui/test-support"]
+
+[[example]]
+name = "github_snapshot"
+required-features = ["snapshot"]
+
+[dependencies]
+paths = { path = "../paths" }
+# The account menu's linked GitHub account (`registerGitHubLinkedAccount`).
+account = { path = "../account" }
+gpui.workspace = true
+anyhow.workspace = true
+serde_json.workspace = true
+theme = { path = "../theme" }
+ui = { path = "../ui" }
+workbench_api = { path = "../workbench_api" }
+# Changed files under sticky headers, with the file navigator.
+multibuffer = { path = "../multibuffer" }
+settings = { path = "../settings" }
+keymap = { path = "../keymap" }
+# Quick open's GitHub section rows.
+palette = { path = "../palette" }
+notifications = { path = "../notifications" }
+# The GitHub calls the web build relays to the workspace server.
+web_protocol = { path = "../web_protocol" }
+serde.workspace = true
+web-time = "1"
+chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
+pulldown-cmark = { version = "0.13", default-features = false }
+gpui_platform = { workspace = true, optional = true, features = ["test-support"] }
+image = { version = "0.25", default-features = false, features = ["png"], optional = true }
+
+[target.'cfg(not(target_family = "wasm"))'.dependencies]
+secure_storage = { path = "../secure_storage" }
+# The old app's GitHub REST client and token sources (no Tauri dependency).
+athas-github = { path = "../../core/github" }
+# The same libgit2 build the other tools use; reads the project's remotes and branch.
+git2 = { version = "0.20", default-features = false, features = ["vendored-libgit2"] }
+
+# The web build compiles the client's types (`models.rs`) from its sources, derives and all.
+[target.'cfg(target_family = "wasm")'.dependencies]
+specta = { version = "=2.0.0-rc.25", features = ["derive", "serde_json"] }
+
+[dev-dependencies]
+gpui = { workspace = true, features = ["test-support"] }

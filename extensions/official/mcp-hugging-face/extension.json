@@ -1,0 +1,30 @@
+{
+  "$schema": "https://athas.dev/schemas/extension.json",
+  "id": "athas.mcp.hugging-face",
+  "name": "hugging-face",
+  "displayName": "Hugging Face",
+  "version": "1.0.0",
+  "description": "Models, datasets and Spaces on the Hugging Face Hub",
+  "publisher": "Athas",
+  "categories": ["Integration"],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/athasdev/athas/tree/master/extensions/official/mcp-hugging-face"
+  },
+  "icon": "icon.svg",
+  "contributes": {
+    "mcpServers": [
+      {
+        "id": "hugging-face",
+        "name": "Hugging Face",
+        "description": "Models, datasets and Spaces on the Hugging Face Hub",
+        "group": "data",
+        "config": {
+          "transport": "http",
+          "url": "https://huggingface.co/mcp"
+        }
+      }
+    ]
+  }
+}

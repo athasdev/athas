@@ -1,12 +1,18 @@
 [package]
-name = "athas-wsl"
-version = "0.1.0"
-edition = "2024"
+name = "wsl"
+edition.workspace = true
+version.workspace = true
+license.workspace = true
+publish.workspace = true
 
-[lints]
-workspace = true
+[lib]
+path = "src/wsl.rs"
 
 [dependencies]
-athas-project = { path = "../project" }
-serde = { version = "1.0", features = ["derive"] }
-specta = { version = "=2.0.0-rc.25", features = ["derive", "serde_json"] }
+anyhow.workspace = true
+gpui.workspace = true
+file_tree = { path = "../file_tree" }
+# The remote backends' shapes: `FileAccess`, `Contents` and `RemoteGit` over a `GitRunner`.
+remote = { path = "../remote" }
+# Athas's WSL crate (no Tauri dependency): distributions, path translation, file commands.
+athas_wsl = { package = "athas-wsl", path = "../../core/wsl" }

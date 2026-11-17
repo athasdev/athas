@@ -1,0 +1,22 @@
+[package]
+name = "ai_snapshot"
+edition.workspace = true
+version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+gpui = { workspace = true, features = ["test-support"] }
+gpui_platform = { workspace = true, features = ["test-support"] }
+anyhow.workspace = true
+account = { path = "../account" }
+agent_ui = { path = "../agent_ui" }
+ai_mcp = { path = "../ai_mcp" }
+claude_ide = { path = "../claude_ide" }
+# The mock model and cloud service the scenes talk to.
+ai_providers = { path = "../ai_providers", features = ["test-support"] }
+image = { version = "0.25", default-features = false, features = ["png"] }
+serde_json.workspace = true
+settings = { path = "../settings" }
+theme = { path = "../theme" }
+ui = { path = "../ui" }

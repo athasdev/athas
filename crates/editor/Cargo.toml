@@ -1,0 +1,58 @@
+[package]
+name = "editor"
+edition.workspace = true
+version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lib]
+path = "src/editor.rs"
+
+[dependencies]
+web-time = "1"
+gpui.workspace = true
+anyhow.workspace = true
+serde_json = { workspace = true, features = ["preserve_order"] }
+base64 = "0.22"
+theme = { path = "../theme" }
+ui = { path = "../ui" }
+settings = { path = "../settings" }
+workbench_api = { path = "../workbench_api" }
+lsp_client = { path = "../lsp_client" }
+dap = { path = "../dap" }
+keymap = { path = "../keymap" }
+notifications = { path = "../notifications" }
+extensions = { path = "../extensions" }
+pulldown-cmark = { version = "0.13", default-features = false }
+futures = "0.3"
+ropey = { version = "1.6", default-features = false, features = ["simd"] }
+regex = "1"
+unicode-segmentation = "1"
+
+[target.'cfg(not(target_family = "wasm"))'.dependencies]
+tooling = { path = "../tooling" }
+# Athas's checked writes: through symlinks, keeping a BOM and refusing read-only files.
+athas_project = { package = "athas-project", path = "../../core/project" }
+# The same libgit2 build the git tools use: the gutter's change markers and inline blame.
+git2 = { version = "0.20", default-features = false, features = ["vendored-libgit2"] }
+# Web images in the markdown preview.
+reqwest = { version = "0.12", default-features = false, features = ["blocking", "rustls-tls", "rustls-tls-native-roots"] }
+# Grammars are C; this tree-sitter does not build them for wasm32-unknown-unknown.
+tree-sitter = "0.25"
+streaming-iterator = "0.1"
+tree-sitter-language = "0.1"
+tree-sitter-rust = "0.24"
+tree-sitter-typescript = "0.23"
+tree-sitter-javascript = "0.25"
+tree-sitter-json = "0.24"
+tree-sitter-python = "0.25"
+tree-sitter-go = "0.25"
+tree-sitter-css = "0.25"
+tree-sitter-html = "0.23"
+tree-sitter-md = "0.5"
+tree-sitter-toml-ng = "0.7"
+tree-sitter-yaml = "0.7"
+tree-sitter-bash = "0.25"
+
+[dev-dependencies]
+tempfile = "3"

@@ -1,0 +1,5 @@
+<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" data-brand="opencode">
+  <rect x="0.75" y="0.75" width="22.5" height="22.5" rx="5.5" fill="#131010" stroke="#2F2B2B" stroke-width="1.5" />
+  <path d="M15 10.5V16.5H9V10.5H15Z" fill="#5A5858" />
+  <path fill-rule="evenodd" clip-rule="evenodd" d="M18 19.5H6V4.5H18V19.5ZM15 7.5H9V16.5H15V7.5Z" fill="#F7F4F3" />
+</svg>

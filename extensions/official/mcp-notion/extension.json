@@ -1,0 +1,30 @@
+{
+  "$schema": "https://athas.dev/schemas/extension.json",
+  "id": "athas.mcp.notion",
+  "name": "notion",
+  "displayName": "Notion",
+  "version": "1.0.0",
+  "description": "Pages, databases and comments in Notion",
+  "publisher": "Athas",
+  "categories": ["Integration"],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/athasdev/athas/tree/master/extensions/official/mcp-notion"
+  },
+  "icon": "icon.svg",
+  "contributes": {
+    "mcpServers": [
+      {
+        "id": "notion",
+        "name": "Notion",
+        "description": "Pages, databases and comments in Notion",
+        "group": "work",
+        "config": {
+          "transport": "http",
+          "url": "https://mcp.notion.com/mcp"
+        }
+      }
+    ]
+  }
+}

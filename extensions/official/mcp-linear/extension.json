@@ -1,0 +1,30 @@
+{
+  "$schema": "https://athas.dev/schemas/extension.json",
+  "id": "athas.mcp.linear",
+  "name": "linear",
+  "displayName": "Linear",
+  "version": "1.0.0",
+  "description": "Issues, projects and cycles in your Linear workspace",
+  "publisher": "Athas",
+  "categories": ["Integration"],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/athasdev/athas/tree/master/extensions/official/mcp-linear"
+  },
+  "icon": "icon.svg",
+  "contributes": {
+    "mcpServers": [
+      {
+        "id": "linear",
+        "name": "Linear",
+        "description": "Issues, projects and cycles in your Linear workspace",
+        "group": "popular",
+        "config": {
+          "transport": "http",
+          "url": "https://mcp.linear.app/mcp"
+        }
+      }
+    ]
+  }
+}

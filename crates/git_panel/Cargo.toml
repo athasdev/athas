@@ -1,0 +1,39 @@
+[package]
+name = "git_panel"
+edition.workspace = true
+version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lib]
+path = "src/git_panel.rs"
+
+[dependencies]
+web-time = "1"
+gpui.workspace = true
+anyhow.workspace = true
+theme = { path = "../theme" }
+ui = { path = "../ui" }
+extensions = { path = "../extensions" }
+settings = { path = "../settings" }
+keymap = { path = "../keymap" }
+workbench_api = { path = "../workbench_api" }
+# Diff, commit and blame tabs the panel opens, and their ids.
+git_diff = { path = "../git_diff" }
+# Which sections are open, kept between runs (`athas:git-stream-sections`).
+paths = { path = "../paths" }
+serde.workspace = true
+serde_json.workspace = true
+
+[target.'cfg(not(target_family = "wasm"))'.dependencies]
+dirs = "6"
+# The old app's git2-based backend (no Tauri dependency).
+athas-version-control = { path = "../../core/version-control" }
+# The same libgit2 build the crate uses; read HEAD cheaply while polling.
+git2 = { version = "0.20", default-features = false, features = ["vendored-libgit2"] }
+
+[dev-dependencies]
+tempfile = "3"
+gpui = { workspace = true, features = ["test-support"] }
+gpui_platform = { workspace = true, features = ["test-support"] }
+image = { version = "0.25", default-features = false, features = ["png"] }

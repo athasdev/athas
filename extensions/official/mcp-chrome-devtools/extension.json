@@ -1,0 +1,31 @@
+{
+  "$schema": "https://athas.dev/schemas/extension.json",
+  "id": "athas.mcp.chrome-devtools",
+  "name": "chrome-devtools",
+  "displayName": "Chrome DevTools",
+  "version": "1.0.0",
+  "description": "Inspect, debug and profile pages in Chrome",
+  "publisher": "Athas",
+  "categories": ["Integration"],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/athasdev/athas/tree/master/extensions/official/mcp-chrome-devtools"
+  },
+  "icon": "icon.svg",
+  "contributes": {
+    "mcpServers": [
+      {
+        "id": "chrome-devtools",
+        "name": "Chrome DevTools",
+        "description": "Inspect, debug and profile pages in Chrome",
+        "group": "developer",
+        "config": {
+          "transport": "stdio",
+          "command": "npx",
+          "args": ["-y", "chrome-devtools-mcp@latest"]
+        }
+      }
+    ]
+  }
+}

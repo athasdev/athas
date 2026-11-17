@@ -1,0 +1,31 @@
+{
+  "$schema": "https://athas.dev/schemas/extension.json",
+  "id": "athas.mcp.git",
+  "name": "git",
+  "displayName": "Git",
+  "version": "1.0.0",
+  "description": "Read, search and change a local Git repository",
+  "publisher": "Athas",
+  "categories": ["Integration"],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/athasdev/athas/tree/master/extensions/official/mcp-git"
+  },
+  "icon": "icon.svg",
+  "contributes": {
+    "mcpServers": [
+      {
+        "id": "git",
+        "name": "Git",
+        "description": "Read, search and change a local Git repository",
+        "group": "developer",
+        "config": {
+          "transport": "stdio",
+          "command": "uvx",
+          "args": ["mcp-server-git"]
+        }
+      }
+    ]
+  }
+}

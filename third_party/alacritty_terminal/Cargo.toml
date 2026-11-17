@@ -1,0 +1,49 @@
+# alacritty_terminal 0.25.1 from crates.io. The only change: the PTY and its event loop (polling,
+# home) are left out of wasm builds, where the web workbench streams terminals from a server and
+# needs only the grid and the parser.
+[package]
+name = "alacritty_terminal"
+version = "0.25.1"
+authors = ["Christian Duerr <contact@christianduerr.com>", "Joe Wilm <joe@jwilm.com>"]
+license = "Apache-2.0"
+description = "Library for writing terminal emulators"
+homepage = "https://alacritty.org"
+repository = "https://github.com/alacritty/alacritty"
+edition = "2021"
+publish = false
+
+[features]
+default = ["serde"]
+serde = ["dep:serde", "bitflags/serde", "vte/serde"]
+
+[dependencies]
+base64 = "0.22.0"
+bitflags = "2.4.1"
+log = "0.4"
+parking_lot = "0.12.0"
+regex-automata = "0.4.3"
+unicode-width = "0.2.0"
+vte = { version = "0.15.0", default-features = false, features = ["std", "ansi"] }
+serde = { version = "1", features = ["derive", "rc"], optional = true }
+
+[target.'cfg(not(target_family = "wasm"))'.dependencies]
+home = "0.5.5"
+libc = "0.2"
+polling = "3.8.0"
+
+[target.'cfg(unix)'.dependencies]
+rustix-openpty = "0.2.0"
+rustix = { version = "1.0.0", default-features = false, features = ["std"] }
+signal-hook = "0.3.10"
+
+[target.'cfg(windows)'.dependencies]
+piper = "0.2.1"
+miow = "0.6.0"
+windows-sys = { version = "0.59.0", features = [
+    "Win32_System_Console",
+    "Win32_Foundation",
+    "Win32_Security",
+    "Win32_System_LibraryLoader",
+    "Win32_System_Threading",
+    "Win32_System_WindowsProgramming",
+]}

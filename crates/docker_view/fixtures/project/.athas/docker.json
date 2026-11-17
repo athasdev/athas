@@ -1,0 +1,6 @@
+{
+  "buildPresets": [{ "name": "production image", "contextPath": ".", "tag": "acme/web:prod", "buildArgs": [] }],
+  "runPresets": [],
+  "composePresets": [{ "name": "start workspace", "files": [], "service": null, "action": "up", "envFiles": [".env"] }],
+  "debugPresets": [{ "name": "debug server", "command": "node --inspect server.js", "workdir": "/srv/app", "target": "container", "source": "project" }]
+}

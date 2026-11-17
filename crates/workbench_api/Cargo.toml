@@ -1,0 +1,12 @@
+[package]
+name = "workbench_api"
+edition.workspace = true
+version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lib]
+path = "src/workbench_api.rs"
+
+[dependencies]
+gpui.workspace = true

@@ -1,0 +1,75 @@
+[package]
+name = "athas_web"
+edition.workspace = true
+version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lib]
+path = "src/athas_web.rs"
+crate-type = ["cdylib", "rlib"]
+
+# The backends are plain Rust over the protocol, so they build and are tested natively against an
+# in-process `athas_server`; only the browser glue and the app itself are wasm-only.
+[dependencies]
+anyhow.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+web_protocol = { path = "../web_protocol" }
+file_tree = { path = "../file_tree" }
+editor = { path = "../editor" }
+git_panel = { path = "../git_panel" }
+git_diff = { path = "../git_diff" }
+search_panel = { path = "../search_panel" }
+terminal_view = { path = "../terminal_view" }
+lsp_client = { path = "../lsp_client" }
+agent_ui = { path = "../agent_ui" }
+github_panel = { path = "../github_panel" }
+database_view = { path = "../database_view", default-features = false }
+docker_view = { path = "../docker_view" }
+workbench_api = { path = "../workbench_api" }
+futures = "0.3"
+
+[target.'cfg(target_family = "wasm")'.dependencies]
+gpui.workspace = true
+gpui_platform.workspace = true
+account = { path = "../account" }
+collaboration = { path = "../collaboration" }
+extensions = { path = "../extensions" }
+extensions_ui = { path = "../extensions_ui" }
+notifications = { path = "../notifications" }
+settings = { path = "../settings" }
+settings_ui = { path = "../settings_ui" }
+theme = { path = "../theme" }
+ui = { path = "../ui" }
+workbench = { path = "../workbench" }
+workspace = { path = "../workspace" }
+browser_view = { path = "../browser_view" }
+wasm-bindgen = "0.2"
+js-sys = "0.3"
+web-sys = { version = "0.3", features = [
+    "BinaryType",
+    "Blob",
+    "CloseEvent",
+    "console",
+    "Document",
+    "Element",
+    "File",
+    "FileList",
+    "FileReader",
+    "HtmlAnchorElement",
+    "HtmlElement",
+    "HtmlInputElement",
+    "Url",
+    "Location",
+    "MessageEvent",
+    "Storage",
+    "WebSocket",
+    "Window",
+    "XmlHttpRequest",
+] }
+
+[dev-dependencies]
+athas_server = { path = "../athas_server" }
+athas-github = { path = "../../core/github" }
+tempfile = "3"

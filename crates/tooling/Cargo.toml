@@ -1,30 +1,35 @@
 [package]
-name = "athas-tooling"
-version = "0.1.0"
-edition = "2024"
+name = "tooling"
+edition.workspace = true
+version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lib]
+path = "src/tooling.rs"
 
 [dependencies]
-athas-runtime = { path = "../runtime" }
+paths = { path = "../paths" }
+serde.workspace = true
+serde_json.workspace = true
+# The old app's runtimes (bun, node, python, go, cargo downloads); no Tauri dependency.
+athas-runtime = { path = "../../core/runtime" }
 flate2 = "1.0"
 futures-util = "0.3"
 log = "0.4"
 regex = "1.10"
-reqwest = { workspace = true, features = ["stream"] }
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
-tauri = { version = "2.12", default-features = false, features = ["wry"] }
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "rustls-tls-native-roots", "stream"] }
 tar = "0.4"
-tempfile = "3.20.0"
+tempfile = "3"
+# Installs run on their own runtime: reqwest and the runtimes need a tokio reactor.
+tokio = { version = "1", features = ["rt-multi-thread", "time"] }
 url = "2.5"
 walkdir = "2.5.0"
 which = "7.0"
+dirs = "6"
 xz2 = { version = "0.1", features = ["static"] }
 zip = "9"
-specta = { version = "=2.0.0-rc.25", features = ["derive", "serde_json"] }
 
 [dev-dependencies]
-athas-test-support = { path = "../test-support" }
+athas-test-support = { path = "../../core/test-support" }
 tokio = { version = "1", features = ["macros", "rt"] }
-
-[lints]
-workspace = true

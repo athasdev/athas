@@ -1,28 +1,44 @@
 [package]
-name = "athas-remote"
-version = "0.1.0"
-edition = "2024"
+name = "remote"
+edition.workspace = true
+version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lib]
+path = "src/remote.rs"
+
+[features]
+# Trait implementations for seams whose traits those crates do not export yet; see the crate docs.
+editor = ["dep:editor"]
+git_panel = ["dep:git_panel"]
+terminal_view = ["dep:terminal_view"]
 
 [dependencies]
-athas-project = { path = "../project" }
-athas-terminal = { path = "../terminal" }
-base64 = "0.22"
-dirs = "5.0"
-sha2 = "0.10"
-lazy_static = "1.4"
-log = "0.4"
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
-specta = { version = "=2.0.0-rc.25", features = ["derive", "serde_json"] }
-# libssh2 has no pure-Rust crypto backend: on macOS and Linux it links
-# OpenSSL's libcrypto, so OpenSSL is vendored here for portable builds.
-# This is the only crate in the workspace that pulls in OpenSSL.
+paths = { path = "../paths" }
+gpui.workspace = true
+anyhow.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+theme = { path = "../theme" }
+ui = { path = "../ui" }
+file_tree = { path = "../file_tree" }
+editor = { path = "../editor", optional = true }
+git_panel = { path = "../git_panel", optional = true }
+terminal_view = { path = "../terminal_view", optional = true }
+# Athas's project crate: the locked, atomic text mutation the trust store is written with.
+athas_project = { package = "athas-project", path = "../../core/project" }
+# libssh2 has no pure-Rust crypto backend: on macOS and Linux it links OpenSSL's libcrypto, so
+# OpenSSL is vendored for portable builds, as Athas's `crates/remote` does.
 ssh2 = { version = "0.9", features = ["vendored-openssl"] }
-tauri = { version = "2.12", default-features = false, features = ["wry"] }
-uuid = { version = "1", features = ["v4"] }
+secure_storage = { path = "../secure_storage" }
+base64 = "0.22"
+sha2 = "0.10"
+dirs = "6"
 
 [dev-dependencies]
-tempfile = "3.20"
-
-[lints]
-workspace = true
+gpui = { workspace = true, features = ["test-support"] }
+# `examples/remote_snapshot.rs` renders the views into PNGs without a window.
+gpui_platform = { workspace = true, features = ["test-support"] }
+image = { version = "0.25", default-features = false, features = ["png"] }
+tempfile = "3"

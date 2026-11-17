@@ -1,51 +1,64 @@
 [workspace]
-members = [
-  "src-tauri",
-  "crates/runtime",
-  "crates/tooling",
-  "crates/lsp",
-  "crates/remote",
-  "crates/wsl",
-  "crates/project",
-  "crates/version-control",
-  "crates/extensions",
-  "crates/terminal",
-  "crates/ai",
-  "crates/exec-path",
-  "crates/github",
-  "crates/fff-search",
-  "crates/debugger",
-  "crates/database",
-  "crates/browser",
-  "crates/docker",
-  "crates/claude-ide",
-  "crates/test-support",
-]
-resolver = "2"
+resolver = "3"
+members = ["crates/*"]
+# The original Rust crates are a workspace of their own (core/Cargo.toml).
+exclude = ["core"]
 
-# Shared dependency specs that pin the workspace to a single TLS stack.
-# reqwest uses rustls only (bundled webpki roots plus the OS trust store),
-# and libgit2 is built without its HTTPS/SSH transports because every remote
-# operation shells out to the git CLI. Neither pulls in native-tls/OpenSSL.
+[workspace.package]
+edition = "2024"
+version = "0.1.0"
+license = "AGPL-3.0-or-later"
+publish = false
+
 [workspace.dependencies]
-git2 = { version = "0.20", default-features = false, features = ["vendored-libgit2"] }
-reqwest = { version = "0.12", default-features = false, features = [
-  "rustls-tls",
-  "rustls-tls-native-roots",
-] }
+gpui = { git = "https://github.com/zed-industries/zed", rev = "3def8bad0b62dbda02d5b67b00df96fe8d3957bd" }
+gpui_platform = { git = "https://github.com/zed-industries/zed", rev = "3def8bad0b62dbda02d5b67b00df96fe8d3957bd", default-features = false, features = ["font-kit", "runtime_shaders"] }
+anyhow = "1"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
 
-[workspace.lints.clippy]
-uninlined_format_args = "allow"
-new_without_default = "allow"
+# GPUI depends on Zed's forks of these crates; mirror Zed's workspace patches.
+[patch.crates-io]
+async-process = { git = "https://github.com/zed-industries/async-process.git", rev = "0b6d6713570af61806e1e5cb40e0f757cb93fd9d" }
+async-task = { git = "https://github.com/zed-industries/async-task.git", rev = "015845a19fc31752c02367567d3b8900a406f9da" }
+calloop = { git = "https://github.com/zed-industries/calloop", rev = "3759371fee14c40066d64777e2a36b6ffcc22590" }
+khronos-egl = { git = "https://github.com/zed-industries/khronos-egl", rev = "42214b36347b108fd9630ca6254b96dde59e04fe" }
+# Builds for wasm without its PTY; see the crate's manifest.
+alacritty_terminal = { path = "third_party/alacritty_terminal" }
 
-[profile.release]
-lto = "thin"
-
+# Debug info made the build folder grow past 13 GB and filled the disk; line tables keep
+# backtraces readable at a fraction of the size, and dependencies carry none.
 [profile.dev]
+incremental = true
+codegen-units = 16
+debug = "line-tables-only"
+
+[profile.dev.package]
+"*" = { debug = false }
+gpui_macros = { opt-level = 3 }
+derive_refineable = { opt-level = 3 }
+
+# Shipping desktop builds (`scripts/bundle-mac.sh --release`, the release workflow).
+# opt-level 3: the editor's text layout and rendering want speed more than a few MB.
+# Thin LTO across one codegen unit gets most of fat LTO's size win without its memory peak
+# (fat LTO of the whole app needs well over 16 GB). Panics keep unwinding: 66 background
+# threads (language servers, terminals, watchers, agents) rely on a panic ending only their
+# own thread, and the telemetry panic hook still records it. Symbols are stripped; crash
+# reports carry file and line from the panic location, not from debug info.
+[profile.release]
+opt-level = 3
+lto = "thin"
+codegen-units = 1
+panic = "unwind"
+debug = false
+strip = "symbols"
 incremental = false
 
-[profile.dev.package.libduckdb-sys]
-debug = 0
-
-[profile.test.package.libduckdb-sys]
-debug = 0
+# The web build (`scripts/build-web.sh --release`): small over fast.
+[profile.web-release]
+inherits = "release"
+codegen-units = 16
+opt-level = "s"
+lto = "thin"
+debug = false
+strip = "debuginfo"

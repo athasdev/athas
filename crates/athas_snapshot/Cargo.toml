@@ -1,0 +1,33 @@
+[package]
+name = "athas_snapshot"
+edition.workspace = true
+version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+gpui = { workspace = true, features = ["test-support"] }
+gpui_platform = { workspace = true, features = ["test-support"] }
+anyhow.workspace = true
+theme = { path = "../theme" }
+ui = { path = "../ui" }
+workspace = { path = "../workspace" }
+workbench = { path = "../workbench" }
+lsp_client = { path = "../lsp_client" }
+agent_ui = { path = "../agent_ui" }
+image = { version = "0.25", default-features = false, features = ["png"] }
+settings = { path = "../settings" }
+keymap = { path = "../keymap" }
+run_actions = { path = "../run_actions" }
+settings_ui = { path = "../settings_ui" }
+serde_json.workspace = true
+notifications = { path = "../notifications" }
+extensions = { path = "../extensions" }
+extensions_ui = { path = "../extensions_ui" }
+editor = { path = "../editor" }
+browser_view = { path = "../browser_view" }
+# Recorded GitHub pages for the `detached-pr` scene.
+github_panel = { path = "../github_panel", features = ["snapshot"] }
+# The command palette's database and Docker pages (`database-palette`, `docker-palette`).
+database_view = { path = "../database_view" }
+docker_view = { path = "../docker_view" }

@@ -1,0 +1,35 @@
+[package]
+name = "athas"
+edition.workspace = true
+version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[features]
+# DuckDB files in the database view, off by default (builds DuckDB's C++ engine from source).
+duckdb = ["workbench/duckdb"]
+
+[dependencies]
+gpui.workspace = true
+gpui_platform.workspace = true
+anyhow.workspace = true
+theme = { path = "../theme" }
+ui = { path = "../ui" }
+workspace = { path = "../workspace" }
+workbench = { path = "../workbench" }
+palette = { path = "../palette" }
+terminal_view = { path = "../terminal_view" }
+agent_ui = { path = "../agent_ui" }
+settings = { path = "../settings" }
+settings_ui = { path = "../settings_ui" }
+extensions = { path = "../extensions" }
+extensions_ui = { path = "../extensions_ui" }
+account = { path = "../account" }
+telemetry = { path = "../telemetry" }
+collaboration = { path = "../collaboration" }
+platform = { path = "../platform" }
+logging = { path = "../logging" }
+exec_path = { path = "../exec_path" }
+http_client = { git = "https://github.com/zed-industries/zed", rev = "3def8bad0b62dbda02d5b67b00df96fe8d3957bd" }
+ureq = { version = "3.5", default-features = false, features = ["rustls"] }
+futures = "0.3"

@@ -1,0 +1,33 @@
+{
+  "$schema": "https://athas.dev/schemas/extension.json",
+  "id": "athas.mcp.supabase",
+  "name": "supabase",
+  "displayName": "Supabase",
+  "version": "1.0.0",
+  "description": "Databases, auth and edge functions in Supabase",
+  "publisher": "Athas",
+  "categories": ["Integration"],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/athasdev/athas/tree/master/extensions/official/mcp-supabase"
+  },
+  "icon": "icon.svg",
+  "contributes": {
+    "mcpServers": [
+      {
+        "id": "supabase",
+        "name": "Supabase",
+        "description": "Databases, auth and edge functions in Supabase",
+        "group": "developer",
+        "setupNote": "Set SUPABASE_ACCESS_TOKEN to a Supabase personal access token.",
+        "config": {
+          "transport": "stdio",
+          "command": "npx",
+          "args": ["-y", "@supabase/mcp-server-supabase@latest"],
+          "env": ["SUPABASE_ACCESS_TOKEN"]
+        }
+      }
+    ]
+  }
+}

@@ -1,0 +1,49 @@
+{
+  "entries": [
+    { "type": "user", "text": "Add a GPUI shell skeleton: title row, sidebar and centre, and save the layout between launches." },
+    { "type": "thought", "text": "The workspace crate already has the state; the shell needs a view for each region and a store for the layout." },
+    { "type": "toolCall", "id": "t1", "title": "Read crates/workspace/src/workspace.rs", "kind": "read", "status": "completed",
+      "locations": [ { "path": "/code/athas/crates/workspace/src/workspace.rs", "line": 40 } ] },
+    { "type": "toolCall", "id": "t2", "title": "rg \"SessionStatus\" crates", "kind": "search", "status": "completed",
+      "content": [ { "type": "text", "text": "Found 12 matches in 4 files" } ] },
+    { "type": "agent", "text": "I'll split the shell into three views.\n\n## Plan\n\n1. A `TitleRow` with the project switcher\n2. A **sidebar** that follows the activity bar\n3. The centre, which keeps one view per tab\n\nThe layout goes to `workspace.json` through the existing [`StateStore`](https://github.com/athasdev/athas):\n\n```rust\npub trait StateStore {\n    fn load(&self) -> Option<WorkspaceState>;\n    fn save(&self, state: &WorkspaceState);\n}\n```\n\n> Sessions keep their view alive while they exist, so a running agent keeps running." },
+    { "type": "toolCall", "id": "t3", "title": "Edit crates/workbench/src/centre.rs", "kind": "edit", "status": "completed",
+      "content": [ { "type": "diff", "path": "/code/athas/crates/workbench/src/centre.rs",
+        "oldText": "use gpui::{div, prelude::*};\n\npub fn render_centre() -> impl IntoElement {\n    div().size_full()\n}\n",
+        "newText": "use gpui::{div, prelude::*};\nuse workspace::TabItem;\n\npub fn render_centre(item: Option<&TabItem>) -> impl IntoElement {\n    div().size_full().flex().flex_col()\n}\n" } ] },
+    { "type": "toolCall", "id": "t4", "title": "cargo test -p workbench", "kind": "execute", "status": "completed",
+      "rawInput": { "command": "cargo test -p workbench" },
+      "terminalOutput": "running 14 tests\ntest layout::tests::restores_widths ... ok\ntest result: ok. 14 passed; 0 failed\n", "exitCode": 0 },
+    { "type": "agent", "text": "Tests pass. Next I'll wire the layout store into `Workbench::new`." },
+    { "type": "toolCall", "id": "t5", "title": "Edit crates/workbench/src/workbench.rs", "kind": "edit", "status": "pending",
+      "content": [ { "type": "diff", "path": "/code/athas/crates/workbench/src/workbench.rs",
+        "oldText": "    let state = WorkspaceState::default();\n",
+        "newText": "    let state = store.load().unwrap_or_default();\n" } ] }
+  ],
+  "plan": [
+    { "content": "Title row with the project switcher", "status": "completed" },
+    { "content": "Sidebar driven by the activity bar", "status": "completed" },
+    { "content": "Save and restore the layout", "status": "in_progress" },
+    { "content": "Screenshot every scene", "status": "pending" }
+  ],
+  "modes": { "current": "default", "available": [
+    { "id": "default", "name": "Always ask" }, { "id": "acceptEdits", "name": "Accept edits" }, { "id": "plan", "name": "Plan mode" }
+  ] },
+  "configOptions": [
+    { "id": "model", "name": "Model", "category": "model", "current": "opus",
+      "choices": [ { "value": "opus", "name": "Opus 5.5" }, { "value": "sonnet", "name": "Sonnet 5" } ] },
+    { "id": "effort", "name": "Effort", "category": "thought_level", "current": "high", "default": "medium",
+      "choices": [ { "value": "low", "name": "Low" }, { "value": "medium", "name": "Medium" }, { "value": "high", "name": "High" }, { "value": "xhigh", "name": "Extra high" } ] }
+  ],
+  "usage": { "used": 41000, "size": 200000 },
+  "running": true,
+  "permission": {
+    "sessionId": "fixture",
+    "toolCall": { "toolCallId": "t5" },
+    "options": [
+      { "optionId": "allow-always", "name": "Always allow edits", "kind": "allow_always" },
+      { "optionId": "allow", "name": "Allow", "kind": "allow_once" },
+      { "optionId": "reject", "name": "Reject", "kind": "reject_once" }
+    ]
+  }
+}
