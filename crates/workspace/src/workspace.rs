@@ -879,7 +879,8 @@ fn normalize_path(path: &str) -> String {
 
 impl WorkspaceState {
     pub fn from_json(json: &str) -> anyhow::Result<Self> {
-        let state: Self = serde_json::from_str(json)?;
+        let mut state: Self = serde_json::from_str(json)?;
+        state.merge_session_tabs();
         Ok(state)
     }
 
@@ -1190,7 +1191,8 @@ impl WorkspaceState {
             self.active_project = Some(project);
         }
         let owner = Owner::Session(id.clone());
-        let panes = self.tab_sets.entry(owner.key()).or_default();
+        let key = self.set_key(&owner);
+        let panes = self.tab_sets.entry(key).or_default();
         if !panes.all_tabs().any(|tab| matches!(tab, TabItem::Session { id: tab_id } if tab_id == id)) {
             let set = panes.active_set_mut();
             let index = set.pinned.min(set.tabs.len());
@@ -1293,7 +1295,61 @@ impl WorkspaceState {
 
     /// The tabs of the group in front of an owner's panes.
     pub fn tab_set(&self, owner: &Owner) -> Option<&TabSet> {
-        self.tab_sets.get(&owner.key()).map(Panes::active_set)
+        self.tab_sets.get(&self.set_key(owner)).map(Panes::active_set)
+    }
+
+    /// The tabs an owner shows. A session of a project shares its project's tabs, so the files
+    /// and that project's sessions sit in one row; a chat without a project keeps its own.
+    fn set_key(&self, owner: &Owner) -> String {
+        match owner {
+            Owner::Session(id) => match self.session(id).and_then(|session| session.project.clone()) {
+                Some(project) => Owner::Project(project).key(),
+                None => owner.key(),
+            },
+            Owner::Project(_) => owner.key(),
+        }
+    }
+
+    /// In a project's shared tabs, the tab in front says what is in front: a session's tab puts
+    /// that session there (the sidebar selects it), any other tab the project's view.
+    fn follow_active_tab(&mut self) {
+        if self.bottom_focused {
+            return;
+        }
+        let project = match &self.focus {
+            Some(Owner::Project(id)) => Some(id.clone()),
+            Some(Owner::Session(id)) => self.session(id).and_then(|session| session.project.clone()),
+            None => None,
+        };
+        let Some(project) = project else { return };
+        let active = self.tab_sets.get(&Owner::Project(project.clone()).key()).and_then(|panes| {
+            let set = panes.active_set();
+            set.active.and_then(|index| set.tabs.get(index).cloned())
+        });
+        self.focus = Some(match active {
+            Some(TabItem::Session { id }) if self.session(&id).is_some_and(|session| session.project.as_ref() == Some(&project)) => Owner::Session(id),
+            _ => Owner::Project(project),
+        });
+    }
+
+    /// Tabs used to be kept per session; a session of a project now shares its project's, so
+    /// the tabs saved under such a session join the project's when the state loads.
+    fn merge_session_tabs(&mut self) {
+        let moves: Vec<(String, String)> = self
+            .sessions
+            .iter()
+            .filter_map(|session| session.project.as_ref().map(|project| (Owner::Session(session.id.clone()).key(), Owner::Project(project.clone()).key())))
+            .collect();
+        for (from, to) in moves {
+            let Some(panes) = self.tab_sets.remove(&from) else { continue };
+            let target = self.tab_sets.entry(to).or_default();
+            let tabs: Vec<TabItem> = panes.all_tabs().filter(|tab| !target.all_tabs().any(|kept| kept == *tab)).cloned().collect();
+            let set = target.active_set_mut();
+            set.tabs.extend(tabs);
+            if set.active.is_none() && !set.tabs.is_empty() {
+                set.active = Some(0);
+            }
+        }
     }
 
     /// The panes the centre shows: every group and how they are split.
@@ -1306,15 +1362,15 @@ impl WorkspaceState {
 
     /// The centre's groups, whether or not the bottom pane has the keys.
     pub fn centre_panes(&self) -> Option<&Panes> {
-        self.focus.as_ref().and_then(|owner| self.tab_sets.get(&owner.key()))
+        self.focus.as_ref().and_then(|owner| self.tab_sets.get(&self.set_key(owner)))
     }
 
     fn focused_panes_mut(&mut self) -> Option<&mut Panes> {
         if self.bottom_focused {
             return Some(&mut self.bottom);
         }
-        let owner = self.focus.clone()?;
-        self.tab_sets.get_mut(&owner.key())
+        let key = self.set_key(&self.focus.clone()?);
+        self.tab_sets.get_mut(&key)
     }
 
     fn every_panes(&self) -> impl Iterator<Item = &Panes> {
@@ -1334,7 +1390,7 @@ impl WorkspaceState {
             return false;
         }
         let centre_key = match self.focus.clone() {
-            Some(owner) => owner.key(),
+            Some(owner) => self.set_key(&owner),
             None => return false,
         };
         let Some(centre) = self.tab_sets.get_mut(&centre_key) else { return false };
@@ -1391,6 +1447,7 @@ impl WorkspaceState {
         {
             panes.active = group;
         }
+        self.follow_active_tab();
     }
 
     /// Moves a tab to another group, in front there; a group it leaves empty goes away.
@@ -1455,8 +1512,8 @@ impl WorkspaceState {
     /// Split ids start over in every project's and session's panes: only the panes in front
     /// (and the bottom pane, whose ids are its own) take the ratio, not every split numbered so.
     pub fn set_split_ratio(&mut self, split: u64, ratio: f32) {
-        if let Some(owner) = self.focus.clone()
-            && let Some(panes) = self.tab_sets.get_mut(&owner.key())
+        if let Some(key) = self.focus.clone().map(|owner| self.set_key(&owner))
+            && let Some(panes) = self.tab_sets.get_mut(&key)
         {
             panes.root.set_ratio(split, ratio);
         }
@@ -1478,6 +1535,7 @@ impl WorkspaceState {
                 set.active = Some(index);
             }
         }
+        self.follow_active_tab();
     }
 
     /// Closes a tab in front. Closing a session's own tab leaves the session for its project.
@@ -1497,7 +1555,8 @@ impl WorkspaceState {
             return;
         }
         let Some(owner) = self.focus.clone() else { return };
-        let Some(panes) = self.tab_sets.get_mut(&owner.key()) else { return };
+        let key = self.set_key(&owner);
+        let Some(panes) = self.tab_sets.get_mut(&key) else { return };
         let set = panes.active_set_mut();
         if let Some(item) = set.tabs.get(index) {
             self.closed_tabs.push((owner.clone(), item.clone()));
@@ -1514,13 +1573,14 @@ impl WorkspaceState {
         if closing_session && let Owner::Session(id) = owner {
             self.leave_session(&id);
         }
+        self.follow_active_tab();
     }
 
     /// Closes the tabs in front that `keep` rejects, by index; the session's own tab and pinned
     /// tabs stay.
     fn close_tabs_where(&mut self, keep: impl Fn(usize, &TabItem) -> bool) {
         let Some(owner) = self.focus.clone() else { return };
-        let Some(panes) = (if self.bottom_focused { Some(&self.bottom) } else { self.tab_sets.get(&owner.key()) }) else { return };
+        let Some(panes) = (if self.bottom_focused { Some(&self.bottom) } else { self.tab_sets.get(&self.set_key(&owner)) }) else { return };
         let set = panes.active_set();
         let closing: Vec<usize> = set
             .tabs
@@ -1642,8 +1702,10 @@ impl WorkspaceState {
         {
             return self.reopen_closed_tab();
         }
-        self.tab_sets.entry(owner.key()).or_default().open(item);
+        let key = self.set_key(&owner);
+        self.tab_sets.entry(key).or_default().open(item);
         self.focus = Some(owner);
+        self.follow_active_tab();
         true
     }
 
@@ -1675,8 +1737,10 @@ impl WorkspaceState {
             self.bottom.open(TabItem::File { path: path.to_string() });
             return;
         }
-        self.tab_sets.entry(owner.key()).or_default().open(TabItem::File { path: path.to_string() });
+        let key = self.set_key(&owner);
+        self.tab_sets.entry(key).or_default().open(TabItem::File { path: path.to_string() });
         self.focus = Some(owner);
+        self.follow_active_tab();
     }
 
     /// Points every tab of `old` at `new`, after a Save As.
@@ -1768,7 +1832,8 @@ impl WorkspaceState {
                 None => return,
             },
         };
-        let set = if self.bottom_focused { self.bottom.active_set_mut() } else { self.tab_sets.entry(owner.key()).or_default().active_set_mut() };
+        let key = self.set_key(&owner);
+        let set = if self.bottom_focused { self.bottom.active_set_mut() } else { self.tab_sets.entry(key).or_default().active_set_mut() };
         let existing = set.tabs.iter().position(|tab| {
             matches!(tab, TabItem::Resource { kind: k, id: i, .. } if k == kind && i == id)
         });
@@ -1780,6 +1845,7 @@ impl WorkspaceState {
             None => set.open(TabItem::Resource { kind: kind.into(), id: id.into(), title: title.into() }),
         }
         self.focus = Some(owner);
+        self.follow_active_tab();
     }
 
     /// Opens a project's dashboard as a tab of the project's own view.
@@ -2144,6 +2210,44 @@ mod tests {
         assert!(state.sidebar_sessions().chats.iter().any(|s| s.id == session));
         state.open_project("/code/athas");
         assert!(state.sidebar_sessions().project.iter().any(|s| s.id == session));
+    }
+
+    #[test]
+    fn a_projects_sessions_share_its_tabs() {
+        let mut state = WorkspaceState::default();
+        let athas = state.open_project("/code/athas");
+        state.open_file("/code/athas/src/main.rs");
+        let session = state.new_session(Some(athas.clone()), "claude-code");
+        state.open_session(&session);
+        // One row: the file stays beside the session instead of the bar switching to the
+        // session's own tabs.
+        let tabs = state.focused_tabs().unwrap().tabs.clone();
+        assert!(tabs.contains(&TabItem::File { path: "/code/athas/src/main.rs".into() }));
+        assert!(tabs.contains(&TabItem::Session { id: session.clone() }));
+        assert_eq!(state.focus, Some(Owner::Session(session.clone())));
+
+        // The tab in front says who is in front.
+        let file = tabs.iter().position(|tab| matches!(tab, TabItem::File { .. })).unwrap();
+        state.activate_tab(file);
+        assert_eq!(state.focus, Some(Owner::Project(athas.clone())));
+        assert_eq!(state.focused_tabs().unwrap().tabs, tabs);
+        let own = tabs.iter().position(|tab| *tab == TabItem::Session { id: session.clone() }).unwrap();
+        state.activate_tab(own);
+        assert_eq!(state.focus, Some(Owner::Session(session.clone())));
+    }
+
+    #[test]
+    fn tabs_saved_under_a_session_join_its_project() {
+        let mut state = WorkspaceState::default();
+        let athas = state.open_project("/code/athas");
+        let session = state.new_session(Some(athas.clone()), "claude-code");
+        let mut old = Panes::default();
+        old.open(TabItem::File { path: "/code/athas/a.rs".into() });
+        state.tab_sets.insert(Owner::Session(session.clone()).key(), old);
+        let state = WorkspaceState::from_json(&state.to_json().unwrap()).unwrap();
+        assert!(!state.tab_sets.contains_key(&Owner::Session(session).key()));
+        let project = state.tab_set(&Owner::Project(athas)).unwrap();
+        assert!(project.tabs.contains(&TabItem::File { path: "/code/athas/a.rs".into() }));
     }
 
     #[test]
