@@ -247,7 +247,9 @@ mod tests {
         let (stream, receiver) = LogStream::start(fake_docker(), "web".into(), 100);
         let lines: Vec<LogMessage> = futures::executor::block_on(receiver.take(13).collect());
         drop(stream);
-        assert!(matches!(&lines[0], LogMessage::Line { stderr: false, text } if text.ends_with("request 1")));
+        // stdout and stderr are read on separate threads, so only each pipe's own order holds.
+        let first_stdout = lines.iter().find(|line| matches!(line, LogMessage::Line { stderr: false, .. }));
+        assert!(matches!(first_stdout, Some(LogMessage::Line { text, .. }) if text.ends_with("request 1")));
         assert!(lines.iter().any(|line| matches!(line, LogMessage::Line { stderr: true, .. })));
     }
 }
