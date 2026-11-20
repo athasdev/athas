@@ -861,6 +861,10 @@ impl FileTree {
         if let Some(index) = reveal {
             self.pending_reveal = None;
             self.scroll_handle.scroll_to_item(index, ScrollStrategy::Nearest);
+        } else if self.loading.is_empty() {
+            // Everything has loaded and the row is not there (a filter hides it): stop waiting,
+            // or a much later rebuild would scroll to it out of nowhere.
+            self.pending_reveal = None;
         }
         cx.notify();
     }
@@ -1256,7 +1260,11 @@ impl FileTree {
         }
         self.clear_multi(Some(row.path.clone()));
         self.selected = Some(row.path.clone());
-        self.active = Some(row.path.clone());
+        // A click is the user's own move: drop a reveal still waiting for its row, so a later
+        // rebuild doesn't scroll away from where they are. `active` stays the file open in the
+        // centre (a folder is never it): setting it here made the workbench's next sync look
+        // like a new file, which selected and scrolled back to that file.
+        self.pending_reveal = None;
         if row.is_dir {
             if event.click_count() < 2 {
                 self.toggle_dir(&row.path, cx);
