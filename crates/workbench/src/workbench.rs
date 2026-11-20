@@ -2916,30 +2916,79 @@ mod run_in_terminal_tests {
 
 /// The toasts, bottom right, in the window that shows them: the one last brought to the front,
 /// workbench or detached, as each of the original's windows has its own toaster.
+///
+/// Every message of the app lands here, in one place. Like Sonner: the newest toast in front with
+/// the older ones peeking above it as narrower cards; under the pointer the stack spreads out to
+/// show them all. A toast slides up and fades in as it arrives.
 pub(crate) fn toast_stack(window: &Window, workbench: bool, cx: &mut App) -> Option<gpui::AnyElement> {
+    use gpui::{Animation, AnimationExt as _};
+
     if !windows::shows_toasts(window.window_handle().window_id(), workbench, cx) {
         return None;
     }
     let store = cx.try_global::<notifications::Notifications>()?;
+    // Oldest first, as they arrived; the newest is the last.
     let toasts: Vec<notifications::Notification> = store.toasts().cloned().collect();
     if toasts.is_empty() {
         return None;
     }
-    let elements: Vec<gpui::AnyElement> = toasts
-        .iter()
-        .map(|toast| {
-            let id = toast.id.clone();
-            notifications::render_toast(
-                toast,
-                move |window, cx| {
-                    notifications::close_toast(cx, &id);
-                    window.refresh();
-                },
-                cx,
-            )
-        })
-        .collect();
-    Some(div().absolute().bottom(px(24.)).right(px(24.)).flex().flex_col().gap(px(14.)).children(elements).child(ui::occluder()).into_any_element())
+    let expanded = toasts.len() == 1 || cx.try_global::<notifications::ToastStackHover>().is_some_and(|hover| hover.0);
+    let theme = cx.theme().clone();
+    let toast = |toast: &notifications::Notification, cx: &mut App| {
+        let id = toast.id.clone();
+        let card = notifications::render_toast(
+            toast,
+            move |window, cx| {
+                notifications::close_toast(cx, &id);
+                window.refresh();
+            },
+            cx,
+        );
+        div().child(card).with_animation(
+            gpui::ElementId::Name(format!("toast-in-{}", toast.id).into()),
+            Animation::new(std::time::Duration::from_millis(220)).with_easing(gpui::ease_out_quint()),
+            |this, delta| this.opacity(delta).mt(px((1. - delta) * 16.)),
+        )
+    };
+    let stack = if expanded {
+        div().flex().flex_col().gap(px(8.)).children(toasts.iter().map(|item| toast(item, cx)).collect::<Vec<_>>()).into_any_element()
+    } else {
+        let newest = toasts.last()?;
+        let behind = toasts.len().saturating_sub(1).min(2);
+        // Cards behind the newest: each a little narrower and fainter, peeking 10px above it.
+        let shells: Vec<gpui::AnyElement> = (1..=behind)
+            .rev()
+            .map(|depth| {
+                let inset = px(10. * depth as f32);
+                div()
+                    .absolute()
+                    .left(inset)
+                    .right(inset)
+                    .top(px(-10. * depth as f32))
+                    .h(px(40.))
+                    .rounded(px(12.))
+                    .bg(theme.colors.overlay)
+                    .shadow(theme.shadows.popover.clone())
+                    .opacity(1. - 0.3 * depth as f32)
+                    .into_any_element()
+            })
+            .collect();
+        div().relative().children(shells).child(toast(newest, cx)).into_any_element()
+    };
+    Some(
+        div()
+            .id("toast-stack")
+            .absolute()
+            .bottom(px(24.))
+            .right(px(24.))
+            .on_hover(|hovered, window, cx| {
+                cx.set_global(notifications::ToastStackHover(*hovered));
+                window.refresh();
+            })
+            .child(stack)
+            .child(ui::occluder())
+            .into_any_element(),
+    )
 }
 
 /// Sessions titled with Athas's context preamble (an agent named them by the first prompt as

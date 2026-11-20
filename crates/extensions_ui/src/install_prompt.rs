@@ -52,6 +52,7 @@ fn prompt(id: String, name: String, cx: &mut App) {
             action: Some(NotificationAction::new("Install", move |_, cx| install(install_id.clone(), install_name.clone(), cx))),
             sticky: true,
             on_dismiss: Some(on_dismiss),
+            ..Default::default()
         },
     );
 }
@@ -95,7 +96,7 @@ fn install(id: String, name: String, cx: &mut App) {
                             prompt(retry_id.clone(), retry_name.clone(), cx);
                         })),
                         sticky: true,
-                        on_dismiss: None,
+                        ..Default::default()
                     },
                 );
             }

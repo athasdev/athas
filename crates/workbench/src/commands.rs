@@ -497,7 +497,7 @@ fn switch_branch(repo: PathBuf, branch: String, cx: &mut gpui::App) {
                     message,
                     None,
                     None,
-                    notifications::ToastOptions { action: Some(action), sticky: true, on_dismiss: None },
+                    notifications::ToastOptions { action: Some(action), sticky: true, ..Default::default() },
                 );
             }
             Err(error) => {

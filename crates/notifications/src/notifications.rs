@@ -76,6 +76,8 @@ pub struct Notification {
     pub created_at: u64,
     pub read: bool,
     pub action: Option<NotificationAction>,
+    /// A quieter second button beside `action`, such as Cancel or another way to fix it.
+    pub secondary_action: Option<NotificationAction>,
     /// Stays until closed (`duration: 0`) instead of fading.
     pub sticky: bool,
     /// Runs when the user closes the toast.
@@ -98,6 +100,7 @@ impl std::fmt::Debug for Notification {
 #[derive(Default)]
 pub struct ToastOptions {
     pub action: Option<NotificationAction>,
+    pub secondary_action: Option<NotificationAction>,
     pub sticky: bool,
     pub on_dismiss: Option<Rc<dyn Fn(&mut App)>>,
 }
@@ -114,6 +117,13 @@ pub struct Notifications {
 }
 
 impl Global for Notifications {}
+
+/// Whether the pointer is over the toasts: the stack spreads out to show every toast, as
+/// Sonner's does, and folds back behind the newest when it leaves.
+#[derive(Default)]
+pub struct ToastStackHover(pub bool);
+
+impl Global for ToastStackHover {}
 
 impl Notifications {
     pub fn items(&self) -> &[Notification] {
@@ -182,6 +192,7 @@ pub fn notify_with(
             created_at: now_ms(),
             read: false,
             action: options.action,
+            secondary_action: options.secondary_action,
             sticky: options.sticky,
             on_dismiss: options.on_dismiss,
         },
@@ -216,6 +227,7 @@ pub fn record(
         created_at: now_ms(),
         read: false,
         action,
+        secondary_action: None,
         sticky: false,
         on_dismiss: None,
     };
@@ -431,15 +443,22 @@ pub fn render_toast(notification: &Notification, on_close: impl Fn(&mut Window, 
                 .line_height(px(20.))
                 .child(div().text_color(colors.foreground).child(notification.message.clone()))
                 .children(notification.description.clone().map(|description| div().text_color(colors.muted_foreground).child(description)))
-                .children(notification.action.clone().map(|action| {
-                    let handler = action.handler.clone();
-                    div().flex().pt(px(6.)).child(
-                        Button::new("toast-action", action.label.clone())
-                            .variant(ButtonVariant::Outline)
-                            .size(ButtonSize::Small)
-                            .on_click(move |_, window, cx| handler(window, cx)),
+                .when(notification.action.is_some() || notification.secondary_action.is_some(), |this| {
+                    // The fix first and filled, a second way out quieter beside it.
+                    let button = |id: &'static str, action: &NotificationAction, variant: ButtonVariant| {
+                        let handler = action.handler.clone();
+                        Button::new(id, action.label.clone()).variant(variant).size(ButtonSize::Small).on_click(move |_, window, cx| handler(window, cx))
+                    };
+                    this.child(
+                        div()
+                            .flex()
+                            .flex_wrap()
+                            .gap(px(6.))
+                            .pt(px(8.))
+                            .children(notification.action.as_ref().map(|action| button("toast-action", action, ButtonVariant::Accent)))
+                            .children(notification.secondary_action.as_ref().map(|action| button("toast-secondary-action", action, ButtonVariant::Outline))),
                     )
-                })),
+                }),
         )
         .child(
             div()
