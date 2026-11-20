@@ -173,6 +173,9 @@ jobs:
           set -euo pipefail
           args=(build --release -p athas -p cli)
           if [ -n "${{ matrix.target }}" ]; then args+=(--target "${{ matrix.target }}"); fi
+          # libssh2 builds OpenSSL from source; Git Bash's perl lacks the modules its Configure
+          # needs, the runner's Strawberry Perl has them.
+          if [ "${{ matrix.os }}" = windows ]; then export OPENSSL_SRC_PERL="C:/Strawberry/perl/bin/perl.exe"; fi
           cargo "${args[@]}"
 
       - name: Import Windows certificate
