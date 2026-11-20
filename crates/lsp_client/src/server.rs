@@ -448,8 +448,23 @@ fn read_loop(shared: Arc<Shared>, stdout: impl Read) {
     while let Ok(Some(body)) = rpc::read_message(&mut reader) {
         dispatch(&shared, &body);
     }
-    let tail = shared.stderr_tail.lock().iter().rev().take(5).cloned().collect::<Vec<_>>().into_iter().rev().collect::<Vec<_>>().join("\n");
-    finish(&shared, (!tail.is_empty()).then_some(tail));
+    let tail: Vec<String> = shared.stderr_tail.lock().iter().cloned().collect();
+    finish(&shared, exit_reason(&tail));
+}
+
+/// The one line of a server's last stderr output that says why it stopped: the last `error`
+/// line, else the last line that is not part of a backtrace. A crash prints its backtrace
+/// last (`9: <tokio::runtime::…>`), which says nothing to the user.
+fn exit_reason(tail: &[String]) -> Option<String> {
+    let lines: Vec<&str> = tail.iter().map(|line| line.trim()).filter(|line| !line.is_empty()).collect();
+    let is_trace = |line: &str| {
+        line.starts_with("at ")
+            || line.starts_with("stack backtrace")
+            || line.starts_with("note: ")
+            || line.split_once(':').is_some_and(|(frame, _)| !frame.is_empty() && frame.chars().all(|c| c.is_ascii_digit()))
+    };
+    let error = lines.iter().rev().find(|line| line.to_ascii_lowercase().starts_with("error") || line.contains("panicked at"));
+    error.or_else(|| lines.iter().rev().find(|line| !is_trace(line))).map(|line| line.to_string())
 }
 
 fn dispatch(shared: &Arc<Shared>, body: &str) {
@@ -591,6 +606,22 @@ fn initialize_params(root: &Path, options: Option<Value>) -> Value {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn the_exit_reason_is_the_error_line_not_the_backtrace() {
+        let tail = |lines: &[&str]| lines.iter().map(|line| line.to_string()).collect::<Vec<_>>();
+        let crash = tail(&[
+            "error: Unknown binary 'rust-analyzer' in official toolchain 'nightly'.",
+            "stack backtrace:",
+            "   8: rustup_init::main",
+            "   9: <tokio::runtime::runtime::Runtime>::block_on::<rustup_init::main::{closure#0}>",
+        ]);
+        assert_eq!(exit_reason(&crash).as_deref(), Some("error: Unknown binary 'rust-analyzer' in official toolchain 'nightly'."));
+        let plain = tail(&["starting", "lost connection to the project", ""]);
+        assert_eq!(exit_reason(&plain).as_deref(), Some("lost connection to the project"));
+        assert_eq!(exit_reason(&tail(&["   3: main"])), None);
+        assert_eq!(exit_reason(&[]), None);
+    }
+
     use super::*;
 
     #[test]

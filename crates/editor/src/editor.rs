@@ -1926,6 +1926,9 @@ impl Editor {
         } else {
             self.notice.clone()?
         };
+        // The banner is one line high: a message with line breaks (a server's output) would
+        // draw its lines over each other. Show the first line; the rest stays in the logs.
+        let message = message.lines().map(str::trim).find(|line| !line.is_empty()).unwrap_or_default().to_string();
         let entity = cx.entity();
         Some(
             div()
