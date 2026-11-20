@@ -708,41 +708,80 @@ impl FileTree {
 
     /// The tool's buttons at the end of the sidebar's top row.
     pub fn render_header_actions(&mut self, _: &mut Window, cx: &mut Context<Self>) -> AnyElement {
-        let button = |id: &'static str, icon: IconName, tooltip: &'static str| {
-            Button::icon(id, icon).size(ButtonSize::Small).plane(Plane::Page).tooltip(tooltip)
+        let open = |key: &str| self.open_menu.as_ref().is_some_and(|menu| menu.key.as_ref() == key);
+        let (new_open, more_open) = (open("new"), open("more"));
+        let menu_at = |event: &ClickEvent| {
+            let position = event.position();
+            point(position.x + px(8.), position.y + px(8.))
         };
-        let root = self.root.clone();
-        let preferences_open = self.open_menu.as_ref().is_some_and(|menu| menu.key.as_ref() == "preferences");
         div()
             .flex()
             .items_center()
             .gap(px(2.))
-            .child(button("files-new-file", IconName::FilePlus, "New File").on_click(cx.listener({
-                let root = root.clone();
-                move |this, _, window, cx| this.start_edit(EditKind::NewFile, root.clone(), window, cx)
-            })))
-            .child(button("files-new-folder", IconName::FolderPlus, "New Folder").on_click(cx.listener(
-                move |this, _, window, cx| this.start_edit(EditKind::NewFolder, root.clone(), window, cx),
-            )))
             .child(
-                button("files-preferences", IconName::Sliders, "File explorer preferences")
-                    .active(preferences_open)
-                    .on_click(cx.listener(|this, event: &ClickEvent, window, cx| {
-                        let position = event.position();
-                        this.show_preferences(point(position.x + px(8.), position.y + px(8.)), window, cx);
-                    })),
+                Button::icon("files-new", IconName::Plus)
+                    .size(ButtonSize::Small)
+                    .plane(Plane::Page)
+                    .active(new_open)
+                    .tooltip("New File or Folder")
+                    .on_click(cx.listener(move |this, event: &ClickEvent, window, cx| this.show_new_menu(menu_at(event), window, cx))),
             )
             .child(
-                button("files-refresh", IconName::ArrowClockwise, "Refresh")
-                    .on_click(cx.listener(|this, _, _, cx| this.refresh(cx))),
+                Button::icon("files-more", IconName::Dots)
+                    .size(ButtonSize::Small)
+                    .plane(Plane::Page)
+                    .active(more_open)
+                    .tooltip("More Actions")
+                    .on_click(cx.listener(move |this, event: &ClickEvent, window, cx| this.show_more_menu(menu_at(event), window, cx))),
             )
-            .child(button("files-collapse", IconName::ChevronDoubleUp, "Collapse All").on_click(cx.listener(
-                |this, _, _, cx| {
-                    this.model.collapse_all();
-                    this.rebuild(cx);
-                },
-            )))
             .into_any_element()
+    }
+
+    /// New File and New Folder, at the root.
+    fn show_new_menu(&mut self, position: Point<Pixels>, window: &mut Window, cx: &mut Context<Self>) {
+        let this = cx.weak_entity();
+        let item = |label: &'static str, icon: IconName, kind: EditKind| -> MenuEntry {
+            let this = this.clone();
+            MenuItem::new(label)
+                .icon(icon)
+                .on_select(move |window, cx| {
+                    this.update(cx, |tree, cx| {
+                        let root = tree.root.clone();
+                        tree.start_edit(kind.clone(), root, window, cx);
+                    })
+                    .ok();
+                })
+                .into()
+        };
+        let entries = vec![item("New File", IconName::FilePlus, EditKind::NewFile), item("New Folder", IconName::FolderPlus, EditKind::NewFolder)];
+        self.show_menu("new", entries, position, Anchor::TopRight, window, cx);
+    }
+
+    /// Refresh and Collapse All, then the explorer's preferences, in one menu.
+    fn show_more_menu(&mut self, position: Point<Pixels>, window: &mut Window, cx: &mut Context<Self>) {
+        let this = cx.weak_entity();
+        let refresh = this.clone();
+        let mut entries: Vec<MenuEntry> = vec![
+            MenuItem::new("Refresh")
+                .icon(IconName::ArrowClockwise)
+                .on_select(move |_, cx| {
+                    refresh.update(cx, |tree, cx| tree.refresh(cx)).ok();
+                })
+                .into(),
+            MenuItem::new("Collapse All")
+                .icon(IconName::ChevronDoubleUp)
+                .on_select(move |_, cx| {
+                    this.update(cx, |tree, cx| {
+                        tree.model.collapse_all();
+                        tree.rebuild(cx);
+                    })
+                    .ok();
+                })
+                .into(),
+            MenuEntry::Separator,
+        ];
+        entries.extend(self.preference_entries(cx));
+        self.show_menu("more", entries, position, Anchor::TopRight, window, cx);
     }
 
     // Loading and watching.
@@ -1464,7 +1503,8 @@ impl FileTree {
     }
 
     /// The header's preferences (`file-explorer-preferences-menu.tsx`).
-    fn show_preferences(&mut self, position: Point<Pixels>, window: &mut Window, cx: &mut Context<Self>) {
+    /// The explorer's preferences as menu rows: what it shows, how it looks and sorts.
+    fn preference_entries(&self, cx: &mut Context<Self>) -> Vec<MenuEntry> {
         let this = cx.weak_entity();
         let settings = self.settings.clone();
         let toggle = |label: &'static str, checked: bool, change: fn(&mut FileTreeSettings)| -> MenuEntry {
@@ -1512,7 +1552,7 @@ impl FileTree {
         }
         entries.push(MenuEntry::Separator);
         entries.push(toggle("Confirm Before Delete", settings.confirm_delete, |s| s.confirm_delete ^= true));
-        self.show_menu("preferences", entries, position, Anchor::TopRight, window, cx);
+        entries
     }
 
     // Name fields.

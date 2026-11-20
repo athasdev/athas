@@ -140,7 +140,13 @@ impl Workbench {
             let row = div().id("sidebar-title-row").h(metrics::PANE_HEADER).w_full().flex_none();
             self.drag_region(row, cx)
         });
+        // Files gets a titled header, as the Sessions list has: its two buttons (New, More) stay
+        // visible, where a hidden row of five used to leave an empty band over the tree.
+        let files_header = view == SidebarView::Files && extension_view.is_none();
         let toolbar = actions.map(|actions| {
+            if files_header {
+                return div().flex_none().px(px(8.)).pb(px(2.)).child(SectionLabel::new("Files").trailing(actions));
+            }
             div()
                 .flex()
                 .flex_none()
