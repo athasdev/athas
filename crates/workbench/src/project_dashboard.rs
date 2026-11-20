@@ -78,6 +78,9 @@ fn read_state(path: PathBuf) -> Option<ProjectState> {
     Some(ProjectState { branch: status.branch, ahead: status.ahead, behind: status.behind, changed_files: status.files.len(), additions, deletions, issues: Vec::new() })
 }
 
+/// Sessions the project overview lists before "Show all".
+const DASHBOARD_SESSIONS: usize = 8;
+
 impl Workbench {
     pub(crate) fn render_project_dashboard(&self, id: &ProjectId, window: &mut Window, cx: &mut Context<Self>) -> AnyElement {
         let colors = cx.theme().colors.clone();
@@ -104,12 +107,39 @@ impl Workbench {
         // runs with no session yet, newest first, as the sidebar lists them.
         let outside = agent_ui::outside_sessions::sidebar_sessions(std::path::Path::new(&project.path), cx);
         let cloud_runs = self.cloud_sidebar_groups(cx).runs_by_project.remove(&project.id.0).unwrap_or_default();
-        let mut entries: Vec<(u64, AnyElement)> =
-            sessions.iter().filter(|session| !session.pinned).map(|session| (session.last_activity_at, self.render_session_row_in(session, false, false, false, now, cx))).collect();
-        entries.extend(outside.iter().map(|session| (session.updated_ms(), self.render_outside_session_row(session, now, cx))));
-        entries.extend(cloud_runs.iter().map(|run| (agent_ui::cloud::sidebar::created_ms(run), self.render_cloud_run_row(run, now, cx))));
+        // Sorted before any row is built: a project can have hundreds of sessions (the agents'
+        // own history included), and building every row made the page slow to open.
+        enum Entry<'a> {
+            Session(&'a workspace::Session),
+            Outside(&'a agent_ui::outside_sessions::OutsideSession),
+            Cloud(&'a agent_ui::cloud::CloudRun),
+        }
+        let mut entries: Vec<(u64, Entry)> = sessions.iter().filter(|session| !session.pinned).map(|session| (session.last_activity_at, Entry::Session(session))).collect();
+        entries.extend(outside.iter().map(|session| (session.updated_ms(), Entry::Outside(session))));
+        entries.extend(cloud_runs.iter().map(|run| (agent_ui::cloud::sidebar::created_ms(run), Entry::Cloud(run))));
         entries.sort_by_key(|(at, _)| std::cmp::Reverse(*at));
-        let rows: Vec<AnyElement> = entries.into_iter().map(|(_, row)| row).collect();
+        let total = entries.len();
+        let shown = if self.dashboard_all_sessions { total } else { total.min(DASHBOARD_SESSIONS) };
+        let mut rows: Vec<AnyElement> = entries
+            .into_iter()
+            .take(shown)
+            .map(|(_, entry)| match entry {
+                Entry::Session(session) => self.render_session_row_in(session, false, false, false, now, cx),
+                Entry::Outside(session) => self.render_outside_session_row(session, now, cx),
+                Entry::Cloud(run) => self.render_cloud_run_row(run, now, cx),
+            })
+            .collect();
+        if total > DASHBOARD_SESSIONS {
+            let label = if self.dashboard_all_sessions { "Show fewer".to_string() } else { format!("Show all ({total})") };
+            rows.push(
+                SidebarListItem::new("dashboard-sessions-toggle", label)
+                    .on_click(cx.listener(|this, _, _, cx| {
+                        this.dashboard_all_sessions = !this.dashboard_all_sessions;
+                        cx.notify();
+                    }))
+                    .into_any_element(),
+            );
+        }
         let suggestions: Vec<AnyElement> = state
             .as_ref()
             .map(project_suggestions::suggestions)

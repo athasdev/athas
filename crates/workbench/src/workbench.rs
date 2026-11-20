@@ -424,6 +424,8 @@ pub struct Workbench {
     should_move_window: bool,
     /// Whether the sidebar floats over the centre (narrow windows).
     sidebar_overlay_open: bool,
+    /// The project overview lists every session, not only the newest few.
+    pub(crate) dashboard_all_sessions: bool,
     /// Where the floating title controls end, so a header under them makes room.
     title_leading_end: Rc<Cell<Pixels>>,
     centre_maximized: bool,
@@ -680,6 +682,7 @@ impl Workbench {
             drag: None,
             should_move_window: false,
             sidebar_overlay_open: false,
+            dashboard_all_sessions: false,
             title_leading_end: Rc::new(Cell::new(px(0.))),
             centre_maximized: false,
             follow_system_appearance: true,
