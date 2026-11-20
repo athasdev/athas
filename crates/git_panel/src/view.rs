@@ -5,7 +5,7 @@ use web_time::{SystemTime, UNIX_EPOCH};
 
 use gpui::{
     Anchor, AnyElement, ClickEvent, Context, ElementId, Hsla, IntoElement, MouseButton, MouseDownEvent, Render,
-    SharedString, Window, div, point, prelude::*, px, relative,
+    SharedString, Window, div, point, prelude::*, px,
 };
 use theme::{ActiveTheme, ThemeColors};
 use ui::{Button, ButtonSize, ButtonVariant, EmptyState, Icon, IconName, IconSize, MenuItem, Plane, metrics, typography};
@@ -117,71 +117,23 @@ impl Row {
         }
     }
 
-    fn render(self, colors: &ThemeColors) -> gpui::Stateful<gpui::Div> {
-        let group = SharedString::from(format!("git-row-{}", self.id));
-        let hover = colors.accent;
-        let has_actions = !self.actions.is_empty();
-        div()
-            .id(self.id)
-            .group(group.clone())
-            .relative()
-            .flex()
-            .items_center()
-            .gap(px(8.))
-            .h(metrics::LIST_ROW)
-            .px(px(8.))
-            .rounded(metrics::RADIUS_MD)
-            .text_size(typography::TEXT_SM)
-            .line_height(relative(typography::LEADING_ROW))
-            .text_color(colors.foreground)
-            .when(self.selected, |this| this.bg(colors.selected))
-            .when(!self.selected, |this| this.hover(move |style| style.bg(hover)))
-            .when(self.muted, |this| this.opacity(0.5))
-            .children(self.icon.map(|icon| div().flex().flex_none().items_center().child(icon)))
-            .child(
-                div()
-                    .flex_shrink(1.)
-                    .min_w_0()
-                    .truncate()
-                    .when(self.selected, |this| this.font_weight(typography::MEDIUM))
-                    .when(self.struck, |this| this.line_through().text_color(colors.muted_foreground))
-                    .child(self.title),
-            )
-            .child(
-                div()
-                    .flex_1()
-                    .min_w_0()
-                    .truncate()
-                    .text_size(typography::TEXT_CAPTION)
-                    .text_color(colors.subtle_foreground)
-                    .children(self.secondary),
-            )
-            .when(!self.meta.is_empty(), |this| {
-                this.child(
-                    div()
-                        .flex()
-                        .flex_none()
-                        .items_center()
-                        .gap(px(6.))
-                        .text_size(typography::TEXT_CAPTION)
-                        .text_color(colors.subtle_foreground)
-                        .when(has_actions, |this| this.group_hover(group.clone(), |style| style.invisible()))
-                        .children(self.meta),
-                )
-            })
-            .when(has_actions, |this| {
-                this.child(
-                    div()
-                        .absolute()
-                        .right(px(4.))
-                        .flex()
-                        .items_center()
-                        .gap(px(2.))
-                        .invisible()
-                        .group_hover(group, |style| style.visible())
-                        .children(self.actions),
-                )
-            })
+    /// Drawn as the sidebar's standard list row (`SidebarListItem`), with the title's detail on
+    /// its line, the meta at the end and the actions in its place on hover.
+    fn render(self, _colors: &ThemeColors) -> gpui::Stateful<gpui::Div> {
+        let mut item = ui::SidebarListItem::new(ElementId::Name(format!("{}-item", self.id).into()), self.title).active(self.selected).struck(self.struck);
+        if let Some(icon) = self.icon {
+            item = item.leading(icon);
+        }
+        if let Some(secondary) = self.secondary {
+            item = item.detail(secondary);
+        }
+        if !self.meta.is_empty() {
+            item = item.trailing(div().flex().items_center().gap(px(6.)).text_size(typography::TEXT_CAPTION).children(self.meta));
+        }
+        if !self.actions.is_empty() {
+            item = item.hover_trailing(div().flex().items_center().gap(px(2.)).children(self.actions));
+        }
+        div().id(self.id).relative().w_full().flex_none().when(self.muted, |this| this.opacity(0.5)).child(item)
     }
 }
 

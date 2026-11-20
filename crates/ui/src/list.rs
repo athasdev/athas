@@ -32,6 +32,9 @@ pub struct SidebarListItem {
     trailing: Option<AnyElement>,
     hover_trailing: Option<AnyElement>,
     description: Option<SharedString>,
+    /// Dimmed text on the label's line, after it (a branch's upstream, a tag's pre-release).
+    detail: Option<SharedString>,
+    struck: bool,
     active: bool,
     emphasized: bool,
     tone: SidebarListItemTone,
@@ -50,6 +53,8 @@ impl SidebarListItem {
             trailing: None,
             hover_trailing: None,
             description: None,
+            detail: None,
+            struck: false,
             active: false,
             emphasized: false,
             tone: SidebarListItemTone::Default,
@@ -88,6 +93,18 @@ impl SidebarListItem {
 
     pub fn description(mut self, description: impl Into<SharedString>) -> Self {
         self.description = Some(single_line(description.into()));
+        self
+    }
+
+    /// Dimmed text after the label on its own line, giving way first when the row is narrow.
+    pub fn detail(mut self, detail: impl Into<SharedString>) -> Self {
+        self.detail = Some(single_line(detail.into()));
+        self
+    }
+
+    /// Strikes the label through, for something gone (a branch whose upstream was deleted).
+    pub fn struck(mut self, struck: bool) -> Self {
+        self.struck = struck;
         self
     }
 
@@ -197,11 +214,24 @@ impl RenderOnce for SidebarListItem {
                     .overflow_hidden()
                     .child(
                         div()
-                            .truncate()
-                            .when(self.description.is_some(), |this| {
-                                this.text_color(colors.foreground).font_weight(typography::MEDIUM)
-                            })
-                            .child(self.label),
+                            .flex()
+                            .items_baseline()
+                            .gap(px(6.))
+                            .min_w_0()
+                            .child(
+                                div()
+                                    .flex_shrink_0()
+                                    .max_w_full()
+                                    .truncate()
+                                    .when(self.description.is_some(), |this| {
+                                        this.text_color(colors.foreground).font_weight(typography::MEDIUM)
+                                    })
+                                    .when(self.struck, |this| this.line_through().text_color(colors.subtle_foreground))
+                                    .child(self.label),
+                            )
+                            .children(self.detail.map(|detail| {
+                                div().min_w_0().truncate().text_size(typography::TEXT_CAPTION).text_color(colors.subtle_foreground).child(detail)
+                            })),
                     )
                     .children(self.description.map(|description| {
                         div()
