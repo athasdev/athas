@@ -392,7 +392,7 @@ impl OnboardingView {
 
     fn render_step(&mut self, cx: &mut Context<Self>) -> AnyElement {
         match self.step {
-            0 if let Some(choices) = cx.try_global::<AppearanceChoices>().map(|choices| choices.0) => self.card(vec![choices(cx)], cx),
+            0 if let Some(choices) = cx.try_global::<AppearanceChoices>().map(|choices| choices.0) => choices(cx),
             0 => {
                 let sync = settings::get(cx).sync_system_theme;
                 let dark = cx.theme().appearance.is_dark();

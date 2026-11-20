@@ -1,11 +1,11 @@
-//! The Appearance page's choice cards (`appearance/appearance-choices.tsx`, `theme-previews.tsx`):
-//! the color scheme and interface style as tiny windows, and the themes as swatches.
+//! The appearance picker at the top of Appearance > Theme, also the welcome's first step
+//! (`appearance/appearance-choices.tsx`, `theme-previews.tsx`): the color scheme and interface
+//! style as two segmented controls, and the themes as a tight grid of swatches, each drawn in the
+//! theme's own editor colors.
 
-use std::sync::Arc;
-
-use gpui::{AnyElement, App, ElementId, Hsla, SharedString, div, prelude::*, px};
+use gpui::{AnyElement, App, HighlightStyle, SharedString, StyledText, div, prelude::*, px};
 use theme::{ActiveTheme, Theme};
-use ui::{metrics, typography};
+use ui::{Icon, IconName, IconSize, Tabs, TabsTrigger, metrics, typography};
 
 #[derive(Clone, Copy, PartialEq)]
 enum Scheme {
@@ -14,12 +14,23 @@ enum Scheme {
     Dark,
 }
 
-fn theme_or_fallback(id: &str, dark: bool, cx: &App) -> Option<Arc<Theme>> {
-    let registry = theme::registry(cx);
-    registry
-        .get(id)
-        .or_else(|| registry.themes().iter().find(|theme| theme.appearance.is_dark() == dark).cloned())
-        .or_else(|| registry.themes().first().cloned())
+impl Scheme {
+    fn value(self) -> &'static str {
+        match self {
+            Scheme::Auto => "auto",
+            Scheme::Light => "light",
+            Scheme::Dark => "dark",
+        }
+    }
+
+    fn from_value(value: &str) -> Option<Self> {
+        match value {
+            "auto" => Some(Scheme::Auto),
+            "light" => Some(Scheme::Light),
+            "dark" => Some(Scheme::Dark),
+            _ => None,
+        }
+    }
 }
 
 fn is_dark(id: &str, cx: &App) -> bool {
@@ -54,240 +65,159 @@ fn set_scheme(scheme: Scheme, cx: &mut App) {
     });
 }
 
-/// A small window drawn in a theme's colors: traffic lights, a sidebar, a document.
-fn window_sketch(theme: &Theme, glass: bool) -> gpui::Div {
+/// Width of one theme swatch; the grid wraps as many as fit.
+const SWATCH_WIDTH: f32 = 124.;
+
+/// A line of code in a theme's syntax colors: `let a = f("x");`.
+fn code_sample(theme: &Theme) -> StyledText {
     let colors = &theme.colors;
-    let line = |width: f32, color: Hsla| div().w(px(width)).h(px(2.)).rounded_full().bg(color);
+    let syntax = |key: &str| colors.syntax.get(key).copied().unwrap_or(colors.foreground);
+    let parts: [(&str, gpui::Hsla); 8] = [
+        ("let", syntax("keyword")),
+        (" ", colors.foreground),
+        ("a", syntax("variable")),
+        (" = ", syntax("operator")),
+        ("f", syntax("function")),
+        ("(", syntax("punctuation")),
+        ("\"x\"", syntax("string")),
+        (");", syntax("punctuation")),
+    ];
+    let mut text = String::new();
+    let mut highlights = Vec::new();
+    for (part, color) in parts {
+        let start = text.len();
+        text.push_str(part);
+        highlights.push((start..text.len(), HighlightStyle { color: Some(color), ..Default::default() }));
+    }
+    StyledText::new(text).with_highlights(highlights)
+}
+
+/// One theme: its name and a line of code on its editor background. Chosen, it gets a thin ring
+/// in the accent, set off by a gap, and a check in the theme's own accent.
+fn theme_swatch(theme: &Theme, key: &'static str, active: bool, cx: &App) -> AnyElement {
+    let app = &cx.theme().colors;
+    let colors = &theme.colors;
+    let id = theme.id.clone();
+    let hover_border = app.border_strong;
     div()
-        .flex()
-        .flex_col()
-        .w(px(60.))
-        .h(px(40.))
-        .rounded(px(6.))
-        .overflow_hidden()
-        .when(!glass, |this| this.bg(colors.surface))
-        .when(glass, |this| this.bg(colors.surface.opacity(0.35)))
-        .shadow(theme.shadows.raised.clone())
+        .id(SharedString::from(format!("theme-swatch-{key}-{}", theme.id)))
+        .flex_none()
+        .w(px(SWATCH_WIDTH))
+        .p(px(2.))
+        .rounded(metrics::RADIUS_LG + px(2.))
+        .border_1()
+        .border_color(if active { app.primary } else { gpui::transparent_black() })
+        .when(!active, |this| this.hover(move |style| style.border_color(hover_border)))
         .child(
             div()
                 .flex()
-                .flex_none()
-                .items_center()
+                .flex_col()
                 .gap(px(2.))
-                .h(px(10.))
-                .px(px(4.))
-                .children([colors.terminal[1], colors.terminal[3], colors.terminal[2]].map(|color| div().size(px(4.)).rounded_full().bg(color))),
-        )
-        .child(
-            div()
-                .flex()
-                .flex_1()
-                .min_h_0()
-                .gap(px(2.))
-                .pr(px(2.))
-                .pb(px(2.))
-                .child(div().w(px(14.)).flex_none())
+                .px(px(8.))
+                .py(px(6.))
+                .rounded(metrics::RADIUS_LG)
+                .overflow_hidden()
+                .bg(colors.background)
+                .border_1()
+                .border_color(app.border)
                 .child(
                     div()
                         .flex()
-                        .flex_col()
-                        .flex_1()
-                        .gap(px(2.))
-                        .p(px(4.))
-                        .rounded(px(2.))
-                        .bg(colors.background)
-                        .child(line(20., colors.primary))
-                        .child(line(28., colors.muted_foreground))
-                        .child(line(16., colors.muted_foreground)),
-                ),
-        )
-}
-
-/// One card: a preview over its name, ringed in the accent while chosen.
-fn choice_card(
-    id: impl Into<ElementId>,
-    label: impl Into<SharedString>,
-    preview: impl IntoElement,
-    width: f32,
-    active: bool,
-    on_click: impl Fn(&mut App) + 'static,
-    cx: &App,
-) -> AnyElement {
-    let theme = cx.theme();
-    let colors = &theme.colors;
-    let wide = width >= 144.;
-    div()
-        .id(id)
-        .flex()
-        .flex_col()
-        .flex_none()
-        .items_center()
-        .gap(px(6.))
-        .p(px(4.))
-        .rounded(metrics::RADIUS_LG)
-        .child(
-            div()
-                .w(px(if wide { 144. } else { 96. }))
-                .h(px(if wide { 80. } else { 64. }))
-                .rounded(metrics::RADIUS_MD)
-                .overflow_hidden()
-                .bg(colors.surface)
-                .shadow(theme.shadows.raised.clone())
-                .when(active, |this| this.border_2().border_color(colors.primary))
-                .child(preview),
-        )
-        .child(
-            div()
-                .truncate()
-                .text_size(typography::TEXT_SM)
-                .text_color(if active { colors.foreground } else { colors.muted_foreground })
-                .when(active, |this| this.font_weight(typography::MEDIUM))
-                .child(label.into()),
-        )
-        .on_click(move |_, _, cx| on_click(cx))
-        .into_any_element()
-}
-
-fn backdrop(cx: &App) -> gpui::Div {
-    div().flex().items_center().justify_center().size_full().rounded(metrics::RADIUS_MD).bg(cx.theme().colors.primary)
-}
-
-/// A theme at a glance: its text, a prompt in its chrome, its accent, and its ANSI colors.
-fn theme_swatch(theme: &Theme) -> gpui::Div {
-    let colors = &theme.colors;
-    div()
-        .rounded(metrics::RADIUS_MD)
-        .flex()
-        .flex_col()
-        .justify_center()
-        .gap(px(10.))
-        .size_full()
-        .px(px(14.))
-        .bg(colors.background)
-        .child(
-            div()
-                .flex()
-                .items_center()
-                .gap(px(8.))
-                .child(div().text_size(typography::TEXT_LG).text_color(colors.foreground).child("Aa"))
+                        .items_center()
+                        .justify_between()
+                        .gap(px(4.))
+                        .h(px(14.))
+                        .text_size(typography::TEXT_CAPTION)
+                        .text_color(colors.foreground)
+                        .when(active, |this| this.font_weight(typography::MEDIUM))
+                        .child(div().min_w_0().truncate().child(theme.name.clone()))
+                        .when(active, |this| this.child(Icon::new(IconName::Check).size(IconSize::Custom(px(12.))).color(theme.own_primary()))),
+                )
                 .child(
                     div()
-                        .px(px(4.))
-                        .rounded(px(3.))
-                        .bg(colors.surface)
+                        .h(px(14.))
+                        .overflow_hidden()
+                        .whitespace_nowrap()
                         .font_family(typography::MONO_FONT)
-                        .text_size(typography::TEXT_SM)
-                        .text_color(colors.foreground)
-                        .child("~/"),
-                )
-                .child(div().w(px(6.)).h(px(14.)).rounded_full().bg(theme.own_primary())),
+                        .text_size(px(10.5))
+                        .child(code_sample(theme)),
+                ),
         )
-        .child(
-            div()
-                .flex()
-                .gap(px(2.))
-                .children(colors.terminal[..7].iter().map(|color| div().size(px(10.)).rounded_full().border_1().border_color(colors.border).bg(*color))),
-        )
-}
-
-fn field(label: &'static str, content: impl IntoElement, cx: &App) -> AnyElement {
-    div()
-        .flex()
-        .flex_col()
-        .min_w_0()
-        .gap(px(8.))
-        .child(div().text_size(typography::TEXT_SM).text_color(cx.theme().colors.muted_foreground).child(label))
-        .child(content)
+        .on_click(move |_, _, cx| {
+            let id = id.clone();
+            settings::update(cx, |settings| {
+                settings.set(key, id.into()).ok();
+            });
+        })
         .into_any_element()
 }
 
-fn theme_row(label: &'static str, key: &'static str, dark: bool, cx: &App) -> AnyElement {
+/// The swatches of one appearance, under a caption when both are shown.
+fn theme_grid(caption: Option<(IconName, &'static str)>, key: &'static str, dark: bool, cx: &App) -> AnyElement {
     let value = settings::saved(cx).get(key).and_then(|value| value.as_str().map(str::to_string)).unwrap_or_default();
-    let cards: Vec<AnyElement> = theme::registry(cx)
+    let muted = cx.theme().colors.muted_foreground;
+    let swatches: Vec<AnyElement> = theme::registry(cx)
         .themes()
         .iter()
         .filter(|theme| theme.appearance.is_dark() == dark)
-        .map(|theme| {
-            let id = theme.id.clone();
-            choice_card(
-                SharedString::from(format!("theme-card-{key}-{id}")),
-                theme.name.clone(),
-                theme_swatch(theme),
-                144.,
-                theme.id == value,
-                move |cx| {
-                    let id = id.clone();
-                    settings::update(cx, |settings| {
-                        settings.set(key, id.into()).ok();
-                    });
-                },
-                cx,
-            )
-        })
+        .map(|theme| theme_swatch(theme, key, theme.id == value, cx))
         .collect();
-    field(
-        label,
-        div()
-            .id(SharedString::from(format!("theme-row-{key}")))
-            .flex()
-            .gap(px(12.))
-            .pb(px(6.))
-            .overflow_x_scroll()
-            .children(cards),
-        cx,
-    )
+    div()
+        .flex()
+        .flex_col()
+        .gap(px(6.))
+        .children(caption.map(|(icon, label)| {
+            div()
+                .flex()
+                .items_center()
+                .gap(px(6.))
+                .px(px(2.))
+                .text_size(typography::TEXT_SM)
+                .text_color(muted)
+                .child(Icon::new(icon).size(IconSize::Custom(px(13.))).color(muted))
+                .child(label)
+        }))
+        .child(div().flex().flex_wrap().gap(px(4.)).children(swatches))
+        .into_any_element()
 }
 
-/// The block at the top of Appearance > Theme.
+/// The block at the top of Appearance > Theme, and the welcome's first step.
 pub fn theme_choices(cx: &App) -> AnyElement {
     let settings = settings::saved(cx).clone();
-    let light = theme_or_fallback(&settings.auto_theme_light, false, cx);
-    let dark = theme_or_fallback(&settings.auto_theme_dark, true, cx);
-    let current = if settings.sync_system_theme { None } else { theme::registry(cx).get(&settings.theme) };
-    let (Some(light), Some(dark)) = (light, dark) else { return div().into_any_element() };
-    let current = current.unwrap_or_else(|| cx.theme().clone());
     let scheme = current_scheme(cx);
 
-    let split = {
-        let (light, dark) = (light.clone(), dark.clone());
-        div()
-            .relative()
-            .w(px(60.))
-            .h(px(40.))
-            .child(div().absolute().inset_0().child(window_sketch(&light, false)))
-            .child(div().absolute().top_0().bottom_0().left(px(30.)).right_0().overflow_hidden().child(
-                div().absolute().top_0().left(px(-30.)).child(window_sketch(&dark, false)),
-            ))
-    };
-    let schemes = div()
-        .flex()
-        .gap(px(12.))
-        .child(choice_card("scheme-auto", "Auto", backdrop(cx).child(split), 104., scheme == Scheme::Auto, |cx| set_scheme(Scheme::Auto, cx), cx))
-        .child(choice_card("scheme-light", "Light", backdrop(cx).child(window_sketch(&light, false)), 104., scheme == Scheme::Light, |cx| set_scheme(Scheme::Light, cx), cx))
-        .child(choice_card("scheme-dark", "Dark", backdrop(cx).child(window_sketch(&dark, false)), 104., scheme == Scheme::Dark, |cx| set_scheme(Scheme::Dark, cx), cx));
-    let glass = settings.window_transparency;
-    let set_glass = |glass: bool| move |cx: &mut App| settings::update(cx, |settings| settings.window_transparency = glass);
-    let styles = div()
-        .flex()
-        .gap(px(12.))
-        .child(choice_card("style-classic", "Classic", backdrop(cx).child(window_sketch(&current, false)), 104., !glass, set_glass(false), cx))
-        .child(choice_card("style-glass", "Glass", backdrop(cx).child(window_sketch(&current, true)), 104., glass, set_glass(true), cx));
+    let schemes = Tabs::new(
+        "appearance-scheme",
+        vec![
+            TabsTrigger::new(Scheme::Auto.value(), "Auto").icon(IconName::Monitor),
+            TabsTrigger::new(Scheme::Light.value(), "Light").icon(IconName::Sun),
+            TabsTrigger::new(Scheme::Dark.value(), "Dark").icon(IconName::Moon),
+        ],
+        scheme.value(),
+    )
+    .on_change(|value, _, cx| {
+        if let Some(scheme) = Scheme::from_value(value) {
+            set_scheme(scheme, cx);
+        }
+    });
+    let styles = Tabs::new(
+        "appearance-style",
+        vec![TabsTrigger::new("classic", "Classic"), TabsTrigger::new("glass", "Glass")],
+        if settings.window_transparency { "glass" } else { "classic" },
+    )
+    .on_change(|value, _, cx| {
+        let glass = value.as_ref() == "glass";
+        settings::update(cx, |settings| settings.window_transparency = glass);
+    });
 
     let mut rows = vec![
-        div()
-            .flex()
-            .flex_wrap()
-            .gap_x(px(32.))
-            .gap_y(px(16.))
-            .child(field("Color Scheme", schemes, cx))
-            .child(field("Interface Style", styles, cx))
-            .into_any_element(),
+        div().flex().flex_wrap().items_center().justify_between().gap(px(8.)).child(schemes).child(styles).into_any_element(),
     ];
     if settings.sync_system_theme {
-        rows.push(theme_row("Light Theme", "autoThemeLight", false, cx));
-        rows.push(theme_row("Dark Theme", "autoThemeDark", true, cx));
+        rows.push(theme_grid(Some((IconName::Sun, "Light")), "autoThemeLight", false, cx));
+        rows.push(theme_grid(Some((IconName::Moon, "Dark")), "autoThemeDark", true, cx));
     } else {
-        rows.push(theme_row("Theme", "theme", is_dark(&settings.theme, cx), cx));
+        rows.push(theme_grid(None, "theme", is_dark(&settings.theme, cx), cx));
     }
-    div().flex().flex_col().gap(px(16.)).px(px(12.)).py(px(12.)).children(rows).into_any_element()
+    div().flex().flex_col().gap(px(14.)).px(px(10.)).py(px(12.)).children(rows).into_any_element()
 }
