@@ -178,7 +178,12 @@ pub trait GitRepository: Send + Sync {
     fn add_worktree(&self, _path: &str, _branch: Option<&str>) -> Result<()> {
         Err(unsupported())
     }
-    fn remove_worktree(&self, _path: &str) -> Result<()> {
+    /// Removes a worktree; `force` removes it with uncommitted changes too.
+    fn remove_worktree(&self, _path: &str, _force: bool) -> Result<()> {
+        Err(unsupported())
+    }
+    /// Drops the records of worktrees whose folders are gone or no longer worktrees.
+    fn prune_worktrees(&self) -> Result<()> {
         Err(unsupported())
     }
     fn remotes(&self) -> Result<Vec<Remote>> {
@@ -489,8 +494,12 @@ impl GitRepository for LocalRepository {
         self.locked(|repo| vc::git_add_worktree(repo, path.to_string(), branch.map(str::to_string), branch.is_some()))
     }
 
-    fn remove_worktree(&self, path: &str) -> Result<()> {
-        self.locked(|repo| vc::git_remove_worktree(repo, path.to_string(), false))
+    fn remove_worktree(&self, path: &str, force: bool) -> Result<()> {
+        self.locked(|repo| vc::git_remove_worktree(repo, path.to_string(), force))
+    }
+
+    fn prune_worktrees(&self) -> Result<()> {
+        self.locked(vc::git_prune_worktrees)
     }
 
     fn remotes(&self) -> Result<Vec<Remote>> {
@@ -671,7 +680,7 @@ mod tests {
         assert_eq!(worktrees.len(), 2);
         assert_eq!(worktrees[1].branch.as_deref(), Some("linked"));
         assert!(!worktrees[1].is_current);
-        repo.remove_worktree(&worktrees[1].path).unwrap();
+        repo.remove_worktree(&worktrees[1].path, false).unwrap();
         assert_eq!(repo.worktrees().unwrap().len(), 1);
 
         assert!(repo.remotes().unwrap().is_empty());

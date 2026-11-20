@@ -16,6 +16,7 @@ theme = { path = "../theme" }
 ui = { path = "../ui" }
 extensions = { path = "../extensions" }
 settings = { path = "../settings" }
+notifications = { path = "../notifications" }
 keymap = { path = "../keymap" }
 workbench_api = { path = "../workbench_api" }
 # Diff, commit and blame tabs the panel opens, and their ids.

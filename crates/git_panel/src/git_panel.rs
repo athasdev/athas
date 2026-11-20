@@ -58,7 +58,6 @@ const POLL_INTERVAL: Duration = Duration::from_secs(4);
 /// Commits the history loads at a time.
 const COMMIT_PAGE: usize = 50;
 /// How long a success notice stays.
-const NOTICE_TIMEOUT: Duration = Duration::from_secs(4);
 
 /// The Git settings the panel follows, read again whenever the settings change.
 #[derive(Clone, Debug, PartialEq)]
@@ -293,6 +292,68 @@ enum NoticeAction {
     StashAndSwitch(String),
     /// Discard the files although no copy could be kept in Local History.
     DiscardWithoutCopy(Vec<ChangeFile>),
+    /// `git worktree prune`: drops worktree records whose folder is gone or broken.
+    PruneWorktrees,
+    /// Removes the worktree with its uncommitted changes (`--force`).
+    ForceRemoveWorktree(String),
+}
+
+impl NoticeAction {
+    fn label(&self) -> &'static str {
+        match self {
+            NoticeAction::StashAndSwitch(_) => "Stash & Switch",
+            NoticeAction::DiscardWithoutCopy(_) => "Discard Anyway",
+            NoticeAction::PruneWorktrees => "Prune",
+            NoticeAction::ForceRemoveWorktree(_) => "Force Remove",
+        }
+    }
+}
+
+/// What a failed `git worktree remove` means, said plainly, and the action that fixes it.
+fn worktree_removal_problem(error: &str, path: &str, forced: bool) -> (String, Option<NoticeAction>) {
+    let lower = error.to_lowercase();
+    if lower.contains("does not exist") || lower.contains("is not a working tree") || lower.contains("not a valid") {
+        (
+            "Couldn't remove the worktree: its folder is no longer a Git worktree: Prune removes the stale record; the folder itself stays".into(),
+            Some(NoticeAction::PruneWorktrees),
+        )
+    } else if !forced && (lower.contains("modified or untracked") || lower.contains("contains modified") || lower.contains("uncommitted")) {
+        (
+            "The worktree has uncommitted changes: Force Remove deletes the folder with them".into(),
+            Some(NoticeAction::ForceRemoveWorktree(path.to_string())),
+        )
+    } else if lower.contains("locked") {
+        ("Couldn't remove the worktree: it is locked: unlock it with `git worktree unlock` first".into(), None)
+    } else {
+        (format!("Couldn't remove the worktree: {}", clean_git_error(error)), None)
+    }
+}
+
+/// A git error as a person reads it: without the "Git <command> failed: fatal:" prefixes.
+fn clean_git_error(error: &str) -> String {
+    let mut text = error.trim();
+    loop {
+        let before = text;
+        for prefix in ["fatal:", "error:"] {
+            if let Some(rest) = text.strip_prefix(prefix) {
+                text = rest.trim_start();
+            }
+        }
+        if let Some((head, rest)) = text.split_once(": ")
+            && head.starts_with("Git ")
+            && head.ends_with(" failed")
+        {
+            text = rest.trim_start();
+        }
+        if text == before {
+            break;
+        }
+    }
+    let mut cleaned = text.to_string();
+    if let Some(first) = cleaned.get(..1) {
+        cleaned = first.to_uppercase() + &cleaned[1..];
+    }
+    cleaned
 }
 
 /// Keeps a file's working copy in Local History before its changes are discarded.
@@ -308,12 +369,6 @@ pub fn set_discard_snapshot(cx: &mut gpui::App, snapshot: DiscardSnapshot) {
     cx.set_global(SnapshotHook(snapshot));
 }
 
-/// What Athas says in a toast: the result of an operation, shown at the foot of the panel.
-struct Notice {
-    message: SharedString,
-    tone: Tone,
-    action: Option<NoticeAction>,
-}
 
 /// The branch being named in the Branches tab, and what it starts from (HEAD when `None`).
 struct BranchDraft {
@@ -368,7 +423,6 @@ pub struct GitPanel {
     initializing: bool,
     branch_draft: Option<BranchDraft>,
     draft: Option<DraftKind>,
-    notice: Option<Notice>,
     notice_epoch: usize,
     open_menu: Option<OpenMenu>,
     /// The commit composer's width at its last paint: the diff numbers hide under 230px, as the
@@ -534,7 +588,6 @@ impl GitPanel {
             initializing: false,
             branch_draft: None,
             draft: None,
-            notice: None,
             notice_epoch: 0,
             open_menu: None,
             composer_width: std::rc::Rc::new(std::cell::Cell::new(0.)),
@@ -879,28 +932,53 @@ impl GitPanel {
         .detach();
     }
 
+    /// Tells the user how an operation went, as the app's toasts (bottom right) where every
+    /// message goes: `title: detail` splits into the toast's message and description, and an
+    /// action becomes its button.
     fn report(&mut self, message: impl Into<SharedString>, tone: Tone, action: Option<NoticeAction>, cx: &mut Context<Self>) {
-        self.notice = Some(Notice { message: message.into(), tone, action });
+        let message: SharedString = message.into();
+        let (title, detail) = match message.split_once(": ") {
+            Some((title, detail)) => (title.to_string(), Some(SharedString::from(detail.to_string()))),
+            None => (message.to_string(), None),
+        };
+        let kind = match tone {
+            Tone::Success => notifications::NotificationKind::Success,
+            Tone::Warning => notifications::NotificationKind::Warning,
+            Tone::Error => notifications::NotificationKind::Error,
+        };
         self.notice_epoch += 1;
-        cx.notify();
-        if tone == Tone::Success {
-            let epoch = self.notice_epoch;
-            cx.spawn(async move |this, cx| {
-                cx.background_executor().timer(NOTICE_TIMEOUT).await;
-                this.update(cx, |this, cx| {
-                    if this.notice_epoch == epoch {
-                        this.notice = None;
-                        cx.notify();
-                    }
-                })
-                .ok();
+        let id = SharedString::from(format!("git-panel-{}-{}", cx.entity_id(), self.notice_epoch));
+        let sticky = action.is_some();
+        let action = action.map(|action| {
+            let (this, id) = (cx.weak_entity(), id.clone());
+            notifications::NotificationAction::new(action.label(), move |_, cx| {
+                notifications::dismiss_toast(cx, &id);
+                this.update(cx, |panel, cx| panel.run_notice_action(action.clone(), cx)).ok();
             })
-            .detach();
+        });
+        notifications::notify_with(
+            cx,
+            kind,
+            notifications::NotificationCategory::Athas,
+            title,
+            detail,
+            Some(id),
+            notifications::ToastOptions { action, sticky, ..Default::default() },
+        );
+        cx.notify();
+    }
+
+    fn run_notice_action(&mut self, action: NoticeAction, cx: &mut Context<Self>) {
+        match action {
+            NoticeAction::StashAndSwitch(branch) => self.stash_and_switch(branch, cx),
+            NoticeAction::DiscardWithoutCopy(files) => self.discard(files, false, cx),
+            NoticeAction::PruneWorktrees => self.prune_worktrees(cx),
+            NoticeAction::ForceRemoveWorktree(path) => self.remove_worktree_with(path, true, cx),
         }
     }
 
     fn report_error(&mut self, context: &str, error: anyhow::Error, cx: &mut Context<Self>) {
-        self.report(format!("{context}: {error}"), Tone::Error, None, cx);
+        self.report(format!("{context}: {}", clean_git_error(&error.to_string())), Tone::Error, None, cx);
     }
 
     // Operations.
@@ -1184,7 +1262,6 @@ impl GitPanel {
     }
 
     fn stash_and_switch(&mut self, branch: String, cx: &mut Context<Self>) {
-        self.notice = None;
         self.run(
             {
                 let branch = branch.clone();
@@ -1746,12 +1823,28 @@ impl GitPanel {
         );
     }
 
+    fn prune_worktrees(&mut self, cx: &mut Context<Self>) {
+        self.run_reported(|repo| repo.prune_worktrees(), "Pruned stale worktrees".into(), "Couldn't prune worktrees", cx);
+    }
+
     fn remove_worktree(&mut self, path: String, cx: &mut Context<Self>) {
+        self.remove_worktree_with(path, false, cx);
+    }
+
+    /// Removes a worktree; when git refuses, says why and offers the fix (Prune, Force Remove).
+    fn remove_worktree_with(&mut self, path: String, force: bool, cx: &mut Context<Self>) {
         let done = format!("Removed worktree {path}");
-        self.run_reported(
-            move |repo| repo.remove_worktree(&path),
-            done,
-            "Failed to remove worktree. It may have uncommitted changes",
+        let target = path.clone();
+        self.run(
+            move |repo| repo.remove_worktree(&path, force),
+            move |this, result, cx| match result {
+                Ok(()) => this.report(done, Tone::Success, None, cx),
+                Err(error) => {
+                    let (message, action) = worktree_removal_problem(&error.to_string(), &target, force);
+                    this.report(message, Tone::Error, action, cx);
+                }
+            },
+            true,
             cx,
         );
     }
@@ -2258,6 +2351,27 @@ mod tests {
     use std::{cell::RefCell, process::Command, rc::Rc};
 
     #[test]
+    fn a_failed_worktree_removal_says_why_and_offers_the_fix() {
+        let broken = "Git worktree remove failed: fatal: validation failed, cannot remove working tree: '/tmp/wt/.git' does not exist";
+        let (message, action) = super::worktree_removal_problem(broken, "/tmp/wt", false);
+        assert!(message.contains("no longer a Git worktree"), "{message}");
+        assert!(matches!(action, Some(super::NoticeAction::PruneWorktrees)));
+
+        let dirty = "Git worktree remove failed: fatal: '/tmp/wt' contains modified or untracked files, use --force to delete it";
+        let (_, action) = super::worktree_removal_problem(dirty, "/tmp/wt", false);
+        assert!(matches!(action, Some(super::NoticeAction::ForceRemoveWorktree(path)) if path == "/tmp/wt"));
+        // Forced already: nothing more to offer.
+        let (_, action) = super::worktree_removal_problem(dirty, "/tmp/wt", true);
+        assert!(action.is_none());
+    }
+
+    #[test]
+    fn git_errors_lose_their_prefixes() {
+        assert_eq!(super::clean_git_error("Git push failed: fatal: the remote end hung up"), "The remote end hung up");
+        assert_eq!(super::clean_git_error("error: pathspec 'x' did not match"), "Pathspec 'x' did not match");
+    }
+
+    #[test]
     fn open_sections_read_like_the_original() {
         use super::Sections;
         assert_eq!(Sections::default(), Sections { staged: true, changes: true, stashes: false, history: true });
@@ -2327,8 +2441,14 @@ mod tests {
         let files = panel.read_with(cx, |panel, _| panel.groups.unstaged.clone());
 
         panel.update(cx, |panel, cx| panel.discard(files.clone(), true, cx));
-        settle(cx, |cx| panel.read_with(cx, |panel, _| panel.notice.is_some()));
-        panel.read_with(cx, |panel, _| assert!(matches!(panel.notice.as_ref().unwrap().action, Some(NoticeAction::DiscardWithoutCopy(_)))));
+        // The failure is a toast that offers to discard without the copy.
+        let offers_discard = |cx: &mut gpui::VisualTestContext| {
+            cx.read(|cx| {
+                cx.try_global::<notifications::Notifications>()
+                    .is_some_and(|store| store.toasts().any(|toast| toast.action.as_ref().is_some_and(|action| action.label.as_ref() == "Discard Anyway")))
+            })
+        };
+        settle(cx, |cx| offers_discard(cx));
         assert_eq!(std::fs::read_to_string(dir.path().join("a.txt")).unwrap(), "one\ntwo\n");
 
         fail.store(false, std::sync::atomic::Ordering::SeqCst);

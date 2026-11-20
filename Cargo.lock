@@ -3714,6 +3714,7 @@ dependencies = [
  "gpui_platform",
  "image",
  "keymap",
+ "notifications",
  "paths",
  "serde",
  "serde_json",

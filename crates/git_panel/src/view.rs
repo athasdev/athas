@@ -11,7 +11,7 @@ use theme::{ActiveTheme, ThemeColors};
 use ui::{Button, ButtonSize, ButtonVariant, EmptyState, Icon, IconName, IconSize, MenuItem, Plane, metrics, typography};
 
 use crate::{
-    DraftKind, GitPanel, NoticeAction, RepoState, Section, Tab, Tone,
+    DraftKind, GitPanel, RepoState, Section, Tab,
     model::{self, ChangeFile, can_discard, filter_files, matches_query, plural, short_hash, stash_title, status_letter},
     repository::{Commit, FileStatus, RemoteOp, StashAction},
 };
@@ -100,6 +100,27 @@ struct Row {
     selected: bool,
     muted: bool,
     struck: bool,
+    /// The row's right-click menu, opened where the pointer is.
+    context: Option<RowMenu>,
+}
+
+/// Opens a row's menu at a point of the window.
+type RowMenu = std::rc::Rc<dyn Fn(gpui::Point<gpui::Pixels>, &mut Window, &mut gpui::App)>;
+
+/// A right-click menu for a row: `entries` builds its rows when it opens.
+fn row_menu(
+    key: String,
+    cx: &mut Context<GitPanel>,
+    entries: impl Fn(&mut GitPanel, gpui::Point<gpui::Pixels>, &mut Context<GitPanel>) -> Vec<ui::MenuEntry> + 'static,
+) -> RowMenu {
+    let this = cx.weak_entity();
+    std::rc::Rc::new(move |position, window, cx| {
+        this.update(cx, |panel, cx| {
+            let rows = entries(panel, position, cx);
+            panel.show_menu(&key, rows, position, Anchor::TopLeft, window, cx);
+        })
+        .ok();
+    })
 }
 
 impl Row {
@@ -114,6 +135,7 @@ impl Row {
             selected: false,
             muted: false,
             struck: false,
+            context: None,
         }
     }
 
@@ -132,6 +154,12 @@ impl Row {
         }
         if !self.actions.is_empty() {
             item = item.hover_trailing(div().flex().items_center().gap(px(2.)).children(self.actions));
+        }
+        if let Some(menu) = self.context {
+            item = item.on_secondary_mouse_down(move |event, window, cx| {
+                cx.stop_propagation();
+                menu(event.position, window, cx);
+            });
         }
         div().id(self.id).relative().w_full().flex_none().when(self.muted, |this| this.opacity(0.5)).child(item)
     }
@@ -889,6 +917,16 @@ impl GitPanel {
                     row_button(("stash-drop", index), IconName::Trash, "Drop", cx, move |this, _, _, cx| this.stash_action(StashAction::Drop, index, cx))
                         .into_any_element(),
                 ];
+                row.context = Some(row_menu(format!("stash-menu-{index}"), cx, move |panel, _, cx| {
+                    vec![
+                        panel.item("Show Changes", cx, move |this, _, cx| this.open_stash(index, cx)).icon(IconName::GitDiff).into(),
+                        ui::MenuEntry::Separator,
+                        panel.item("Apply", cx, move |this, _, cx| this.stash_action(StashAction::Apply, index, cx)).icon(IconName::Archive).into(),
+                        panel.item("Pop", cx, move |this, _, cx| this.stash_action(StashAction::Pop, index, cx)).icon(IconName::ArrowUp).into(),
+                        ui::MenuEntry::Separator,
+                        panel.item("Drop", cx, move |this, _, cx| this.stash_action(StashAction::Drop, index, cx)).icon(IconName::Trash).destructive().into(),
+                    ]
+                }));
                 let message = format!("{}\nClick to see its changes", stash.message);
                 row.render(colors)
                     .anchored_tooltip(move || ui::Tooltip::new(message.clone()))
@@ -1215,6 +1253,20 @@ impl GitPanel {
                 })
                 .into_any_element(),
             ];
+            let menu_name = name.clone();
+            let current_name = current.clone();
+            row.context = Some(row_menu(format!("branch-menu-{name}"), cx, move |panel, position, cx| {
+                let (switch, compare, base, copy, doomed) = (menu_name.clone(), menu_name.clone(), menu_name.clone(), menu_name.clone(), menu_name.clone());
+                vec![
+                    panel.item("Switch to Branch", cx, move |this, _, cx| this.checkout(switch.clone(), cx)).icon(IconName::GitBranch).into(),
+                    panel.item(format!("Compare with {current_name}"), cx, move |this, _, cx| this.view_branch_diff(compare.clone(), cx)).icon(IconName::GitDiff).into(),
+                    panel.item("New Branch from This", cx, move |this, window, cx| this.start_branch_draft(Some(base.clone()), window, cx)).icon(IconName::Plus).into(),
+                    ui::MenuEntry::Separator,
+                    panel.item("Copy Name", cx, move |this, _, cx| this.copy(copy.clone(), cx)).icon(IconName::Copy).into(),
+                    ui::MenuEntry::Separator,
+                    panel.item("Delete Branch…", cx, move |this, window, cx| this.confirm_delete_branch(doomed.clone(), position, window, cx)).icon(IconName::Trash).destructive().into(),
+                ]
+            }));
             let tooltip = format!("{name}\nClick to switch");
             list = list.child(
                 row.render(colors)
@@ -1426,6 +1478,30 @@ impl GitPanel {
                         .into_any_element(),
                     );
                 }
+                {
+                    let (path, prunable) = (worktree.path.clone(), worktree.prunable);
+                    let removable = !worktree.is_current && main.as_ref() != Some(&worktree.path) && !worktree.is_bare;
+                    row.context = Some(row_menu(format!("worktree-menu-{index}"), cx, move |panel, position, cx| {
+                        let mut entries: Vec<ui::MenuEntry> = Vec::new();
+                        if !prunable {
+                            let (open, window_path) = (path.clone(), path.clone());
+                            entries.push(panel.item("Open", cx, move |_, _, cx| workbench_api::open_project(cx, open.clone())).icon(IconName::FolderOpen).into());
+                            entries.push(panel.item("Open in New Window", cx, move |_, _, cx| workbench_api::open_project_in_new_window(cx, window_path.clone())).icon(IconName::OpenExternal).into());
+                            entries.push(ui::MenuEntry::Separator);
+                        }
+                        let copy = path.clone();
+                        entries.push(panel.item("Copy Path", cx, move |this, _, cx| this.copy(copy.clone(), cx)).icon(IconName::Copy).into());
+                        if prunable {
+                            entries.push(ui::MenuEntry::Separator);
+                            entries.push(panel.item("Prune Stale Worktrees", cx, |this, _, cx| this.prune_worktrees(cx)).icon(IconName::Broom).into());
+                        } else if removable {
+                            let doomed = path.clone();
+                            entries.push(ui::MenuEntry::Separator);
+                            entries.push(panel.item("Remove Worktree…", cx, move |this, window, cx| this.confirm_remove_worktree(doomed.clone(), position, window, cx)).icon(IconName::Trash).destructive().into());
+                        }
+                        entries
+                    }));
+                }
                 let click_to_open = openable && !worktree.is_current;
                 let tooltip = if click_to_open { format!("{}\nClick to open", worktree.path) } else { worktree.path.clone() };
                 let open = worktree.path.clone();
@@ -1472,6 +1548,18 @@ impl GitPanel {
                     })
                     .into_any_element(),
                 ];
+                let (name, url) = (remote.name.clone(), remote.url.clone());
+                row.context = Some(row_menu(format!("remote-menu-{index}"), cx, move |panel, position, cx| {
+                    let (fetch, copy_url, copy_name, doomed) = (name.clone(), url.clone(), name.clone(), name.clone());
+                    vec![
+                        panel.item(format!("Fetch {name}"), cx, move |this, _, cx| this.fetch_remote(Some(fetch.clone()), cx)).icon(IconName::ArrowsClockwise).into(),
+                        ui::MenuEntry::Separator,
+                        panel.item("Copy URL", cx, move |this, _, cx| this.copy(copy_url.clone(), cx)).icon(IconName::Copy).into(),
+                        panel.item("Copy Name", cx, move |this, _, cx| this.copy(copy_name.clone(), cx)).icon(IconName::Copy).into(),
+                        ui::MenuEntry::Separator,
+                        panel.item("Remove Remote…", cx, move |this, window, cx| this.confirm_remove_remote(doomed.clone(), position, window, cx)).icon(IconName::Trash).destructive().into(),
+                    ]
+                }));
                 let tooltip = remote.url.clone();
                 row.render(colors).anchored_tooltip(move || ui::Tooltip::new(tooltip.clone())).into_any_element()
             })
@@ -1527,6 +1615,8 @@ impl GitPanel {
                     })
                     .into_any_element(),
                 );
+                let (context_tag, context_previous) = (tag.clone(), previous.cloned());
+                row.context = Some(row_menu(format!("tag:{}", tag.name), cx, move |panel, _, cx| panel.tag_menu(&context_tag, context_previous.as_ref(), cx)));
                 let base = previous.map_or_else(|| "HEAD".to_string(), |tag| tag.name.clone());
                 let tooltip = format!(
                     "{} · {}{}\nClick to see what changed since {base}",
@@ -1545,60 +1635,6 @@ impl GitPanel {
         self.render_ref_tab(self.tag_filter_input.clone(), DraftKind::Tag, "New tag", None, rows, empty, colors, cx)
     }
 
-    fn render_notice(&self, colors: &ThemeColors, cx: &mut Context<Self>) -> Option<impl IntoElement> {
-        let notice = self.notice.as_ref()?;
-        let (icon, tone) = match notice.tone {
-            Tone::Success => (IconName::CheckCircle, colors.success),
-            Tone::Warning => (IconName::Warning, colors.warning),
-            Tone::Error => (IconName::WarningCircle, colors.destructive),
-        };
-        let theme = cx.theme().clone();
-        Some(
-            div().flex_none().px(px(8.)).pb(px(8.)).child(
-                div()
-                    .flex()
-                    .flex_col()
-                    .gap(px(6.))
-                    .p(px(8.))
-                    .rounded(metrics::RADIUS_LG)
-                    .bg(colors.raised)
-                    .shadow(theme.shadows.raised.clone())
-                    .text_size(typography::TEXT_SM)
-                    .child(
-                        div()
-                            .flex()
-                            .items_start()
-                            .gap(px(8.))
-                            .child(div().pt(px(2.)).child(Icon::new(icon).size(IconSize::XSmall).color(tone)))
-                            .child(div().flex_1().min_w_0().text_color(colors.foreground).child(notice.message.clone()))
-                            .child(
-                                Button::icon("git-notice-close", IconName::X)
-                                    .size(ButtonSize::XSmall)
-                                    .tooltip("Dismiss")
-                                    .on_click(cx.listener(|this, _, _, cx| {
-                                        this.notice = None;
-                                        cx.notify();
-                                    })),
-                            ),
-                    )
-                    .children(notice.action.clone().map(|action| match action {
-                        NoticeAction::StashAndSwitch(branch) => div().flex().justify_end().child(
-                            Button::new("git-notice-action", "Stash & switch")
-                                .size(ButtonSize::Small)
-                                .on_click(cx.listener(move |this, _, _, cx| this.stash_and_switch(branch.clone(), cx))),
-                        ),
-                        NoticeAction::DiscardWithoutCopy(files) => div().flex().justify_end().child(
-                            Button::new("git-notice-action", "Discard")
-                                .size(ButtonSize::Small)
-                                .on_click(cx.listener(move |this, _, _, cx| {
-                                    this.notice = None;
-                                    this.discard(files.clone(), false, cx)
-                                })),
-                        ),
-                    })),
-            ),
-        )
-    }
 }
 
 impl Render for GitPanel {
@@ -1666,7 +1702,6 @@ impl Render for GitPanel {
             .min_h_0()
             .min_w_0()
             .child(body)
-            .children(self.render_notice(&colors, cx))
             .children(self.open_menu.as_ref().map(|menu| menu.render()))
     }
 }
