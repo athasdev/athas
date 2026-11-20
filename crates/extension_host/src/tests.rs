@@ -284,7 +284,12 @@ fn timers_run_inside_the_worker() {
     let code = r#"
 let ticks = 0;
 const interval = setInterval(() => { ticks += 1; if (ticks === 3) clearInterval(interval); }, 5);
-api.commands.register({ id: "wait", run: () => new Promise((resolve) => setTimeout(() => resolve(ticks), 60)) });
+// Waits for the third tick (however slow the machine), then a little longer: a cleared interval
+// must not tick again.
+api.commands.register({ id: "wait", run: () => new Promise((resolve) => {
+  const check = () => (ticks >= 3 ? setTimeout(() => resolve(ticks), 30) : setTimeout(check, 5));
+  check();
+}) });
 "#;
     let id = block_on(host.load_generated(&generated("timers", code))).unwrap();
     assert_eq!(block_on(host.execute_command(&id, "generated.timers.wait", vec![])).unwrap(), json!(3));
