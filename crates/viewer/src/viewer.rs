@@ -114,13 +114,21 @@ pub fn set_web_reader(reader: WebReader) {
     let _ = WEB_READER.set(reader);
 }
 
+/// An SVG's size in pixels, from its `width` / `height` or `viewBox`. The image crate reads
+/// only raster formats, and without a size the viewer can neither fit nor zoom the image.
+fn svg_size(data: &[u8]) -> Option<(u32, u32)> {
+    let tree = usvg::Tree::from_data(data, &usvg::Options::default()).ok()?;
+    let size = tree.size();
+    Some((size.width().ceil().max(1.) as u32, size.height().ceil().max(1.) as u32))
+}
+
 #[cfg(target_family = "wasm")]
 fn load(kind: Kind, path: &Path) -> anyhow::Result<Loaded> {
     let reader = WEB_READER.get().ok_or_else(|| anyhow::anyhow!("Files can't be read here."))?;
     let data = reader(path)?;
     let bytes = data.len() as u64;
     Ok(match kind {
-        Kind::Image => Loaded::Image { size: image::ImageReader::new(std::io::Cursor::new(&data)).with_guessed_format()?.into_dimensions().ok(), bytes },
+        Kind::Image => Loaded::Image { size: svg_size(&data).or_else(|| image::ImageReader::new(std::io::Cursor::new(&data)).with_guessed_format().ok()?.into_dimensions().ok()), bytes },
         Kind::Csv => Loaded::Csv { text: String::from_utf8_lossy(&data).into_owned(), bytes },
         Kind::Pdf => Loaded::Pdf { document: pdf::open(data)?, bytes },
         Kind::Binary => Loaded::Binary { data: data.into_iter().take(HEX_LIMIT).collect(), bytes },
@@ -131,7 +139,11 @@ fn load(kind: Kind, path: &Path) -> anyhow::Result<Loaded> {
 fn load(kind: Kind, path: &Path) -> anyhow::Result<Loaded> {
     let bytes = std::fs::metadata(path)?.len();
     Ok(match kind {
-        Kind::Image => Loaded::Image { size: image::image_dimensions(path).ok(), bytes },
+        Kind::Image => {
+            let svg = extension(path).eq_ignore_ascii_case("svg");
+            let size = if svg { std::fs::read(path).ok().and_then(|data| svg_size(&data)) } else { image::image_dimensions(path).ok() };
+            Loaded::Image { size, bytes }
+        }
         Kind::Csv => {
             let data = std::fs::read(path)?;
             Loaded::Csv { text: String::from_utf8_lossy(&data).into_owned(), bytes }
@@ -1270,6 +1282,15 @@ impl Render for FileViewer {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn an_svg_has_a_size_so_it_can_zoom() {
+        let sized = br#"<svg xmlns="http://www.w3.org/2000/svg" width="24" height="16"><path d="M0 0h1"/></svg>"#;
+        assert_eq!(svg_size(sized), Some((24, 16)));
+        let view_box = br#"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 32"><path d="M0 0h1"/></svg>"#;
+        assert_eq!(svg_size(view_box), Some((48, 32)));
+        assert_eq!(svg_size(b"not an svg"), None);
+    }
 
     #[test]
     fn steps_between_zoom_levels() {

@@ -11111,6 +11111,7 @@ dependencies = [
  "tempfile",
  "theme",
  "ui",
+ "usvg",
  "workbench_api",
 ]
 

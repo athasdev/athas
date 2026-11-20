@@ -18,6 +18,8 @@ workbench_api = { path = "../workbench_api" }
 image = { version = "0.25", default-features = false, features = ["png", "jpeg", "webp", "gif", "bmp", "ico"] }
 # Pure-Rust PDF rasterizer.
 hayro = "0.9"
+# The size of an SVG, which the image crate cannot read; the version GPUI draws SVGs with.
+usvg = { version = "0.46", default-features = false }
 
 [dev-dependencies]
 tempfile = "3"
