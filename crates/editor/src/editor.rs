@@ -1121,6 +1121,11 @@ impl Editor {
     /// Shows the caret and restarts blinking after activity.
     pub(crate) fn pause_blink(&mut self, cx: &mut Context<Self>) {
         self.caret_moved(cx);
+        self.restart_blink(cx);
+    }
+
+    /// Shows the caret and starts blinking again from visible, when focused.
+    fn restart_blink(&mut self, cx: &mut Context<Self>) {
         self.cursor_visible = true;
         let blinks = settings::get(cx).editor_cursor_blinking != "solid";
         if !self.focused || !blinks {
@@ -1999,6 +2004,18 @@ impl Document {
 
 impl Render for Editor {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        // `on_focus` / `on_blur` only report changes after the editor subscribed: an editor
+        // focused before that (opened from the file tree, say) kept `focused` false and drew no
+        // caret until focus left and came back. Follow the real focus here.
+        let focused = self.focus_handle.is_focused(window);
+        if focused != self.focused {
+            self.focused = focused;
+            if focused {
+                self.restart_blink(cx);
+            } else {
+                self.blink_task = None;
+            }
+        }
         let background = cx.theme().colors.background;
         if self.status == Status::Ready && !self.block_demo_done {
             self.block_demo_done = true;
