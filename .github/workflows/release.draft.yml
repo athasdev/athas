@@ -1,4 +1,4 @@
-# DRAFT — not wired to any trigger but a manual dispatch, and not tested on GitHub yet.
+# Manual dispatch only. Creates a draft release; `publish` makes it public.
 #
 # Builds the GPUI app as the next Athas release, mirroring athasdev/athas's release.yml: the same
 # platforms, signing, notarization, asset names, `latest.json` and release flow, so the Tauri
@@ -262,11 +262,10 @@ jobs:
     needs: [metadata, build]
     runs-on: ubuntu-latest
     steps:
-      # The asset policy, `latest.json` builder and validator of athasdev/athas, so both apps
-      # publish the same manifest (scripts/release/release-assets.mjs).
+      # The asset policy, `latest.json` builder and validator the Tauri releases used, so both
+      # apps publish the same manifest (scripts/release/release-assets.mjs).
       - uses: actions/checkout@v6
         with:
-          repository: athasdev/athas
           path: athas
       - uses: oven-sh/setup-bun@v2
         with:
@@ -296,9 +295,9 @@ jobs:
           if gh release view "$TAG" --repo "$RELEASE_REPO" >/dev/null 2>&1; then
             test "$(gh release view "$TAG" --repo "$RELEASE_REPO" --json isDraft --jq .isDraft)" = true
           else
-            # The tag points at the athasdev/athas commit that carries this code (see the doc).
+            # The tag points at the commit this run built (created when the release is published).
             gh release create "$TAG" --repo "$RELEASE_REPO" --draft "${prerelease[@]}" \
-              --title "Athas ${TAG#v}" --notes-file release-body.md
+              --target "$GITHUB_SHA" --title "Athas ${TAG#v}" --notes-file release-body.md
           fi
           gh release upload "$TAG" --repo "$RELEASE_REPO" prepared-release/* --clobber
       - name: Validate the release
