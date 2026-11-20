@@ -253,7 +253,7 @@ impl Theme {
             selected: selected.into(),
             selected_emphasized: mix(primary, 0.18, selected).into(),
             selection: get("selection").unwrap_or(soft(primary, 0.25)).into(),
-            focus_ring: soft(primary, 0.5).into(),
+            focus_ring: soft(primary, 0.8).into(),
             segment_track: segment_track.into(),
             segment_knob: segment_knob.into(),
             knob: white().into(),

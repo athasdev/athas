@@ -294,7 +294,7 @@ impl RenderOnce for InputGroup {
         let ring = |color, spread| BoxShadow { color, offset: point(px(0.), px(0.)), blur_radius: px(0.), spread_radius: px(spread), inset: false };
         let mut shadow = if self.variant == InputGroupVariant::Default { theme.shadows.raised.clone() } else { Vec::new() };
         if focused {
-            shadow.push(ring(colors.focus_ring, 2.));
+            shadow.push(ring(colors.focus_ring, 1.));
         } else if self.invalid {
             shadow.push(ring(colors.destructive, 1.));
         }

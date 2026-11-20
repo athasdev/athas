@@ -553,7 +553,7 @@ impl Select {
             .text_color(colors.foreground)
             .when_some(bg, |this, bg| this.bg(bg))
             .when_some(hover, |this, hover| this.hover(move |style| style.bg(hover)))
-            .when(focused && self.variant != SelectVariant::Ghost, |this| this.border_3().border_color(colors.focus_ring))
+            .when(focused && self.variant != SelectVariant::Ghost, |this| this.border_1().border_color(colors.focus_ring))
             .when(self.disabled, |this| this.opacity(0.5))
             .on_mouse_down(MouseButton::Left, cx.listener(Self::on_trigger_down))
             .child(

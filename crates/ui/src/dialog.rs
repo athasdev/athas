@@ -250,7 +250,8 @@ impl RenderOnce for Dialog {
     }
 }
 
-/// The focus ring a keyboard-focused control wears (`ring-3 ring-focus`), without moving it.
+/// The focus ring a keyboard-focused control wears, without moving it: 2px, enough to find
+/// the focus by keyboard without the halo a 3px ring made.
 pub fn focus_ring(focused: bool, cx: &App) -> gpui::Div {
     let ring = cx.theme().colors.focus_ring;
     div().flex_none().rounded_full().when(focused, |this| {
@@ -258,7 +259,7 @@ pub fn focus_ring(focused: bool, cx: &App) -> gpui::Div {
             color: ring,
             offset: point(px(0.), px(0.)),
             blur_radius: px(0.),
-            spread_radius: px(3.),
+            spread_radius: px(2.),
             inset: false,
         }])
     })

@@ -81,7 +81,7 @@ impl Render for SecretInput {
             .rounded_full()
             .bg(theme.colors.raised)
             .shadow(theme.shadows.raised.clone())
-            .when(focused, |this| this.border_3().border_color(theme.colors.focus_ring).px(px(9.)))
+            .when(focused, |this| this.border_1().border_color(theme.colors.focus_ring).px(px(11.)))
             .text_size(typography::TEXT_SM)
             .child(if self.text.is_empty() {
                 div().text_color(theme.colors.subtle_foreground).child(self.placeholder.clone())

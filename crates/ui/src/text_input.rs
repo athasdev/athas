@@ -866,7 +866,8 @@ impl Render for TextInput {
                     .px(px(12.))
                     .rounded_full()
                     .bg(theme.colors.raised)
-                    // `focus:ring-3 focus:ring-focus`: a 3px ring outside the pill, which keeps its size.
+                    // A 1px ring in the accent outside the pill, which keeps its size: the 3px ring
+                    // of the web build read as a thick halo at the app's scale.
                     .shadow({
                         let mut shadow = theme.shadows.raised.clone();
                         if focused {
@@ -874,7 +875,7 @@ impl Render for TextInput {
                                 color: theme.colors.focus_ring,
                                 offset: gpui::point(px(0.), px(0.)),
                                 blur_radius: px(0.),
-                                spread_radius: px(3.),
+                                spread_radius: px(1.),
                                 inset: false,
                             });
                         }
