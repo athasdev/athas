@@ -1,5 +1,6 @@
-//! The font family picker (`components/font-selector.tsx`): the system's fonts, each drawn in its
-//! own face, with a search field and, for the editor and terminal, only monospaced families.
+//! The font family picker (`components/font-selector.tsx`): the system's fonts, each name in the
+//! UI font with a short sample in its own face beside it, a search field and, for the editor and
+//! terminal, only monospaced families.
 
 use std::ops::Range;
 
@@ -29,8 +30,19 @@ pub fn font_families(cx: &mut App) -> Vec<SharedString> {
         .filter(|name| !name.starts_with('.'))
         .map(SharedString::from)
         .collect();
+    // The system's own UI font (San Francisco on macOS), which GPUI knows by this name. Apps may
+    // use it through the system; it is not bundled or shipped with Athas.
+    let families: Vec<SharedString> = cfg!(target_os = "macos").then(|| SharedString::from(SYSTEM_FONT)).into_iter().chain(families).collect();
     cx.set_global(FontCatalog(families.clone()));
     families
+}
+
+/// The name GPUI gives the platform's UI font.
+pub const SYSTEM_FONT: &str = ".SystemUIFont";
+
+/// How a family is shown: the system font by what it is, others by their name.
+pub fn display_name(family: &str) -> SharedString {
+    if family == SYSTEM_FONT { "System Font (San Francisco)".into() } else { SharedString::from(family.to_string()) }
 }
 
 /// Whether a family is monospaced, by the names monospaced families go by. Measuring every face
@@ -114,7 +126,7 @@ impl FontPicker {
             .iter()
             .filter(|family| !self.monospace_only || looks_monospaced(family) || **family == self.current)
             .filter(|family| {
-                let lower = family.to_lowercase();
+                let lower = display_name(family).to_lowercase();
                 words.iter().all(|word| lower.contains(word))
             })
             .cloned()
@@ -159,6 +171,7 @@ impl FontPicker {
                         .flex()
                         .items_center()
                         .gap(px(8.))
+                        .w_full()
                         .h(px(30.))
                         .px(px(8.))
                         .rounded(metrics::RADIUS_MD)
@@ -176,15 +189,24 @@ impl FontPicker {
                         .child(div().size(px(12.)).flex_none().when(current, |this| {
                             this.child(Icon::new(IconName::Check).size(IconSize::XSmall).color(colors.foreground))
                         }))
+                        // Every name in the UI font, so the list reads evenly (a symbol or display
+                        // face can't make a name unreadable); the sample shows the face itself.
                         .child(
                             div()
                                 .flex_1()
                                 .min_w_0()
                                 .truncate()
-                                .font_family(family.clone())
-                                .text_size(typography::TEXT_BASE)
+                                .text_size(typography::TEXT_SM)
                                 .text_color(colors.foreground)
-                                .child(family),
+                                .child(display_name(&family)),
+                        )
+                        .child(
+                            div()
+                                .flex_none()
+                                .font_family(family)
+                                .text_size(typography::TEXT_SM)
+                                .text_color(colors.subtle_foreground)
+                                .child("Aa"),
                         )
                         .into_any_element(),
                 )

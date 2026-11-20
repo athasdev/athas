@@ -1154,7 +1154,7 @@ impl SettingsView {
             SettingKind::Font { monospace } => {
                 let current = value_text(&value);
                 let open = self.font_picker.as_ref().is_some_and(|picker| picker.key == key);
-                let button = Button::new(("setting-font", index), if current.is_empty() { "Default".to_string() } else { current })
+                let button = Button::new(("setting-font", index), if current.is_empty() { "Default".to_string() } else { crate::font_picker::display_name(&current).to_string() })
                     .variant(ButtonVariant::Outline)
                     .regular_weight()
                     .trailing_icon(IconName::ChevronDown)
