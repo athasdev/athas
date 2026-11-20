@@ -1,0 +1,24 @@
+[package]
+name = "run_actions"
+edition.workspace = true
+version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lib]
+path = "src/run_actions.rs"
+
+[dependencies]
+paths = { path = "../paths" }
+gpui.workspace = true
+anyhow.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+regex = "1"
+palette = { path = "../palette" }
+ui = { path = "../ui" }
+theme = { path = "../theme" }
+workspace = { path = "../workspace" }
+
+[target.'cfg(not(target_family = "wasm"))'.dependencies]
+dirs = "6"

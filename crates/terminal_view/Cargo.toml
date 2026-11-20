@@ -1,0 +1,35 @@
+[package]
+name = "terminal_view"
+edition.workspace = true
+version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lib]
+path = "src/terminal_view.rs"
+
+[dependencies]
+paths = { path = "../paths" }
+web-time = "1"
+gpui.workspace = true
+anyhow.workspace = true
+theme = { path = "../theme" }
+ui = { path = "../ui" }
+settings = { path = "../settings" }
+keymap = { path = "../keymap" }
+notifications = { path = "../notifications" }
+workbench_api = { path = "../workbench_api" }
+serde.workspace = true
+serde_json.workspace = true
+alacritty_terminal = "0.25"
+futures = "0.3"
+
+[target.'cfg(not(target_family = "wasm"))'.dependencies]
+dirs = "6"
+# Athas's WSL crate: the installed distributions, offered as `WSL: <name>` shells on Windows.
+athas_wsl = { package = "athas-wsl", path = "../../core/wsl" }
+libc = "0.2"
+portable-pty = "0.9"
+
+[dev-dependencies]
+tempfile = "3"

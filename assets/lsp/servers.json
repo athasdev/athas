@@ -1,0 +1,938 @@
+{
+  "languages": [
+    {
+      "id": "astro",
+      "extensions": [
+        "astro"
+      ],
+      "filenames": [],
+      "server": "astro-ls"
+    },
+    {
+      "id": "bash",
+      "extensions": [
+        "sh",
+        "bash",
+        "zsh"
+      ],
+      "filenames": [
+        ".bashrc",
+        ".zshrc",
+        ".bash_profile",
+        ".profile"
+      ],
+      "server": "bash-language-server"
+    },
+    {
+      "id": "c",
+      "extensions": [
+        "c",
+        "h"
+      ],
+      "filenames": [],
+      "server": "clangd"
+    },
+    {
+      "id": "csharp",
+      "extensions": [
+        "cs"
+      ],
+      "filenames": [],
+      "server": "omnisharp"
+    },
+    {
+      "id": "cpp",
+      "extensions": [
+        "cpp",
+        "cc",
+        "cxx",
+        "hpp",
+        "hh",
+        "hxx"
+      ],
+      "filenames": [],
+      "server": "clangd"
+    },
+    {
+      "id": "css",
+      "extensions": [
+        "css"
+      ],
+      "filenames": [],
+      "server": "vscode-css-language-server"
+    },
+    {
+      "id": "scss",
+      "extensions": [
+        "scss"
+      ],
+      "filenames": [],
+      "server": "vscode-css-language-server"
+    },
+    {
+      "id": "sass",
+      "extensions": [
+        "sass"
+      ],
+      "filenames": [],
+      "server": "vscode-css-language-server"
+    },
+    {
+      "id": "less",
+      "extensions": [
+        "less"
+      ],
+      "filenames": [],
+      "server": "vscode-css-language-server"
+    },
+    {
+      "id": "dart",
+      "extensions": [
+        "dart"
+      ],
+      "filenames": [],
+      "server": "dart"
+    },
+    {
+      "id": "dockerfile",
+      "extensions": [
+        "dockerfile"
+      ],
+      "filenames": [
+        "Dockerfile",
+        "Containerfile"
+      ],
+      "server": "docker-langserver"
+    },
+    {
+      "id": "elixir",
+      "extensions": [
+        "ex",
+        "exs"
+      ],
+      "filenames": [],
+      "server": "elixir-ls"
+    },
+    {
+      "id": "elm",
+      "extensions": [
+        "elm"
+      ],
+      "filenames": [],
+      "server": "elm-language-server"
+    },
+    {
+      "id": "go",
+      "extensions": [
+        "go"
+      ],
+      "filenames": [
+        "go.mod",
+        "go.sum",
+        "go.work"
+      ],
+      "server": "gopls"
+    },
+    {
+      "id": "graphql",
+      "extensions": [
+        "graphql",
+        "gql"
+      ],
+      "filenames": [],
+      "server": "graphql-lsp"
+    },
+    {
+      "id": "html",
+      "extensions": [
+        "html",
+        "htm",
+        "xhtml"
+      ],
+      "filenames": [],
+      "server": "vscode-html-language-server"
+    },
+    {
+      "id": "java",
+      "extensions": [
+        "java"
+      ],
+      "filenames": [],
+      "server": "jdtls"
+    },
+    {
+      "id": "javascript",
+      "extensions": [
+        "js",
+        "mjs",
+        "cjs",
+        "jsx"
+      ],
+      "filenames": [],
+      "server": "typescript-language-server"
+    },
+    {
+      "id": "json",
+      "extensions": [
+        "json",
+        "jsonc"
+      ],
+      "filenames": [],
+      "server": "vscode-json-language-server"
+    },
+    {
+      "id": "jupyter-notebook",
+      "extensions": [
+        "ipynb"
+      ],
+      "filenames": [],
+      "server": "vscode-json-language-server"
+    },
+    {
+      "id": "kotlin",
+      "extensions": [
+        "kt",
+        "kts"
+      ],
+      "filenames": [],
+      "server": "kotlin-language-server"
+    },
+    {
+      "id": "lua",
+      "extensions": [
+        "lua"
+      ],
+      "filenames": [],
+      "server": "lua-language-server"
+    },
+    {
+      "id": "markdown",
+      "extensions": [
+        "md",
+        "markdown",
+        "mdx"
+      ],
+      "filenames": [],
+      "server": "marksman"
+    },
+    {
+      "id": "rmarkdown",
+      "extensions": [
+        "rmd",
+        "rmd"
+      ],
+      "filenames": [],
+      "server": "marksman"
+    },
+    {
+      "id": "objc",
+      "extensions": [
+        "m",
+        "mm",
+        "h"
+      ],
+      "filenames": [],
+      "server": "clangd"
+    },
+    {
+      "id": "ocaml",
+      "extensions": [
+        "ml",
+        "mli"
+      ],
+      "filenames": [],
+      "server": "ocamllsp"
+    },
+    {
+      "id": "php",
+      "extensions": [
+        "php",
+        "phtml",
+        "php3",
+        "php4",
+        "php5",
+        "php7",
+        "php8",
+        "phar",
+        "phps"
+      ],
+      "filenames": [],
+      "server": "intelephense"
+    },
+    {
+      "id": "python",
+      "extensions": [
+        "py",
+        "pyw",
+        "pyi",
+        "ipy"
+      ],
+      "filenames": [],
+      "server": "pyright"
+    },
+    {
+      "id": "rescript",
+      "extensions": [
+        "res",
+        "resi"
+      ],
+      "filenames": [],
+      "server": "rescript-language-server"
+    },
+    {
+      "id": "ruby",
+      "extensions": [
+        "rb",
+        "rbw",
+        "erb",
+        "rake",
+        "gemspec",
+        "ru",
+        "builder",
+        "jbuilder",
+        "rxml",
+        "rjs",
+        "rabl",
+        "thor",
+        "podspec",
+        "arb"
+      ],
+      "filenames": [
+        "Rakefile",
+        "Gemfile",
+        "Gemfile.lock",
+        "Guardfile",
+        "Capfile",
+        "Appraisals",
+        "Berksfile",
+        "Brewfile",
+        "Cheffile",
+        "Dangerfile",
+        "Fastfile",
+        "Podfile",
+        "Rantfile",
+        "Thorfile",
+        "Vagrantfile",
+        "Puppetfile"
+      ],
+      "server": "solargraph"
+    },
+    {
+      "id": "rust",
+      "extensions": [
+        "rs"
+      ],
+      "filenames": [],
+      "server": "rust-analyzer"
+    },
+    {
+      "id": "scala",
+      "extensions": [
+        "scala",
+        "sc"
+      ],
+      "filenames": [],
+      "server": "metals"
+    },
+    {
+      "id": "solidity",
+      "extensions": [
+        "sol"
+      ],
+      "filenames": [],
+      "server": "solidity-language-server"
+    },
+    {
+      "id": "sql",
+      "extensions": [
+        "sql",
+        "dsql"
+      ],
+      "filenames": [],
+      "server": "sql-language-server"
+    },
+    {
+      "id": "svelte",
+      "extensions": [
+        "svelte"
+      ],
+      "filenames": [],
+      "server": "svelteserver"
+    },
+    {
+      "id": "swift",
+      "extensions": [
+        "swift"
+      ],
+      "filenames": [],
+      "server": "sourcekit-lsp"
+    },
+    {
+      "id": "terraform",
+      "extensions": [
+        "tf",
+        "tfvars"
+      ],
+      "filenames": [],
+      "server": "terraform-ls"
+    },
+    {
+      "id": "toml",
+      "extensions": [
+        "toml"
+      ],
+      "filenames": [],
+      "server": "taplo"
+    },
+    {
+      "id": "typescriptreact",
+      "extensions": [
+        "tsx"
+      ],
+      "filenames": [],
+      "server": "typescript-language-server"
+    },
+    {
+      "id": "typescript",
+      "extensions": [
+        "ts",
+        "mts",
+        "cts"
+      ],
+      "filenames": [],
+      "server": "typescript-language-server"
+    },
+    {
+      "id": "vue",
+      "extensions": [
+        "vue"
+      ],
+      "filenames": [],
+      "server": "vue-language-server"
+    },
+    {
+      "id": "yaml",
+      "extensions": [
+        "yaml",
+        "yml"
+      ],
+      "filenames": [],
+      "server": "yaml-language-server"
+    },
+    {
+      "id": "zig",
+      "extensions": [
+        "zig",
+        "zon"
+      ],
+      "filenames": [],
+      "server": "zls"
+    }
+  ],
+  "servers": {
+    "astro-ls": {
+      "runtime": "bun",
+      "command": "astro-ls",
+      "package": "@astrojs/language-server",
+      "args": [
+        "--stdio"
+      ],
+      "initializationOptions": null,
+      "rootMarkers": [
+        "package.json",
+        "tsconfig.json",
+        "jsconfig.json"
+      ]
+    },
+    "bash-language-server": {
+      "runtime": "bun",
+      "command": "bash-language-server",
+      "package": "bash-language-server",
+      "args": [
+        "start"
+      ],
+      "initializationOptions": null,
+      "rootMarkers": [
+        "package.json"
+      ]
+    },
+    "clangd": {
+      "runtime": "binary",
+      "command": "clangd",
+      "package": null,
+      "args": [
+        "--background-index"
+      ],
+      "initializationOptions": null,
+      "rootMarkers": [
+        "compile_commands.json",
+        "compile_flags.txt",
+        "CMakeLists.txt",
+        ".clangd"
+      ]
+    },
+    "dart": {
+      "runtime": "binary",
+      "command": "dart",
+      "package": null,
+      "args": [
+        "language-server",
+        "--protocol=lsp"
+      ],
+      "initializationOptions": null,
+      "rootMarkers": [
+        "package.json"
+      ]
+    },
+    "docker-langserver": {
+      "runtime": "bun",
+      "command": "docker-langserver",
+      "package": "dockerfile-language-server-nodejs",
+      "args": [
+        "--stdio"
+      ],
+      "initializationOptions": null,
+      "rootMarkers": [
+        "package.json"
+      ]
+    },
+    "elixir-ls": {
+      "runtime": "binary",
+      "command": "language_server.sh",
+      "package": null,
+      "args": [],
+      "initializationOptions": null,
+      "rootMarkers": [
+        "package.json"
+      ]
+    },
+    "elm-language-server": {
+      "runtime": "binary",
+      "command": "elm-language-server",
+      "package": null,
+      "args": [
+        "--stdio"
+      ],
+      "initializationOptions": null,
+      "rootMarkers": [
+        "package.json"
+      ]
+    },
+    "gopls": {
+      "runtime": "go",
+      "command": "gopls",
+      "package": "golang.org/x/tools/gopls",
+      "args": [
+        "serve"
+      ],
+      "initializationOptions": null,
+      "rootMarkers": [
+        "go.work",
+        "go.mod"
+      ]
+    },
+    "graphql-lsp": {
+      "runtime": "bun",
+      "command": "graphql-lsp",
+      "package": "graphql-language-service-cli",
+      "args": [
+        "server",
+        "-m",
+        "stream"
+      ],
+      "initializationOptions": null,
+      "rootMarkers": [
+        "package.json"
+      ]
+    },
+    "intelephense": {
+      "runtime": "bun",
+      "command": "intelephense",
+      "package": "intelephense",
+      "args": [
+        "--stdio"
+      ],
+      "initializationOptions": null,
+      "rootMarkers": [
+        "package.json"
+      ]
+    },
+    "jdtls": {
+      "runtime": "binary",
+      "command": "jdtls",
+      "package": null,
+      "args": [],
+      "initializationOptions": {
+        "settings": {
+          "java": {
+            "autobuild": {
+              "enabled": true
+            },
+            "completion": {
+              "favoriteStaticMembers": [
+                "org.junit.Assert.*",
+                "org.junit.Assume.*",
+                "org.junit.jupiter.api.Assertions.*",
+                "org.junit.jupiter.api.Assumptions.*",
+                "org.junit.jupiter.api.DynamicContainer.*",
+                "org.junit.jupiter.api.DynamicTest.*",
+                "org.mockito.Mockito.*",
+                "org.mockito.ArgumentMatchers.*",
+                "org.mockito.Answers.*"
+              ],
+              "guessMethodArguments": true,
+              "importOrder": [
+                "#",
+                "java",
+                "javax",
+                "org",
+                "com",
+                ""
+              ]
+            },
+            "configuration": {
+              "updateBuildConfiguration": "automatic"
+            },
+            "eclipse": {
+              "downloadSources": true
+            },
+            "format": {
+              "comments": {
+                "enabled": true
+              },
+              "enabled": true,
+              "onType": {
+                "enabled": true
+              }
+            },
+            "foldingRange": {
+              "enabled": true
+            },
+            "import": {
+              "gradle": {
+                "enabled": true,
+                "wrapper": {
+                  "enabled": true
+                }
+              },
+              "maven": {
+                "enabled": true
+              }
+            },
+            "implementationCodeLens": "all",
+            "inlayHints": {
+              "parameterNames": {
+                "enabled": "literals"
+              }
+            },
+            "referencesCodeLens": {
+              "enabled": true
+            },
+            "references": {
+              "includeDecompiledSources": true
+            },
+            "maven": {
+              "downloadSources": true,
+              "updateSnapshots": false
+            },
+            "project": {
+              "referencedLibraries": [
+                "lib/**/*.jar"
+              ],
+              "resourceFilters": [
+                "node_modules",
+                ".git"
+              ]
+            },
+            "selectionRange": {
+              "enabled": true
+            },
+            "signatureHelp": {
+              "enabled": true
+            },
+            "typeHierarchy": {
+              "lazyLoad": false
+            }
+          }
+        }
+      },
+      "rootMarkers": [
+        "package.json"
+      ]
+    },
+    "kotlin-language-server": {
+      "runtime": "binary",
+      "command": "kotlin-language-server",
+      "package": null,
+      "args": [],
+      "initializationOptions": null,
+      "rootMarkers": [
+        "package.json"
+      ]
+    },
+    "lua-language-server": {
+      "runtime": "binary",
+      "command": "lua-language-server",
+      "package": null,
+      "args": [],
+      "initializationOptions": null,
+      "rootMarkers": [
+        ".luarc.json"
+      ]
+    },
+    "marksman": {
+      "runtime": "binary",
+      "command": "marksman",
+      "package": null,
+      "args": [
+        "server"
+      ],
+      "initializationOptions": null,
+      "rootMarkers": [
+        "package.json"
+      ]
+    },
+    "metals": {
+      "runtime": "system",
+      "command": "metals",
+      "package": null,
+      "args": [],
+      "initializationOptions": null,
+      "rootMarkers": [
+        "package.json"
+      ]
+    },
+    "ocamllsp": {
+      "runtime": "system",
+      "command": "ocamllsp",
+      "package": null,
+      "args": [],
+      "initializationOptions": null,
+      "rootMarkers": [
+        "package.json"
+      ]
+    },
+    "omnisharp": {
+      "runtime": "binary",
+      "command": "omnisharp",
+      "package": null,
+      "args": [
+        "--languageserver"
+      ],
+      "initializationOptions": null,
+      "rootMarkers": [
+        "package.json"
+      ]
+    },
+    "pyright": {
+      "runtime": "bun",
+      "command": "pyright-langserver",
+      "package": "pyright",
+      "args": [
+        "--stdio"
+      ],
+      "initializationOptions": null,
+      "rootMarkers": [
+        "pyproject.toml",
+        "setup.py",
+        "setup.cfg",
+        "requirements.txt",
+        "pyrightconfig.json"
+      ]
+    },
+    "rescript-language-server": {
+      "runtime": "binary",
+      "command": "rescript-language-server",
+      "package": null,
+      "args": [
+        "--stdio"
+      ],
+      "initializationOptions": null,
+      "rootMarkers": [
+        "package.json"
+      ]
+    },
+    "rust-analyzer": {
+      "runtime": "binary",
+      "command": "rust-analyzer",
+      "package": null,
+      "args": [],
+      "initializationOptions": null,
+      "rootMarkers": [
+        "Cargo.toml",
+        "rust-project.json"
+      ]
+    },
+    "solargraph": {
+      "runtime": "binary",
+      "command": "solargraph",
+      "package": null,
+      "args": [
+        "stdio"
+      ],
+      "initializationOptions": null,
+      "rootMarkers": [
+        "package.json"
+      ]
+    },
+    "solidity-language-server": {
+      "runtime": "binary",
+      "command": "solidity-language-server",
+      "package": null,
+      "args": [
+        "--stdio"
+      ],
+      "initializationOptions": null,
+      "rootMarkers": [
+        "package.json"
+      ]
+    },
+    "sourcekit-lsp": {
+      "runtime": "system",
+      "command": "sourcekit-lsp",
+      "package": null,
+      "args": [],
+      "initializationOptions": null,
+      "rootMarkers": [
+        "package.json"
+      ]
+    },
+    "sql-language-server": {
+      "runtime": "bun",
+      "command": "sql-language-server",
+      "package": "sql-language-server",
+      "args": [
+        "up",
+        "--method",
+        "stdio"
+      ],
+      "initializationOptions": null,
+      "rootMarkers": [
+        "package.json"
+      ]
+    },
+    "svelteserver": {
+      "runtime": "bun",
+      "command": "svelteserver",
+      "package": "svelte-language-server",
+      "args": [
+        "--stdio"
+      ],
+      "initializationOptions": null,
+      "rootMarkers": [
+        "package.json"
+      ]
+    },
+    "taplo": {
+      "runtime": "rust",
+      "command": "taplo",
+      "package": "taplo-cli",
+      "args": [
+        "lsp",
+        "stdio"
+      ],
+      "initializationOptions": null,
+      "rootMarkers": [
+        "package.json"
+      ]
+    },
+    "terraform-ls": {
+      "runtime": "binary",
+      "command": "terraform-ls",
+      "package": null,
+      "args": [
+        "serve"
+      ],
+      "initializationOptions": null,
+      "rootMarkers": [
+        "package.json"
+      ]
+    },
+    "typescript-language-server": {
+      "runtime": "bun",
+      "command": "typescript-language-server",
+      "package": "typescript-language-server",
+      "args": [
+        "--stdio"
+      ],
+      "initializationOptions": null,
+      "rootMarkers": [
+        "package.json",
+        "tsconfig.json",
+        "jsconfig.json"
+      ]
+    },
+    "vscode-css-language-server": {
+      "runtime": "bun",
+      "command": "vscode-css-language-server",
+      "package": "vscode-langservers-extracted",
+      "args": [
+        "--stdio"
+      ],
+      "initializationOptions": null,
+      "rootMarkers": [
+        "package.json"
+      ]
+    },
+    "vscode-html-language-server": {
+      "runtime": "bun",
+      "command": "vscode-html-language-server",
+      "package": "vscode-langservers-extracted",
+      "args": [
+        "--stdio"
+      ],
+      "initializationOptions": null,
+      "rootMarkers": [
+        "package.json"
+      ]
+    },
+    "vscode-json-language-server": {
+      "runtime": "bun",
+      "command": "vscode-json-language-server",
+      "package": "vscode-langservers-extracted",
+      "args": [
+        "--stdio"
+      ],
+      "initializationOptions": null,
+      "rootMarkers": [
+        "package.json"
+      ]
+    },
+    "vue-language-server": {
+      "runtime": "bun",
+      "command": "vue-language-server",
+      "package": "@vue/language-server",
+      "args": [
+        "--stdio"
+      ],
+      "initializationOptions": null,
+      "rootMarkers": [
+        "package.json",
+        "tsconfig.json",
+        "jsconfig.json"
+      ]
+    },
+    "yaml-language-server": {
+      "runtime": "bun",
+      "command": "yaml-language-server",
+      "package": "yaml-language-server",
+      "args": [
+        "--stdio"
+      ],
+      "initializationOptions": null,
+      "rootMarkers": [
+        "package.json"
+      ]
+    },
+    "zls": {
+      "runtime": "binary",
+      "command": "zls",
+      "package": null,
+      "args": [],
+      "initializationOptions": null,
+      "rootMarkers": [
+        "build.zig"
+      ]
+    }
+  }
+}

@@ -1,0 +1,31 @@
+[package]
+name = "lsp_client"
+edition.workspace = true
+version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lib]
+path = "src/lsp_client.rs"
+
+[dependencies]
+paths = { path = "../paths" }
+gpui.workspace = true
+anyhow.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+futures = "0.3"
+parking_lot = "0.12"
+ropey = { version = "1.6", default-features = false, features = ["simd"] }
+lsp-types = "0.95"
+
+[target.'cfg(not(target_family = "wasm"))'.dependencies]
+athas_project = { package = "athas-project", path = "../../core/project" }
+
+[target.'cfg(target_family = "wasm")'.dependencies]
+percent-encoding = "2"
+wasm-bindgen-futures = "0.4"
+
+[dev-dependencies]
+gpui = { workspace = true, features = ["test-support"] }
+tempfile = "3"

@@ -1,0 +1,19 @@
+[package]
+name = "multibuffer"
+edition.workspace = true
+version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lib]
+path = "src/multibuffer.rs"
+
+[dependencies]
+gpui.workspace = true
+theme = { path = "../theme" }
+ui = { path = "../ui" }
+# File icons from the icon theme in use.
+extensions = { path = "../extensions" }
+
+[dev-dependencies]
+gpui = { workspace = true, features = ["test-support"] }

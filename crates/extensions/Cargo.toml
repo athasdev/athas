@@ -1,21 +1,34 @@
 [package]
-name = "athas-extensions"
-version = "0.1.0"
-edition = "2024"
+name = "extensions"
+edition.workspace = true
+version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lib]
+path = "src/extensions.rs"
 
 [dependencies]
-anyhow = "1.0"
-chrono = { version = "0.4.41", features = ["serde"] }
-flate2 = "1.0"
-futures-util = "0.3"
-log = "0.4"
-reqwest = { workspace = true, features = ["stream"] }
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
-sha256 = "1.5"
-specta = { version = "=2.0.0-rc.25", features = ["derive", "serde_json"] }
-tar = "0.4"
-tauri = { version = "2.12", default-features = false, features = ["wry"] }
+paths = { path = "../paths" }
+web-time = "1"
+gpui.workspace = true
+anyhow.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+futures = "0.3"
+settings = { path = "../settings" }
+telemetry = { path = "../telemetry" }
+theme = { path = "../theme" }
 
-[lints]
-workspace = true
+[target.'cfg(not(target_family = "wasm"))'.dependencies]
+dirs = "6"
+flate2 = "1"
+hex = "0.4"
+sha2 = "0.10"
+tar = "0.4"
+ureq = { version = "3.5", default-features = false, features = ["rustls"] }
+tooling = { path = "../tooling" }
+
+[dev-dependencies]
+gpui = { workspace = true, features = ["test-support"] }
+tempfile = "3"

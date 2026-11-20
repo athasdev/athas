@@ -1,0 +1,30 @@
+{
+  "$schema": "https://athas.dev/schemas/extension.json",
+  "id": "athas.mcp.stripe",
+  "name": "stripe",
+  "displayName": "Stripe",
+  "version": "1.0.0",
+  "description": "Customers, payments and the Stripe docs",
+  "publisher": "Athas",
+  "categories": ["Integration"],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/athasdev/athas/tree/master/extensions/official/mcp-stripe"
+  },
+  "icon": "icon.svg",
+  "contributes": {
+    "mcpServers": [
+      {
+        "id": "stripe",
+        "name": "Stripe",
+        "description": "Customers, payments and the Stripe docs",
+        "group": "work",
+        "config": {
+          "transport": "http",
+          "url": "https://mcp.stripe.com"
+        }
+      }
+    ]
+  }
+}

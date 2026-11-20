@@ -1,0 +1,31 @@
+{
+  "$schema": "https://athas.dev/schemas/extension.json",
+  "id": "athas.mcp.memory",
+  "name": "memory",
+  "displayName": "Memory",
+  "version": "1.0.0",
+  "description": "A local knowledge graph agents keep facts in",
+  "publisher": "Athas",
+  "categories": ["Integration"],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/athasdev/athas/tree/master/extensions/official/mcp-memory"
+  },
+  "icon": "icon.svg",
+  "contributes": {
+    "mcpServers": [
+      {
+        "id": "memory",
+        "name": "Memory",
+        "description": "A local knowledge graph agents keep facts in",
+        "group": "data",
+        "config": {
+          "transport": "stdio",
+          "command": "npx",
+          "args": ["-y", "@modelcontextprotocol/server-memory"]
+        }
+      }
+    ]
+  }
+}

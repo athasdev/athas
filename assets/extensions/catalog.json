@@ -1,0 +1,4111 @@
+{
+ "version": 1,
+ "extensions": [
+  {
+   "path": "agents/antigravity-acp",
+   "manifest": {
+    "$schema": "https://athas.dev/schemas/extension.json",
+    "id": "athas.agent.antigravity",
+    "name": "Google Antigravity",
+    "displayName": "Google Antigravity",
+    "description": "Google's consumer coding agent, connected through its official ACP server.",
+    "version": "1.0.0",
+    "publisher": "Google",
+    "categories": [
+     "Agent"
+    ],
+    "agents": [
+     {
+      "id": "antigravity-acp",
+      "name": "Google Antigravity",
+      "binaryName": "agy_acp_server",
+      "description": "Google's consumer coding agent with its official ACP server.",
+      "args": [],
+      "argsByPlatform": {
+       "linux-arm64": [
+        "--uid="
+       ],
+       "linux-x64": [
+        "--uid="
+       ]
+      },
+      "install": {
+       "runtime": "binary",
+       "package": "antigravity-acp",
+       "version": "1.0.0",
+       "command": "agy_acp_server.par",
+       "commandsByPlatform": {
+        "darwin-arm64": "agy_acp_server.par",
+        "linux-arm64": "agy_acp_server.par",
+        "linux-x64": "agy_acp_server.par",
+        "win32-arm64": "agy_acp_server.exe",
+        "win32-x64": "agy_acp_server.exe"
+       },
+       "downloadUrls": {
+        "darwin-arm64": "https://dl.google.com/agy-extensions/releases/macos/agy-acp-server-agy_acp_server_20260818_01_RC01-darwin-arm64.zip",
+        "linux-arm64": "https://dl.google.com/agy-extensions/releases/linux/agy-acp-server-agy_acp_server_20260818_01_RC01-linux-arm64.zip",
+        "linux-x64": "https://dl.google.com/agy-extensions/releases/linux/agy-acp-server-agy_acp_server_20260818_01_RC01-linux-x86_64.zip",
+        "win32-arm64": "https://dl.google.com/agy-extensions/releases/windows/agy-acp-server-agy_acp_server_20260818_01_RC01-windows-arm64.zip",
+        "win32-x64": "https://dl.google.com/agy-extensions/releases/windows/agy-acp-server-agy_acp_server_20260818_01_RC01-windows-x86_64.zip"
+       }
+      }
+     }
+    ]
+   },
+   "icon": "extensions/icons/athas.agent.antigravity.svg",
+   "monochromeIcon": true
+  },
+  {
+   "path": "agents/claude-acp",
+   "manifest": {
+    "$schema": "https://athas.dev/schemas/extension.json",
+    "id": "athas.agent.claude-acp",
+    "name": "Claude Agent",
+    "displayName": "Claude Agent",
+    "description": "Runs Anthropic's Claude Code through the community ACP adapter. Sign in with your own Claude subscription or Anthropic API key. Subscription use counts against your plan's Agent SDK credit. Not affiliated with Anthropic.",
+    "version": "1.0.0",
+    "publisher": "Agent Client Protocol",
+    "categories": [
+     "Agent"
+    ],
+    "agents": [
+     {
+      "id": "claude-acp",
+      "name": "Claude Agent",
+      "binaryName": "claude-agent-acp",
+      "description": "Runs Anthropic's Claude Code through the community ACP adapter. Sign in with your own Claude subscription or Anthropic API key. Subscription use counts against your plan's Agent SDK credit. Not affiliated with Anthropic.",
+      "args": [],
+      "install": {
+       "runtime": "node",
+       "package": "@agentclientprotocol/claude-agent-acp@0.73.0",
+       "version": "0.73.0",
+       "command": "claude-agent-acp"
+      }
+     }
+    ]
+   },
+   "icon": "extensions/icons/athas.agent.claude-acp.svg",
+   "monochromeIcon": true
+  },
+  {
+   "path": "agents/gemini-cli",
+   "manifest": {
+    "$schema": "https://athas.dev/schemas/extension.json",
+    "id": "athas.agent.gemini-cli",
+    "name": "Gemini CLI",
+    "displayName": "Gemini CLI",
+    "description": "Google's Gemini CLI with ACP support for enterprise, Google Cloud, and paid API-key access.",
+    "version": "1.0.0",
+    "publisher": "Google",
+    "categories": [
+     "Agent"
+    ],
+    "agents": [
+     {
+      "id": "gemini-cli",
+      "name": "Gemini CLI",
+      "binaryName": "gemini",
+      "description": "Google's Gemini CLI for enterprise, Google Cloud, and paid API-key users.",
+      "args": [
+       "--acp"
+      ],
+      "install": {
+       "runtime": "node",
+       "package": "@google/gemini-cli@0.58.0",
+       "version": "0.58.0",
+       "command": "gemini"
+      }
+     }
+    ]
+   },
+   "icon": "extensions/icons/athas.agent.gemini-cli.svg",
+   "monochromeIcon": false
+  },
+  {
+   "path": "agents/github-copilot-cli",
+   "manifest": {
+    "$schema": "https://athas.dev/schemas/extension.json",
+    "id": "athas.agent.github-copilot",
+    "name": "GitHub Copilot",
+    "displayName": "GitHub Copilot",
+    "description": "GitHub's command-line coding agent with native ACP support.",
+    "version": "1.0.0",
+    "publisher": "GitHub",
+    "categories": [
+     "Agent"
+    ],
+    "agents": [
+     {
+      "id": "github-copilot-cli",
+      "name": "GitHub Copilot",
+      "binaryName": "copilot",
+      "description": "GitHub's command-line coding agent with native ACP support.",
+      "args": [
+       "--acp"
+      ],
+      "install": {
+       "runtime": "node",
+       "package": "@github/copilot@1.0.82",
+       "version": "1.0.82",
+       "command": "copilot"
+      }
+     }
+    ]
+   },
+   "icon": "extensions/icons/athas.agent.github-copilot.svg",
+   "monochromeIcon": false
+  },
+  {
+   "path": "agents/kimi-cli",
+   "manifest": {
+    "$schema": "https://athas.dev/schemas/extension.json",
+    "id": "athas.agent.kimi-cli",
+    "name": "Kimi CLI",
+    "displayName": "Kimi CLI",
+    "description": "Moonshot's Kimi command-line agent with native ACP support.",
+    "version": "1.0.0",
+    "publisher": "Moonshot AI",
+    "categories": [
+     "Agent"
+    ],
+    "agents": [
+     {
+      "id": "kimi-cli",
+      "name": "Kimi CLI",
+      "binaryName": "kimi",
+      "description": "Moonshot Kimi Code CLI agent with native ACP support.",
+      "args": [
+       "acp"
+      ],
+      "install": {
+       "runtime": "binary",
+       "package": "kimi-cli",
+       "version": "1.50.0",
+       "command": "kimi",
+       "downloadUrls": {
+        "darwin-arm64": "https://github.com/MoonshotAI/kimi-cli/releases/download/1.50.0/kimi-1.50.0-aarch64-apple-darwin.tar.gz",
+        "darwin-x64": "https://github.com/MoonshotAI/kimi-cli/releases/download/1.50.0/kimi-1.50.0-x86_64-apple-darwin.tar.gz",
+        "linux-arm64": "https://github.com/MoonshotAI/kimi-cli/releases/download/1.50.0/kimi-1.50.0-aarch64-unknown-linux-gnu.tar.gz",
+        "linux-x64": "https://github.com/MoonshotAI/kimi-cli/releases/download/1.50.0/kimi-1.50.0-x86_64-unknown-linux-gnu.tar.gz",
+        "win32-arm64": "https://github.com/MoonshotAI/kimi-cli/releases/download/1.50.0/kimi-1.50.0-aarch64-pc-windows-msvc.zip",
+        "win32-x64": "https://github.com/MoonshotAI/kimi-cli/releases/download/1.50.0/kimi-1.50.0-x86_64-pc-windows-msvc.zip"
+       }
+      }
+     }
+    ]
+   },
+   "icon": "extensions/icons/athas.agent.kimi-cli.svg",
+   "monochromeIcon": false
+  },
+  {
+   "path": "agents/opencode",
+   "manifest": {
+    "$schema": "https://athas.dev/schemas/extension.json",
+    "id": "athas.agent.opencode",
+    "name": "OpenCode",
+    "displayName": "OpenCode",
+    "description": "Open-source terminal coding agent with native ACP support.",
+    "version": "1.0.0",
+    "publisher": "OpenCode",
+    "categories": [
+     "Agent"
+    ],
+    "agents": [
+     {
+      "id": "opencode",
+      "name": "OpenCode",
+      "binaryName": "opencode",
+      "description": "Open-source terminal coding agent with native ACP support.",
+      "args": [
+       "acp"
+      ],
+      "install": {
+       "runtime": "node",
+       "package": "opencode-ai@1.18.27",
+       "version": "1.18.27",
+       "command": "opencode"
+      }
+     }
+    ]
+   },
+   "icon": "extensions/icons/athas.agent.opencode.svg",
+   "monochromeIcon": false
+  },
+  {
+   "path": "agents/qwen-code",
+   "manifest": {
+    "$schema": "https://athas.dev/schemas/extension.json",
+    "id": "athas.agent.qwen-code",
+    "name": "Qwen Code",
+    "displayName": "Qwen Code",
+    "description": "Alibaba Qwen's command-line coding agent with native ACP support.",
+    "version": "1.0.0",
+    "publisher": "Alibaba",
+    "categories": [
+     "Agent"
+    ],
+    "agents": [
+     {
+      "id": "qwen-code",
+      "name": "Qwen Code",
+      "binaryName": "qwen",
+      "description": "Alibaba Qwen Code agent with native ACP support.",
+      "args": [
+       "--acp",
+       "--experimental-skills"
+      ],
+      "install": {
+       "runtime": "node",
+       "package": "@qwen-code/qwen-code@0.22.3",
+       "version": "0.22.3",
+       "command": "qwen"
+      }
+     }
+    ]
+   },
+   "icon": "extensions/icons/athas.agent.qwen-code.svg",
+   "monochromeIcon": false
+  },
+  {
+   "path": "ai/v0",
+   "manifest": {
+    "$schema": "https://athas.dev/schemas/extension.json",
+    "id": "athas.ai.v0",
+    "name": "v0",
+    "displayName": "v0",
+    "description": "Generate apps with v0 and optional shadcn registry design-system context.",
+    "version": "1.0.0",
+    "publisher": "Athas",
+    "categories": [
+     "AI"
+    ],
+    "activationEvents": [
+     "onAIProvider:v0"
+    ],
+    "aiProviders": [
+     {
+      "id": "v0",
+      "name": "v0",
+      "apiUrl": "https://api.v0.dev/v1/chats",
+      "requiresApiKey": true,
+      "transport": "tauri",
+      "maxTokens": 50000,
+      "apiKeyUrl": "https://v0.dev/chat/settings/keys",
+      "apiKeyPlaceholder": "v0_xxxxxxxxxxxxxxxxxxxx",
+      "models": [
+       {
+        "id": "v0-auto",
+        "name": "v0 Auto",
+        "maxTokens": 50000
+       },
+       {
+        "id": "v0-mini",
+        "name": "v0 Mini",
+        "maxTokens": 50000
+       },
+       {
+        "id": "v0-pro",
+        "name": "v0 Pro",
+        "maxTokens": 50000
+       },
+       {
+        "id": "v0-max",
+        "name": "v0 Max",
+        "maxTokens": 50000
+       },
+       {
+        "id": "v0-max-fast",
+        "name": "v0 Max Fast",
+        "maxTokens": 50000
+       }
+      ]
+     }
+    ],
+    "main": "main.js",
+    "permissions": {
+     "network": [
+      "https://*"
+     ],
+     "settings": [
+      "v0DesignSystems",
+      "activeV0DesignSystemId"
+     ]
+    },
+    "icon": "icon.svg",
+    "license": "MIT",
+    "repository": {
+     "type": "git",
+     "url": "https://github.com/athasdev/athas"
+    },
+    "installation": {
+     "downloadUrl": "https://athas.dev/extensions/packages/ai/v0/athas.ai.v0.tar.gz",
+     "size": 18967,
+     "checksum": "64abb2ea8144748a95a6d66b72dba8079d1e5951bd051f104f5628d051406866"
+    }
+   },
+   "icon": "extensions/icons/athas.ai.v0.svg",
+   "monochromeIcon": true
+  },
+  {
+   "path": "astro",
+   "manifest": {
+    "$schema": "https://athas.dev/schemas/extension.json",
+    "id": "athas.astro",
+    "name": "Astro",
+    "displayName": "Astro",
+    "version": "1.0.0",
+    "description": "Astro language support with LSP and formatting",
+    "publisher": "Athas",
+    "categories": [
+     "Language"
+    ],
+    "languages": [
+     {
+      "id": "astro",
+      "extensions": [
+       ".astro"
+      ],
+      "aliases": [
+       "Astro"
+      ]
+     }
+    ],
+    "capabilities": {
+     "lsp": {
+      "name": "astro-ls",
+      "runtime": "bun",
+      "package": "@astrojs/language-server",
+      "args": [
+       "--stdio"
+      ]
+     },
+     "formatter": {
+      "name": "prettier",
+      "runtime": "bun",
+      "package": "prettier",
+      "packages": [
+       "prettier-plugin-astro"
+      ],
+      "args": [
+       "--plugin",
+       "prettier-plugin-astro",
+       "--stdin-filepath",
+       "${file}"
+      ]
+     }
+    }
+   },
+   "icon": "extensions/icons/athas.astro.svg",
+   "monochromeIcon": false
+  },
+  {
+   "path": "bash",
+   "manifest": {
+    "$schema": "https://athas.dev/schemas/extension.json",
+    "id": "athas.bash",
+    "name": "Bash",
+    "displayName": "Bash",
+    "version": "1.0.0",
+    "description": "Bash/Shell script support with LSP",
+    "publisher": "Athas",
+    "categories": [
+     "Language"
+    ],
+    "languages": [
+     {
+      "id": "bash",
+      "extensions": [
+       ".sh",
+       ".bash",
+       ".zsh"
+      ],
+      "aliases": [
+       "Bash",
+       "Shell",
+       "sh"
+      ],
+      "filenames": [
+       ".bashrc",
+       ".zshrc",
+       ".bash_profile",
+       ".profile"
+      ]
+     }
+    ],
+    "capabilities": {
+     "lsp": {
+      "name": "bash-language-server",
+      "runtime": "bun",
+      "package": "bash-language-server",
+      "args": [
+       "start"
+      ]
+     }
+    }
+   },
+   "icon": "extensions/icons/athas.bash.svg",
+   "monochromeIcon": false
+  },
+  {
+   "path": "c",
+   "manifest": {
+    "$schema": "https://athas.dev/schemas/extension.json",
+    "id": "athas.c",
+    "name": "C",
+    "displayName": "C",
+    "version": "1.0.0",
+    "description": "C language support with LSP",
+    "publisher": "Athas",
+    "categories": [
+     "Language"
+    ],
+    "languages": [
+     {
+      "id": "c",
+      "extensions": [
+       ".c",
+       ".h"
+      ],
+      "aliases": [
+       "C"
+      ]
+     }
+    ],
+    "capabilities": {
+     "lsp": {
+      "name": "clangd",
+      "runtime": "binary",
+      "args": [
+       "--background-index"
+      ]
+     }
+    }
+   },
+   "icon": "extensions/icons/athas.c.svg",
+   "monochromeIcon": false
+  },
+  {
+   "path": "c-sharp",
+   "manifest": {
+    "$schema": "https://athas.dev/schemas/extension.json",
+    "id": "athas.csharp",
+    "name": "CSharp",
+    "displayName": "C#",
+    "version": "1.0.0",
+    "description": "C# language support with LSP",
+    "publisher": "Athas",
+    "categories": [
+     "Language"
+    ],
+    "languages": [
+     {
+      "id": "csharp",
+      "extensions": [
+       ".cs"
+      ],
+      "aliases": [
+       "C#",
+       "CSharp",
+       "csharp"
+      ]
+     }
+    ],
+    "capabilities": {
+     "lsp": {
+      "name": "omnisharp",
+      "runtime": "binary",
+      "args": [
+       "--languageserver"
+      ]
+     }
+    }
+   },
+   "icon": "extensions/icons/athas.csharp.svg",
+   "monochromeIcon": false
+  },
+  {
+   "path": "cpp",
+   "manifest": {
+    "$schema": "https://athas.dev/schemas/extension.json",
+    "id": "athas.cpp",
+    "name": "C++",
+    "displayName": "C++",
+    "version": "1.0.0",
+    "description": "C++ language support with LSP",
+    "publisher": "Athas",
+    "categories": [
+     "Language"
+    ],
+    "languages": [
+     {
+      "id": "cpp",
+      "extensions": [
+       ".cpp",
+       ".cc",
+       ".cxx",
+       ".hpp",
+       ".hh",
+       ".hxx"
+      ],
+      "aliases": [
+       "C++",
+       "cpp"
+      ]
+     }
+    ],
+    "capabilities": {
+     "lsp": {
+      "name": "clangd",
+      "runtime": "binary",
+      "args": [
+       "--background-index"
+      ]
+     }
+    }
+   },
+   "icon": "extensions/icons/athas.cpp.svg",
+   "monochromeIcon": false
+  },
+  {
+   "path": "css",
+   "manifest": {
+    "$schema": "https://athas.dev/schemas/extension.json",
+    "id": "athas.css",
+    "name": "CSS",
+    "displayName": "CSS",
+    "version": "1.0.0",
+    "description": "CSS, SCSS, SASS, and Less language support with LSP and formatting",
+    "publisher": "Athas",
+    "categories": [
+     "Language"
+    ],
+    "languages": [
+     {
+      "id": "css",
+      "extensions": [
+       ".css"
+      ],
+      "aliases": [
+       "CSS"
+      ]
+     },
+     {
+      "id": "scss",
+      "extensions": [
+       ".scss"
+      ],
+      "aliases": [
+       "SCSS"
+      ]
+     },
+     {
+      "id": "sass",
+      "extensions": [
+       ".sass"
+      ],
+      "aliases": [
+       "Sass"
+      ]
+     },
+     {
+      "id": "less",
+      "extensions": [
+       ".less"
+      ],
+      "aliases": [
+       "Less"
+      ]
+     }
+    ],
+    "capabilities": {
+     "lsp": {
+      "name": "vscode-css-language-server",
+      "runtime": "bun",
+      "package": "vscode-langservers-extracted",
+      "args": [
+       "--stdio"
+      ]
+     },
+     "formatter": {
+      "name": "prettier",
+      "runtime": "bun",
+      "package": "prettier",
+      "args": [
+       "--stdin-filepath",
+       "${file}"
+      ]
+     }
+    }
+   },
+   "icon": "extensions/icons/athas.css.svg",
+   "monochromeIcon": false
+  },
+  {
+   "path": "dart",
+   "manifest": {
+    "$schema": "https://athas.dev/schemas/extension.json",
+    "id": "athas.dart",
+    "name": "Dart",
+    "displayName": "Dart",
+    "version": "1.0.0",
+    "description": "Dart language support with LSP",
+    "publisher": "Athas",
+    "categories": [
+     "Language"
+    ],
+    "languages": [
+     {
+      "id": "dart",
+      "extensions": [
+       ".dart"
+      ],
+      "aliases": [
+       "Dart"
+      ]
+     }
+    ],
+    "capabilities": {
+     "lsp": {
+      "name": "dart",
+      "runtime": "binary",
+      "args": [
+       "language-server",
+       "--protocol=lsp"
+      ]
+     }
+    }
+   },
+   "icon": "extensions/icons/athas.dart.svg",
+   "monochromeIcon": false
+  },
+  {
+   "path": "database/duckdb",
+   "manifest": {
+    "$schema": "https://athas.dev/schemas/extension.json",
+    "id": "athas.database.duckdb",
+    "name": "DuckDB",
+    "displayName": "DuckDB Provider",
+    "version": "1.0.0",
+    "description": "DuckDB database browser and query provider.",
+    "publisher": "Athas",
+    "categories": [
+     "Database"
+    ],
+    "activationEvents": [
+     "onDatabase:duckdb"
+    ],
+    "license": "MIT",
+    "repository": {
+     "type": "git",
+     "url": "https://github.com/athasdev/athas/tree/master/extensions/official/duckdb"
+    },
+    "icon": "icon.svg",
+    "databases": [
+     {
+      "id": "duckdb",
+      "label": "DuckDB",
+      "isFileBased": true,
+      "protocolVersion": 1,
+      "fileExtensions": [
+       ".duckdb",
+       ".duck"
+      ],
+      "sidecar": {
+       "darwin-arm64": "bin/athas-db-duckdb",
+       "darwin-x64": "bin/athas-db-duckdb",
+       "linux-arm64": "bin/athas-db-duckdb",
+       "linux-x64": "bin/athas-db-duckdb",
+       "win32-x64": "bin/athas-db-duckdb.exe"
+      }
+     }
+    ],
+    "installation": {
+     "downloadUrl": "https://athas.dev/extensions/database/duckdb/darwin-arm64.tar.gz",
+     "size": 12337474,
+     "checksum": "68e4ed8f7a23cb5b723d5657dbdb0e2935d4a15b089bdb48c59844304db4071f",
+     "platformArch": {
+      "darwin-arm64": {
+       "downloadUrl": "https://athas.dev/extensions/database/duckdb/darwin-arm64.tar.gz",
+       "size": 12337474,
+       "checksum": "68e4ed8f7a23cb5b723d5657dbdb0e2935d4a15b089bdb48c59844304db4071f"
+      }
+     }
+    }
+   },
+   "icon": "extensions/icons/athas.database.duckdb.svg",
+   "monochromeIcon": false
+  },
+  {
+   "path": "database/mongodb",
+   "manifest": {
+    "$schema": "https://athas.dev/schemas/extension.json",
+    "id": "athas.database.mongodb",
+    "name": "MongoDB",
+    "displayName": "MongoDB Provider",
+    "version": "1.0.0",
+    "description": "MongoDB connection, collection, and document provider.",
+    "publisher": "Athas",
+    "categories": [
+     "Database"
+    ],
+    "activationEvents": [
+     "onDatabase:mongodb"
+    ],
+    "license": "MIT",
+    "repository": {
+     "type": "git",
+     "url": "https://github.com/athasdev/athas/tree/master/extensions/official/mongodb"
+    },
+    "icon": "icon.svg",
+    "databases": [
+     {
+      "id": "mongodb",
+      "label": "MongoDB",
+      "isFileBased": false,
+      "protocolVersion": 1,
+      "defaultPort": 27017,
+      "sidecar": {
+       "darwin-arm64": "bin/athas-db-mongodb",
+       "darwin-x64": "bin/athas-db-mongodb",
+       "linux-arm64": "bin/athas-db-mongodb",
+       "linux-x64": "bin/athas-db-mongodb",
+       "win32-x64": "bin/athas-db-mongodb.exe"
+      }
+     }
+    ],
+    "installation": {
+     "downloadUrl": "https://athas.dev/extensions/database/mongodb/darwin-arm64.tar.gz",
+     "size": 3501533,
+     "checksum": "be8850f287cc83fd4da733e551019e5ffbd1b646d23d16198383451f3a888432",
+     "platformArch": {
+      "darwin-arm64": {
+       "downloadUrl": "https://athas.dev/extensions/database/mongodb/darwin-arm64.tar.gz",
+       "size": 3501533,
+       "checksum": "be8850f287cc83fd4da733e551019e5ffbd1b646d23d16198383451f3a888432"
+      }
+     }
+    }
+   },
+   "icon": "extensions/icons/athas.database.mongodb.svg",
+   "monochromeIcon": false
+  },
+  {
+   "path": "database/mysql",
+   "manifest": {
+    "$schema": "https://athas.dev/schemas/extension.json",
+    "id": "athas.database.mysql",
+    "name": "MySQL",
+    "displayName": "MySQL Provider",
+    "version": "1.0.0",
+    "description": "MySQL connection, schema, and query provider.",
+    "publisher": "Athas",
+    "categories": [
+     "Database"
+    ],
+    "activationEvents": [
+     "onDatabase:mysql"
+    ],
+    "license": "MIT",
+    "repository": {
+     "type": "git",
+     "url": "https://github.com/athasdev/athas/tree/master/extensions/official/mysql"
+    },
+    "icon": "icon.svg",
+    "databases": [
+     {
+      "id": "mysql",
+      "label": "MySQL",
+      "isFileBased": false,
+      "protocolVersion": 1,
+      "defaultPort": 3306,
+      "sidecar": {
+       "darwin-arm64": "bin/athas-db-mysql",
+       "darwin-x64": "bin/athas-db-mysql",
+       "linux-arm64": "bin/athas-db-mysql",
+       "linux-x64": "bin/athas-db-mysql",
+       "win32-x64": "bin/athas-db-mysql.exe"
+      }
+     }
+    ],
+    "installation": {
+     "downloadUrl": "https://athas.dev/extensions/database/mysql/darwin-arm64.tar.gz",
+     "size": 1602099,
+     "checksum": "c0d78f778da855216e2ea6c20f4fcb4fb33093a77b456017f072f69cf93998f4",
+     "platformArch": {
+      "darwin-arm64": {
+       "downloadUrl": "https://athas.dev/extensions/database/mysql/darwin-arm64.tar.gz",
+       "size": 1602099,
+       "checksum": "c0d78f778da855216e2ea6c20f4fcb4fb33093a77b456017f072f69cf93998f4"
+      }
+     }
+    }
+   },
+   "icon": "extensions/icons/athas.database.mysql.svg",
+   "monochromeIcon": false
+  },
+  {
+   "path": "database/postgres",
+   "manifest": {
+    "$schema": "https://athas.dev/schemas/extension.json",
+    "id": "athas.database.postgres",
+    "name": "PostgreSQL",
+    "displayName": "PostgreSQL Provider",
+    "version": "1.0.0",
+    "description": "PostgreSQL connection, schema, and query provider.",
+    "publisher": "Athas",
+    "categories": [
+     "Database"
+    ],
+    "activationEvents": [
+     "onDatabase:postgres"
+    ],
+    "license": "MIT",
+    "repository": {
+     "type": "git",
+     "url": "https://github.com/athasdev/athas/tree/master/extensions/official/postgres"
+    },
+    "icon": "icon.svg",
+    "databases": [
+     {
+      "id": "postgres",
+      "label": "PostgreSQL",
+      "isFileBased": false,
+      "protocolVersion": 1,
+      "defaultPort": 5432,
+      "sidecar": {
+       "darwin-arm64": "bin/athas-db-postgres",
+       "darwin-x64": "bin/athas-db-postgres",
+       "linux-arm64": "bin/athas-db-postgres",
+       "linux-x64": "bin/athas-db-postgres",
+       "win32-x64": "bin/athas-db-postgres.exe"
+      }
+     }
+    ],
+    "installation": {
+     "downloadUrl": "https://athas.dev/extensions/database/postgres/darwin-arm64.tar.gz",
+     "size": 1759311,
+     "checksum": "5644ddceae24700886dfdec77ad69e81d3149617922df373781f1bf0b5f3145c",
+     "platformArch": {
+      "darwin-arm64": {
+       "downloadUrl": "https://athas.dev/extensions/database/postgres/darwin-arm64.tar.gz",
+       "size": 1759311,
+       "checksum": "5644ddceae24700886dfdec77ad69e81d3149617922df373781f1bf0b5f3145c"
+      }
+     }
+    }
+   },
+   "icon": "extensions/icons/athas.database.postgres.svg",
+   "monochromeIcon": false
+  },
+  {
+   "path": "database/redis",
+   "manifest": {
+    "$schema": "https://athas.dev/schemas/extension.json",
+    "id": "athas.database.redis",
+    "name": "Redis",
+    "displayName": "Redis Provider",
+    "version": "1.0.0",
+    "description": "Redis connection, key scanning, and value editing provider.",
+    "publisher": "Athas",
+    "categories": [
+     "Database"
+    ],
+    "activationEvents": [
+     "onDatabase:redis"
+    ],
+    "license": "MIT",
+    "repository": {
+     "type": "git",
+     "url": "https://github.com/athasdev/athas/tree/master/extensions/official/redis"
+    },
+    "icon": "icon.svg",
+    "databases": [
+     {
+      "id": "redis",
+      "label": "Redis",
+      "isFileBased": false,
+      "protocolVersion": 1,
+      "defaultPort": 6379,
+      "sidecar": {
+       "darwin-arm64": "bin/athas-db-redis",
+       "darwin-x64": "bin/athas-db-redis",
+       "linux-arm64": "bin/athas-db-redis",
+       "linux-x64": "bin/athas-db-redis",
+       "win32-x64": "bin/athas-db-redis.exe"
+      }
+     }
+    ],
+    "installation": {
+     "downloadUrl": "https://athas.dev/extensions/database/redis/darwin-arm64.tar.gz",
+     "size": 746802,
+     "checksum": "5e1e770dd25b49651453e4e022cab8e403849b9b68e793df3a7ddb66a98415f5",
+     "platformArch": {
+      "darwin-arm64": {
+       "downloadUrl": "https://athas.dev/extensions/database/redis/darwin-arm64.tar.gz",
+       "size": 746802,
+       "checksum": "5e1e770dd25b49651453e4e022cab8e403849b9b68e793df3a7ddb66a98415f5"
+      }
+     }
+    }
+   },
+   "icon": "extensions/icons/athas.database.redis.svg",
+   "monochromeIcon": false
+  },
+  {
+   "path": "database/sqlite",
+   "manifest": {
+    "$schema": "https://athas.dev/schemas/extension.json",
+    "id": "athas.database.sqlite",
+    "name": "SQLite",
+    "displayName": "SQLite Provider",
+    "version": "1.0.0",
+    "description": "SQLite database browser and query provider.",
+    "publisher": "Athas",
+    "categories": [
+     "Database"
+    ],
+    "activationEvents": [
+     "onDatabase:sqlite"
+    ],
+    "license": "MIT",
+    "repository": {
+     "type": "git",
+     "url": "https://github.com/athasdev/athas/tree/master/extensions/official/sqlite"
+    },
+    "icon": "icon.svg",
+    "databases": [
+     {
+      "id": "sqlite",
+      "label": "SQLite",
+      "isFileBased": true,
+      "protocolVersion": 1,
+      "fileExtensions": [
+       ".sqlite",
+       ".db",
+       ".sqlite3"
+      ],
+      "sidecar": {
+       "darwin-arm64": "bin/athas-db-sqlite",
+       "darwin-x64": "bin/athas-db-sqlite",
+       "linux-arm64": "bin/athas-db-sqlite",
+       "linux-x64": "bin/athas-db-sqlite",
+       "win32-x64": "bin/athas-db-sqlite.exe"
+      }
+     }
+    ],
+    "installation": {
+     "downloadUrl": "https://athas.dev/extensions/database/sqlite/darwin-arm64.tar.gz",
+     "size": 1238311,
+     "checksum": "16b0b2618818afc091471e97ee9ba7dc25eee69f2e663155f2127fb54e4177b0",
+     "platformArch": {
+      "darwin-arm64": {
+       "downloadUrl": "https://athas.dev/extensions/database/sqlite/darwin-arm64.tar.gz",
+       "size": 1238311,
+       "checksum": "16b0b2618818afc091471e97ee9ba7dc25eee69f2e663155f2127fb54e4177b0"
+      }
+     }
+    }
+   },
+   "icon": "extensions/icons/athas.database.sqlite.svg",
+   "monochromeIcon": false
+  },
+  {
+   "path": "dockerfile",
+   "manifest": {
+    "$schema": "https://athas.dev/schemas/extension.json",
+    "id": "athas.dockerfile",
+    "name": "Dockerfile",
+    "displayName": "Dockerfile",
+    "version": "1.0.0",
+    "description": "Dockerfile language support with LSP",
+    "publisher": "Athas",
+    "categories": [
+     "Language"
+    ],
+    "languages": [
+     {
+      "id": "dockerfile",
+      "extensions": [
+       ".dockerfile"
+      ],
+      "aliases": [
+       "Dockerfile",
+       "docker"
+      ],
+      "filenames": [
+       "Dockerfile",
+       "Containerfile"
+      ]
+     }
+    ],
+    "capabilities": {
+     "lsp": {
+      "name": "docker-langserver",
+      "runtime": "bun",
+      "package": "dockerfile-language-server-nodejs",
+      "args": [
+       "--stdio"
+      ]
+     }
+    }
+   },
+   "icon": "extensions/icons/athas.dockerfile.svg",
+   "monochromeIcon": false
+  },
+  {
+   "path": "elisp",
+   "manifest": {
+    "$schema": "https://athas.dev/schemas/extension.json",
+    "id": "athas.elisp",
+    "name": "EmacsLisp",
+    "displayName": "Emacs Lisp",
+    "version": "1.0.0",
+    "description": "Emacs Lisp language support",
+    "publisher": "Athas",
+    "categories": [
+     "Language"
+    ],
+    "languages": [
+     {
+      "id": "elisp",
+      "extensions": [
+       ".el",
+       ".emacs"
+      ],
+      "aliases": [
+       "Emacs Lisp",
+       "elisp"
+      ]
+     }
+    ]
+   },
+   "icon": "extensions/icons/athas.elisp.svg",
+   "monochromeIcon": false
+  },
+  {
+   "path": "elixir",
+   "manifest": {
+    "$schema": "https://athas.dev/schemas/extension.json",
+    "id": "athas.elixir",
+    "name": "Elixir",
+    "displayName": "Elixir",
+    "version": "1.0.0",
+    "description": "Elixir language support with LSP",
+    "publisher": "Athas",
+    "categories": [
+     "Language"
+    ],
+    "languages": [
+     {
+      "id": "elixir",
+      "extensions": [
+       ".ex",
+       ".exs"
+      ],
+      "aliases": [
+       "Elixir"
+      ]
+     }
+    ],
+    "capabilities": {
+     "lsp": {
+      "name": "elixir-ls",
+      "runtime": "binary",
+      "args": []
+     }
+    }
+   },
+   "icon": "extensions/icons/athas.elixir.svg",
+   "monochromeIcon": false
+  },
+  {
+   "path": "elm",
+   "manifest": {
+    "$schema": "https://athas.dev/schemas/extension.json",
+    "id": "athas.elm",
+    "name": "Elm",
+    "displayName": "Elm",
+    "version": "1.0.0",
+    "description": "Elm language support with LSP",
+    "publisher": "Athas",
+    "categories": [
+     "Language"
+    ],
+    "languages": [
+     {
+      "id": "elm",
+      "extensions": [
+       ".elm"
+      ],
+      "aliases": [
+       "Elm"
+      ]
+     }
+    ],
+    "capabilities": {
+     "lsp": {
+      "name": "elm-language-server",
+      "runtime": "binary",
+      "args": [
+       "--stdio"
+      ]
+     }
+    }
+   },
+   "icon": "extensions/icons/athas.elm.svg",
+   "monochromeIcon": false
+  },
+  {
+   "path": "go",
+   "manifest": {
+    "$schema": "https://athas.dev/schemas/extension.json",
+    "id": "athas.go",
+    "name": "Go",
+    "displayName": "Go",
+    "version": "1.0.0",
+    "description": "Go language support with LSP and tooling",
+    "publisher": "Athas",
+    "categories": [
+     "Language"
+    ],
+    "languages": [
+     {
+      "id": "go",
+      "extensions": [
+       ".go"
+      ],
+      "aliases": [
+       "Go",
+       "golang"
+      ],
+      "filenames": [
+       "go.mod",
+       "go.sum",
+       "go.work"
+      ]
+     }
+    ],
+    "capabilities": {
+     "lsp": {
+      "name": "gopls",
+      "runtime": "go",
+      "package": "golang.org/x/tools/gopls",
+      "args": [
+       "serve"
+      ]
+     },
+     "linter": {
+      "name": "golangci-lint",
+      "runtime": "go",
+      "package": "github.com/golangci/golangci-lint/cmd/golangci-lint",
+      "args": [
+       "run",
+       "--out-format",
+       "json"
+      ]
+     },
+     "formatter": {
+      "name": "gofumpt",
+      "runtime": "go",
+      "package": "mvdan.cc/gofumpt",
+      "args": []
+     }
+    }
+   },
+   "icon": "extensions/icons/athas.go.svg",
+   "monochromeIcon": false
+  },
+  {
+   "path": "graphql",
+   "manifest": {
+    "$schema": "https://athas.dev/schemas/extension.json",
+    "id": "athas.graphql",
+    "name": "GraphQL",
+    "displayName": "GraphQL",
+    "version": "1.0.0",
+    "description": "GraphQL language support with LSP and formatting",
+    "publisher": "Athas",
+    "categories": [
+     "Language"
+    ],
+    "languages": [
+     {
+      "id": "graphql",
+      "extensions": [
+       ".graphql",
+       ".gql"
+      ],
+      "aliases": [
+       "GraphQL",
+       "gql"
+      ]
+     }
+    ],
+    "capabilities": {
+     "lsp": {
+      "name": "graphql-lsp",
+      "runtime": "bun",
+      "package": "graphql-language-service-cli",
+      "args": [
+       "server",
+       "-m",
+       "stream"
+      ]
+     },
+     "formatter": {
+      "name": "prettier",
+      "runtime": "bun",
+      "package": "prettier",
+      "args": [
+       "--parser",
+       "graphql",
+       "--stdin-filepath",
+       "${file}"
+      ]
+     }
+    }
+   },
+   "icon": "extensions/icons/athas.graphql.svg",
+   "monochromeIcon": false
+  },
+  {
+   "path": "html",
+   "manifest": {
+    "$schema": "https://athas.dev/schemas/extension.json",
+    "id": "athas.html",
+    "name": "HTML",
+    "displayName": "HTML",
+    "version": "1.0.0",
+    "description": "HTML language support with LSP and formatting",
+    "publisher": "Athas",
+    "categories": [
+     "Language"
+    ],
+    "languages": [
+     {
+      "id": "html",
+      "extensions": [
+       ".html",
+       ".htm",
+       ".xhtml"
+      ],
+      "aliases": [
+       "HTML"
+      ]
+     }
+    ],
+    "capabilities": {
+     "lsp": {
+      "name": "vscode-html-language-server",
+      "runtime": "bun",
+      "package": "vscode-langservers-extracted",
+      "args": [
+       "--stdio"
+      ]
+     },
+     "formatter": {
+      "name": "prettier",
+      "runtime": "bun",
+      "package": "prettier",
+      "args": [
+       "--stdin-filepath",
+       "${file}"
+      ]
+     }
+    }
+   },
+   "icon": "extensions/icons/athas.html.svg",
+   "monochromeIcon": false
+  },
+  {
+   "path": "icon-theme/material",
+   "manifest": {
+    "$schema": "https://athas.dev/schemas/extension.json",
+    "id": "athas.icon-theme.material",
+    "name": "material-icons",
+    "displayName": "Material Icons",
+    "version": "2.4.0",
+    "description": "Material Design file icons for Athas.",
+    "publisher": "Athas",
+    "categories": [
+     "Icon Theme"
+    ],
+    "activationEvents": [
+     "onIconTheme:material"
+    ],
+    "license": "MIT",
+    "repository": {
+     "type": "git",
+     "url": "https://github.com/PKief/vscode-material-icon-theme"
+    },
+    "icons": [
+     {
+      "id": "material",
+      "name": "Material Icons",
+      "description": "Material Design file icons.",
+      "preview": {
+       "fileName": "index.ts",
+       "kind": "file"
+      },
+      "defaultFile": "file",
+      "defaultFolder": "folder",
+      "defaultFolderOpen": "folderOpen"
+     }
+    ],
+    "installation": {
+     "downloadUrl": "https://athas.dev/extensions/packages/icon-theme/material/athas.icon-theme.material.tar.gz",
+     "size": 531519,
+     "checksum": "d708c01ec254d9e7d7613d682f958ac4ec59eb7f64212aae6bc19ac0e57daae7"
+    }
+   },
+   "icon": "extensions/icons/athas.icon-theme.material.svg",
+   "monochromeIcon": false
+  },
+  {
+   "path": "icon-theme/symbols",
+   "manifest": {
+    "$schema": "https://athas.dev/schemas/extension.json",
+    "id": "athas.icon-theme.symbols",
+    "name": "symbols-icons",
+    "displayName": "Symbols Icons",
+    "version": "0.0.25",
+    "description": "A simple, modern file icon theme for Athas.",
+    "publisher": "Miguel Solorio",
+    "categories": [
+     "Icon Theme"
+    ],
+    "activationEvents": [
+     "onIconTheme:symbols"
+    ],
+    "license": "MIT",
+    "repository": {
+     "type": "git",
+     "url": "https://github.com/miguelsolorio/vscode-symbols"
+    },
+    "icons": [
+     {
+      "id": "symbols",
+      "name": "Symbols Icons",
+      "description": "Modern file and folder icons from the Symbols icon theme.",
+      "preview": {
+       "fileName": "index.ts",
+       "kind": "file"
+      },
+      "defaultFile": "document",
+      "defaultFolder": "folder",
+      "defaultFolderOpen": "folder-open"
+     }
+    ],
+    "installation": {
+     "downloadUrl": "https://athas.dev/extensions/packages/icon-theme/symbols/athas.icon-theme.symbols.tar.gz",
+     "size": 4759935,
+     "checksum": "2c4c3431090536fde236edc746f8dd221b7b7ffde05b13304ff410e6e2425740"
+    }
+   },
+   "icon": "extensions/icons/athas.icon-theme.symbols.svg",
+   "monochromeIcon": false
+  },
+  {
+   "path": "integration/gitlab",
+   "manifest": {
+    "$schema": "https://athas.dev/schemas/extension.json",
+    "id": "athas.gitlab",
+    "name": "gitlab",
+    "displayName": "GitLab",
+    "description": "Review merge requests, issues, and pipelines for the current GitLab repository.",
+    "version": "1.0.0",
+    "publisher": "Athas",
+    "categories": [
+     "Integration"
+    ],
+    "integrations": [
+     {
+      "id": "gitlab",
+      "name": "GitLab",
+      "description": "GitLab projects, merge requests, issues, and pipelines",
+      "kind": "code-host",
+      "icon": "gitlab"
+     }
+    ],
+    "main": "main.js",
+    "permissions": {
+     "network": [
+      "https://*",
+      "http://localhost:*",
+      "http://127.0.0.1:*"
+     ],
+     "secrets": true,
+     "workspace": "read",
+     "openExternal": true
+    },
+    "icon": "icon.svg",
+    "license": "MIT",
+    "repository": {
+     "type": "git",
+     "url": "https://github.com/athasdev/athas"
+    },
+    "installation": {
+     "downloadUrl": "https://athas.dev/extensions/packages/integration/gitlab/athas.gitlab.tar.gz",
+     "size": 12823,
+     "checksum": "feb3113b3a424834d6951abd3ec49a5b147bce25f029d8df70d4cedbdf725daf"
+    }
+   },
+   "icon": "extensions/icons/athas.gitlab.svg",
+   "monochromeIcon": false
+  },
+  {
+   "path": "integration/sentry",
+   "manifest": {
+    "$schema": "https://athas.dev/schemas/extension.json",
+    "id": "athas.sentry",
+    "name": "sentry",
+    "displayName": "Sentry",
+    "description": "Inspect unresolved Sentry issues for a project without leaving Athas.",
+    "version": "1.0.0",
+    "publisher": "Athas",
+    "categories": [
+     "Integration"
+    ],
+    "integrations": [
+     {
+      "id": "sentry",
+      "name": "Sentry",
+      "description": "Sentry errors and issue activity",
+      "kind": "observability",
+      "icon": "sentry"
+     }
+    ],
+    "main": "main.js",
+    "permissions": {
+     "network": [
+      "https://*",
+      "http://localhost:*",
+      "http://127.0.0.1:*"
+     ],
+     "secrets": true,
+     "openExternal": true,
+     "clipboardWrite": true
+    },
+    "icon": "icon.svg",
+    "license": "MIT",
+    "repository": {
+     "type": "git",
+     "url": "https://github.com/athasdev/athas"
+    },
+    "installation": {
+     "downloadUrl": "https://athas.dev/extensions/packages/integration/sentry/athas.sentry.tar.gz",
+     "size": 10775,
+     "checksum": "a072c7e8db9bb33b9316c6a37bd0440f852ef5a052f113398919a9840eea2768"
+    }
+   },
+   "icon": "extensions/icons/athas.sentry.svg",
+   "monochromeIcon": false
+  },
+  {
+   "path": "java",
+   "manifest": {
+    "$schema": "https://athas.dev/schemas/extension.json",
+    "id": "athas.java",
+    "name": "Java",
+    "displayName": "Java",
+    "version": "1.0.0",
+    "description": "Java language support with LSP",
+    "publisher": "Athas",
+    "categories": [
+     "Language"
+    ],
+    "languages": [
+     {
+      "id": "java",
+      "extensions": [
+       ".java"
+      ],
+      "aliases": [
+       "Java"
+      ]
+     }
+    ],
+    "capabilities": {
+     "lsp": {
+      "name": "jdtls",
+      "runtime": "binary",
+      "args": [],
+      "initializationOptions": {
+       "settings": {
+        "java": {
+         "autobuild": {
+          "enabled": true
+         },
+         "completion": {
+          "favoriteStaticMembers": [
+           "org.junit.Assert.*",
+           "org.junit.Assume.*",
+           "org.junit.jupiter.api.Assertions.*",
+           "org.junit.jupiter.api.Assumptions.*",
+           "org.junit.jupiter.api.DynamicContainer.*",
+           "org.junit.jupiter.api.DynamicTest.*",
+           "org.mockito.Mockito.*",
+           "org.mockito.ArgumentMatchers.*",
+           "org.mockito.Answers.*"
+          ],
+          "guessMethodArguments": true,
+          "importOrder": [
+           "#",
+           "java",
+           "javax",
+           "org",
+           "com",
+           ""
+          ]
+         },
+         "configuration": {
+          "updateBuildConfiguration": "automatic"
+         },
+         "eclipse": {
+          "downloadSources": true
+         },
+         "format": {
+          "comments": {
+           "enabled": true
+          },
+          "enabled": true,
+          "onType": {
+           "enabled": true
+          }
+         },
+         "foldingRange": {
+          "enabled": true
+         },
+         "import": {
+          "gradle": {
+           "enabled": true,
+           "wrapper": {
+            "enabled": true
+           }
+          },
+          "maven": {
+           "enabled": true
+          }
+         },
+         "implementationCodeLens": "all",
+         "inlayHints": {
+          "parameterNames": {
+           "enabled": "literals"
+          }
+         },
+         "referencesCodeLens": {
+          "enabled": true
+         },
+         "references": {
+          "includeDecompiledSources": true
+         },
+         "maven": {
+          "downloadSources": true,
+          "updateSnapshots": false
+         },
+         "project": {
+          "referencedLibraries": [
+           "lib/**/*.jar"
+          ],
+          "resourceFilters": [
+           "node_modules",
+           ".git"
+          ]
+         },
+         "selectionRange": {
+          "enabled": true
+         },
+         "signatureHelp": {
+          "enabled": true
+         },
+         "typeHierarchy": {
+          "lazyLoad": false
+         }
+        }
+       }
+      }
+     }
+    }
+   },
+   "icon": "extensions/icons/athas.java.svg",
+   "monochromeIcon": false
+  },
+  {
+   "path": "javascript",
+   "manifest": {
+    "$schema": "https://athas.dev/schemas/extension.json",
+    "id": "athas.javascript",
+    "name": "JavaScript",
+    "displayName": "JavaScript",
+    "version": "1.0.0",
+    "description": "JavaScript language support with LSP and tooling",
+    "publisher": "Athas",
+    "categories": [
+     "Language"
+    ],
+    "languages": [
+     {
+      "id": "javascript",
+      "extensions": [
+       ".js",
+       ".mjs",
+       ".cjs",
+       ".jsx"
+      ],
+      "aliases": [
+       "JavaScript",
+       "js"
+      ]
+     }
+    ],
+    "capabilities": {
+     "lsp": {
+      "name": "typescript-language-server",
+      "runtime": "bun",
+      "package": "typescript-language-server",
+      "packages": [
+       "typescript"
+      ],
+      "args": [
+       "--stdio"
+      ]
+     },
+     "formatter": {
+      "name": "prettier",
+      "runtime": "bun",
+      "package": "prettier",
+      "args": [
+       "--stdin-filepath",
+       "${file}"
+      ]
+     },
+     "linter": {
+      "name": "eslint",
+      "runtime": "bun",
+      "package": "eslint",
+      "args": [
+       "--stdin",
+       "--stdin-filename",
+       "${file}",
+       "--format",
+       "json"
+      ]
+     }
+    }
+   },
+   "icon": "extensions/icons/athas.javascript.svg",
+   "monochromeIcon": false
+  },
+  {
+   "path": "json",
+   "manifest": {
+    "$schema": "https://athas.dev/schemas/extension.json",
+    "id": "athas.json",
+    "name": "JSON",
+    "displayName": "JSON",
+    "version": "1.0.0",
+    "description": "JSON language support with LSP and formatting",
+    "publisher": "Athas",
+    "categories": [
+     "Language"
+    ],
+    "languages": [
+     {
+      "id": "json",
+      "extensions": [
+       ".json",
+       ".jsonc"
+      ],
+      "aliases": [
+       "JSON"
+      ]
+     },
+     {
+      "id": "jupyter-notebook",
+      "extensions": [
+       ".ipynb"
+      ],
+      "aliases": [
+       "Jupyter Notebook",
+       "ipynb"
+      ]
+     }
+    ],
+    "capabilities": {
+     "lsp": {
+      "name": "vscode-json-language-server",
+      "runtime": "bun",
+      "package": "vscode-langservers-extracted",
+      "args": [
+       "--stdio"
+      ]
+     },
+     "formatter": {
+      "name": "prettier",
+      "runtime": "bun",
+      "package": "prettier",
+      "args": [
+       "--stdin-filepath",
+       "${file}"
+      ]
+     }
+    }
+   },
+   "icon": "extensions/icons/athas.json.svg",
+   "monochromeIcon": false
+  },
+  {
+   "path": "kotlin",
+   "manifest": {
+    "$schema": "https://athas.dev/schemas/extension.json",
+    "id": "athas.kotlin",
+    "name": "Kotlin",
+    "displayName": "Kotlin",
+    "version": "1.0.0",
+    "description": "Kotlin language support with LSP",
+    "publisher": "Athas",
+    "categories": [
+     "Language"
+    ],
+    "languages": [
+     {
+      "id": "kotlin",
+      "extensions": [
+       ".kt",
+       ".kts"
+      ],
+      "aliases": [
+       "Kotlin"
+      ]
+     }
+    ],
+    "capabilities": {
+     "lsp": {
+      "name": "kotlin-language-server",
+      "runtime": "binary",
+      "args": []
+     }
+    }
+   },
+   "icon": "extensions/icons/athas.kotlin.svg",
+   "monochromeIcon": false
+  },
+  {
+   "path": "lua",
+   "manifest": {
+    "$schema": "https://athas.dev/schemas/extension.json",
+    "id": "athas.lua",
+    "name": "Lua",
+    "displayName": "Lua",
+    "version": "1.0.0",
+    "description": "Lua language support with LSP",
+    "publisher": "Athas",
+    "categories": [
+     "Language"
+    ],
+    "languages": [
+     {
+      "id": "lua",
+      "extensions": [
+       ".lua"
+      ],
+      "aliases": [
+       "Lua"
+      ]
+     }
+    ],
+    "capabilities": {
+     "lsp": {
+      "name": "lua-language-server",
+      "runtime": "binary",
+      "downloadUrl": "https://athas.dev/extensions/packages/lua/lua-${os}-${arch}.tar.gz"
+     },
+     "formatter": {
+      "name": "stylua",
+      "runtime": "binary",
+      "args": [
+       "-"
+      ]
+     },
+     "linter": {
+      "name": "luacheck",
+      "runtime": "system",
+      "args": [
+       "--formatter",
+       "plain"
+      ]
+     }
+    }
+   },
+   "icon": "extensions/icons/athas.lua.svg",
+   "monochromeIcon": false
+  },
+  {
+   "path": "markdown",
+   "manifest": {
+    "$schema": "https://athas.dev/schemas/extension.json",
+    "id": "athas.markdown",
+    "name": "Markdown",
+    "displayName": "Markdown",
+    "version": "1.0.0",
+    "description": "Markdown language support with LSP and formatting",
+    "publisher": "Athas",
+    "categories": [
+     "Language"
+    ],
+    "languages": [
+     {
+      "id": "markdown",
+      "extensions": [
+       ".md",
+       ".markdown",
+       ".mdx"
+      ],
+      "aliases": [
+       "Markdown",
+       "md"
+      ]
+     },
+     {
+      "id": "rmarkdown",
+      "extensions": [
+       ".Rmd",
+       ".rmd"
+      ],
+      "aliases": [
+       "R Markdown",
+       "Rmd",
+       "rmarkdown"
+      ]
+     }
+    ],
+    "capabilities": {
+     "lsp": {
+      "name": "marksman",
+      "runtime": "binary",
+      "downloadUrl": "https://athas.dev/extensions/markdown/markdown-${os}-${arch}.tar.gz",
+      "args": [
+       "server"
+      ]
+     },
+     "formatter": {
+      "name": "prettier",
+      "runtime": "bun",
+      "package": "prettier",
+      "args": [
+       "--stdin-filepath",
+       "${file}"
+      ]
+     }
+    }
+   },
+   "icon": "extensions/icons/athas.markdown.svg",
+   "monochromeIcon": false
+  },
+  {
+   "path": "mcp/atlassian",
+   "manifest": {
+    "$schema": "https://athas.dev/schemas/extension.json",
+    "id": "athas.mcp.atlassian",
+    "name": "atlassian",
+    "displayName": "Atlassian",
+    "version": "1.0.0",
+    "description": "Jira issues and Confluence pages",
+    "publisher": "Athas",
+    "categories": [
+     "Integration"
+    ],
+    "license": "MIT",
+    "repository": {
+     "type": "git",
+     "url": "https://github.com/athasdev/athas/tree/master/extensions/official/mcp-atlassian"
+    },
+    "icon": "icon.svg",
+    "contributes": {
+     "mcpServers": [
+      {
+       "id": "atlassian",
+       "name": "Atlassian",
+       "description": "Jira issues and Confluence pages",
+       "group": "work",
+       "config": {
+        "transport": "sse",
+        "url": "https://mcp.atlassian.com/v1/sse"
+       }
+      }
+     ]
+    }
+   },
+   "icon": "extensions/icons/athas.mcp.atlassian.svg",
+   "monochromeIcon": true
+  },
+  {
+   "path": "mcp/chrome-devtools",
+   "manifest": {
+    "$schema": "https://athas.dev/schemas/extension.json",
+    "id": "athas.mcp.chrome-devtools",
+    "name": "chrome-devtools",
+    "displayName": "Chrome DevTools",
+    "version": "1.0.0",
+    "description": "Inspect, debug and profile pages in Chrome",
+    "publisher": "Athas",
+    "categories": [
+     "Integration"
+    ],
+    "license": "MIT",
+    "repository": {
+     "type": "git",
+     "url": "https://github.com/athasdev/athas/tree/master/extensions/official/mcp-chrome-devtools"
+    },
+    "icon": "icon.svg",
+    "contributes": {
+     "mcpServers": [
+      {
+       "id": "chrome-devtools",
+       "name": "Chrome DevTools",
+       "description": "Inspect, debug and profile pages in Chrome",
+       "group": "developer",
+       "config": {
+        "transport": "stdio",
+        "command": "npx",
+        "args": [
+         "-y",
+         "chrome-devtools-mcp@latest"
+        ]
+       }
+      }
+     ]
+    }
+   },
+   "icon": "extensions/icons/athas.mcp.chrome-devtools.svg",
+   "monochromeIcon": true
+  },
+  {
+   "path": "mcp/cloudflare-docs",
+   "manifest": {
+    "$schema": "https://athas.dev/schemas/extension.json",
+    "id": "athas.mcp.cloudflare-docs",
+    "name": "cloudflare-docs",
+    "displayName": "Cloudflare Docs",
+    "version": "1.0.0",
+    "description": "Search the Cloudflare developer documentation",
+    "publisher": "Athas",
+    "categories": [
+     "Integration"
+    ],
+    "license": "MIT",
+    "repository": {
+     "type": "git",
+     "url": "https://github.com/athasdev/athas/tree/master/extensions/official/mcp-cloudflare-docs"
+    },
+    "icon": "icon.svg",
+    "contributes": {
+     "mcpServers": [
+      {
+       "id": "cloudflare-docs",
+       "name": "Cloudflare Docs",
+       "description": "Search the Cloudflare developer documentation",
+       "group": "developer",
+       "config": {
+        "transport": "http",
+        "url": "https://docs.mcp.cloudflare.com/mcp"
+       }
+      }
+     ]
+    }
+   },
+   "icon": "extensions/icons/athas.mcp.cloudflare-docs.svg",
+   "monochromeIcon": true
+  },
+  {
+   "path": "mcp/context7",
+   "manifest": {
+    "$schema": "https://athas.dev/schemas/extension.json",
+    "id": "athas.mcp.context7",
+    "name": "context7",
+    "displayName": "Context7",
+    "version": "1.0.0",
+    "description": "Current library documentation and code examples",
+    "publisher": "Athas",
+    "categories": [
+     "Integration"
+    ],
+    "license": "MIT",
+    "repository": {
+     "type": "git",
+     "url": "https://github.com/athasdev/athas/tree/master/extensions/official/mcp-context7"
+    },
+    "icon": "icon.svg",
+    "contributes": {
+     "mcpServers": [
+      {
+       "id": "context7",
+       "name": "Context7",
+       "description": "Current library documentation and code examples",
+       "group": "popular",
+       "config": {
+        "transport": "stdio",
+        "command": "npx",
+        "args": [
+         "-y",
+         "@upstash/context7-mcp"
+        ]
+       }
+      }
+     ]
+    }
+   },
+   "icon": "extensions/icons/athas.mcp.context7.svg",
+   "monochromeIcon": true
+  },
+  {
+   "path": "mcp/fetch",
+   "manifest": {
+    "$schema": "https://athas.dev/schemas/extension.json",
+    "id": "athas.mcp.fetch",
+    "name": "fetch",
+    "displayName": "Fetch",
+    "version": "1.0.0",
+    "description": "Fetch web pages and read them as Markdown",
+    "publisher": "Athas",
+    "categories": [
+     "Integration"
+    ],
+    "license": "MIT",
+    "repository": {
+     "type": "git",
+     "url": "https://github.com/athasdev/athas/tree/master/extensions/official/mcp-fetch"
+    },
+    "icon": "icon.svg",
+    "contributes": {
+     "mcpServers": [
+      {
+       "id": "fetch",
+       "name": "Fetch",
+       "description": "Fetch web pages and read them as Markdown",
+       "group": "data",
+       "config": {
+        "transport": "stdio",
+        "command": "uvx",
+        "args": [
+         "mcp-server-fetch"
+        ]
+       }
+      }
+     ]
+    }
+   },
+   "icon": "extensions/icons/athas.mcp.fetch.svg",
+   "monochromeIcon": true
+  },
+  {
+   "path": "mcp/figma",
+   "manifest": {
+    "$schema": "https://athas.dev/schemas/extension.json",
+    "id": "athas.mcp.figma",
+    "name": "figma",
+    "displayName": "Figma",
+    "version": "1.0.0",
+    "description": "Design context from Figma files, frames and components",
+    "publisher": "Athas",
+    "categories": [
+     "Integration"
+    ],
+    "license": "MIT",
+    "repository": {
+     "type": "git",
+     "url": "https://github.com/athasdev/athas/tree/master/extensions/official/mcp-figma"
+    },
+    "icon": "icon.svg",
+    "contributes": {
+     "mcpServers": [
+      {
+       "id": "figma",
+       "name": "Figma",
+       "description": "Design context from Figma files, frames and components",
+       "group": "popular",
+       "config": {
+        "transport": "http",
+        "url": "https://mcp.figma.com/mcp"
+       }
+      }
+     ]
+    }
+   },
+   "icon": "extensions/icons/athas.mcp.figma.svg",
+   "monochromeIcon": true
+  },
+  {
+   "path": "mcp/filesystem",
+   "manifest": {
+    "$schema": "https://athas.dev/schemas/extension.json",
+    "id": "athas.mcp.filesystem",
+    "name": "filesystem",
+    "displayName": "Filesystem",
+    "version": "1.0.0",
+    "description": "Read and write files in the folders you allow",
+    "publisher": "Athas",
+    "categories": [
+     "Integration"
+    ],
+    "license": "MIT",
+    "repository": {
+     "type": "git",
+     "url": "https://github.com/athasdev/athas/tree/master/extensions/official/mcp-filesystem"
+    },
+    "icon": "icon.svg",
+    "contributes": {
+     "mcpServers": [
+      {
+       "id": "filesystem",
+       "name": "Filesystem",
+       "description": "Read and write files in the folders you allow",
+       "group": "developer",
+       "setupNote": "The last argument is the folder the server may use. Add a line for each folder.",
+       "config": {
+        "transport": "stdio",
+        "command": "npx",
+        "args": [
+         "-y",
+         "@modelcontextprotocol/server-filesystem",
+         "."
+        ]
+       }
+      }
+     ]
+    }
+   },
+   "icon": "extensions/icons/athas.mcp.filesystem.svg",
+   "monochromeIcon": true
+  },
+  {
+   "path": "mcp/git",
+   "manifest": {
+    "$schema": "https://athas.dev/schemas/extension.json",
+    "id": "athas.mcp.git",
+    "name": "git",
+    "displayName": "Git",
+    "version": "1.0.0",
+    "description": "Read, search and change a local Git repository",
+    "publisher": "Athas",
+    "categories": [
+     "Integration"
+    ],
+    "license": "MIT",
+    "repository": {
+     "type": "git",
+     "url": "https://github.com/athasdev/athas/tree/master/extensions/official/mcp-git"
+    },
+    "icon": "icon.svg",
+    "contributes": {
+     "mcpServers": [
+      {
+       "id": "git",
+       "name": "Git",
+       "description": "Read, search and change a local Git repository",
+       "group": "developer",
+       "config": {
+        "transport": "stdio",
+        "command": "uvx",
+        "args": [
+         "mcp-server-git"
+        ]
+       }
+      }
+     ]
+    }
+   },
+   "icon": "extensions/icons/athas.mcp.git.svg",
+   "monochromeIcon": true
+  },
+  {
+   "path": "mcp/github",
+   "manifest": {
+    "$schema": "https://athas.dev/schemas/extension.json",
+    "id": "athas.mcp.github",
+    "name": "github",
+    "displayName": "GitHub",
+    "version": "1.0.0",
+    "description": "Repositories, issues, pull requests and Actions",
+    "publisher": "Athas",
+    "categories": [
+     "Integration"
+    ],
+    "license": "MIT",
+    "repository": {
+     "type": "git",
+     "url": "https://github.com/athasdev/athas/tree/master/extensions/official/mcp-github"
+    },
+    "icon": "icon.svg",
+    "contributes": {
+     "mcpServers": [
+      {
+       "id": "github",
+       "name": "GitHub",
+       "description": "Repositories, issues, pull requests and Actions",
+       "group": "popular",
+       "setupNote": "Set Authorization to Bearer followed by a GitHub personal access token.",
+       "config": {
+        "transport": "http",
+        "url": "https://api.githubcopilot.com/mcp/",
+        "headers": [
+         "Authorization"
+        ]
+       }
+      }
+     ]
+    }
+   },
+   "icon": "extensions/icons/athas.mcp.github.svg",
+   "monochromeIcon": true
+  },
+  {
+   "path": "mcp/hugging-face",
+   "manifest": {
+    "$schema": "https://athas.dev/schemas/extension.json",
+    "id": "athas.mcp.hugging-face",
+    "name": "hugging-face",
+    "displayName": "Hugging Face",
+    "version": "1.0.0",
+    "description": "Models, datasets and Spaces on the Hugging Face Hub",
+    "publisher": "Athas",
+    "categories": [
+     "Integration"
+    ],
+    "license": "MIT",
+    "repository": {
+     "type": "git",
+     "url": "https://github.com/athasdev/athas/tree/master/extensions/official/mcp-hugging-face"
+    },
+    "icon": "icon.svg",
+    "contributes": {
+     "mcpServers": [
+      {
+       "id": "hugging-face",
+       "name": "Hugging Face",
+       "description": "Models, datasets and Spaces on the Hugging Face Hub",
+       "group": "data",
+       "config": {
+        "transport": "http",
+        "url": "https://huggingface.co/mcp"
+       }
+      }
+     ]
+    }
+   },
+   "icon": "extensions/icons/athas.mcp.hugging-face.svg",
+   "monochromeIcon": true
+  },
+  {
+   "path": "mcp/linear",
+   "manifest": {
+    "$schema": "https://athas.dev/schemas/extension.json",
+    "id": "athas.mcp.linear",
+    "name": "linear",
+    "displayName": "Linear",
+    "version": "1.0.0",
+    "description": "Issues, projects and cycles in your Linear workspace",
+    "publisher": "Athas",
+    "categories": [
+     "Integration"
+    ],
+    "license": "MIT",
+    "repository": {
+     "type": "git",
+     "url": "https://github.com/athasdev/athas/tree/master/extensions/official/mcp-linear"
+    },
+    "icon": "icon.svg",
+    "contributes": {
+     "mcpServers": [
+      {
+       "id": "linear",
+       "name": "Linear",
+       "description": "Issues, projects and cycles in your Linear workspace",
+       "group": "popular",
+       "config": {
+        "transport": "http",
+        "url": "https://mcp.linear.app/mcp"
+       }
+      }
+     ]
+    }
+   },
+   "icon": "extensions/icons/athas.mcp.linear.svg",
+   "monochromeIcon": true
+  },
+  {
+   "path": "mcp/memory",
+   "manifest": {
+    "$schema": "https://athas.dev/schemas/extension.json",
+    "id": "athas.mcp.memory",
+    "name": "memory",
+    "displayName": "Memory",
+    "version": "1.0.0",
+    "description": "A local knowledge graph agents keep facts in",
+    "publisher": "Athas",
+    "categories": [
+     "Integration"
+    ],
+    "license": "MIT",
+    "repository": {
+     "type": "git",
+     "url": "https://github.com/athasdev/athas/tree/master/extensions/official/mcp-memory"
+    },
+    "icon": "icon.svg",
+    "contributes": {
+     "mcpServers": [
+      {
+       "id": "memory",
+       "name": "Memory",
+       "description": "A local knowledge graph agents keep facts in",
+       "group": "data",
+       "config": {
+        "transport": "stdio",
+        "command": "npx",
+        "args": [
+         "-y",
+         "@modelcontextprotocol/server-memory"
+        ]
+       }
+      }
+     ]
+    }
+   },
+   "icon": "extensions/icons/athas.mcp.memory.svg",
+   "monochromeIcon": true
+  },
+  {
+   "path": "mcp/notion",
+   "manifest": {
+    "$schema": "https://athas.dev/schemas/extension.json",
+    "id": "athas.mcp.notion",
+    "name": "notion",
+    "displayName": "Notion",
+    "version": "1.0.0",
+    "description": "Pages, databases and comments in Notion",
+    "publisher": "Athas",
+    "categories": [
+     "Integration"
+    ],
+    "license": "MIT",
+    "repository": {
+     "type": "git",
+     "url": "https://github.com/athasdev/athas/tree/master/extensions/official/mcp-notion"
+    },
+    "icon": "icon.svg",
+    "contributes": {
+     "mcpServers": [
+      {
+       "id": "notion",
+       "name": "Notion",
+       "description": "Pages, databases and comments in Notion",
+       "group": "work",
+       "config": {
+        "transport": "http",
+        "url": "https://mcp.notion.com/mcp"
+       }
+      }
+     ]
+    }
+   },
+   "icon": "extensions/icons/athas.mcp.notion.svg",
+   "monochromeIcon": true
+  },
+  {
+   "path": "mcp/playwright",
+   "manifest": {
+    "$schema": "https://athas.dev/schemas/extension.json",
+    "id": "athas.mcp.playwright",
+    "name": "playwright",
+    "displayName": "Playwright",
+    "version": "1.0.0",
+    "description": "Drive a real browser to open, click and read pages",
+    "publisher": "Athas",
+    "categories": [
+     "Integration"
+    ],
+    "license": "MIT",
+    "repository": {
+     "type": "git",
+     "url": "https://github.com/athasdev/athas/tree/master/extensions/official/mcp-playwright"
+    },
+    "icon": "icon.svg",
+    "contributes": {
+     "mcpServers": [
+      {
+       "id": "playwright",
+       "name": "Playwright",
+       "description": "Drive a real browser to open, click and read pages",
+       "group": "popular",
+       "config": {
+        "transport": "stdio",
+        "command": "npx",
+        "args": [
+         "@playwright/mcp@latest"
+        ]
+       }
+      }
+     ]
+    }
+   },
+   "icon": "extensions/icons/athas.mcp.playwright.svg",
+   "monochromeIcon": true
+  },
+  {
+   "path": "mcp/postgres",
+   "manifest": {
+    "$schema": "https://athas.dev/schemas/extension.json",
+    "id": "athas.mcp.postgres",
+    "name": "postgres",
+    "displayName": "Postgres",
+    "version": "1.0.0",
+    "description": "Query and inspect a PostgreSQL database",
+    "publisher": "Athas",
+    "categories": [
+     "Integration"
+    ],
+    "license": "MIT",
+    "repository": {
+     "type": "git",
+     "url": "https://github.com/athasdev/athas/tree/master/extensions/official/mcp-postgres"
+    },
+    "icon": "icon.svg",
+    "contributes": {
+     "mcpServers": [
+      {
+       "id": "postgres",
+       "name": "Postgres",
+       "description": "Query and inspect a PostgreSQL database",
+       "group": "data",
+       "setupNote": "Set DATABASE_URI to the connection string. Restricted mode keeps it read-only.",
+       "config": {
+        "transport": "stdio",
+        "command": "uvx",
+        "args": [
+         "postgres-mcp",
+         "--access-mode=restricted"
+        ],
+        "env": [
+         "DATABASE_URI"
+        ]
+       }
+      }
+     ]
+    }
+   },
+   "icon": "extensions/icons/athas.mcp.postgres.svg",
+   "monochromeIcon": false
+  },
+  {
+   "path": "mcp/sentry",
+   "manifest": {
+    "$schema": "https://athas.dev/schemas/extension.json",
+    "id": "athas.mcp.sentry",
+    "name": "sentry",
+    "displayName": "Sentry",
+    "version": "1.0.0",
+    "description": "Errors, issues and releases from Sentry",
+    "publisher": "Athas",
+    "categories": [
+     "Integration"
+    ],
+    "license": "MIT",
+    "repository": {
+     "type": "git",
+     "url": "https://github.com/athasdev/athas/tree/master/extensions/official/mcp-sentry"
+    },
+    "icon": "icon.svg",
+    "contributes": {
+     "mcpServers": [
+      {
+       "id": "sentry",
+       "name": "Sentry",
+       "description": "Errors, issues and releases from Sentry",
+       "group": "popular",
+       "config": {
+        "transport": "http",
+        "url": "https://mcp.sentry.dev/mcp"
+       }
+      }
+     ]
+    }
+   },
+   "icon": "extensions/icons/athas.mcp.sentry.svg",
+   "monochromeIcon": true
+  },
+  {
+   "path": "mcp/sequential-thinking",
+   "manifest": {
+    "$schema": "https://athas.dev/schemas/extension.json",
+    "id": "athas.mcp.sequential-thinking",
+    "name": "sequential-thinking",
+    "displayName": "Sequential Thinking",
+    "version": "1.0.0",
+    "description": "Work through a problem in revisable steps",
+    "publisher": "Athas",
+    "categories": [
+     "Integration"
+    ],
+    "license": "MIT",
+    "repository": {
+     "type": "git",
+     "url": "https://github.com/athasdev/athas/tree/master/extensions/official/mcp-sequential-thinking"
+    },
+    "icon": "icon.svg",
+    "contributes": {
+     "mcpServers": [
+      {
+       "id": "sequential-thinking",
+       "name": "Sequential Thinking",
+       "description": "Work through a problem in revisable steps",
+       "group": "data",
+       "config": {
+        "transport": "stdio",
+        "command": "npx",
+        "args": [
+         "-y",
+         "@modelcontextprotocol/server-sequential-thinking"
+        ]
+       }
+      }
+     ]
+    }
+   },
+   "icon": "extensions/icons/athas.mcp.sequential-thinking.svg",
+   "monochromeIcon": true
+  },
+  {
+   "path": "mcp/slack",
+   "manifest": {
+    "$schema": "https://athas.dev/schemas/extension.json",
+    "id": "athas.mcp.slack",
+    "name": "slack",
+    "displayName": "Slack",
+    "version": "1.0.0",
+    "description": "Channels, threads and messages in Slack",
+    "publisher": "Athas",
+    "categories": [
+     "Integration"
+    ],
+    "license": "MIT",
+    "repository": {
+     "type": "git",
+     "url": "https://github.com/athasdev/athas/tree/master/extensions/official/mcp-slack"
+    },
+    "icon": "icon.svg",
+    "contributes": {
+     "mcpServers": [
+      {
+       "id": "slack",
+       "name": "Slack",
+       "description": "Channels, threads and messages in Slack",
+       "group": "work",
+       "setupNote": "Set SLACK_MCP_XOXP_TOKEN to a Slack user token.",
+       "config": {
+        "transport": "stdio",
+        "command": "npx",
+        "args": [
+         "-y",
+         "slack-mcp-server@latest",
+         "--transport",
+         "stdio"
+        ],
+        "env": [
+         "SLACK_MCP_XOXP_TOKEN"
+        ]
+       }
+      }
+     ]
+    }
+   },
+   "icon": "extensions/icons/athas.mcp.slack.svg",
+   "monochromeIcon": true
+  },
+  {
+   "path": "mcp/stripe",
+   "manifest": {
+    "$schema": "https://athas.dev/schemas/extension.json",
+    "id": "athas.mcp.stripe",
+    "name": "stripe",
+    "displayName": "Stripe",
+    "version": "1.0.0",
+    "description": "Customers, payments and the Stripe docs",
+    "publisher": "Athas",
+    "categories": [
+     "Integration"
+    ],
+    "license": "MIT",
+    "repository": {
+     "type": "git",
+     "url": "https://github.com/athasdev/athas/tree/master/extensions/official/mcp-stripe"
+    },
+    "icon": "icon.svg",
+    "contributes": {
+     "mcpServers": [
+      {
+       "id": "stripe",
+       "name": "Stripe",
+       "description": "Customers, payments and the Stripe docs",
+       "group": "work",
+       "config": {
+        "transport": "http",
+        "url": "https://mcp.stripe.com"
+       }
+      }
+     ]
+    }
+   },
+   "icon": "extensions/icons/athas.mcp.stripe.svg",
+   "monochromeIcon": true
+  },
+  {
+   "path": "mcp/supabase",
+   "manifest": {
+    "$schema": "https://athas.dev/schemas/extension.json",
+    "id": "athas.mcp.supabase",
+    "name": "supabase",
+    "displayName": "Supabase",
+    "version": "1.0.0",
+    "description": "Databases, auth and edge functions in Supabase",
+    "publisher": "Athas",
+    "categories": [
+     "Integration"
+    ],
+    "license": "MIT",
+    "repository": {
+     "type": "git",
+     "url": "https://github.com/athasdev/athas/tree/master/extensions/official/mcp-supabase"
+    },
+    "icon": "icon.svg",
+    "contributes": {
+     "mcpServers": [
+      {
+       "id": "supabase",
+       "name": "Supabase",
+       "description": "Databases, auth and edge functions in Supabase",
+       "group": "developer",
+       "setupNote": "Set SUPABASE_ACCESS_TOKEN to a Supabase personal access token.",
+       "config": {
+        "transport": "stdio",
+        "command": "npx",
+        "args": [
+         "-y",
+         "@supabase/mcp-server-supabase@latest"
+        ],
+        "env": [
+         "SUPABASE_ACCESS_TOKEN"
+        ]
+       }
+      }
+     ]
+    }
+   },
+   "icon": "extensions/icons/athas.mcp.supabase.svg",
+   "monochromeIcon": true
+  },
+  {
+   "path": "mcp/vercel",
+   "manifest": {
+    "$schema": "https://athas.dev/schemas/extension.json",
+    "id": "athas.mcp.vercel",
+    "name": "vercel",
+    "displayName": "Vercel",
+    "version": "1.0.0",
+    "description": "Projects, deployments and build logs on Vercel",
+    "publisher": "Athas",
+    "categories": [
+     "Integration"
+    ],
+    "license": "MIT",
+    "repository": {
+     "type": "git",
+     "url": "https://github.com/athasdev/athas/tree/master/extensions/official/mcp-vercel"
+    },
+    "icon": "icon.svg",
+    "contributes": {
+     "mcpServers": [
+      {
+       "id": "vercel",
+       "name": "Vercel",
+       "description": "Projects, deployments and build logs on Vercel",
+       "group": "developer",
+       "config": {
+        "transport": "http",
+        "url": "https://mcp.vercel.com"
+       }
+      }
+     ]
+    }
+   },
+   "icon": "extensions/icons/athas.mcp.vercel.svg",
+   "monochromeIcon": true
+  },
+  {
+   "path": "nix",
+   "manifest": {
+    "$schema": "https://athas.dev/schemas/extension.json",
+    "id": "athas.nix",
+    "name": "Nix",
+    "displayName": "Nix",
+    "version": "1.0.0",
+    "description": "Nix language support with syntax highlighting",
+    "publisher": "Athas",
+    "categories": [
+     "Language"
+    ],
+    "languages": [
+     {
+      "id": "nix",
+      "extensions": [
+       ".nix"
+      ],
+      "aliases": [
+       "Nix",
+       "nix"
+      ]
+     }
+    ]
+   },
+   "icon": "extensions/icons/athas.nix.svg",
+   "monochromeIcon": false
+  },
+  {
+   "path": "objc",
+   "manifest": {
+    "$schema": "https://athas.dev/schemas/extension.json",
+    "id": "athas.objc",
+    "name": "ObjectiveC",
+    "displayName": "Objective-C",
+    "version": "1.0.0",
+    "description": "Objective-C language support with LSP",
+    "publisher": "Athas",
+    "categories": [
+     "Language"
+    ],
+    "languages": [
+     {
+      "id": "objc",
+      "extensions": [
+       ".m",
+       ".mm",
+       ".h"
+      ],
+      "aliases": [
+       "Objective-C",
+       "ObjC",
+       "objc"
+      ]
+     }
+    ],
+    "capabilities": {
+     "lsp": {
+      "name": "clangd",
+      "runtime": "binary",
+      "args": [
+       "--background-index"
+      ]
+     }
+    }
+   },
+   "icon": "extensions/icons/athas.objc.svg",
+   "monochromeIcon": false
+  },
+  {
+   "path": "ocaml",
+   "manifest": {
+    "$schema": "https://athas.dev/schemas/extension.json",
+    "id": "athas.ocaml",
+    "name": "OCaml",
+    "displayName": "OCaml",
+    "version": "1.0.0",
+    "description": "OCaml language support with LSP",
+    "publisher": "Athas",
+    "categories": [
+     "Language"
+    ],
+    "languages": [
+     {
+      "id": "ocaml",
+      "extensions": [
+       ".ml",
+       ".mli"
+      ],
+      "aliases": [
+       "OCaml"
+      ]
+     }
+    ],
+    "capabilities": {
+     "lsp": {
+      "name": "ocamllsp",
+      "runtime": "system",
+      "args": []
+     }
+    }
+   },
+   "icon": "extensions/icons/athas.ocaml.svg",
+   "monochromeIcon": false
+  },
+  {
+   "path": "php",
+   "manifest": {
+    "$schema": "https://athas.dev/schemas/extension.json",
+    "id": "athas.php",
+    "name": "PHP",
+    "displayName": "PHP",
+    "version": "1.0.0",
+    "description": "PHP language support with LSP",
+    "publisher": "Athas",
+    "categories": [
+     "Language"
+    ],
+    "languages": [
+     {
+      "id": "php",
+      "extensions": [
+       ".php",
+       ".phtml",
+       ".php3",
+       ".php4",
+       ".php5",
+       ".php7",
+       ".php8",
+       ".phar",
+       ".phps"
+      ],
+      "aliases": [
+       "PHP",
+       "php"
+      ]
+     }
+    ],
+    "capabilities": {
+     "lsp": {
+      "name": "intelephense",
+      "runtime": "bun",
+      "package": "intelephense",
+      "args": [
+       "--stdio"
+      ]
+     }
+    }
+   },
+   "icon": "extensions/icons/athas.php.svg",
+   "monochromeIcon": false
+  },
+  {
+   "path": "protobuf",
+   "manifest": {
+    "$schema": "https://athas.dev/schemas/extension.json",
+    "id": "athas.protobuf",
+    "name": "Protobuf",
+    "displayName": "Protocol Buffers",
+    "version": "1.0.0",
+    "description": "Protocol Buffers language support with syntax highlighting",
+    "publisher": "Athas",
+    "categories": [
+     "Language"
+    ],
+    "languages": [
+     {
+      "id": "protobuf",
+      "extensions": [
+       ".proto"
+      ],
+      "aliases": [
+       "Protocol Buffers",
+       "Protobuf",
+       "proto"
+      ]
+     }
+    ]
+   },
+   "icon": "extensions/icons/athas.protobuf.svg",
+   "monochromeIcon": false
+  },
+  {
+   "path": "python",
+   "manifest": {
+    "$schema": "https://athas.dev/schemas/extension.json",
+    "id": "athas.python",
+    "name": "Python",
+    "displayName": "Python",
+    "version": "1.0.0",
+    "description": "Python language support with LSP and tooling",
+    "publisher": "Athas",
+    "categories": [
+     "Language"
+    ],
+    "languages": [
+     {
+      "id": "python",
+      "extensions": [
+       ".py",
+       ".pyw",
+       ".pyi",
+       ".ipy"
+      ],
+      "aliases": [
+       "Python",
+       "python3",
+       "IPython"
+      ]
+     }
+    ],
+    "capabilities": {
+     "lsp": {
+      "name": "pyright",
+      "runtime": "bun",
+      "package": "pyright",
+      "args": [
+       "--stdio"
+      ]
+     },
+     "formatter": {
+      "name": "black",
+      "runtime": "python",
+      "package": "black",
+      "args": [
+       "--stdin-filename",
+       "${file}",
+       "-"
+      ]
+     },
+     "linter": {
+      "name": "ruff",
+      "runtime": "python",
+      "package": "ruff",
+      "args": [
+       "check",
+       "--stdin-filename",
+       "${file}",
+       "--output-format",
+       "json",
+       "-"
+      ]
+     }
+    }
+   },
+   "icon": "extensions/icons/athas.python.svg",
+   "monochromeIcon": false
+  },
+  {
+   "path": "ql",
+   "manifest": {
+    "$schema": "https://athas.dev/schemas/extension.json",
+    "id": "athas.ql",
+    "name": "QL",
+    "displayName": "QL",
+    "version": "1.0.0",
+    "description": "QL language support",
+    "publisher": "Athas",
+    "categories": [
+     "Language"
+    ],
+    "languages": [
+     {
+      "id": "ql",
+      "extensions": [
+       ".ql",
+       ".qll"
+      ],
+      "aliases": [
+       "QL",
+       "CodeQL"
+      ]
+     }
+    ]
+   },
+   "icon": "extensions/icons/athas.ql.svg",
+   "monochromeIcon": false
+  },
+  {
+   "path": "r",
+   "manifest": {
+    "$schema": "https://athas.dev/schemas/extension.json",
+    "id": "athas.r",
+    "name": "R",
+    "displayName": "R",
+    "version": "1.0.0",
+    "description": "R language support for statistical programming and reproducible analysis",
+    "publisher": "Athas",
+    "categories": [
+     "Language"
+    ],
+    "languages": [
+     {
+      "id": "r",
+      "extensions": [
+       ".R",
+       ".r"
+      ],
+      "aliases": [
+       "R",
+       "Rscript"
+      ],
+      "filenames": [
+       ".Rprofile"
+      ]
+     }
+    ]
+   },
+   "icon": "extensions/icons/athas.r.svg",
+   "monochromeIcon": false
+  },
+  {
+   "path": "rescript",
+   "manifest": {
+    "$schema": "https://athas.dev/schemas/extension.json",
+    "id": "athas.rescript",
+    "name": "ReScript",
+    "displayName": "ReScript",
+    "version": "1.0.0",
+    "description": "ReScript language support with LSP",
+    "publisher": "Athas",
+    "categories": [
+     "Language"
+    ],
+    "languages": [
+     {
+      "id": "rescript",
+      "extensions": [
+       ".res",
+       ".resi"
+      ],
+      "aliases": [
+       "ReScript",
+       "rescript"
+      ]
+     }
+    ],
+    "capabilities": {
+     "lsp": {
+      "name": "rescript-language-server",
+      "runtime": "binary",
+      "args": [
+       "--stdio"
+      ]
+     }
+    }
+   },
+   "icon": "extensions/icons/athas.rescript.svg",
+   "monochromeIcon": false
+  },
+  {
+   "path": "ruby",
+   "manifest": {
+    "$schema": "https://athas.dev/schemas/extension.json",
+    "id": "athas.ruby",
+    "name": "Ruby",
+    "displayName": "Ruby",
+    "version": "1.0.0",
+    "description": "Ruby language support (Ruby, ERB and common Rails templates)",
+    "publisher": "Athas",
+    "categories": [
+     "Language"
+    ],
+    "languages": [
+     {
+      "id": "ruby",
+      "extensions": [
+       ".rb",
+       ".rbw",
+       ".erb",
+       ".rake",
+       ".gemspec",
+       ".ru",
+       ".builder",
+       ".jbuilder",
+       ".rxml",
+       ".rjs",
+       ".rabl",
+       ".thor",
+       ".podspec",
+       ".arb"
+      ],
+      "aliases": [
+       "Ruby",
+       "rb",
+       "erb"
+      ],
+      "filenames": [
+       "Rakefile",
+       "Gemfile",
+       "Gemfile.lock",
+       "Guardfile",
+       "Capfile",
+       "Appraisals",
+       "Berksfile",
+       "Brewfile",
+       "Cheffile",
+       "Dangerfile",
+       "Fastfile",
+       "Podfile",
+       "Rantfile",
+       "Thorfile",
+       "Vagrantfile",
+       "Puppetfile"
+      ]
+     }
+    ],
+    "capabilities": {
+     "lsp": {
+      "name": "solargraph",
+      "runtime": "binary",
+      "args": [
+       "stdio"
+      ]
+     }
+    }
+   },
+   "icon": "extensions/icons/athas.ruby.svg",
+   "monochromeIcon": false
+  },
+  {
+   "path": "rust",
+   "manifest": {
+    "$schema": "https://athas.dev/schemas/extension.json",
+    "id": "athas.rust",
+    "name": "Rust",
+    "displayName": "Rust",
+    "version": "1.0.0",
+    "description": "Rust language support with LSP",
+    "publisher": "Athas",
+    "categories": [
+     "Language"
+    ],
+    "languages": [
+     {
+      "id": "rust",
+      "extensions": [
+       ".rs"
+      ],
+      "aliases": [
+       "Rust",
+       "rs"
+      ]
+     }
+    ],
+    "capabilities": {
+     "lsp": {
+      "name": "rust-analyzer",
+      "runtime": "binary",
+      "downloadUrl": "https://github.com/rust-lang/rust-analyzer/releases/latest/download/rust-analyzer-${targetArch}-${targetOs}.${archiveExt}"
+     }
+    }
+   },
+   "icon": "extensions/icons/athas.rust.svg",
+   "monochromeIcon": false
+  },
+  {
+   "path": "scala",
+   "manifest": {
+    "$schema": "https://athas.dev/schemas/extension.json",
+    "id": "athas.scala",
+    "name": "Scala",
+    "displayName": "Scala",
+    "version": "1.0.0",
+    "description": "Scala language support with LSP",
+    "publisher": "Athas",
+    "categories": [
+     "Language"
+    ],
+    "languages": [
+     {
+      "id": "scala",
+      "extensions": [
+       ".scala",
+       ".sc"
+      ],
+      "aliases": [
+       "Scala"
+      ]
+     }
+    ],
+    "capabilities": {
+     "lsp": {
+      "name": "metals",
+      "runtime": "system",
+      "args": []
+     }
+    }
+   },
+   "icon": "extensions/icons/athas.scala.svg",
+   "monochromeIcon": false
+  },
+  {
+   "path": "skills/code-review",
+   "manifest": {
+    "$schema": "https://athas.dev/schemas/extension.json",
+    "id": "athas.skill.code-review",
+    "name": "code-review",
+    "displayName": "Code Review",
+    "description": "Review code changes for correctness, regressions, and missing validation.",
+    "version": "1.0.0",
+    "publisher": "Athas",
+    "categories": [
+     "Skill"
+    ],
+    "contributes": {
+     "skills": [
+      {
+       "id": "athas.code-review",
+       "name": "Code Review",
+       "description": "Review code changes for correctness, regressions, and missing validation.",
+       "path": "SKILL.md",
+       "tags": [
+        "review",
+        "quality"
+       ]
+      }
+     ]
+    },
+    "icon": "icon.svg",
+    "license": "MIT",
+    "repository": {
+     "type": "git",
+     "url": "https://github.com/athasdev/athas"
+    }
+   },
+   "icon": "extensions/icons/athas.skill.code-review.svg",
+   "monochromeIcon": false
+  },
+  {
+   "path": "skills/debugging",
+   "manifest": {
+    "$schema": "https://athas.dev/schemas/extension.json",
+    "id": "athas.skill.debugging",
+    "name": "systematic-debugging",
+    "displayName": "Systematic Debugging",
+    "description": "Trace failures to their real boundary before proposing a focused fix.",
+    "version": "1.0.0",
+    "publisher": "Athas",
+    "categories": [
+     "Skill"
+    ],
+    "contributes": {
+     "skills": [
+      {
+       "id": "athas.systematic-debugging",
+       "name": "Systematic Debugging",
+       "description": "Trace failures to their real boundary before proposing a focused fix.",
+       "path": "SKILL.md",
+       "tags": [
+        "debugging",
+        "diagnostics"
+       ]
+      }
+     ]
+    },
+    "icon": "icon.svg",
+    "license": "MIT",
+    "repository": {
+     "type": "git",
+     "url": "https://github.com/athasdev/athas"
+    }
+   },
+   "icon": "extensions/icons/athas.skill.debugging.svg",
+   "monochromeIcon": false
+  },
+  {
+   "path": "skills/implementation-plan",
+   "manifest": {
+    "$schema": "https://athas.dev/schemas/extension.json",
+    "id": "athas.skill.implementation-plan",
+    "name": "implementation-plan",
+    "displayName": "Implementation Plan",
+    "description": "Turn a product request into a concrete, repository-grounded implementation plan.",
+    "version": "1.0.0",
+    "publisher": "Athas",
+    "categories": [
+     "Skill"
+    ],
+    "contributes": {
+     "skills": [
+      {
+       "id": "athas.implementation-plan",
+       "name": "Implementation Plan",
+       "description": "Turn a product request into a concrete, repository-grounded implementation plan.",
+       "path": "SKILL.md",
+       "tags": [
+        "planning",
+        "architecture"
+       ]
+      }
+     ]
+    },
+    "icon": "icon.svg",
+    "license": "MIT",
+    "repository": {
+     "type": "git",
+     "url": "https://github.com/athasdev/athas"
+    }
+   },
+   "icon": "extensions/icons/athas.skill.implementation-plan.svg",
+   "monochromeIcon": false
+  },
+  {
+   "path": "solidity",
+   "manifest": {
+    "$schema": "https://athas.dev/schemas/extension.json",
+    "id": "athas.solidity",
+    "name": "Solidity",
+    "displayName": "Solidity",
+    "version": "1.0.0",
+    "description": "Solidity language support with LSP",
+    "publisher": "Athas",
+    "categories": [
+     "Language"
+    ],
+    "languages": [
+     {
+      "id": "solidity",
+      "extensions": [
+       ".sol"
+      ],
+      "aliases": [
+       "Solidity"
+      ]
+     }
+    ],
+    "capabilities": {
+     "lsp": {
+      "name": "solidity-language-server",
+      "runtime": "binary",
+      "args": [
+       "--stdio"
+      ]
+     }
+    }
+   },
+   "icon": "extensions/icons/athas.solidity.svg",
+   "monochromeIcon": false
+  },
+  {
+   "path": "sql",
+   "manifest": {
+    "$schema": "https://athas.dev/schemas/extension.json",
+    "id": "athas.sql",
+    "name": "SQL",
+    "displayName": "SQL",
+    "version": "1.0.0",
+    "description": "SQL language support with LSP and formatting",
+    "publisher": "Athas",
+    "categories": [
+     "Language"
+    ],
+    "languages": [
+     {
+      "id": "sql",
+      "extensions": [
+       ".sql",
+       ".dsql"
+      ],
+      "aliases": [
+       "SQL",
+       "sql"
+      ]
+     }
+    ],
+    "capabilities": {
+     "lsp": {
+      "name": "sql-language-server",
+      "runtime": "bun",
+      "package": "sql-language-server",
+      "args": [
+       "up",
+       "--method",
+       "stdio"
+      ]
+     },
+     "formatter": {
+      "name": "sql-formatter",
+      "runtime": "bun",
+      "package": "sql-formatter",
+      "args": []
+     }
+    }
+   },
+   "icon": "extensions/icons/athas.sql.svg",
+   "monochromeIcon": false
+  },
+  {
+   "path": "svelte",
+   "manifest": {
+    "$schema": "https://athas.dev/schemas/extension.json",
+    "id": "athas.svelte",
+    "name": "Svelte",
+    "displayName": "Svelte",
+    "version": "1.0.0",
+    "description": "Svelte language support with LSP and formatting",
+    "publisher": "Athas",
+    "categories": [
+     "Language"
+    ],
+    "languages": [
+     {
+      "id": "svelte",
+      "extensions": [
+       ".svelte"
+      ],
+      "aliases": [
+       "Svelte"
+      ]
+     }
+    ],
+    "capabilities": {
+     "lsp": {
+      "name": "svelteserver",
+      "runtime": "bun",
+      "package": "svelte-language-server",
+      "args": [
+       "--stdio"
+      ]
+     },
+     "formatter": {
+      "name": "prettier",
+      "runtime": "bun",
+      "package": "prettier",
+      "args": [
+       "--plugin",
+       "prettier-plugin-svelte",
+       "--stdin-filepath",
+       "${file}"
+      ]
+     }
+    }
+   },
+   "icon": "extensions/icons/athas.svelte.svg",
+   "monochromeIcon": false
+  },
+  {
+   "path": "swift",
+   "manifest": {
+    "$schema": "https://athas.dev/schemas/extension.json",
+    "id": "athas.swift",
+    "name": "Swift",
+    "displayName": "Swift",
+    "version": "1.0.0",
+    "description": "Swift language support with LSP",
+    "publisher": "Athas",
+    "categories": [
+     "Language"
+    ],
+    "languages": [
+     {
+      "id": "swift",
+      "extensions": [
+       ".swift"
+      ],
+      "aliases": [
+       "Swift"
+      ]
+     }
+    ],
+    "capabilities": {
+     "lsp": {
+      "name": "sourcekit-lsp",
+      "runtime": "system",
+      "args": []
+     }
+    }
+   },
+   "icon": "extensions/icons/athas.swift.svg",
+   "monochromeIcon": false
+  },
+  {
+   "path": "systemrdl",
+   "manifest": {
+    "$schema": "https://athas.dev/schemas/extension.json",
+    "id": "athas.systemrdl",
+    "name": "SystemRDL",
+    "displayName": "SystemRDL",
+    "version": "1.0.0",
+    "description": "SystemRDL language support",
+    "publisher": "Athas",
+    "categories": [
+     "Language"
+    ],
+    "languages": [
+     {
+      "id": "systemrdl",
+      "extensions": [
+       ".rdl"
+      ],
+      "aliases": [
+       "SystemRDL",
+       "systemrdl"
+      ]
+     }
+    ]
+   },
+   "icon": "extensions/icons/athas.systemrdl.svg",
+   "monochromeIcon": false
+  },
+  {
+   "path": "terraform",
+   "manifest": {
+    "$schema": "https://athas.dev/schemas/extension.json",
+    "id": "athas.terraform",
+    "name": "Terraform",
+    "displayName": "Terraform",
+    "version": "1.0.0",
+    "description": "Terraform and HCL language support with LSP",
+    "publisher": "Athas",
+    "categories": [
+     "Language"
+    ],
+    "languages": [
+     {
+      "id": "terraform",
+      "extensions": [
+       ".tf",
+       ".tfvars"
+      ],
+      "aliases": [
+       "Terraform",
+       "HCL",
+       "hcl"
+      ]
+     }
+    ],
+    "capabilities": {
+     "lsp": {
+      "name": "terraform-ls",
+      "runtime": "binary",
+      "args": [
+       "serve"
+      ]
+     }
+    }
+   },
+   "icon": "extensions/icons/athas.terraform.svg",
+   "monochromeIcon": false
+  },
+  {
+   "path": "theme/vercel",
+   "manifest": {
+    "$schema": "https://athas.dev/schemas/extension.json",
+    "id": "athas.theme.vercel",
+    "name": "vercel",
+    "displayName": "Vercel Theme",
+    "description": "Light and dark themes inspired by Vercel's dashboard and documentation.",
+    "version": "1.0.0",
+    "publisher": "Athas",
+    "categories": [
+     "Theme"
+    ],
+    "activationEvents": [
+     "onTheme:vercel-light",
+     "onTheme:vercel-dark"
+    ],
+    "themes": [
+     {
+      "id": "vercel-light",
+      "name": "Vercel Light",
+      "description": "A minimal light theme with Vercel-inspired accent and syntax colors.",
+      "appearance": "light",
+      "colors": {
+       "background": "#ffffff",
+       "surface": "#fafafa",
+       "foreground": "#171717",
+       "muted-foreground": "#525252",
+       "subtle-foreground": "#737373",
+       "border": "#e5e5e5",
+       "accent": "#f5f5f5",
+       "selected": "#eeeeee",
+       "primary": "#0070f3",
+       "destructive": "#e5484d",
+       "warning": "#ad5700",
+       "success": "#007f5f",
+       "info": "#0070f3",
+       "cursor": "#171717",
+       "line-highlight": "#fafafa",
+       "selection": "#eaeaea",
+       "git-added": "#007f5f",
+       "git-modified": "#ad5700",
+       "git-deleted": "#e5484d"
+      },
+      "syntax": {
+       "keyword": "#d4006a",
+       "string": "#007f5f",
+       "number": "#ad5700",
+       "comment": "#737373",
+       "variable": "#171717",
+       "function": "#0070f3",
+       "constant": "#7928ca",
+       "property": "#006f62",
+       "type": "#0070f3",
+       "operator": "#d4006a",
+       "punctuation": "#525252",
+       "boolean": "#ad5700",
+       "null": "#ad5700",
+       "regex": "#007f5f",
+       "tag": "#d4006a",
+       "attribute": "#7928ca"
+      }
+     },
+     {
+      "id": "vercel-dark",
+      "name": "Vercel Dark",
+      "description": "A minimal black theme with Vercel-inspired accent and syntax colors.",
+      "appearance": "dark",
+      "colors": {
+       "background": "#000000",
+       "surface": "#0a0a0a",
+       "foreground": "#ededed",
+       "muted-foreground": "#a1a1a1",
+       "subtle-foreground": "#737373",
+       "border": "#262626",
+       "accent": "#111111",
+       "selected": "#1a1a1a",
+       "primary": "#0070f3",
+       "destructive": "#ff4d4f",
+       "warning": "#f5a623",
+       "success": "#50e3c2",
+       "info": "#0070f3",
+       "cursor": "#ededed",
+       "line-highlight": "#0a0a0a",
+       "selection": "#1a1a1a",
+       "git-added": "#50e3c2",
+       "git-modified": "#f5a623",
+       "git-deleted": "#ff4d4f"
+      },
+      "syntax": {
+       "keyword": "#ff0080",
+       "string": "#50e3c2",
+       "number": "#f5a623",
+       "comment": "#666666",
+       "variable": "#ededed",
+       "function": "#0070f3",
+       "constant": "#7928ca",
+       "property": "#79ffe1",
+       "type": "#0070f3",
+       "operator": "#ff0080",
+       "punctuation": "#a1a1a1",
+       "boolean": "#f5a623",
+       "null": "#f5a623",
+       "regex": "#50e3c2",
+       "tag": "#ff0080",
+       "attribute": "#7928ca"
+      }
+     }
+    ],
+    "icon": "icon.svg",
+    "license": "MIT",
+    "repository": {
+     "type": "git",
+     "url": "https://github.com/athasdev/athas"
+    },
+    "installation": {
+     "downloadUrl": "https://athas.dev/extensions/packages/theme/vercel/athas.theme.vercel.tar.gz",
+     "size": 6167,
+     "checksum": "d62e198efe741e612752e4cc69c28c9b3eeae366e49c2325be13d696e7b73d27"
+    }
+   },
+   "icon": "extensions/icons/athas.theme.vercel.svg",
+   "monochromeIcon": true
+  },
+  {
+   "path": "tlaplus",
+   "manifest": {
+    "$schema": "https://athas.dev/schemas/extension.json",
+    "id": "athas.tlaplus",
+    "name": "TLAPLUS",
+    "displayName": "TLA+",
+    "version": "1.0.0",
+    "description": "TLA+ language support",
+    "publisher": "Athas",
+    "categories": [
+     "Language"
+    ],
+    "languages": [
+     {
+      "id": "tlaplus",
+      "extensions": [
+       ".tla"
+      ],
+      "aliases": [
+       "TLA+",
+       "TLAPLUS",
+       "tlaplus"
+      ]
+     }
+    ]
+   },
+   "icon": "extensions/icons/athas.tlaplus.svg",
+   "monochromeIcon": false
+  },
+  {
+   "path": "toml",
+   "manifest": {
+    "$schema": "https://athas.dev/schemas/extension.json",
+    "id": "athas.toml",
+    "name": "TOML",
+    "displayName": "TOML",
+    "version": "1.0.0",
+    "description": "TOML language support with LSP and formatting",
+    "publisher": "Athas",
+    "categories": [
+     "Language"
+    ],
+    "languages": [
+     {
+      "id": "toml",
+      "extensions": [
+       ".toml"
+      ],
+      "aliases": [
+       "TOML"
+      ]
+     }
+    ],
+    "capabilities": {
+     "lsp": {
+      "name": "taplo",
+      "runtime": "rust",
+      "package": "taplo-cli",
+      "args": [
+       "lsp",
+       "stdio"
+      ]
+     },
+     "formatter": {
+      "name": "taplo",
+      "runtime": "rust",
+      "package": "taplo-cli",
+      "args": [
+       "format",
+       "-"
+      ]
+     }
+    }
+   },
+   "icon": "extensions/icons/athas.toml.svg",
+   "monochromeIcon": false
+  },
+  {
+   "path": "tsx",
+   "manifest": {
+    "$schema": "https://athas.dev/schemas/extension.json",
+    "id": "athas.tsx",
+    "name": "TSX",
+    "displayName": "TypeScript JSX",
+    "version": "1.0.0",
+    "description": "TypeScript JSX/React support with LSP and tooling",
+    "publisher": "Athas",
+    "categories": [
+     "Language"
+    ],
+    "languages": [
+     {
+      "id": "typescriptreact",
+      "extensions": [
+       ".tsx"
+      ],
+      "aliases": [
+       "TSX",
+       "TypeScript React"
+      ]
+     }
+    ],
+    "capabilities": {
+     "lsp": {
+      "name": "typescript-language-server",
+      "runtime": "bun",
+      "package": "typescript-language-server",
+      "packages": [
+       "typescript"
+      ],
+      "args": [
+       "--stdio"
+      ]
+     },
+     "formatter": {
+      "name": "prettier",
+      "runtime": "bun",
+      "package": "prettier",
+      "args": [
+       "--stdin-filepath",
+       "${file}"
+      ]
+     },
+     "linter": {
+      "name": "eslint",
+      "runtime": "bun",
+      "package": "eslint",
+      "args": [
+       "--stdin",
+       "--stdin-filename",
+       "${file}",
+       "--format",
+       "json"
+      ]
+     }
+    }
+   },
+   "icon": "extensions/icons/athas.tsx.svg",
+   "monochromeIcon": false
+  },
+  {
+   "path": "typescript",
+   "manifest": {
+    "$schema": "https://athas.dev/schemas/extension.json",
+    "id": "athas.typescript",
+    "name": "TypeScript",
+    "displayName": "TypeScript",
+    "version": "1.0.0",
+    "description": "TypeScript language support with LSP and tooling",
+    "publisher": "Athas",
+    "categories": [
+     "Language"
+    ],
+    "languages": [
+     {
+      "id": "typescript",
+      "extensions": [
+       ".ts",
+       ".mts",
+       ".cts"
+      ],
+      "aliases": [
+       "TypeScript",
+       "ts"
+      ]
+     }
+    ],
+    "capabilities": {
+     "lsp": {
+      "name": "typescript-language-server",
+      "runtime": "bun",
+      "package": "typescript-language-server",
+      "packages": [
+       "typescript"
+      ],
+      "args": [
+       "--stdio"
+      ]
+     },
+     "formatter": {
+      "name": "prettier",
+      "runtime": "bun",
+      "package": "prettier",
+      "args": [
+       "--stdin-filepath",
+       "${file}"
+      ]
+     },
+     "linter": {
+      "name": "eslint",
+      "runtime": "bun",
+      "package": "eslint",
+      "args": [
+       "--stdin",
+       "--stdin-filename",
+       "${file}",
+       "--format",
+       "json"
+      ]
+     }
+    }
+   },
+   "icon": "extensions/icons/athas.typescript.svg",
+   "monochromeIcon": false
+  },
+  {
+   "path": "vue",
+   "manifest": {
+    "$schema": "https://athas.dev/schemas/extension.json",
+    "id": "athas.vue",
+    "name": "Vue",
+    "displayName": "Vue",
+    "version": "1.0.0",
+    "description": "Vue language support with LSP, formatting and linting",
+    "publisher": "Athas",
+    "categories": [
+     "Language"
+    ],
+    "languages": [
+     {
+      "id": "vue",
+      "extensions": [
+       ".vue"
+      ],
+      "aliases": [
+       "Vue"
+      ]
+     }
+    ],
+    "capabilities": {
+     "lsp": {
+      "name": "vue-language-server",
+      "runtime": "bun",
+      "package": "@vue/language-server",
+      "args": [
+       "--stdio"
+      ]
+     },
+     "formatter": {
+      "name": "prettier",
+      "runtime": "bun",
+      "package": "prettier",
+      "args": [
+       "--stdin-filepath",
+       "${file}"
+      ]
+     },
+     "linter": {
+      "name": "eslint",
+      "runtime": "bun",
+      "package": "eslint",
+      "args": [
+       "--stdin",
+       "--stdin-filename",
+       "${file}",
+       "--format",
+       "json"
+      ]
+     }
+    }
+   },
+   "icon": "extensions/icons/athas.vue.svg",
+   "monochromeIcon": false
+  },
+  {
+   "path": "xml",
+   "manifest": {
+    "$schema": "https://athas.dev/schemas/extension.json",
+    "id": "athas.xml",
+    "name": "XML",
+    "displayName": "XML",
+    "version": "1.0.0",
+    "description": "XML and SVG language support with syntax highlighting",
+    "publisher": "Athas",
+    "categories": [
+     "Language"
+    ],
+    "languages": [
+     {
+      "id": "xml",
+      "extensions": [
+       ".xml",
+       ".xsl",
+       ".xslt",
+       ".xsd",
+       ".dtd",
+       ".wsdl",
+       ".plist",
+       ".svg",
+       ".csproj",
+       ".vbproj",
+       ".fsproj",
+       ".props",
+       ".targets"
+      ],
+      "aliases": [
+       "XML",
+       "xml"
+      ],
+      "filenames": [
+       ".xml"
+      ]
+     }
+    ]
+   },
+   "icon": "extensions/icons/athas.xml.svg",
+   "monochromeIcon": false
+  },
+  {
+   "path": "yaml",
+   "manifest": {
+    "$schema": "https://athas.dev/schemas/extension.json",
+    "id": "athas.yaml",
+    "name": "YAML",
+    "displayName": "YAML",
+    "version": "1.0.0",
+    "description": "YAML language support with LSP and formatting",
+    "publisher": "Athas",
+    "categories": [
+     "Language"
+    ],
+    "languages": [
+     {
+      "id": "yaml",
+      "extensions": [
+       ".yaml",
+       ".yml"
+      ],
+      "aliases": [
+       "YAML"
+      ]
+     }
+    ],
+    "capabilities": {
+     "lsp": {
+      "name": "yaml-language-server",
+      "runtime": "bun",
+      "package": "yaml-language-server",
+      "args": [
+       "--stdio"
+      ]
+     },
+     "formatter": {
+      "name": "prettier",
+      "runtime": "bun",
+      "package": "prettier",
+      "args": [
+       "--stdin-filepath",
+       "${file}"
+      ]
+     }
+    }
+   },
+   "icon": "extensions/icons/athas.yaml.svg",
+   "monochromeIcon": false
+  },
+  {
+   "path": "zig",
+   "manifest": {
+    "$schema": "https://athas.dev/schemas/extension.json",
+    "id": "athas.zig",
+    "name": "Zig",
+    "displayName": "Zig",
+    "version": "1.0.0",
+    "description": "Zig language support with LSP",
+    "publisher": "Athas",
+    "categories": [
+     "Language"
+    ],
+    "languages": [
+     {
+      "id": "zig",
+      "extensions": [
+       ".zig",
+       ".zon"
+      ],
+      "aliases": [
+       "Zig"
+      ]
+     }
+    ],
+    "capabilities": {
+     "lsp": {
+      "name": "zls",
+      "runtime": "binary",
+      "args": []
+     },
+     "formatter": {
+      "name": "zig",
+      "runtime": "binary",
+      "args": [
+       "fmt",
+       "--stdin"
+      ]
+     }
+    }
+   },
+   "icon": "extensions/icons/athas.zig.svg",
+   "monochromeIcon": false
+  }
+ ]
+}

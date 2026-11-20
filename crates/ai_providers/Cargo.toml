@@ -1,0 +1,25 @@
+[package]
+name = "ai_providers"
+edition.workspace = true
+version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lib]
+path = "src/ai_providers.rs"
+
+[features]
+# A local HTTP server that answers like a provider, for tests of crates that drive the agent.
+test-support = []
+
+[dependencies]
+paths = { path = "../paths" }
+serde.workspace = true
+serde_json.workspace = true
+futures = "0.3"
+
+[target.'cfg(not(target_family = "wasm"))'.dependencies]
+# The same build the GitHub crate already pulls in: rustls only, blocking reads on a thread of
+# our own, so no async runtime has to run beside GPUI's executors.
+reqwest = { version = "0.12", default-features = false, features = ["blocking", "json", "rustls-tls"] }
+secure_storage = { path = "../secure_storage" }

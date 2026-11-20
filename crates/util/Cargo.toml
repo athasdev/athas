@@ -1,0 +1,14 @@
+[package]
+name = "util"
+edition.workspace = true
+version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lib]
+path = "src/util.rs"
+
+[dependencies]
+chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
+regex = "1"
+unicode-normalization = "0.1"

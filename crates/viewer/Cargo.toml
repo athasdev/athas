@@ -1,0 +1,23 @@
+[package]
+name = "viewer"
+edition.workspace = true
+version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lib]
+path = "src/viewer.rs"
+
+[dependencies]
+gpui.workspace = true
+anyhow.workspace = true
+theme = { path = "../theme" }
+ui = { path = "../ui" }
+workbench_api = { path = "../workbench_api" }
+# The same image crate GPUI decodes with: PDF pages are handed to it as frames.
+image = { version = "0.25", default-features = false, features = ["png", "jpeg", "webp", "gif", "bmp", "ico"] }
+# Pure-Rust PDF rasterizer.
+hayro = "0.9"
+
+[dev-dependencies]
+tempfile = "3"

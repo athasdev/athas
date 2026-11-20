@@ -1,0 +1,317 @@
+# DRAFT — not wired to any trigger but a manual dispatch, and not tested on GitHub yet.
+#
+# Builds the GPUI app as the next Athas release, mirroring athasdev/athas's release.yml: the same
+# platforms, signing, notarization, asset names, `latest.json` and release flow, so the Tauri
+# app's updater (https://athas.dev/api/update/stable reads `latest.json` from the newest
+# athasdev/athas release) installs it like any other release. See docs/release-migration.md.
+#
+# The release is created in athasdev/athas (where www and installed apps look), as a draft, and a
+# `-beta.N` tag makes it a prerelease, which only users on the beta channel are offered. Nothing
+# is published unless `publish` is set and AUTO_PUBLISH_RELEASE is "true".
+#
+# Secrets (same names as athasdev/athas): APPLE_CERTIFICATE, APPLE_CERT_PASSWORD,
+# APPLE_SIGNING_IDENTITY, APPLE_ID, APPLE_PASSWORD, APPLE_TEAM_ID, WINDOWS_CERTIFICATE,
+# WINDOWS_CERTIFICATE_PASSWORD, WINDOWS_TIMESTAMP_URL, TAURI_SIGNING_PRIVATE_KEY,
+# TAURI_SIGNING_PRIVATE_KEY_PASSWORD, ATHAS_RELEASE_TOKEN (contents:write on athasdev/athas).
+name: "Release (GPUI, draft)"
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag, e.g. v0.19.0-beta.1 (must be newer than the last Tauri release)"
+        required: true
+        type: string
+      publish:
+        description: "Publish the release after validating it (else it stays a draft)"
+        required: false
+        default: false
+        type: boolean
+
+concurrency:
+  group: ${{ github.workflow }}-${{ inputs.tag }}
+  cancel-in-progress: false
+
+env:
+  CARGO_TERM_COLOR: always
+  # The shipping identity: bundle id com.code.athas, data in dev.athas.app (crates/paths).
+  ATHAS_IDENTITY: release
+  RELEASE_REPO: athasdev/athas
+
+jobs:
+  metadata:
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.meta.outputs.tag }}
+      version: ${{ steps.meta.outputs.version }}
+      msi_version: ${{ steps.meta.outputs.msi_version }}
+    steps:
+      - uses: actions/checkout@v6
+      - name: Validate the tag
+        id: meta
+        env:
+          TAG: ${{ inputs.tag }}
+          GH_TOKEN: ${{ secrets.ATHAS_RELEASE_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [[ ! "$TAG" =~ ^v([0-9]+)\.([0-9]+)\.([0-9]+)(-beta\.([1-9][0-9]*))?$ ]]; then
+            echo "Invalid release tag: $TAG" >&2; exit 1
+          fi
+          version="${TAG#v}"
+          # The updater only offers newer versions, and www serves the newest release by version.
+          newest="$(gh api "repos/${RELEASE_REPO}/releases?per_page=30" --jq '[.[] | select(.draft | not) | .tag_name] | .[]' \
+            | sed 's/^v//' | sort -V | tail -n 1)"
+          if [ -n "$newest" ] && [ "$(printf '%s\n%s\n' "$newest" "$version" | sort -V | tail -n 1)" != "$version" ]; then
+            echo "$version is not newer than the published $newest" >&2; exit 1
+          fi
+          # MSI versions are numeric (major.minor.patch.build); a beta maps to its build number.
+          beta="${BASH_REMATCH[5]:-0}"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "msi_version=${BASH_REMATCH[1]}.${BASH_REMATCH[2]}.${BASH_REMATCH[3]}.${beta}" >> "$GITHUB_OUTPUT"
+
+  build:
+    needs: metadata
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { platform: macos-latest, os: macos, artifact: macos-aarch64, target: aarch64-apple-darwin }
+          - { platform: macos-latest, os: macos, artifact: macos-x86_64, target: x86_64-apple-darwin }
+          - { platform: ubuntu-22.04, os: linux, artifact: linux-x86_64, target: "" }
+          - { platform: ubuntu-22.04-arm, os: linux, artifact: linux-aarch64, target: "" }
+          - { platform: windows-latest, os: windows, artifact: windows-x86_64, target: "" }
+          - { platform: windows-latest, os: windows, artifact: windows-aarch64, target: aarch64-pc-windows-msvc }
+    runs-on: ${{ matrix.platform }}
+    timeout-minutes: 120
+    env:
+      VERSION: ${{ needs.metadata.outputs.version }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set the workspace version from the tag
+        shell: bash
+        run: |
+          set -euo pipefail
+          perl -0pi -e 's/(\[workspace\.package\][^\[]*?version = ")[^"]+(")/${1}'"$VERSION"'${2}/s' Cargo.toml
+          grep -A3 '^\[workspace.package\]' Cargo.toml
+
+      - name: Install Rust (rust-toolchain.toml)
+        shell: bash
+        run: |
+          rustup show active-toolchain || rustup toolchain install
+          if [ -n "${{ matrix.target }}" ]; then rustup target add "${{ matrix.target }}"; fi
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: gpui-release-${{ matrix.artifact }}
+
+      - name: Setup Bun (Tauri bundler CLI)
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.14
+
+      - name: Install Linux dependencies
+        if: matrix.os == 'linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential clang cmake pkg-config libssl-dev libfontconfig-dev \
+            libwayland-dev libxkbcommon-x11-dev libx11-xcb-dev libvulkan-dev libzstd-dev libasound2-dev \
+            libwebkit2gtk-4.1-dev libgtk-3-dev librsvg2-dev patchelf xdg-utils file
+
+      # ---- macOS: scripts/bundle-mac.sh signs, notarizes, archives and signs the updater archive.
+      - name: Import Apple certificate
+        if: matrix.os == 'macos'
+        env:
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERT_PASSWORD: ${{ secrets.APPLE_CERT_PASSWORD }}
+        run: |
+          set -euo pipefail
+          if [[ -z "$APPLE_CERTIFICATE" || -z "$APPLE_CERT_PASSWORD" ]]; then
+            echo "Apple signing secrets are missing; a release must be signed." >&2; exit 1
+          fi
+          cert="$RUNNER_TEMP/cert.p12"; keychain="$RUNNER_TEMP/signing.keychain-db"; password="$(openssl rand -base64 32)"
+          echo -n "$APPLE_CERTIFICATE" | base64 --decode -o "$cert"
+          security create-keychain -p "$password" "$keychain"
+          security set-keychain-settings -lut 21600 "$keychain"
+          security unlock-keychain -p "$password" "$keychain"
+          security import "$cert" -P "$APPLE_CERT_PASSWORD" -A -t cert -f pkcs12 -k "$keychain"
+          security set-key-partition-list -S apple-tool:,apple: -k "$password" "$keychain"
+          security list-keychain -d user -s "$keychain"
+
+      - name: Build and bundle (macOS)
+        if: matrix.os == 'macos'
+        env:
+          ATHAS_SIGN_IDENTITY: "${{ secrets.APPLE_SIGNING_IDENTITY || 'Developer ID Application: Mehmet Ozgul (N43BXFX4H4)' }}"
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          ATHAS_SIGN_UPDATE: "1"
+          ATHAS_TAURI_CLI: bunx @tauri-apps/cli@2
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+          CARGO_BUILD_JOBS: "4"
+        run: |
+          set -euo pipefail
+          scripts/bundle-mac.sh --release --target "${{ matrix.target }}"
+          out="target/${{ matrix.target }}/release/bundle"
+          mkdir -p release-dist
+          cp "$out"/Athas_*.app.tar.gz "$out"/Athas_*.app.tar.gz.sig "$out"/Athas_*.dmg release-dist/
+          ls -la release-dist
+
+      # ---- Windows and Linux: the prebuilt binary goes through the Tauri bundler (packaging/tauri),
+      # so the NSIS installer keeps the Tauri app's product name, per-user install folder
+      # (%LOCALAPPDATA%\Athas), uninstall and registry keys, and the deb/rpm keep the package name.
+      - name: Build (Windows, Linux)
+        if: matrix.os != 'macos'
+        shell: bash
+        run: |
+          set -euo pipefail
+          args=(build --release -p athas -p cli)
+          if [ -n "${{ matrix.target }}" ]; then args+=(--target "${{ matrix.target }}"); fi
+          cargo "${args[@]}"
+
+      - name: Import Windows certificate
+        if: matrix.os == 'windows'
+        shell: pwsh
+        env:
+          WINDOWS_CERTIFICATE: ${{ secrets.WINDOWS_CERTIFICATE }}
+          WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
+          WINDOWS_TIMESTAMP_URL: ${{ secrets.WINDOWS_TIMESTAMP_URL }}
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:WINDOWS_CERTIFICATE)) {
+            Write-Host "No Windows certificate; the installers are unsigned (as the Tauri releases are without it)."
+            exit 0
+          }
+          New-Item -ItemType Directory -Force -Path certificate | Out-Null
+          Set-Content -Path certificate/cert.txt -Value $env:WINDOWS_CERTIFICATE
+          certutil -decode certificate/cert.txt certificate/cert.pfx
+          $password = ConvertTo-SecureString -String $env:WINDOWS_CERTIFICATE_PASSWORD -AsPlainText -Force
+          $cert = Import-PfxCertificate -FilePath certificate/cert.pfx -CertStoreLocation Cert:\CurrentUser\My -Password $password |
+            Where-Object { $_.HasPrivateKey } | Select-Object -First 1
+          $url = if ([string]::IsNullOrWhiteSpace($env:WINDOWS_TIMESTAMP_URL)) { "http://time.certum.pl/" } else { $env:WINDOWS_TIMESTAMP_URL }
+          "TAURI_WINDOWS_SIGNING={""bundle"":{""windows"":{""certificateThumbprint"":""$($cert.Thumbprint)"",""digestAlgorithm"":""sha256"",""timestampUrl"":""$url""}}}" |
+            Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          Remove-Item -Recurse -Force certificate
+
+      - name: Bundle (Windows, Linux)
+        if: matrix.os != 'macos'
+        shell: bash
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+          MSI_VERSION: ${{ needs.metadata.outputs.msi_version }}
+        run: |
+          set -euo pipefail
+          export CARGO_TARGET_DIR="$GITHUB_WORKSPACE/target"
+          if [ "${{ matrix.os }}" = windows ]; then
+            bundles="nsis,msi"
+            cli="../../target/${{ matrix.target }}/release/athas-cli.exe"
+            [ -z "${{ matrix.target }}" ] && cli="../../target/release/athas-cli.exe"
+            extra="$(jq -nc --arg v "$VERSION" --arg msi "$MSI_VERSION" --arg cli "$cli" \
+              '{version: $v, bundle: {resources: {($cli): "athas-cli.exe"}, windows: {wix: {version: $msi}}}}')"
+          else
+            bundles="deb,rpm,appimage"
+            extra="$(jq -nc --arg v "$VERSION" '{version: $v}')"
+          fi
+          args=(bundle --bundles "$bundles" --config "$extra")
+          if [ -n "${TAURI_WINDOWS_SIGNING:-}" ]; then args+=(--config "$TAURI_WINDOWS_SIGNING"); fi
+          if [ -n "${{ matrix.target }}" ]; then args+=(--target "${{ matrix.target }}"); fi
+          cd packaging/tauri
+          bunx @tauri-apps/cli@2 "${args[@]}"
+
+      - name: Collect packages (Windows, Linux)
+        if: matrix.os != 'macos'
+        shell: bash
+        run: |
+          set -euo pipefail
+          bundle="target/${{ matrix.target }}/release/bundle"
+          [ -z "${{ matrix.target }}" ] && bundle="target/release/bundle"
+          mkdir -p release-dist
+          find "$bundle" -type f \( -name '*-setup.exe' -o -name '*-setup.exe.sig' -o -name '*.msi' -o -name '*.msi.sig' \
+            -o -name '*.deb' -o -name '*.deb.sig' -o -name '*.rpm' -o -name '*.rpm.sig' -o -name '*.AppImage' -o -name '*.AppImage.sig' \) \
+            -exec cp {} release-dist/ \;
+          ls -la release-dist
+
+      - name: Portable tarball (Linux)
+        if: matrix.os == 'linux'
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          arch="$(uname -m)"; [ "$arch" = arm64 ] && arch=aarch64
+          staging="$(mktemp -d)/athas"
+          install -D -m 755 target/release/athas "$staging/bin/athas"
+          install -D -m 755 target/release/athas-cli "$staging/bin/athas-cli"
+          # Package managers that wrap this tarball update Athas themselves.
+          touch "$staging/bin/managed-by-package-manager"
+          install -D -m 644 packaging/icons/128x128.png "$staging/share/icons/hicolor/128x128/apps/athas.png"
+          archive="release-dist/Athas_${VERSION}_linux-${arch}.tar.gz"
+          tar -C "$(dirname "$staging")" -czf "$archive" athas
+          bunx @tauri-apps/cli@2 signer sign "$archive"
+          test -s "$archive.sig"
+
+      - uses: actions/upload-artifact@v6
+        with:
+          name: release-${{ matrix.artifact }}
+          path: release-dist/*
+          if-no-files-found: error
+
+  assemble:
+    needs: [metadata, build]
+    runs-on: ubuntu-latest
+    steps:
+      # The asset policy, `latest.json` builder and validator of athasdev/athas, so both apps
+      # publish the same manifest (scripts/release/release-assets.mjs).
+      - uses: actions/checkout@v6
+        with:
+          repository: athasdev/athas
+          path: athas
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.14
+      - uses: actions/download-artifact@v7
+        with:
+          pattern: release-*
+          path: release-artifacts
+          merge-multiple: true
+      - name: Assemble assets and latest.json
+        working-directory: athas
+        env:
+          TAG: ${{ needs.metadata.outputs.tag }}
+        run: |
+          set -euo pipefail
+          printf 'Athas %s: the native (GPUI) Athas.\n' "$TAG" > ../release-body.md
+          bun scripts/release/release-assets.mjs assemble --tag "$TAG" --repo "$RELEASE_REPO" \
+            --dir ../release-artifacts --notes-file ../release-body.md --out ../prepared-release
+          jq '.platforms | keys' ../prepared-release/latest.json
+      - name: Create the draft release in athasdev/athas
+        env:
+          GH_TOKEN: ${{ secrets.ATHAS_RELEASE_TOKEN }}
+          TAG: ${{ needs.metadata.outputs.tag }}
+        run: |
+          set -euo pipefail
+          prerelease=(); [[ "$TAG" == *-* ]] && prerelease=(--prerelease)
+          if gh release view "$TAG" --repo "$RELEASE_REPO" >/dev/null 2>&1; then
+            test "$(gh release view "$TAG" --repo "$RELEASE_REPO" --json isDraft --jq .isDraft)" = true
+          else
+            # The tag points at the athasdev/athas commit that carries this code (see the doc).
+            gh release create "$TAG" --repo "$RELEASE_REPO" --draft "${prerelease[@]}" \
+              --title "Athas ${TAG#v}" --notes-file release-body.md
+          fi
+          gh release upload "$TAG" --repo "$RELEASE_REPO" prepared-release/* --clobber
+      - name: Validate the release
+        working-directory: athas
+        env:
+          GH_TOKEN: ${{ secrets.ATHAS_RELEASE_TOKEN }}
+          TAG: ${{ needs.metadata.outputs.tag }}
+        run: bun scripts/release/release-assets.mjs verify --tag "$TAG" --repo "$RELEASE_REPO"
+      # Publishing with a personal token starts athasdev/athas's sync-www-release.yml (stable
+      # only) and package-managers.yml, as a Tauri release does.
+      - name: Publish
+        if: ${{ inputs.publish && vars.AUTO_PUBLISH_RELEASE == 'true' }}
+        env:
+          GH_TOKEN: ${{ secrets.ATHAS_RELEASE_TOKEN }}
+          TAG: ${{ needs.metadata.outputs.tag }}
+        run: gh release edit "$TAG" --repo "$RELEASE_REPO" --draft=false

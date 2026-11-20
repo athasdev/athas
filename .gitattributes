@@ -1,4 +1,0 @@
-*.wasm binary
-
-# Vendored font files and their upstream licenses are kept byte-identical.
-public/fonts/** -whitespace

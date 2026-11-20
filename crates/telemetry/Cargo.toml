@@ -1,0 +1,32 @@
+[package]
+name = "telemetry"
+edition.workspace = true
+version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lib]
+path = "src/telemetry.rs"
+
+[features]
+# A local HTTP server for the tests of this crate and of `account` and `collaboration`.
+test-support = []
+
+[dependencies]
+paths = { path = "../paths" }
+gpui.workspace = true
+anyhow.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+settings = { path = "../settings" }
+regex = "1"
+uuid = { version = "1", features = ["v4"] }
+chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
+dirs = "6"
+
+[target.'cfg(not(target_family = "wasm"))'.dependencies]
+# The same rustls-only reqwest build the GitHub client uses.
+reqwest = { version = "0.12", default-features = false, features = ["blocking", "json", "rustls-tls", "rustls-tls-native-roots"] }
+
+[dev-dependencies]
+tempfile = "3"

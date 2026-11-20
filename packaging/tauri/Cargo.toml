@@ -1,0 +1,16 @@
+# Only here so the Tauri bundler (`tauri bundle`) can package the prebuilt `athas` binary into
+# the installers the Tauri app shipped (NSIS, deb, rpm, AppImage), with the same product name,
+# install folder, registry keys and package names, so they upgrade a Tauri install in place.
+# Never built: the binary comes from the workspace (`CARGO_TARGET_DIR` points at its target).
+# See docs/release-migration.md.
+[package]
+name = "athas"
+version = "0.0.0"
+edition = "2024"
+publish = false
+
+[[bin]]
+name = "athas"
+path = "main.rs"
+
+[workspace]

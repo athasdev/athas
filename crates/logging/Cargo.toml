@@ -1,0 +1,21 @@
+[package]
+name = "logging"
+edition.workspace = true
+version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lib]
+path = "src/logging.rs"
+
+[dependencies]
+paths = { path = "../paths" }
+chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
+dirs = "6"
+log = { version = "0.4", features = ["std"] }
+
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"
+
+[dev-dependencies]
+tempfile = "3"

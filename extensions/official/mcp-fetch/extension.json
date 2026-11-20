@@ -1,0 +1,31 @@
+{
+  "$schema": "https://athas.dev/schemas/extension.json",
+  "id": "athas.mcp.fetch",
+  "name": "fetch",
+  "displayName": "Fetch",
+  "version": "1.0.0",
+  "description": "Fetch web pages and read them as Markdown",
+  "publisher": "Athas",
+  "categories": ["Integration"],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/athasdev/athas/tree/master/extensions/official/mcp-fetch"
+  },
+  "icon": "icon.svg",
+  "contributes": {
+    "mcpServers": [
+      {
+        "id": "fetch",
+        "name": "Fetch",
+        "description": "Fetch web pages and read them as Markdown",
+        "group": "data",
+        "config": {
+          "transport": "stdio",
+          "command": "uvx",
+          "args": ["mcp-server-fetch"]
+        }
+      }
+    ]
+  }
+}

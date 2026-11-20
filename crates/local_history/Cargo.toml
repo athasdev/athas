@@ -1,0 +1,31 @@
+[package]
+name = "local_history"
+edition.workspace = true
+version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lib]
+path = "src/local_history.rs"
+
+[dependencies]
+paths = { path = "../paths" }
+gpui.workspace = true
+anyhow.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+sha2 = "0.10"
+palette = { path = "../palette" }
+notifications = { path = "../notifications" }
+util = { path = "../util" }
+chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
+ui = { path = "../ui" }
+theme = { path = "../theme" }
+workspace = { path = "../workspace" }
+
+[target.'cfg(not(target_family = "wasm"))'.dependencies]
+dirs = "6"
+athas_project = { package = "athas-project", path = "../../core/project" }
+
+[dev-dependencies]
+tempfile = "3"

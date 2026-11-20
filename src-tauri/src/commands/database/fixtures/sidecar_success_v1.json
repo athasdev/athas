@@ -1,8 +1,0 @@
-{
-  "protocolVersion": 1,
-  "ok": true,
-  "result": {
-    "columns": ["id"],
-    "rows": [[1]]
-  }
-}

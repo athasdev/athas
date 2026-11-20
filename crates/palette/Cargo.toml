@@ -1,0 +1,33 @@
+[package]
+name = "palette"
+edition.workspace = true
+version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lib]
+path = "src/palette.rs"
+
+[dependencies]
+paths = { path = "../paths" }
+gpui.workspace = true
+anyhow.workspace = true
+theme = { path = "../theme" }
+ui = { path = "../ui" }
+extensions = { path = "../extensions" }
+settings = { path = "../settings" }
+lsp_client = { path = "../lsp_client" }
+util = { path = "../util" }
+keymap = { path = "../keymap" }
+serde_json.workspace = true
+serde.workspace = true
+web-time = "1"
+
+[target.'cfg(not(target_family = "wasm"))'.dependencies]
+dirs = "6"
+log = "0.4"
+athas-fff-search = { path = "../../core/fff-search" }
+
+[dev-dependencies]
+gpui = { workspace = true, features = ["test-support"] }
+tempfile = "3"

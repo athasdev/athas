@@ -1,0 +1,21 @@
+[package]
+name = "ai_mcp"
+edition.workspace = true
+version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lib]
+path = "src/ai_mcp.rs"
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+futures = "0.3"
+agent-client-protocol-schema = { version = "=1.9.1", default-features = false }
+
+[target.'cfg(not(target_family = "wasm"))'.dependencies]
+ureq = { version = "3.5", default-features = false, features = ["rustls"] }
+
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"

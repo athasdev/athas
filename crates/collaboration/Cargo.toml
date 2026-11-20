@@ -1,0 +1,44 @@
+[package]
+name = "collaboration"
+edition.workspace = true
+version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lib]
+path = "src/collaboration.rs"
+
+[dependencies]
+paths = { path = "../paths" }
+gpui.workspace = true
+anyhow.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+theme = { path = "../theme" }
+ui = { path = "../ui" }
+keymap = { path = "../keymap" }
+notifications = { path = "../notifications" }
+account = { path = "../account" }
+# The persisted session transcript a share is made from.
+agent_ui = { path = "../agent_ui" }
+regex = "1"
+uuid = { version = "1", features = ["v4"] }
+dirs = "6"
+chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
+futures = "0.3"
+url = "2"
+
+[target.'cfg(not(target_family = "wasm"))'.dependencies]
+# Realtime rooms are WebSockets; the account service serves them over TLS.
+tungstenite = { version = "0.27", features = ["rustls-tls-native-roots"] }
+# The document update stream (server-sent events), with the GitHub client's rustls-only build.
+reqwest = { version = "0.12", default-features = false, features = ["blocking", "rustls-tls", "rustls-tls-native-roots"] }
+
+[dev-dependencies]
+tempfile = "3"
+gpui = { workspace = true, features = ["test-support"] }
+telemetry = { path = "../telemetry", features = ["test-support"] }
+# `examples/account_snapshot.rs` renders the views into PNGs without a window.
+gpui_platform = { workspace = true, features = ["test-support"] }
+image = { version = "0.25", default-features = false, features = ["png"] }
+settings = { path = "../settings" }

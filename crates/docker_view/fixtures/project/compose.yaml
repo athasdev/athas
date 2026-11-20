@@ -1,0 +1,9 @@
+# Fixture for the Docker view's Compose tab; never run.
+services:
+  web:
+    image: nginx:1.27
+    ports: ["8080:80"]
+  db:
+    image: postgres:16
+  worker:
+    image: ghcr.io/acme/migrate:latest

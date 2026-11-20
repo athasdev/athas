@@ -1,0 +1,28 @@
+[package]
+name = "ui"
+edition.workspace = true
+version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lib]
+path = "src/ui.rs"
+
+[dependencies]
+gpui.workspace = true
+theme = { path = "../theme" }
+anyhow.workspace = true
+include_dir = "0.7"
+unicode-segmentation = "1"
+web-time = "1"
+
+# Right-click menus drawn by AppKit.
+[target.'cfg(target_os = "macos")'.dependencies]
+objc2 = "0.6"
+objc2-foundation = { version = "0.3", default-features = false, features = ["std", "NSGeometry", "NSString", "objc2-core-foundation"] }
+raw-window-handle = "0.6"
+
+[dev-dependencies]
+gpui = { workspace = true, features = ["test-support"] }
+gpui_platform = { workspace = true, features = ["test-support"] }
+image = { version = "0.25", default-features = false, features = ["png"] }

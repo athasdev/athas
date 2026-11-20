@@ -1,0 +1,32 @@
+{
+  "$schema": "https://athas.dev/schemas/extension.json",
+  "id": "athas.mcp.filesystem",
+  "name": "filesystem",
+  "displayName": "Filesystem",
+  "version": "1.0.0",
+  "description": "Read and write files in the folders you allow",
+  "publisher": "Athas",
+  "categories": ["Integration"],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/athasdev/athas/tree/master/extensions/official/mcp-filesystem"
+  },
+  "icon": "icon.svg",
+  "contributes": {
+    "mcpServers": [
+      {
+        "id": "filesystem",
+        "name": "Filesystem",
+        "description": "Read and write files in the folders you allow",
+        "group": "developer",
+        "setupNote": "The last argument is the folder the server may use. Add a line for each folder.",
+        "config": {
+          "transport": "stdio",
+          "command": "npx",
+          "args": ["-y", "@modelcontextprotocol/server-filesystem", "."]
+        }
+      }
+    ]
+  }
+}

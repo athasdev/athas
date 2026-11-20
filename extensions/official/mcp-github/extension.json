@@ -1,0 +1,32 @@
+{
+  "$schema": "https://athas.dev/schemas/extension.json",
+  "id": "athas.mcp.github",
+  "name": "github",
+  "displayName": "GitHub",
+  "version": "1.0.0",
+  "description": "Repositories, issues, pull requests and Actions",
+  "publisher": "Athas",
+  "categories": ["Integration"],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/athasdev/athas/tree/master/extensions/official/mcp-github"
+  },
+  "icon": "icon.svg",
+  "contributes": {
+    "mcpServers": [
+      {
+        "id": "github",
+        "name": "GitHub",
+        "description": "Repositories, issues, pull requests and Actions",
+        "group": "popular",
+        "setupNote": "Set Authorization to Bearer followed by a GitHub personal access token.",
+        "config": {
+          "transport": "http",
+          "url": "https://api.githubcopilot.com/mcp/",
+          "headers": ["Authorization"]
+        }
+      }
+    ]
+  }
+}

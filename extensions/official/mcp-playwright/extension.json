@@ -1,0 +1,31 @@
+{
+  "$schema": "https://athas.dev/schemas/extension.json",
+  "id": "athas.mcp.playwright",
+  "name": "playwright",
+  "displayName": "Playwright",
+  "version": "1.0.0",
+  "description": "Drive a real browser to open, click and read pages",
+  "publisher": "Athas",
+  "categories": ["Integration"],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/athasdev/athas/tree/master/extensions/official/mcp-playwright"
+  },
+  "icon": "icon.svg",
+  "contributes": {
+    "mcpServers": [
+      {
+        "id": "playwright",
+        "name": "Playwright",
+        "description": "Drive a real browser to open, click and read pages",
+        "group": "popular",
+        "config": {
+          "transport": "stdio",
+          "command": "npx",
+          "args": ["@playwright/mcp@latest"]
+        }
+      }
+    ]
+  }
+}

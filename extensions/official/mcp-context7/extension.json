@@ -1,0 +1,31 @@
+{
+  "$schema": "https://athas.dev/schemas/extension.json",
+  "id": "athas.mcp.context7",
+  "name": "context7",
+  "displayName": "Context7",
+  "version": "1.0.0",
+  "description": "Current library documentation and code examples",
+  "publisher": "Athas",
+  "categories": ["Integration"],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/athasdev/athas/tree/master/extensions/official/mcp-context7"
+  },
+  "icon": "icon.svg",
+  "contributes": {
+    "mcpServers": [
+      {
+        "id": "context7",
+        "name": "Context7",
+        "description": "Current library documentation and code examples",
+        "group": "popular",
+        "config": {
+          "transport": "stdio",
+          "command": "npx",
+          "args": ["-y", "@upstash/context7-mcp"]
+        }
+      }
+    ]
+  }
+}

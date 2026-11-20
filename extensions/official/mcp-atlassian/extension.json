@@ -1,0 +1,30 @@
+{
+  "$schema": "https://athas.dev/schemas/extension.json",
+  "id": "athas.mcp.atlassian",
+  "name": "atlassian",
+  "displayName": "Atlassian",
+  "version": "1.0.0",
+  "description": "Jira issues and Confluence pages",
+  "publisher": "Athas",
+  "categories": ["Integration"],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/athasdev/athas/tree/master/extensions/official/mcp-atlassian"
+  },
+  "icon": "icon.svg",
+  "contributes": {
+    "mcpServers": [
+      {
+        "id": "atlassian",
+        "name": "Atlassian",
+        "description": "Jira issues and Confluence pages",
+        "group": "work",
+        "config": {
+          "transport": "sse",
+          "url": "https://mcp.atlassian.com/v1/sse"
+        }
+      }
+    ]
+  }
+}

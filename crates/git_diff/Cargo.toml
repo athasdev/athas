@@ -1,0 +1,37 @@
+[package]
+name = "git_diff"
+edition.workspace = true
+version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lib]
+path = "src/git_diff.rs"
+
+[dependencies]
+gpui.workspace = true
+anyhow.workspace = true
+web-time = "1"
+theme = { path = "../theme" }
+ui = { path = "../ui" }
+settings = { path = "../settings" }
+workbench_api = { path = "../workbench_api" }
+# The shared many-files shell: sticky file headers and the file navigator.
+multibuffer = { path = "../multibuffer" }
+# Files at a commit open read-only in the editor.
+editor = { path = "../editor" }
+regex = "1"
+# The image crate GPUI decodes with; reads the sizes an image diff shows.
+image = { version = "0.25", default-features = false }
+
+[target.'cfg(not(target_family = "wasm"))'.dependencies]
+# The same libgit2 build the Source Control tool uses.
+git2 = { version = "0.20", default-features = false, features = ["vendored-libgit2"] }
+# `git_file_at_commit`, as the old app reads a file at a commit.
+athas_version_control = { package = "athas-version-control", path = "../../core/version-control" }
+
+[dev-dependencies]
+tempfile = "3"
+gpui = { workspace = true, features = ["test-support"] }
+gpui_platform = { workspace = true, features = ["test-support"] }
+image = { version = "0.25", default-features = false, features = ["png"] }

@@ -1,0 +1,30 @@
+[package]
+name = "search_panel"
+edition.workspace = true
+version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lib]
+path = "src/search_panel.rs"
+
+[dependencies]
+gpui.workspace = true
+anyhow.workspace = true
+theme = { path = "../theme" }
+ui = { path = "../ui" }
+settings = { path = "../settings" }
+# Results as excerpts under sticky file headers, with the file navigator.
+multibuffer = { path = "../multibuffer" }
+# Syntax colours in excerpts.
+editor = { path = "../editor" }
+# Replacing in files an editor has open edits the editor, not the disk.
+workbench_api = { path = "../workbench_api" }
+regex = "1"
+
+[target.'cfg(not(target_family = "wasm"))'.dependencies]
+athas-fff-search = { path = "../../core/fff-search" }
+athas_project = { package = "athas-project", path = "../../core/project" }
+
+[dev-dependencies]
+tempfile = "3"

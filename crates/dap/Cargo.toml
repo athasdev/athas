@@ -1,0 +1,26 @@
+[package]
+name = "dap"
+edition.workspace = true
+version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lib]
+path = "src/dap.rs"
+
+[features]
+# A scripted debug adapter on a local TCP port, for tests and headless snapshots.
+test-support = []
+
+[dependencies]
+paths = { path = "../paths" }
+gpui.workspace = true
+anyhow.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+futures = "0.3"
+dirs = "6"
+
+[dev-dependencies]
+gpui = { workspace = true, features = ["test-support"] }
+tempfile = "3"

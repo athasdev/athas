@@ -1,0 +1,21 @@
+[package]
+name = "ai_tools"
+edition.workspace = true
+version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lib]
+path = "src/ai_tools.rs"
+
+[dependencies]
+serde.workspace = true
+globset = "0.4"
+ignore = "0.4"
+regex = "1"
+# Writes land through a temporary file in the same folder, renamed over the target.
+tempfile = "3"
+
+[dev-dependencies]
+serde_json.workspace = true
+tempfile = "3"

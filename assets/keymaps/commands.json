@@ -1,0 +1,1724 @@
+[
+ {
+  "id": "ai.openChatTranscript",
+  "title": "Open Conversation as Markdown",
+  "category": "Agent",
+  "description": "Open a local snapshot of the conversation and its tool activity",
+  "icon": null
+ },
+ {
+  "id": "ai.reviewAgentChanges",
+  "title": "Review Agent Changes",
+  "category": "Agent",
+  "description": "Review and keep or reject agent edits across files",
+  "icon": null
+ },
+ {
+  "id": "ai.keepAgentHunk",
+  "title": "Keep Agent Change",
+  "category": "AI",
+  "description": "Keep the unreviewed agent change at the cursor",
+  "icon": "Check"
+ },
+ {
+  "id": "ai.rejectAgentHunk",
+  "title": "Undo Agent Change",
+  "category": "AI",
+  "description": "Undo the unreviewed agent change at the cursor",
+  "icon": "X"
+ },
+ {
+  "id": "ai.openAgentInNewWindow",
+  "title": "AI: Open Agent in New Window",
+  "category": "AI",
+  "description": "Open the active agent session in its own window",
+  "icon": "Sparkle"
+ },
+ {
+  "id": "ai.sendSelectionToClaudeCode",
+  "title": "AI: Send Selection to Claude Code",
+  "category": "AI",
+  "description": "Mention the selection or the active file in Claude Code running in a terminal",
+  "icon": "TerminalWindow"
+ },
+ {
+  "id": "ai.showAgentSessions",
+  "title": "AI: Show Agent Sessions",
+  "category": "AI",
+  "description": "Open the agents sidebar with this project's sessions and their history",
+  "icon": "History"
+ },
+ {
+  "id": "ai.toggleSessionPanel",
+  "title": "AI: Toggle Session Dock",
+  "category": "AI",
+  "description": "Show or put away the dock of tools and details beside the agent session",
+  "icon": "Wrench"
+ },
+ {
+  "id": "ai.toggleSessionDetails",
+  "title": "AI: Toggle Session Details",
+  "category": "AI",
+  "description": "Unfold or fold the environment, context, changes and other details in the session dock",
+  "icon": "SidebarRight"
+ },
+ {
+  "id": "ai.showSessionChanges",
+  "title": "AI: Show Session Changes",
+  "category": "AI",
+  "description": "Open the files the agent session changed",
+  "icon": "GitDiff"
+ },
+ {
+  "id": "ai.showSessionBrowser",
+  "title": "AI: Show Session Browser",
+  "category": "AI",
+  "description": "Open the agent session's browser, with the servers it started",
+  "icon": "Globe"
+ },
+ {
+  "id": "ai.showSessionTerminal",
+  "title": "AI: Show Session Terminal",
+  "category": "AI",
+  "description": "Open a terminal in the agent session's project",
+  "icon": "Terminal"
+ },
+ {
+  "id": "ai.toggleFollowAgent",
+  "title": "AI: Toggle Follow Agent",
+  "category": "AI",
+  "description": "Open the files the agent works in while its turn runs",
+  "icon": "Crosshair"
+ },
+ {
+  "id": "ai.cycleAgentMode",
+  "title": "AI: Cycle Agent Mode",
+  "category": "AI",
+  "description": "Switch the current chat between Agent, Ask and Plan",
+  "icon": "ChatBubbleText"
+ },
+ {
+  "id": "ai.reviewPendingAgentChanges",
+  "title": "AI: Review Agent Changes",
+  "category": "AI",
+  "description": "Keep or reject the agent's file edits hunk by hunk",
+  "icon": "GitDiff"
+ },
+ {
+  "id": "ai.keepAllAgentChanges",
+  "title": "AI: Keep All Agent Changes",
+  "category": "AI",
+  "description": "Accept every unreviewed edit the agent made",
+  "icon": "Check"
+ },
+ {
+  "id": "ai.rejectAllAgentChanges",
+  "title": "AI: Reject All Agent Changes",
+  "category": "AI",
+  "description": "Revert every unreviewed edit the agent made",
+  "icon": "X"
+ },
+ {
+  "id": "ai.openCustomize",
+  "title": "AI: Integrations",
+  "category": "AI",
+  "description": "Add MCP servers, agents, skills and extensions",
+  "icon": "PuzzlePiece"
+ },
+ {
+  "id": "ai.openContinuousAgents",
+  "title": "AI: Continuous Agents",
+  "category": "AI",
+  "description": "Create and manage recurring workspace goals",
+  "icon": "ArrowsClockwise"
+ },
+ {
+  "id": "ai.openSkills",
+  "title": "AI: Skills",
+  "category": "AI",
+  "description": "Browse, write and attach reusable agent skills",
+  "icon": "BookOpen"
+ },
+ {
+  "id": "ai.openCloudAgents",
+  "title": "AI: Cloud Agents",
+  "category": "AI",
+  "description": "Start an agent session that runs in the cloud and opens a pull request",
+  "icon": "Cloud"
+ },
+ {
+  "id": "ai.manageAllowedCommands",
+  "title": "AI: Manage Allowed Commands",
+  "category": "AI",
+  "description": "Review the commands and MCP tools the Athas agent runs without asking",
+  "icon": "ShieldCheck"
+ },
+ {
+  "id": "ai.openAcpInspector",
+  "title": "AI: Open ACP Inspector",
+  "category": "AI",
+  "description": "Inspect the JSON-RPC traffic and capabilities of running ACP agents",
+  "icon": "ArrowsLeftRight"
+ },
+ {
+  "id": "ai.importAgentSession",
+  "title": "AI: Import Agent Session",
+  "category": "AI",
+  "description": "Browse the agent's sessions for this workspace and open one",
+  "icon": "History"
+ },
+ {
+  "id": "ai.openAgentCliInTerminal",
+  "title": "AI: Open Agent CLI in Terminal",
+  "category": "AI",
+  "description": null,
+  "icon": "TerminalWindow"
+ },
+ {
+  "id": "ai.logOutOfAgent",
+  "title": "AI: Log Out of Agent",
+  "category": "AI",
+  "description": "Sign out of the running agent; the next prompt asks how to sign in",
+  "icon": "SignOut"
+ },
+ {
+  "id": "ai.restartAgent",
+  "title": "AI: Restart Agent",
+  "category": "AI",
+  "description": "Stop the session's agent process and start it again on the same session",
+  "icon": "ArrowClockwise"
+ },
+ {
+  "id": "ai.setProviderApiKey",
+  "title": "AI: Set Provider API Key",
+  "category": "AI",
+  "description": "Add, replace or remove the API key of a model provider",
+  "icon": "Key"
+ },
+ {
+  "id": "browser.newTab",
+  "title": "New Browser Tab",
+  "category": "Browser",
+  "description": "Browse the web or a local server in a tab",
+  "icon": "Globe"
+ },
+ {
+  "id": "browser.openUrl",
+  "title": "Open URL in Browser Tab",
+  "category": "Browser",
+  "description": "Open an address or a web search in a new browser tab",
+  "icon": "Globe"
+ },
+ {
+  "id": "browser.focusAddressBar",
+  "title": "Focus Address Bar",
+  "category": "Browser",
+  "description": null,
+  "icon": null
+ },
+ {
+  "id": "browser.reload",
+  "title": "Reload Page",
+  "category": "Browser",
+  "description": null,
+  "icon": null
+ },
+ {
+  "id": "browser.back",
+  "title": "Go Back",
+  "category": "Browser",
+  "description": null,
+  "icon": null
+ },
+ {
+  "id": "browser.forward",
+  "title": "Go Forward",
+  "category": "Browser",
+  "description": null,
+  "icon": null
+ },
+ {
+  "id": "browser.openDevTools",
+  "title": "Open Page Developer Tools",
+  "category": "Browser",
+  "description": null,
+  "icon": null
+ },
+ {
+  "id": "editor.selectAll",
+  "title": "Select All",
+  "category": "Edit",
+  "description": null,
+  "icon": null
+ },
+ {
+  "id": "editor.undo",
+  "title": "Undo",
+  "category": "Edit",
+  "description": null,
+  "icon": null
+ },
+ {
+  "id": "editor.redo",
+  "title": "Redo",
+  "category": "Edit",
+  "description": null,
+  "icon": null
+ },
+ {
+  "id": "editor.copy",
+  "title": "Copy",
+  "category": "Edit",
+  "description": null,
+  "icon": null
+ },
+ {
+  "id": "editor.cut",
+  "title": "Cut",
+  "category": "Edit",
+  "description": null,
+  "icon": null
+ },
+ {
+  "id": "editor.paste",
+  "title": "Paste",
+  "category": "Edit",
+  "description": null,
+  "icon": null
+ },
+ {
+  "id": "editor.selectNextOccurrence",
+  "title": "Add Selection To Next Find Match",
+  "category": "Edit",
+  "description": null,
+  "icon": null
+ },
+ {
+  "id": "editor.selectPreviousOccurrence",
+  "title": "Add Selection To Previous Find Match",
+  "category": "Edit",
+  "description": null,
+  "icon": null
+ },
+ {
+  "id": "editor.selectAllOccurrences",
+  "title": "Select All Occurrences of Find Match",
+  "category": "Edit",
+  "description": null,
+  "icon": null
+ },
+ {
+  "id": "editor.duplicateLine",
+  "title": "Duplicate Line",
+  "category": "Edit",
+  "description": null,
+  "icon": null
+ },
+ {
+  "id": "editor.deleteLine",
+  "title": "Delete Line",
+  "category": "Edit",
+  "description": null,
+  "icon": null
+ },
+ {
+  "id": "editor.toggleComment",
+  "title": "Toggle Comment",
+  "category": "Edit",
+  "description": null,
+  "icon": null
+ },
+ {
+  "id": "editor.foldAll",
+  "title": "Fold All",
+  "category": "Edit",
+  "description": null,
+  "icon": null
+ },
+ {
+  "id": "editor.foldLevel1",
+  "title": "Fold Level 1",
+  "category": "Edit",
+  "description": null,
+  "icon": null
+ },
+ {
+  "id": "editor.foldLevel2",
+  "title": "Fold Level 2",
+  "category": "Edit",
+  "description": null,
+  "icon": null
+ },
+ {
+  "id": "editor.foldLevel3",
+  "title": "Fold Level 3",
+  "category": "Edit",
+  "description": null,
+  "icon": null
+ },
+ {
+  "id": "editor.foldLevel4",
+  "title": "Fold Level 4",
+  "category": "Edit",
+  "description": null,
+  "icon": null
+ },
+ {
+  "id": "editor.foldLevel5",
+  "title": "Fold Level 5",
+  "category": "Edit",
+  "description": null,
+  "icon": null
+ },
+ {
+  "id": "editor.foldLevel6",
+  "title": "Fold Level 6",
+  "category": "Edit",
+  "description": null,
+  "icon": null
+ },
+ {
+  "id": "editor.foldLevel7",
+  "title": "Fold Level 7",
+  "category": "Edit",
+  "description": null,
+  "icon": null
+ },
+ {
+  "id": "editor.unfoldAll",
+  "title": "Unfold All",
+  "category": "Edit",
+  "description": null,
+  "icon": null
+ },
+ {
+  "id": "editor.moveLineUp",
+  "title": "Move Line Up",
+  "category": "Edit",
+  "description": null,
+  "icon": null
+ },
+ {
+  "id": "editor.moveLineDown",
+  "title": "Move Line Down",
+  "category": "Edit",
+  "description": null,
+  "icon": null
+ },
+ {
+  "id": "editor.copyLineUp",
+  "title": "Copy Line Up",
+  "category": "Edit",
+  "description": null,
+  "icon": null
+ },
+ {
+  "id": "editor.copyLineDown",
+  "title": "Copy Line Down",
+  "category": "Edit",
+  "description": null,
+  "icon": null
+ },
+ {
+  "id": "editor.insertCursorAbove",
+  "title": "Add Cursor Above",
+  "category": "Edit",
+  "description": null,
+  "icon": null
+ },
+ {
+  "id": "editor.insertCursorBelow",
+  "title": "Add Cursor Below",
+  "category": "Edit",
+  "description": null,
+  "icon": null
+ },
+ {
+  "id": "editor.insertCursorsAtLineEnds",
+  "title": "Add Cursors to Line Ends",
+  "category": "Edit",
+  "description": null,
+  "icon": null
+ },
+ {
+  "id": "editor.removeSecondaryCursors",
+  "title": "Remove Secondary Cursors",
+  "category": "Edit",
+  "description": null,
+  "icon": null
+ },
+ {
+  "id": "editor.formatDocument",
+  "title": "Format Document",
+  "category": "Edit",
+  "description": null,
+  "icon": null
+ },
+ {
+  "id": "editor.formatSelection",
+  "title": "Format Selection",
+  "category": "Edit",
+  "description": null,
+  "icon": null
+ },
+ {
+  "id": "editor.triggerSuggest",
+  "title": "Trigger Suggest",
+  "category": "Edit",
+  "description": null,
+  "icon": null
+ },
+ {
+  "id": "editor.triggerParameterHints",
+  "title": "Trigger Parameter Hints",
+  "category": "Edit",
+  "description": null,
+  "icon": null
+ },
+ {
+  "id": "editor.showHover",
+  "title": "Show Hover",
+  "category": "Edit",
+  "description": null,
+  "icon": null
+ },
+ {
+  "id": "editor.quickFix",
+  "title": "Quick Fix",
+  "category": "Edit",
+  "description": null,
+  "icon": null
+ },
+ {
+  "id": "editor.inlineEdit",
+  "title": "Agent Inline Edit",
+  "category": "Edit",
+  "description": null,
+  "icon": null
+ },
+ {
+  "id": "editor.addSelectionToChat",
+  "title": "Add Selection to Agent Chat",
+  "category": "Agent",
+  "description": "Attach the selected code to the current agent chat",
+  "icon": "Sparkle"
+ },
+ {
+  "id": "editor.addSelectionToNewChat",
+  "title": "Add Selection to New Agent Chat",
+  "category": "Agent",
+  "description": "Start a new agent chat with the selected code attached",
+  "icon": "Sparkle"
+ },
+ {
+  "id": "markdown.togglePreview",
+  "title": "Markdown: Toggle Preview",
+  "category": "Markdown",
+  "description": "Toggle Markdown preview in the current tab",
+  "icon": "Pen"
+ },
+ {
+  "id": "workbench.newTab",
+  "title": "New Tab",
+  "category": "File",
+  "description": null,
+  "icon": null
+ },
+ {
+  "id": "workbench.newWindow",
+  "title": "New Window",
+  "category": "File",
+  "description": null,
+  "icon": null
+ },
+ {
+  "id": "file.save",
+  "title": "Save File",
+  "category": "File",
+  "description": "Save the active file",
+  "icon": "Save"
+ },
+ {
+  "id": "file.saveAs",
+  "title": "Save File As",
+  "category": "File",
+  "description": "Save current file with a new name",
+  "icon": "FilePlus"
+ },
+ {
+  "id": "file.saveAll",
+  "title": "Save All",
+  "category": "File",
+  "description": "Save all modified files",
+  "icon": "Save"
+ },
+ {
+  "id": "file.revert",
+  "title": "Revert File",
+  "category": "File",
+  "description": null,
+  "icon": null
+ },
+ {
+  "id": "file.close",
+  "title": "Close Tab",
+  "category": "File",
+  "description": "Close current tab",
+  "icon": "X"
+ },
+ {
+  "id": "workbench.closeWindow",
+  "title": "Close Window",
+  "category": "Workbench",
+  "description": null,
+  "icon": null
+ },
+ {
+  "id": "file.closeAll",
+  "title": "Close All Tabs",
+  "category": "File",
+  "description": null,
+  "icon": null
+ },
+ {
+  "id": "file.closeOthers",
+  "title": "Close Other Tabs",
+  "category": "File",
+  "description": null,
+  "icon": null
+ },
+ {
+  "id": "file.closeSaved",
+  "title": "Close Saved Tabs",
+  "category": "File",
+  "description": null,
+  "icon": null
+ },
+ {
+  "id": "file.closeTabsToLeft",
+  "title": "Close Tabs to the Left",
+  "category": "File",
+  "description": null,
+  "icon": null
+ },
+ {
+  "id": "file.closeTabsToRight",
+  "title": "Close Tabs to the Right",
+  "category": "File",
+  "description": null,
+  "icon": null
+ },
+ {
+  "id": "file.reopenClosed",
+  "title": "Reopen Closed Tab",
+  "category": "File",
+  "description": "Reopen the most recently closed tab",
+  "icon": "ArrowCounterClockwise"
+ },
+ {
+  "id": "file.new",
+  "title": "New File",
+  "category": "File",
+  "description": "Create a file in the current workspace",
+  "icon": "FilePlus"
+ },
+ {
+  "id": "file.newDocument",
+  "title": "File: New Document",
+  "category": "File",
+  "description": "Open an untitled document in the rich Markdown editor",
+  "icon": "FilePlus"
+ },
+ {
+  "id": "file.open",
+  "title": "Open Project",
+  "category": "File",
+  "description": "Open a folder or project",
+  "icon": "FolderOpen"
+ },
+ {
+  "id": "file.openFolder",
+  "title": "Open Folder",
+  "category": "File",
+  "description": "Choose a folder to open with the system dialog",
+  "icon": "FolderOpen"
+ },
+ {
+  "id": "file.quickOpen",
+  "title": "Quick Open",
+  "category": "File",
+  "description": "Jump to any file with fuzzy search",
+  "icon": "FileText"
+ },
+ {
+  "id": "file.localHistory",
+  "title": "Show Local History",
+  "category": "File",
+  "description": "Open the selected file timeline",
+  "icon": "History"
+ },
+ {
+  "id": "workspace.manage",
+  "title": "Workspace: Manage Workspaces",
+  "category": "File",
+  "description": "Share project commands and AI instructions with your team",
+  "icon": "Grid"
+ },
+ {
+  "id": "workspace.add",
+  "title": "Workspace: Add Workspace\u2026",
+  "category": "File",
+  "description": "Register a project folder as a workspace and edit what your team shares",
+  "icon": "Grid"
+ },
+ {
+  "id": "share.buffer",
+  "title": "File: Share Buffer to Web",
+  "category": "File",
+  "description": "Create a read-only snapshot link",
+  "icon": "FilePlus"
+ },
+ {
+  "id": "share.selection",
+  "title": "File: Share Selection to Web",
+  "category": "File",
+  "description": "Share the selected code",
+  "icon": "FilePlus"
+ },
+ {
+  "id": "share.agent",
+  "title": "AI: Share Agent to Web",
+  "category": "AI",
+  "description": "Share the current conversation",
+  "icon": "FilePlus"
+ },
+ {
+  "id": "git.stageAll",
+  "title": "Git: Stage All Changes",
+  "category": "Git",
+  "description": "Stage all modified files",
+  "icon": "GitBranch"
+ },
+ {
+  "id": "git.unstageAll",
+  "title": "Git: Unstage All Changes",
+  "category": "Git",
+  "description": "Unstage all staged files",
+  "icon": "GitBranch"
+ },
+ {
+  "id": "git.commit",
+  "title": "Git: Commit Changes",
+  "category": "Git",
+  "description": "Commit staged changes",
+  "icon": "GitCommit"
+ },
+ {
+  "id": "git.push",
+  "title": "Git: Push",
+  "category": "Git",
+  "description": "Push changes to remote",
+  "icon": "ArrowUp"
+ },
+ {
+  "id": "git.pull",
+  "title": "Git: Pull",
+  "category": "Git",
+  "description": "Pull changes from remote",
+  "icon": "ArrowClockwise"
+ },
+ {
+  "id": "git.fetch",
+  "title": "Git: Fetch",
+  "category": "Git",
+  "description": "Fetch changes from remote",
+  "icon": "ArrowClockwise"
+ },
+ {
+  "id": "git.discardAll",
+  "title": "Git: Discard All Changes",
+  "category": "Git",
+  "description": "Discard all uncommitted changes",
+  "icon": "GitBranch"
+ },
+ {
+  "id": "git.refresh",
+  "title": "Git: Refresh Status",
+  "category": "Git",
+  "description": "Refresh Git status",
+  "icon": "ArrowClockwise"
+ },
+ {
+  "id": "github.newRelease",
+  "title": "GitHub: New Release",
+  "category": "GitHub",
+  "description": "Draft a release in the active repository",
+  "icon": "Tag"
+ },
+ {
+  "id": "github.refresh",
+  "title": "GitHub: Refresh Current View",
+  "category": "GitHub",
+  "description": "Refresh the active GitHub sidebar section",
+  "icon": "ArrowClockwise"
+ },
+ {
+  "id": "github.checkAuthentication",
+  "title": "GitHub: Check Authentication",
+  "category": "GitHub",
+  "description": "Refresh GitHub account authentication",
+  "icon": "ArrowClockwise"
+ },
+ {
+  "id": "github.connectAccount",
+  "title": "GitHub: Connect Account",
+  "category": "GitHub",
+  "description": "Open GitHub integration settings",
+  "icon": "Link"
+ },
+ {
+  "id": "java.organizeImports",
+  "title": "Java: Organize Imports",
+  "category": "Java",
+  "description": null,
+  "icon": null
+ },
+ {
+  "id": "java.refreshProject",
+  "title": "Java: Refresh Project",
+  "category": "Java",
+  "description": null,
+  "icon": null
+ },
+ {
+  "id": "lsp.restartAllServers",
+  "title": "Language Server: Restart All Servers",
+  "category": "Language Server",
+  "description": "Restart every active language server",
+  "icon": "ArrowClockwise"
+ },
+ {
+  "id": "lsp.stopAllServers",
+  "title": "Language Server: Stop All Servers",
+  "category": "Language Server",
+  "description": "Stop every active language server",
+  "icon": "Square"
+ },
+ {
+  "id": "lsp.showStatus",
+  "title": "LSP: Show Status",
+  "category": "LSP",
+  "description": null,
+  "icon": "TerminalWindow"
+ },
+ {
+  "id": "developer.openAthasLog",
+  "title": "Developer: Open Athas Log",
+  "category": "Developer",
+  "description": "Open the current Athas application log in a read-only editor tab",
+  "icon": "TerminalWindow"
+ },
+ {
+  "id": "cli.installTerminalCommand",
+  "title": "CLI: Install Terminal Command",
+  "category": "CLI",
+  "description": "Install 'athas' command for terminal",
+  "icon": "TerminalWindow"
+ },
+ {
+  "id": "editor.showOutline",
+  "title": "Go to Symbol in Editor",
+  "category": "Navigation",
+  "description": null,
+  "icon": null
+ },
+ {
+  "id": "workbench.showOutline",
+  "title": "Show Outline",
+  "category": "Navigation",
+  "description": null,
+  "icon": null
+ },
+ {
+  "id": "workbench.nextTab",
+  "title": "Next Tab",
+  "category": "Navigation",
+  "description": "Switch to the next open tab",
+  "icon": "ArrowRight"
+ },
+ {
+  "id": "workbench.nextTabCtrlTab",
+  "title": "Next Tab (Ctrl+Tab)",
+  "category": "Navigation",
+  "description": null,
+  "icon": null
+ },
+ {
+  "id": "workbench.previousTab",
+  "title": "Previous Tab",
+  "category": "Navigation",
+  "description": "Switch to the previous open tab",
+  "icon": "ArrowLeft"
+ },
+ {
+  "id": "workbench.previousTabCtrlTab",
+  "title": "Previous Tab (Ctrl+Shift+Tab)",
+  "category": "Navigation",
+  "description": null,
+  "icon": null
+ },
+ {
+  "id": "workbench.nextTabAlt",
+  "title": "Next Tab (Alt)",
+  "category": "Navigation",
+  "description": null,
+  "icon": null
+ },
+ {
+  "id": "workbench.previousTabAlt",
+  "title": "Previous Tab (Alt)",
+  "category": "Navigation",
+  "description": null,
+  "icon": null
+ },
+ {
+  "id": "editor.goToDefinition",
+  "title": "Go to Definition",
+  "category": "Navigation",
+  "description": null,
+  "icon": null
+ },
+ {
+  "id": "editor.goToImplementation",
+  "title": "Go to Implementation",
+  "category": "Navigation",
+  "description": null,
+  "icon": null
+ },
+ {
+  "id": "editor.goToTypeDefinition",
+  "title": "Go to Type Definition",
+  "category": "Navigation",
+  "description": null,
+  "icon": null
+ },
+ {
+  "id": "editor.goToReferences",
+  "title": "Go to References",
+  "category": "Navigation",
+  "description": null,
+  "icon": null
+ },
+ {
+  "id": "editor.peekReferences",
+  "title": "Peek References",
+  "category": "Navigation",
+  "description": null,
+  "icon": null
+ },
+ {
+  "id": "editor.showCallHierarchy",
+  "title": "Show Call Hierarchy",
+  "category": "Navigation",
+  "description": null,
+  "icon": null
+ },
+ {
+  "id": "editor.showTypeHierarchy",
+  "title": "Show Type Hierarchy",
+  "category": "Navigation",
+  "description": null,
+  "icon": null
+ },
+ {
+  "id": "editor.goToBracket",
+  "title": "Go to Bracket",
+  "category": "Navigation",
+  "description": null,
+  "icon": null
+ },
+ {
+  "id": "editor.selectToBracket",
+  "title": "Select to Bracket",
+  "category": "Navigation",
+  "description": null,
+  "icon": null
+ },
+ {
+  "id": "editor.removeBrackets",
+  "title": "Remove Brackets",
+  "category": "Navigation",
+  "description": null,
+  "icon": null
+ },
+ {
+  "id": "editor.expandSelection",
+  "title": "Expand Selection",
+  "category": "Selection",
+  "description": null,
+  "icon": null
+ },
+ {
+  "id": "editor.shrinkSelection",
+  "title": "Shrink Selection",
+  "category": "Selection",
+  "description": null,
+  "icon": null
+ },
+ {
+  "id": "editor.renameSymbol",
+  "title": "Rename Symbol",
+  "category": "Navigation",
+  "description": null,
+  "icon": null
+ },
+ {
+  "id": "navigation.goBack",
+  "title": "Go Back",
+  "category": "Navigation",
+  "description": null,
+  "icon": null
+ },
+ {
+  "id": "navigation.goForward",
+  "title": "Go Forward",
+  "category": "Navigation",
+  "description": null,
+  "icon": null
+ },
+ {
+  "id": "view.showFiles",
+  "title": "View: Show Files",
+  "category": "Navigation",
+  "description": "Switch to files view",
+  "icon": "FolderOpen"
+ },
+ {
+  "id": "view.showGit",
+  "title": "View: Show Git",
+  "category": "Navigation",
+  "description": "Switch to Git view",
+  "icon": "GitBranch"
+ },
+ {
+  "id": "view.showPullRequests",
+  "title": "View: Show Pull Requests",
+  "category": "Navigation",
+  "description": "Switch to GitHub Pull Requests view",
+  "icon": "GitPullRequest"
+ },
+ {
+  "id": "view.showRunAndDebug",
+  "title": "View: Show Run and Debug",
+  "category": "Navigation",
+  "description": "Switch to debugger view",
+  "icon": "Bug"
+ },
+ {
+  "id": "view.showOutline",
+  "title": "View: Show Outline",
+  "category": "Navigation",
+  "description": "Show symbols for the active file in the sidebar",
+  "icon": "List"
+ },
+ {
+  "id": "view.showIntegrations",
+  "title": "View: Show Integrations",
+  "category": "Navigation",
+  "description": "Open the integrations tab",
+  "icon": "Package"
+ },
+ {
+  "id": "go.symbolInEditor",
+  "title": "Go: Symbol in Editor",
+  "category": "Navigation",
+  "description": "Open the active file outline picker",
+  "icon": "List"
+ },
+ {
+  "id": "workbench.toggleActivePaneFullscreen",
+  "title": "Toggle Active Pane Full Screen",
+  "category": "View",
+  "description": "Expand the active pane or return it to the workbench layout",
+  "icon": "ArrowsOut"
+ },
+ {
+  "id": "workbench.splitEditorRight",
+  "title": "Split Editor Right",
+  "category": "View",
+  "description": "Split the active editor group to the right",
+  "icon": "Columns"
+ },
+ {
+  "id": "workbench.splitEditorDown",
+  "title": "Split Editor Down",
+  "category": "View",
+  "description": "Split the active editor group downward",
+  "icon": "Rows"
+ },
+ {
+  "id": "workbench.closeEditorGroup",
+  "title": "Close Editor Group",
+  "category": "View",
+  "description": "Close the active editor group and move its editors to a nearby group",
+  "icon": "X"
+ },
+ {
+  "id": "workbench.closeOtherEditorGroups",
+  "title": "Close Other Editor Groups",
+  "category": "View",
+  "description": "Close every editor group except the active group",
+  "icon": "X"
+ },
+ {
+  "id": "workbench.moveEditorToNextGroup",
+  "title": "Move Editor Into Next Group",
+  "category": "View",
+  "description": "Move the active editor into the next editor group",
+  "icon": "ArrowRight"
+ },
+ {
+  "id": "workbench.moveEditorToPreviousGroup",
+  "title": "Move Editor Into Previous Group",
+  "category": "View",
+  "description": "Move the active editor into the previous editor group",
+  "icon": "ArrowLeft"
+ },
+ {
+  "id": "workbench.resetEditorGroupSizes",
+  "title": "Reset Editor Group Sizes",
+  "category": "View",
+  "description": "Reset editor groups to equal sizes",
+  "icon": "Columns"
+ },
+ {
+  "id": "workbench.toggleEditorGroupLock",
+  "title": "Toggle Editor Group Lock",
+  "category": "View",
+  "description": "Keep the active editor group from receiving newly opened buffers",
+  "icon": "Lock"
+ },
+ {
+  "id": "preview.shareLocalServer",
+  "title": "Share Local Server",
+  "category": "Preview",
+  "description": "Share a dev server on localhost with a temporary preview link",
+  "icon": "Broadcast"
+ },
+ {
+  "id": "help.sendProductFeedback",
+  "title": "Help: Send Product Feedback",
+  "category": "Settings",
+  "description": "Describe your intent, what happened, and what you expected",
+  "icon": "ChatBubbleText"
+ },
+ {
+  "id": "help.openOnboarding",
+  "title": "Help: Open Onboarding",
+  "category": "Settings",
+  "description": "Open the onboarding flow again",
+  "icon": "Sparkle"
+ },
+ {
+  "id": "preferences.openSettingsJson",
+  "title": "Preferences: Open Settings JSON file",
+  "category": "Settings",
+  "description": "Open settings JSON file",
+  "icon": "Settings"
+ },
+ {
+  "id": "preferences.colorTheme",
+  "title": "Preferences: Color Theme",
+  "category": "Theme",
+  "description": "Choose a color theme",
+  "icon": "Palette"
+ },
+ {
+  "id": "preferences.iconTheme",
+  "title": "Preferences: Icons",
+  "category": "Theme",
+  "description": "Choose an icon theme",
+  "icon": "Grid"
+ },
+ {
+  "id": "settings.toggleVimMode",
+  "title": "Vim Mode: Toggle",
+  "category": "Vim",
+  "description": null,
+  "icon": "TerminalWindow"
+ },
+ {
+  "id": "settings.toggleRelativeLineNumbers",
+  "title": "Editor: Toggle Relative Line Numbers",
+  "category": "Editor",
+  "description": "Use absolute line numbers",
+  "icon": "Hash"
+ },
+ {
+  "id": "settings.toggleAutoSave",
+  "title": "General: Toggle Auto Save",
+  "category": "Settings",
+  "description": "Disable automatic file saving",
+  "icon": "Save"
+ },
+ {
+  "id": "terminal.new",
+  "title": "New Terminal",
+  "category": "Terminal",
+  "description": "Create a new integrated terminal",
+  "icon": "TerminalWindow"
+ },
+ {
+  "id": "terminal.close",
+  "title": "Close Terminal",
+  "category": "Terminal",
+  "description": null,
+  "icon": null
+ },
+ {
+  "id": "terminal.find",
+  "title": "Find in Terminal",
+  "category": "Terminal",
+  "description": "Search in the active terminal",
+  "icon": "Search"
+ },
+ {
+  "id": "terminal.split",
+  "title": "Split Terminal Right",
+  "category": "Terminal",
+  "description": "Open a terminal beside the active terminal",
+  "icon": "Columns"
+ },
+ {
+  "id": "terminal.splitDown",
+  "title": "Split Terminal Down",
+  "category": "Terminal",
+  "description": "Open a terminal below the active terminal",
+  "icon": "Rows"
+ },
+ {
+  "id": "terminal.previousCommand",
+  "title": "Scroll to Previous Command",
+  "category": "Terminal",
+  "description": "Jump to the previous prompt in the active terminal",
+  "icon": "ArrowUp"
+ },
+ {
+  "id": "terminal.nextCommand",
+  "title": "Scroll to Next Command",
+  "category": "Terminal",
+  "description": "Jump to the next prompt in the active terminal",
+  "icon": "ArrowDown"
+ },
+ {
+  "id": "terminal.unsplit",
+  "title": "Unsplit Terminal",
+  "category": "Terminal",
+  "description": "Move the focused terminal pane back into its own tab",
+  "icon": "TerminalWindow"
+ },
+ {
+  "id": "terminal.focusNextPane",
+  "title": "Focus Next Terminal Pane",
+  "category": "Terminal",
+  "description": "Move focus to the next split pane of the active terminal",
+  "icon": "ArrowRight"
+ },
+ {
+  "id": "terminal.focusPreviousPane",
+  "title": "Focus Previous Terminal Pane",
+  "category": "Terminal",
+  "description": "Move focus to the previous split pane of the active terminal",
+  "icon": "ArrowLeft"
+ },
+ {
+  "id": "terminal.clear",
+  "title": "Clear Terminal",
+  "category": "Terminal",
+  "description": "Clear the scrollback of the active terminal",
+  "icon": "Broom"
+ },
+ {
+  "id": "terminal.selectAll",
+  "title": "Select All in Terminal",
+  "category": "Terminal",
+  "description": "Select the whole buffer of the active terminal",
+  "icon": "SelectAll"
+ },
+ {
+  "id": "terminal.copyLastCommandOutput",
+  "title": "Copy Last Command Output",
+  "category": "Terminal",
+  "description": "Copy the output of the most recent command to the clipboard",
+  "icon": "Copy"
+ },
+ {
+  "id": "terminal.generateName",
+  "title": "Terminal: Generate Name",
+  "category": "Terminal",
+  "description": "Name the active terminal using your AI connection",
+  "icon": "Sparkle"
+ },
+ {
+  "id": "terminal.zoomIn",
+  "title": "Terminal: Zoom In",
+  "category": "Terminal",
+  "description": "Increase terminal zoom level",
+  "icon": "ZoomIn"
+ },
+ {
+  "id": "terminal.zoomOut",
+  "title": "Terminal: Zoom Out",
+  "category": "Terminal",
+  "description": "Decrease terminal zoom level",
+  "icon": "ZoomOut"
+ },
+ {
+  "id": "terminal.resetZoom",
+  "title": "Terminal: Reset Zoom",
+  "category": "Terminal",
+  "description": "Reset terminal zoom to default level",
+  "icon": "ArrowCounterClockwise"
+ },
+ {
+  "id": "workbench.toggleSidebar",
+  "title": "Toggle Sidebar",
+  "category": "View",
+  "description": "Hide the sidebar panel",
+  "icon": "Sidebar"
+ },
+ {
+  "id": "workbench.toggleDock",
+  "title": "Toggle Dock",
+  "category": "View",
+  "description": "Show or put away the dock of tools beside the centre",
+  "icon": "SidebarRight"
+ },
+ {
+  "id": "workbench.toggleTerminal",
+  "title": "Toggle Terminal",
+  "category": "View",
+  "description": null,
+  "icon": null
+ },
+ {
+  "id": "workbench.toggleTerminalAlt",
+  "title": "Toggle Terminal (Alt)",
+  "category": "View",
+  "description": null,
+  "icon": null
+ },
+ {
+  "id": "workbench.toggleDiagnostics",
+  "title": "Show Diagnostics",
+  "category": "View",
+  "description": "Open diagnostics",
+  "icon": "WarningCircle"
+ },
+ {
+  "id": "workbench.commandPalette",
+  "title": "Command Palette",
+  "category": "View",
+  "description": null,
+  "icon": null
+ },
+ {
+  "id": "workbench.showNotifications",
+  "title": "Show Notifications",
+  "category": "View",
+  "description": null,
+  "icon": null
+ },
+ {
+  "id": "workbench.hostedAgent",
+  "title": "New Athas Agent",
+  "category": "Agent",
+  "description": null,
+  "icon": null
+ },
+ {
+  "id": "workbench.agentLauncher",
+  "title": "New Agent",
+  "category": "Agent",
+  "description": "Open a new agent chat",
+  "icon": "Sparkle"
+ },
+ {
+  "id": "workbench.showFind",
+  "title": "Find",
+  "category": "View",
+  "description": "Find in the active editor",
+  "icon": "Search"
+ },
+ {
+  "id": "workbench.showFindReplace",
+  "title": "Find and Replace",
+  "category": "View",
+  "description": null,
+  "icon": null
+ },
+ {
+  "id": "editor.findNext",
+  "title": "Find Next",
+  "category": "Edit",
+  "description": null,
+  "icon": null
+ },
+ {
+  "id": "editor.findPrevious",
+  "title": "Find Previous",
+  "category": "Edit",
+  "description": null,
+  "icon": null
+ },
+ {
+  "id": "editor.useSelectionForFind",
+  "title": "Use Selection for Find",
+  "category": "Edit",
+  "description": null,
+  "icon": null
+ },
+ {
+  "id": "editor.jumpToSelection",
+  "title": "Jump to Selection",
+  "category": "Edit",
+  "description": null,
+  "icon": null
+ },
+ {
+  "id": "workbench.showGlobalSearch",
+  "title": "Global Search",
+  "category": "View",
+  "description": "Search across files in workspace",
+  "icon": "Search"
+ },
+ {
+  "id": "workbench.showProjectSearch",
+  "title": "Project Search",
+  "category": "View",
+  "description": null,
+  "icon": null
+ },
+ {
+  "id": "workbench.openGlobalSearchInTab",
+  "title": "Open Search in a Tab",
+  "category": "View",
+  "description": "Search across files in a tab with the file list beside the results",
+  "icon": "Search"
+ },
+ {
+  "id": "workbench.showFileExplorer",
+  "title": "Show Files",
+  "category": "View",
+  "description": null,
+  "icon": null
+ },
+ {
+  "id": "workbench.showSourceControl",
+  "title": "Show Source Control",
+  "category": "View",
+  "description": null,
+  "icon": null
+ },
+ {
+  "id": "workbench.showGitHub",
+  "title": "Show GitHub",
+  "category": "View",
+  "description": null,
+  "icon": null
+ },
+ {
+  "id": "workbench.showDocker",
+  "title": "Show Docker",
+  "category": "View",
+  "description": null,
+  "icon": null
+ },
+ {
+  "id": "workbench.showDebugger",
+  "title": "Show Run and Debug",
+  "category": "View",
+  "description": null,
+  "icon": null
+ },
+ {
+  "id": "debug.start",
+  "title": "Start Debugging",
+  "category": "Debug",
+  "description": null,
+  "icon": null
+ },
+ {
+  "id": "debug.stop",
+  "title": "Stop Debugging",
+  "category": "Debug",
+  "description": null,
+  "icon": null
+ },
+ {
+  "id": "debug.restart",
+  "title": "Restart Debugging",
+  "category": "Debug",
+  "description": null,
+  "icon": null
+ },
+ {
+  "id": "debug.toggleBreakpoint",
+  "title": "Toggle Breakpoint",
+  "category": "Debug",
+  "description": null,
+  "icon": null
+ },
+ {
+  "id": "workbench.showThemeSelector",
+  "title": "Theme Selector",
+  "category": "View",
+  "description": null,
+  "icon": null
+ },
+ {
+  "id": "help.showWhatsNew",
+  "title": "What's New",
+  "category": "Help",
+  "description": "Open the latest release notes for this version",
+  "icon": "Sparkle"
+ },
+ {
+  "id": "workbench.toggleMinimap",
+  "title": "Toggle Minimap",
+  "category": "View",
+  "description": "Hide the editor minimap overview",
+  "icon": "Code"
+ },
+ {
+  "id": "editor.toggleWordWrap",
+  "title": "Toggle Word Wrap",
+  "category": "View",
+  "description": "Disable line wrapping in editor",
+  "icon": "TextAlignJustify"
+ },
+ {
+  "id": "editor.toggleLineNumbers",
+  "title": "Toggle Line Numbers",
+  "category": "View",
+  "description": "Hide line numbers in editor",
+  "icon": "Hash"
+ },
+ {
+  "id": "editor.toggleRenderWhitespace",
+  "title": "Toggle Render Whitespace",
+  "category": "View",
+  "description": null,
+  "icon": null
+ },
+ {
+  "id": "workbench.zoomIn",
+  "title": "Zoom In",
+  "category": "View",
+  "description": "Increase the zoom level of the focused view",
+  "icon": "ZoomIn"
+ },
+ {
+  "id": "workbench.zoomOut",
+  "title": "Zoom Out",
+  "category": "View",
+  "description": "Decrease the zoom level of the focused view",
+  "icon": "ZoomOut"
+ },
+ {
+  "id": "workbench.zoomReset",
+  "title": "Reset Zoom",
+  "category": "View",
+  "description": "Reset the zoom level of the focused view",
+  "icon": "ArrowCounterClockwise"
+ },
+ {
+  "id": "workbench.openKeyboardShortcuts",
+  "title": "Open Keyboard Shortcuts",
+  "category": "View",
+  "description": null,
+  "icon": null
+ },
+ {
+  "id": "workbench.toggleBottomPane",
+  "title": "View: Toggle Bottom Pane",
+  "category": "View",
+  "description": "Hide the bottom pane",
+  "icon": "Sidebar"
+ },
+ {
+  "id": "view.toggleTerminal",
+  "title": "View: Toggle Terminal",
+  "category": "View",
+  "description": "Toggle integrated terminal panel",
+  "icon": "TerminalWindow"
+ },
+ {
+  "id": "view.toggleNativeMenuBar",
+  "title": "View: Toggle Native Menu Bar",
+  "category": "View",
+  "description": "Use custom menu bar",
+  "icon": "List"
+ },
+ {
+  "id": "view.toggleCompactMenuBar",
+  "title": "View: Toggle Compact Menu Bar",
+  "category": "View",
+  "description": "Show full menu bar",
+  "icon": "List"
+ },
+ {
+  "id": "database.connect",
+  "title": "Open Database\u2026",
+  "category": "Database",
+  "description": "Open a saved connection or a database file in this project",
+  "icon": "Database"
+ },
+ {
+  "id": "database.newConnection",
+  "title": "New Connection\u2026",
+  "category": "Database",
+  "description": "Connect to a database server or open a database file",
+  "icon": "Database"
+ },
+ {
+  "id": "docker.open",
+  "title": "Open Docker\u2026",
+  "category": "Docker",
+  "description": "Manage containers, images, Compose services and project presets",
+  "icon": "Package"
+ },
+ {
+  "id": "team.open",
+  "title": "Open Team",
+  "category": "Team",
+  "description": "Shared sessions, what needs you and who is here",
+  "icon": "Users"
+ },
+ {
+  "id": "team.shareSession",
+  "title": "Share Session with Team",
+  "category": "Team",
+  "description": "Let teammates follow this agent session live",
+  "icon": "Users"
+ },
+ {
+  "id": "team.stopSharingSession",
+  "title": "Stop Sharing Session",
+  "category": "Team",
+  "description": "Stop sharing this agent session with the team",
+  "icon": "Users"
+ },
+ {
+  "id": "team.handOffSession",
+  "title": "Hand Off Session\u2026",
+  "category": "Team",
+  "description": "Pass this agent session to a teammate",
+  "icon": "Users"
+ },
+ {
+  "id": "team.requestReview",
+  "title": "Request Review\u2026",
+  "category": "Team",
+  "description": "Ask a teammate to review this agent session's changes",
+  "icon": "Users"
+ },
+ {
+  "id": "workbench.openBrowserBilling",
+  "title": "Manage Athas Cloud Usage",
+  "category": "Window",
+  "description": null,
+  "icon": null
+ },
+ {
+  "id": "workbench.openSettings",
+  "title": "Open Settings",
+  "category": "Window",
+  "description": "Open the settings page",
+  "icon": "Settings"
+ },
+ {
+  "id": "window.toggleFullscreen",
+  "title": "Toggle Fullscreen",
+  "category": "Window",
+  "description": "Enter or exit fullscreen mode",
+  "icon": "ArrowsOut"
+ },
+ {
+  "id": "window.toggleFullscreenMac",
+  "title": "Toggle Fullscreen (Mac)",
+  "category": "Window",
+  "description": null,
+  "icon": null
+ },
+ {
+  "id": "window.minimize",
+  "title": "Minimize Window",
+  "category": "Window",
+  "description": "Minimize the window",
+  "icon": "ArrowsIn"
+ },
+ {
+  "id": "window.minimize.mac",
+  "title": "Minimize (Mac)",
+  "category": "Window",
+  "description": null,
+  "icon": null
+ },
+ {
+  "id": "window.minimize.alt",
+  "title": "Minimize (Alt)",
+  "category": "Window",
+  "description": null,
+  "icon": null
+ },
+ {
+  "id": "window.maximize",
+  "title": "Maximize Window",
+  "category": "Window",
+  "description": null,
+  "icon": null
+ },
+ {
+  "id": "window.quit",
+  "title": "Quit Application",
+  "category": "Window",
+  "description": null,
+  "icon": null
+ },
+ {
+  "id": "window.toggleMenuBar",
+  "title": "Toggle Menu Bar",
+  "category": "Window",
+  "description": null,
+  "icon": null
+ },
+ {
+  "id": "window.newTerminalWindow",
+  "title": "Window: New Terminal Window",
+  "category": "Window",
+  "description": "Open terminal in its own window",
+  "icon": "ArrowsOut"
+ },
+ {
+  "id": "window.newSettingsWindow",
+  "title": "Window: New Settings Window",
+  "category": "Window",
+  "description": "Open settings in its own window",
+  "icon": "ArrowsOut"
+ },
+ {
+  "id": "window.newExtensionsWindow",
+  "title": "Window: New Extensions Window",
+  "category": "Window",
+  "description": "Open extensions in its own window",
+  "icon": "ArrowsOut"
+ },
+ {
+  "id": "window.toggleMaximize",
+  "title": "Window: Maximize",
+  "category": "Window",
+  "description": "Maximize or restore the window",
+  "icon": "ArrowsOut"
+ }
+]

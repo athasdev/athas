@@ -1,0 +1,26 @@
+[package]
+name = "cli"
+edition.workspace = true
+version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lib]
+path = "src/cli.rs"
+
+[[bin]]
+name = "athas-cli"
+path = "src/main.rs"
+
+[dependencies]
+paths = { path = "../paths" }
+serde.workspace = true
+serde_json.workspace = true
+dirs = "6"
+dunce = "1"
+
+[dev-dependencies]
+tempfile = "3"
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_Security", "Win32_Security_Authorization", "Win32_Storage_FileSystem", "Win32_System_IO", "Win32_System_Pipes", "Win32_System_Threading"] }

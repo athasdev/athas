@@ -1,0 +1,105 @@
+#!/bin/sh
+# A stand-in `docker` that answers the view's read-only calls with fixture data, so the Docker
+# view can be rendered and tested without a daemon. Anything that would change state is refused.
+#
+#   ATHAS_DOCKER_PROGRAM=crates/docker_view/fixtures/fake-docker \
+#   ATHAS_SNAPSHOT_PROJECT=crates/docker_view/fixtures/project \
+#   ./target/debug/athas_snapshot out.png dark docker
+#
+# Set FAKE_DOCKER_DOWN=1 to answer like a stopped daemon.
+
+if [ -n "$FAKE_DOCKER_DOWN" ]; then
+  echo "failed to connect to the docker API at unix:///var/run/docker.sock; check if the path is correct and if the daemon is running" >&2
+  exit 1
+fi
+
+case "$1 $2" in
+  "ps --all")
+    if [ "$3" = "--quiet" ]; then
+      printf 'c1a2b3c4d5e6\nd2b3c4d5e6f7\ne3c4d5e6f7a8\nf4d5e6f7a8b9\n'
+      exit 0
+    fi
+    cat <<'JSON'
+{"ID":"c1a2b3c4d5e6","Names":"project-web-1","Image":"nginx:1.27","Command":"\"nginx -g 'daemon off;'\"","Status":"Up 2 hours (healthy)","State":"running","Ports":"0.0.0.0:8080->80/tcp, :::8080->80/tcp","Networks":"project_default","CreatedAt":"2026-11-11 08:00:00 +0000 UTC","Size":"1.09kB (virtual 192MB)"}
+{"ID":"d2b3c4d5e6f7","Names":"project-db-1","Image":"postgres:16","Command":"\"docker-entrypoint.s…\"","Status":"Up 2 hours","State":"running","Ports":"0.0.0.0:5432->5432/tcp","Networks":"project_default","CreatedAt":"2026-11-11 08:00:00 +0000 UTC","Size":"63B (virtual 438MB)"}
+{"ID":"e3c4d5e6f7a8","Names":"redis-cache","Image":"redis:7-alpine","Command":"\"docker-entrypoint.s…\"","Status":"Paused","State":"paused","Ports":"6379/tcp","Networks":"bridge","CreatedAt":"2026-11-04 15:30:00 +0000 UTC","Size":"0B (virtual 41MB)"}
+{"ID":"f4d5e6f7a8b9","Names":"migrate-once","Image":"ghcr.io/acme/migrate:latest","Command":"\"/migrate up\"","Status":"Exited (1) 3 days ago","State":"exited","Ports":"","Networks":"bridge","CreatedAt":"2026-11-08 09:12:00 +0000 UTC","Size":"0B (virtual 25MB)"}
+JSON
+    ;;
+  "stats --no-stream")
+    echo '{"ID":"c1a2b3c4d5e6","Name":"project-web-1","CPUPerc":"0.02%","MemUsage":"9MiB / 7.6GiB","MemPerc":"0.12%","NetIO":"1kB / 0B","BlockIO":"0B / 0B","PIDs":"9"}'
+    ;;
+  "inspect --format")
+    echo '{"Id":"c1a2b3c4d5e6","Name":"/project-web-1","State":{"Health":{"Status":"healthy","FailingStreak":0,"Log":[]}}}'
+    ;;
+  "images --all")
+    cat <<'JSON'
+{"ID":"sha256:9f2a1c0b7d3e","Repository":"nginx","Tag":"1.27","Digest":"<none>","Size":"192MB","CreatedSince":"3 weeks ago"}
+{"ID":"sha256:2b7c3d4e5f60","Repository":"postgres","Tag":"16","Digest":"<none>","Size":"438MB","CreatedSince":"5 weeks ago"}
+{"ID":"sha256:41c5a8e9d0f1","Repository":"redis","Tag":"7-alpine","Digest":"<none>","Size":"41MB","CreatedSince":"2 months ago"}
+{"ID":"sha256:77aa21bc90de","Repository":"ghcr.io/acme/migrate","Tag":"latest","Digest":"<none>","Size":"25MB","CreatedSince":"4 days ago"}
+{"ID":"sha256:0d9e8f7a6b5c","Repository":"<none>","Tag":"<none>","Digest":"<none>","Size":"118MB","CreatedSince":"6 weeks ago"}
+JSON
+    ;;
+  "volume ls")
+    cat <<'JSON'
+{"Name":"project_pgdata","Driver":"local","Scope":"local","Mountpoint":"/var/lib/docker/volumes/project_pgdata/_data"}
+{"Name":"redis-data","Driver":"local","Scope":"local","Mountpoint":"/var/lib/docker/volumes/redis-data/_data"}
+{"Name":"3f1e0c9b8a7d6e5f4a3b2c1d0e9f8a7b6c5d4e3f2a1b0c9d8e7f6a5b4c3d2e1f","Driver":"local","Scope":"local","Mountpoint":"/var/lib/docker/volumes/3f1e0c9b/_data"}
+JSON
+    ;;
+  "network ls")
+    echo '{"ID":"a1b2c3d4e5f6","Name":"bridge","Driver":"bridge","Scope":"local","Internal":"false","IPv6":"false"}'
+    echo '{"ID":"9f8e7d6c5b4a","Name":"project_default","Driver":"bridge","Scope":"local","Internal":"false","IPv6":"false"}'
+    echo '{"ID":"0a1b2c3d4e5f","Name":"project_backend","Driver":"bridge","Scope":"local","Internal":"true","IPv6":"false"}'
+    ;;
+  "logs --follow")
+    for i in 1 2 3 4 5 6 7 8 9 10 11 12; do
+      printf '2026-11-11T10:00:%02d.123456789Z 172.18.0.1 - - "GET /api/health HTTP/1.1" 200 2 "-" "curl/8.7.1" request %d\n' "$i" "$i"
+    done
+    echo "2026-11-11T10:00:13.500000000Z [warn] upstream responded slowly (1.2s)" >&2
+    exec sleep 600
+    ;;
+  "container inspect" | "image inspect" | "volume inspect")
+    cat <<'JSON'
+[{"Id":"c1a2b3c4d5e6f708","Created":"2026-11-11T08:00:00.000000000Z","Path":"/docker-entrypoint.sh","Args":["nginx","-g","daemon off;"],"State":{"Status":"running","Running":true,"Paused":false,"Restarting":false,"OOMKilled":false,"Dead":false,"Pid":4242,"ExitCode":0,"Error":"","Health":{"Status":"healthy","FailingStreak":0}},"Image":"sha256:9f2a1c0b7d3e","Name":"/project-web-1","RestartCount":0,"HostConfig":{"NetworkMode":"project_default","PortBindings":{"80/tcp":[{"HostIp":"","HostPort":"8080"}]},"RestartPolicy":{"Name":"unless-stopped","MaximumRetryCount":0},"Memory":0,"CpuShares":0},"Mounts":[],"Config":{"Hostname":"c1a2b3c4d5e6","Env":["PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin","NGINX_VERSION=1.27.2"],"Labels":{"com.docker.compose.project":"project","com.docker.compose.service":"web"}}}]
+JSON
+    ;;
+  "search --limit")
+    cat <<'JSON'
+{"Name":"nginx","Description":"Official build of Nginx.","StarCount":"20871","Official":"[OK]","Automated":""}
+{"Name":"bitnami/nginx","Description":"Bitnami container image for NGINX","StarCount":"201","Official":"","Automated":""}
+{"Name":"nginxinc/nginx-unprivileged","Description":"Unprivileged NGINX Dockerfiles","StarCount":"159","Official":"","Automated":""}
+JSON
+    ;;
+  "login --username")
+    password=$(cat)
+    if [ "$password" = "secret" ]; then echo "Login Succeeded"; else echo "Error response from daemon: unauthorized: incorrect username or password" >&2; exit 1; fi
+    ;;
+  cp\ *)
+    case "$2 $3" in
+      *":"*" -")
+        root="$(cd "$(dirname "$0")" && pwd)/container-root"
+        export COPYFILE_DISABLE=1
+        folder="${2#*:}"
+        folder="${folder%/}"
+        if [ -z "$folder" ]; then exec tar -cf - -C "$root" .; fi
+        exec tar -cf - -C "$root$(dirname "$folder")" "$(basename "$folder")"
+        ;;
+      *) echo "fake-docker: refusing to change anything (cp)" >&2; exit 1 ;;
+    esac
+    ;;
+  compose\ *)
+    case " $* " in
+      *" config --services "*) printf 'web\ndb\nworker\n' ;;
+      *" ps --all "*)
+        echo '[{"ID":"c1a2b3c4d5e6","Name":"project-web-1","Service":"web","State":"running","Health":"healthy","Status":"Up 2 hours (healthy)","Publishers":[{"URL":"0.0.0.0","TargetPort":80,"PublishedPort":8080,"Protocol":"tcp"}]},{"ID":"d2b3c4d5e6f7","Name":"project-db-1","Service":"db","State":"running","Health":"","Status":"Up 2 hours","Publishers":[{"URL":"0.0.0.0","TargetPort":5432,"PublishedPort":5432,"Protocol":"tcp"}]}]'
+        ;;
+      *) echo "fake-docker: refusing to change anything (compose)" >&2; exit 1 ;;
+    esac
+    ;;
+  *)
+    echo "fake-docker: refusing to change anything ($*)" >&2
+    exit 1
+    ;;
+esac
