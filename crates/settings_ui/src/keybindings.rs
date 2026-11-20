@@ -9,13 +9,13 @@ use std::collections::{HashMap, HashSet};
 
 use gpui::{
     AnyElement, App, Context, Entity, KeystrokeEvent, PathPromptOptions, SharedString, Subscription,
-    Window, div, prelude::*, px,
+    UniformListScrollHandle, Window, div, prelude::*, px, uniform_list,
 };
 use keymap::{ImportFormat, Keybinding};
 use notifications::{NotificationCategory, NotificationKind};
 use theme::ActiveTheme;
 use ui::{
-    Badge, Button, ButtonSize, ButtonTone, ButtonVariant, Icon, IconName, IconSize, Kbd, TextInput,
+    Badge, Button, ButtonSize, ButtonVariant, Icon, IconName, IconSize, Kbd, TextInput,
     TextInputEvent, ToggleGroup, ToggleOption, Tone, metrics, typography,
 };
 
@@ -82,8 +82,26 @@ pub struct KeybindingsEditor {
     /// The table of every command, after Edit; the summary rows before.
     editing: bool,
     reset: Entity<TypedConfirm>,
+    /// The table's rows as last filtered: the list draws only the visible ones from here.
+    rows: std::rc::Rc<Vec<CommandRow>>,
+    list_scroll: UniformListScrollHandle,
     _subscriptions: Vec<Subscription>,
 }
+
+/// One command of the table, with what its row shows.
+struct CommandRow {
+    id: String,
+    title: String,
+    subtitle: String,
+    ported: bool,
+    binding: Option<Keybinding>,
+    source: &'static str,
+    /// The titles of the commands its key also runs.
+    conflicts: Vec<String>,
+}
+
+/// Every row is this tall, so the table can draw only the rows in view.
+const ROW_HEIGHT: f32 = 52.;
 
 fn notify(cx: &mut App, kind: NotificationKind, message: impl Into<SharedString>, description: Option<String>) {
     notifications::notify(cx, kind, NotificationCategory::Athas, message, description.map(SharedString::from), None);
@@ -170,6 +188,8 @@ impl KeybindingsEditor {
             recording: None,
             editing: false,
             reset,
+            rows: Default::default(),
+            list_scroll: UniformListScrollHandle::new(),
             _subscriptions: vec![subscription, reload, observe_settings, confirmed],
         }
     }
@@ -443,41 +463,37 @@ impl KeybindingsEditor {
             .into_any_element()
     }
 
+    /// The header's first row: back, the search filling the room, then the file actions.
     fn render_toolbar(&self, cx: &mut Context<Self>) -> AnyElement {
         div()
             .flex()
             .items_center()
-            .justify_between()
-            .gap(px(12.))
+            .gap(px(8.))
+            // Clear of the Settings window's close button in the corner above.
+            .pr(px(28.))
             .child(
-                Button::new("keybindings-back", "Back")
-                    .variant(ButtonVariant::Ghost)
-                    .leading_icon(IconName::ArrowLeft)
+                Button::icon("keybindings-back", IconName::ArrowLeft)
+                    .tooltip("Back to Keybindings")
                     .on_click(cx.listener(|this, _, window, cx| this.set_editing(false, window, cx))),
             )
+            .child(div().flex_1().min_w_0().child(self.search.clone()))
             .child(
-                div()
-                    .flex()
-                    .items_center()
-                    .gap(px(8.))
-                    .child(self.reset.clone())
-                    .child(
-                        Button::new("keybindings-json", "Edit JSON")
-                            .variant(ButtonVariant::Outline)
-                            .tooltip("Open keymap.json in the editor")
-                            .on_click(|_, window, cx| window.dispatch_action(Box::new(crate::commands::OpenKeymapJson), cx)),
-                    )
-                    .child(
-                        Button::new("keybindings-import", "Import")
-                            .variant(ButtonVariant::Outline)
-                            .on_click(cx.listener(|this, _, _, cx| this.import(cx))),
-                    )
-                    .child(
-                        Button::new("keybindings-export", "Export")
-                            .variant(ButtonVariant::Outline)
-                            .on_click(cx.listener(|this, _, _, cx| this.export(cx))),
-                    ),
+                Button::new("keybindings-json", "Edit JSON")
+                    .variant(ButtonVariant::Outline)
+                    .tooltip("Open keymap.json in the editor")
+                    .on_click(|_, window, cx| window.dispatch_action(Box::new(crate::commands::OpenKeymapJson), cx)),
             )
+            .child(
+                Button::new("keybindings-import", "Import")
+                    .variant(ButtonVariant::Outline)
+                    .on_click(cx.listener(|this, _, _, cx| this.import(cx))),
+            )
+            .child(
+                Button::new("keybindings-export", "Export")
+                    .variant(ButtonVariant::Outline)
+                    .on_click(cx.listener(|this, _, _, cx| this.export(cx))),
+            )
+            .child(self.reset.clone())
             .into_any_element()
     }
 }
@@ -548,130 +564,32 @@ impl Render for KeybindingsEditor {
             })
             .collect();
 
-        let header = div()
-            .flex()
-            .items_center()
-            .h(px(32.))
-            .px(px(12.))
-            .text_size(typography::TEXT_CAPTION)
-            .font_weight(typography::MEDIUM)
-            .text_color(colors.subtle_foreground)
-            .children(["Command", "Keybinding", "When", "Source", "Actions"].into_iter().enumerate().map(|(index, label)| column(index).child(label)));
-
-        let rows: Vec<AnyElement> = commands
-            .iter()
-            .enumerate()
-            .map(|(index, command)| {
-                let binding = by_command.get(&command.id);
-                let source = binding.map_or("default", |binding| binding.source.as_str());
-                let conflicting: Vec<&str> = conflicts
-                    .get(&command.id)
-                    .map(|others| others.iter().map(|other| titles.get(other.as_str()).copied().unwrap_or(other.as_str())).collect())
-                    .unwrap_or_default();
-                let has_conflict = !conflicting.is_empty();
-                let is_user = source == "user";
-                let ported = available(&command.id);
-                let command_id = command.id.clone();
-                let removed = binding.cloned();
-                let (source_label, source_tone) = match source {
-                    "preset" => ("Preset", Tone::Neutral),
-                    "default" => ("Default", Tone::Neutral),
-                    "extension" => ("Integration", Tone::Neutral),
-                    _ => ("User", Tone::Accent),
-                };
-                div()
-                    .relative()
-                    .flex()
-                    .flex_col()
-                    .gap(px(6.))
-                    .py(px(8.))
-                    .px(px(12.))
-                    .when(has_conflict, |this| this.bg(colors.destructive_soft))
-                    .child(div().absolute().top_0().left_0().right_0().h(px(1.)).bg(colors.divider))
-                    .child(
-                        div()
-                            .flex()
-                            .items_center()
-                            .child(
-                                column(0)
-                                    .flex()
-                                    .flex_col()
-                                    .child(
-                                        div()
-                                            .flex()
-                                            .items_center()
-                                            .gap(px(6.))
-                                            .child(
-                                                div()
-                                                    .truncate()
-                                                    .text_size(typography::TEXT_SM)
-                                                    .text_color(if ported { colors.foreground } else { colors.muted_foreground })
-                                                    .child(command.title.clone()),
-                                            )
-                                            .when(!ported, |this| this.child(Badge::new("Not ported yet"))),
-                                    )
-                                    .child(
-                                        div()
-                                            .truncate()
-                                            .mt(px(2.))
-                                            .text_size(typography::TEXT_SM)
-                                            .text_color(colors.subtle_foreground)
-                                            .child(format!("{} • {}", command.category, command.id)),
-                                    ),
-                            )
-                            .child(column(1).child(self.render_key_cell(index, &command.id, &command.title, binding, cx)))
-                            .child(
-                                column(2)
-                                    .truncate()
-                                    .text_size(typography::TEXT_SM)
-                                    .text_color(colors.subtle_foreground)
-                                    .child(binding.and_then(|binding| binding.when.clone()).unwrap_or_else(|| "-".into())),
-                            )
-                            .child(column(3).child(Badge::new(source_label).tone(source_tone)))
-                            .child(
-                                column(4)
-                                    .flex()
-                                    .items_center()
-                                    .gap(px(4.))
-                                    .when(is_user, |this| {
-                                        let command_id = command_id.clone();
-                                        this.child(
-                                            Button::new(("binding-reset", index), "Reset")
-                                                .variant(ButtonVariant::Ghost)
-                                                .tooltip("Reset to default")
-                                                .on_click(cx.listener(move |this, _, _, cx| this.reset(&command_id, cx))),
-                                        )
-                                    })
-                                    .when_some(removed, |this, binding| {
-                                        this.child(
-                                            Button::new(("binding-remove", index), "Remove")
-                                                .variant(ButtonVariant::Ghost)
-                                                .tone(ButtonTone::Danger)
-                                                .tooltip("Remove keybinding")
-                                                .on_click(cx.listener(move |this, _, _, cx| this.remove(&binding, cx))),
-                                        )
-                                    }),
-                            ),
-                    )
-                    .when(has_conflict, |this| {
-                        this.child(
-                            div()
-                                .flex()
-                                .items_center()
-                                .gap(px(6.))
-                                .py(px(6.))
-                                .px(px(10.))
-                                .rounded(metrics::RADIUS_MD)
-                                .bg(colors.destructive_soft)
-                                .text_size(typography::TEXT_SM)
-                                .text_color(colors.destructive)
-                                .child(Icon::new(IconName::WarningCircle).size(IconSize::Small).color(colors.destructive))
-                                .child(format!("Conflicts with: {}", conflicting.join(", "))),
-                        )
-                    })
-                    .into_any_element()
-            })
-            .collect();
+        self.rows = std::rc::Rc::new(
+            commands
+                .iter()
+                .map(|command| {
+                    let binding = by_command.get(&command.id);
+                    CommandRow {
+                        id: command.id.clone(),
+                        title: command.title.clone(),
+                        subtitle: format!("{} · {}", command.category, command.id),
+                        ported: available(&command.id),
+                        binding: binding.cloned(),
+                        source: match binding.map(|binding| binding.source.as_str()) {
+                            Some("preset") => "Preset",
+                            Some("extension") => "Integration",
+                            Some("user") => "User",
+                            _ => "Default",
+                        },
+                        conflicts: conflicts
+                            .get(&command.id)
+                            .map(|others| others.iter().map(|other| titles.get(other.as_str()).copied().unwrap_or(other.as_str()).to_string()).collect())
+                            .unwrap_or_default(),
+                    }
+                })
+                .collect(),
+        );
+        let count = self.rows.len();
 
         let filter = self.filter;
         let filters = ToggleGroup::new(
@@ -692,39 +610,162 @@ impl Render for KeybindingsEditor {
             }
         });
 
-        let empty = rows.is_empty();
+        // The header stays put while the table scrolls under it: search and the file actions,
+        // then the filters and how many commands they leave, then the columns.
+        let columns = div()
+            .flex()
+            .flex_none()
+            .items_center()
+            .h(px(32.))
+            .px(px(12.))
+            .border_b_1()
+            .border_color(colors.divider)
+            .text_size(typography::TEXT_CAPTION)
+            .font_weight(typography::MEDIUM)
+            .text_color(colors.subtle_foreground)
+            .children(["Command", "Keybinding", "When", "Source", ""].into_iter().enumerate().map(|(index, label)| column(index).child(label)));
+        let body = if count == 0 {
+            div()
+                .flex()
+                .flex_1()
+                .items_center()
+                .justify_center()
+                .text_size(typography::TEXT_SM)
+                .text_color(colors.muted_foreground)
+                .child("No keybindings found")
+                .into_any_element()
+        } else {
+            ui::with_scrollbar(
+                uniform_list("keybinding-rows", count, cx.processor(Self::render_rows)).track_scroll(&self.list_scroll).flex_1().min_h_0(),
+                ui::Scrollbar::uniform("keybinding-rows-scrollbar", &self.list_scroll),
+            )
+            .into_any_element()
+        };
         div()
             .flex()
             .flex_col()
-            .gap(px(12.))
+            .flex_1()
+            .min_h_0()
+            .gap(px(10.))
             .child(self.render_toolbar(cx))
-            .child(div().flex().items_center().child(div().w(px(320.)).child(self.search.clone())))
-            .child(div().flex().child(filters))
+            .child(
+                div()
+                    .flex()
+                    .items_center()
+                    .justify_between()
+                    .gap(px(12.))
+                    .child(filters)
+                    .child(div().flex_none().text_size(typography::TEXT_SM).text_color(colors.subtle_foreground).child(format!("{count} commands"))),
+            )
             .child(
                 div()
                     .flex()
                     .flex_col()
+                    .flex_1()
+                    .min_h_0()
                     .rounded(metrics::ISLAND_RADIUS)
                     .bg(colors.raised)
                     .shadow(theme.shadows.raised.clone())
                     .overflow_hidden()
-                    .child(header)
-                    .when(empty, |this| {
-                        this.child(
-                            div()
-                                .relative()
-                                .min_h(px(144.))
-                                .flex()
-                                .items_center()
-                                .justify_center()
-                                .child(div().absolute().top_0().left_0().right_0().h(px(1.)).bg(colors.divider))
-                                .text_size(typography::TEXT_SM)
-                                .text_color(colors.muted_foreground)
-                                .child("No keybindings found"),
-                        )
-                    })
-                    .children(rows),
+                    .child(columns)
+                    .child(body),
             )
             .into_any_element()
+    }
+
+}
+
+impl KeybindingsEditor {
+    /// The rows in view; each the same height (a conflict shows as a tint and a warning icon
+    /// whose tooltip names the other commands, not as a band under the row).
+    fn render_rows(&mut self, range: std::ops::Range<usize>, _window: &mut Window, cx: &mut Context<Self>) -> Vec<AnyElement> {
+        let colors = cx.theme().colors.clone();
+        let rows = self.rows.clone();
+        range
+            .filter_map(|index| {
+                let row = rows.get(index)?;
+                let is_user = row.source == "User";
+                let conflict = (!row.conflicts.is_empty()).then(|| format!("Same key as {}", row.conflicts.join(", ")));
+                let command_id = row.id.clone();
+                let removed = row.binding.clone();
+                Some(
+                    div()
+                        .flex()
+                        .items_center()
+                        .w_full()
+                        .h(px(ROW_HEIGHT))
+                        .px(px(12.))
+                        .border_b_1()
+                        .border_color(colors.divider)
+                        .when(conflict.is_some(), |this| this.bg(colors.destructive_soft))
+                        .child(
+                            column(0)
+                                .flex()
+                                .flex_col()
+                                .gap(px(2.))
+                                .child(
+                                    div()
+                                        .flex()
+                                        .items_center()
+                                        .gap(px(6.))
+                                        .min_w_0()
+                                        .child(
+                                            div()
+                                                .truncate()
+                                                .text_size(typography::TEXT_SM)
+                                                .text_color(if row.ported { colors.foreground } else { colors.muted_foreground })
+                                                .child(row.title.clone()),
+                                        )
+                                        .when(!row.ported, |this| this.child(Badge::new("Not ported yet"))),
+                                )
+                                .child(div().truncate().text_size(typography::TEXT_CAPTION).text_color(colors.subtle_foreground).child(row.subtitle.clone())),
+                        )
+                        .child(
+                            column(1).flex().items_center().gap(px(6.)).child(self.render_key_cell(index, &row.id, &row.title, row.binding.as_ref(), cx)).children(
+                                conflict.map(|text| {
+                                    div()
+                                        .id(("binding-conflict", index))
+                                        .flex_none()
+                                        .child(Icon::new(IconName::WarningCircle).size(IconSize::Small).color(colors.destructive))
+                                        .anchored_tooltip(move || ui::Tooltip::new(text.clone()))
+                                }),
+                            ),
+                        )
+                        .child(
+                            column(2)
+                                .truncate()
+                                .text_size(typography::TEXT_SM)
+                                .text_color(colors.subtle_foreground)
+                                .child(row.binding.as_ref().and_then(|binding| binding.when.clone()).unwrap_or_else(|| "-".into())),
+                        )
+                        .child(column(3).child(Badge::new(row.source).tone(if is_user { Tone::Accent } else { Tone::Neutral })))
+                        .child(
+                            column(4)
+                                .flex()
+                                .items_center()
+                                .justify_end()
+                                .gap(px(2.))
+                                .when(is_user, |this| {
+                                    let command_id = command_id.clone();
+                                    this.child(
+                                        Button::icon(("binding-reset", index), IconName::ArrowCounterClockwise)
+                                            .size(ButtonSize::Small)
+                                            .tooltip("Reset to default")
+                                            .on_click(cx.listener(move |this, _, _, cx| this.reset(&command_id, cx))),
+                                    )
+                                })
+                                .when_some(removed, |this, binding| {
+                                    this.child(
+                                        Button::icon(("binding-remove", index), IconName::Trash)
+                                            .size(ButtonSize::Small)
+                                            .tooltip("Remove keybinding")
+                                            .on_click(cx.listener(move |this, _, _, cx| this.remove(&binding, cx))),
+                                    )
+                                }),
+                        )
+                        .into_any_element(),
+                )
+            })
+            .collect()
     }
 }

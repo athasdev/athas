@@ -1739,6 +1739,7 @@ impl Render for SettingsView {
                 }))
         });
         let importing = self.importer.as_ref().map(|(importer, _)| importer.clone());
+        let table_page = importing.is_none() && self.page == "keyboard" && self.keybindings.as_ref().is_some_and(|editor| editor.read(cx).is_editing());
         let mut content: Vec<AnyElement> = Vec::new();
         if let Some(importer) = &importing {
             content.push(importer.clone().into_any_element());
@@ -1879,10 +1880,11 @@ impl Render for SettingsView {
                                     .flex_col()
                                     .flex_1()
                                     .min_h_0()
-                                    .overflow_y_scroll()
-                                    .track_scroll(&self.scroll)
+                                    // The keybindings table scrolls by itself under its header,
+                                    // so the page around it holds still.
+                                    .when(!table_page, |this| this.overflow_y_scroll().track_scroll(&self.scroll).pb(px(40.)))
+                                    .when(table_page, |this| this.pb(px(24.)))
                                     .px(if narrow { px(12.) } else { px(24.) })
-                                    .pb(px(40.))
                                     .gap(px(32.))
                                     .children(content),
                             )
