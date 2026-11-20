@@ -43,12 +43,13 @@ fn tint(color: Hsla, amount: f32) -> Hsla {
 }
 
 impl Theme {
-    /// The theme with the glass tokens: light themes tint the window more, as light vibrancy
-    /// lets the wallpaper through strongly.
+    /// The theme with the glass tokens. The shell keeps most of the theme's own color, so the
+    /// wallpaper reads as a hint through the blur and bright wallpapers don't wash out the text;
+    /// light themes tint more, as light vibrancy lets the wallpaper through strongly.
     pub fn glassed(&self) -> Theme {
         let dark = self.appearance.is_dark();
         let (shell, surface, border, border_strong, hover, active) =
-            if dark { (0.12, 0.48, 0.14, 0.32, 0.09, 0.16) } else { (0.72, 0.62, 0.12, 0.28, 0.07, 0.13) };
+            if dark { (0.62, 0.72, 0.12, 0.28, 0.08, 0.14) } else { (0.8, 0.74, 0.12, 0.28, 0.07, 0.13) };
         let mut theme = self.clone();
         let base = &self.colors;
         let colors = &mut theme.colors;
@@ -83,7 +84,7 @@ mod tests {
         }
         let dark = registry.get("athas-dark").unwrap().glassed();
         let light = registry.get("athas-light").unwrap().glassed();
-        assert!((dark.colors.window.a - 0.12).abs() < 0.01);
-        assert!((light.colors.window.a - 0.72).abs() < 0.01);
+        assert!((dark.colors.window.a - 0.62).abs() < 0.01);
+        assert!((light.colors.window.a - 0.8).abs() < 0.01);
     }
 }
