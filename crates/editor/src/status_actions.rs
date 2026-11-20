@@ -65,7 +65,8 @@ fn server_entries(editor: &WeakEntity<Editor>, cx: &App) -> Vec<MenuEntry> {
         .and_then(|root| root.file_name().map(|name| name.to_string_lossy().into_owned()))
         .unwrap_or_else(|| "Language Servers".to_string());
     let mut entries: Vec<MenuEntry> = vec![MenuItem::new(project).disabled(true).into()];
-    if !servers.is_empty() {
+    // One level: each server's name over its own Restart and Stop, no fly-out to aim for.
+    if servers.len() > 1 {
         entries.push(
             MenuItem::new("Restart all")
                 .icon(IconName::ArrowClockwise)
@@ -73,19 +74,18 @@ fn server_entries(editor: &WeakEntity<Editor>, cx: &App) -> Vec<MenuEntry> {
                 .into(),
         );
         entries.push(MenuItem::new("Stop all").icon(IconName::Square).on_select(|_, cx| LspStore::global(cx).update(cx, |store, cx| store.stop_all(cx))).into());
+    }
+    for server in &servers {
+        let id = server.id();
         entries.push(MenuEntry::Separator);
-        for server in &servers {
-            let id = server.id();
-            entries.push(
-                MenuItem::new(server.name().to_string())
-                    .icon(IconName::Bolt)
-                    .submenu(vec![
-                        MenuItem::new("Restart").on_select(move |_, cx| LspStore::global(cx).update(cx, |store, cx| store.restart_server(id, cx))).into(),
-                        MenuItem::new("Stop").on_select(move |_, cx| LspStore::global(cx).update(cx, |store, cx| store.stop_server(id, cx))).into(),
-                    ])
-                    .into(),
-            );
-        }
+        entries.push(MenuEntry::Label(server.name().to_string().into()));
+        entries.push(
+            MenuItem::new("Restart")
+                .icon(IconName::ArrowClockwise)
+                .on_select(move |_, cx| LspStore::global(cx).update(cx, |store, cx| store.restart_server(id, cx)))
+                .into(),
+        );
+        entries.push(MenuItem::new("Stop").icon(IconName::Square).on_select(move |_, cx| LspStore::global(cx).update(cx, |store, cx| store.stop_server(id, cx))).into());
     }
     let status = editor.as_ref().map(|editor| editor.read(cx).lsp_status()).unwrap_or(LspStatus::Off);
     match &status {
