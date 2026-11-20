@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [main, gpui]
+    branches: [main]
   pull_request:
     branches: [main]
   workflow_dispatch:
