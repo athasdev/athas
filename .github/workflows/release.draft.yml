@@ -12,7 +12,7 @@
 # Secrets (same names as athasdev/athas): APPLE_CERTIFICATE, APPLE_CERT_PASSWORD,
 # APPLE_SIGNING_IDENTITY, APPLE_ID, APPLE_PASSWORD, APPLE_TEAM_ID, WINDOWS_CERTIFICATE,
 # WINDOWS_CERTIFICATE_PASSWORD, WINDOWS_TIMESTAMP_URL, TAURI_SIGNING_PRIVATE_KEY,
-# TAURI_SIGNING_PRIVATE_KEY_PASSWORD, ATHAS_RELEASE_TOKEN (contents:write on athasdev/athas).
+# TAURI_SIGNING_PRIVATE_KEY_PASSWORD.
 name: "Release (GPUI, draft)"
 
 on:
@@ -31,6 +31,10 @@ on:
 concurrency:
   group: ${{ github.workflow }}-${{ inputs.tag }}
   cancel-in-progress: false
+
+# The release is created in this repository with the run's own token.
+permissions:
+  contents: write
 
 env:
   CARGO_TERM_COLOR: always
@@ -51,7 +55,7 @@ jobs:
         id: meta
         env:
           TAG: ${{ inputs.tag }}
-          GH_TOKEN: ${{ secrets.ATHAS_RELEASE_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           if [[ ! "$TAG" =~ ^v([0-9]+)\.([0-9]+)\.([0-9]+)(-beta\.([1-9][0-9]*))?$ ]]; then
@@ -287,7 +291,7 @@ jobs:
           jq '.platforms | keys' ../prepared-release/latest.json
       - name: Create the draft release in athasdev/athas
         env:
-          GH_TOKEN: ${{ secrets.ATHAS_RELEASE_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
           TAG: ${{ needs.metadata.outputs.tag }}
         run: |
           set -euo pipefail
@@ -303,7 +307,7 @@ jobs:
       - name: Validate the release
         working-directory: athas
         env:
-          GH_TOKEN: ${{ secrets.ATHAS_RELEASE_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
           TAG: ${{ needs.metadata.outputs.tag }}
         run: bun scripts/release/release-assets.mjs verify --tag "$TAG" --repo "$RELEASE_REPO"
       # Publishing with a personal token starts athasdev/athas's sync-www-release.yml (stable
@@ -311,6 +315,6 @@ jobs:
       - name: Publish
         if: ${{ inputs.publish && vars.AUTO_PUBLISH_RELEASE == 'true' }}
         env:
-          GH_TOKEN: ${{ secrets.ATHAS_RELEASE_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
           TAG: ${{ needs.metadata.outputs.tag }}
         run: gh release edit "$TAG" --repo "$RELEASE_REPO" --draft=false
