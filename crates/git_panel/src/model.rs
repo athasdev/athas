@@ -238,6 +238,18 @@ fn number(text: &str) -> Option<i64> {
 
 /// Seconds since the epoch for `YYYY-MM-DD` (midnight UTC) or an ISO 8601 date-time with an
 /// offset, as git prints them.
+/// The calendar year of a Unix time (UTC).
+fn year_of(seconds: i64) -> i64 {
+    // Howard Hinnant's civil_from_days, as days_from_civil's inverse.
+    let days = seconds.div_euclid(86_400) + 719_468;
+    let era = days.div_euclid(146_097);
+    let day_of_era = days - era * 146_097;
+    let year_of_era = (day_of_era - day_of_era / 1460 + day_of_era / 36_524 - day_of_era / 146_096) / 365;
+    let day_of_year = day_of_era - (365 * year_of_era + year_of_era / 4 - year_of_era / 100);
+    let month = (5 * day_of_year + 2) / 153;
+    year_of_era + era * 400 + i64::from(month >= 10)
+}
+
 pub fn parse_git_date(text: &str) -> Option<i64> {
     let text = text.trim();
     let date = text.get(..10)?;
@@ -282,10 +294,15 @@ pub fn relative_date(text: &str, now: i64) -> String {
     } else if days < 7 {
         format!("{days}d ago")
     } else {
+        // "Nov 6", with the year only when it is not this one: short enough to line up in a
+        // list's date column, where "11/6/2026" took a third of the row.
         let date = text.trim().get(..10).unwrap_or(text);
         let mut parts = date.split('-').filter_map(number);
         match (parts.next(), parts.next(), parts.next()) {
-            (Some(year), Some(month), Some(day)) => format!("{month}/{day}/{year}"),
+            (Some(year), Some(month @ 1..=12), Some(day)) => {
+                let name = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"][month as usize - 1];
+                if year == year_of(now) { format!("{name} {day}") } else { format!("{name} {day}, {year}") }
+            }
             _ => date.to_string(),
         }
     }
@@ -507,6 +524,8 @@ mod tests {
         assert_eq!(relative_date("2026-11-11", now), "12h ago");
         assert_eq!(relative_date("2026-11-10", now), "yesterday");
         assert_eq!(relative_date("2026-11-07", now), "4d ago");
-        assert_eq!(relative_date("2026-10-01", now), "10/1/2026");
+        assert_eq!(relative_date("2026-10-01", now), "Oct 1");
+        assert_eq!(relative_date("2025-12-31", now), "Dec 31, 2025");
+        assert_eq!(relative_date("2026-01-01T00:00:00Z", now), "Jan 1");
     }
 }

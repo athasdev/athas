@@ -91,7 +91,8 @@ fn spinning_icon(id: &'static str, icon: IconName, color: Hsla) -> AnyElement {
 /// row's actions on hover.
 struct Row {
     id: ElementId,
-    icon: AnyElement,
+    /// `None` leaves the title at the row's start (tags, where one icon on every row was noise).
+    icon: Option<AnyElement>,
     title: SharedString,
     secondary: Option<SharedString>,
     meta: Vec<AnyElement>,
@@ -105,7 +106,7 @@ impl Row {
     fn new(id: impl Into<ElementId>, icon: impl IntoElement, title: impl Into<SharedString>) -> Self {
         Self {
             id: id.into(),
-            icon: icon.into_any_element(),
+            icon: Some(icon.into_any_element()),
             title: title.into(),
             secondary: None,
             meta: Vec::new(),
@@ -136,7 +137,7 @@ impl Row {
             .when(self.selected, |this| this.bg(colors.selected))
             .when(!self.selected, |this| this.hover(move |style| style.bg(hover)))
             .when(self.muted, |this| this.opacity(0.5))
-            .child(div().flex().flex_none().items_center().child(self.icon))
+            .children(self.icon.map(|icon| div().flex().flex_none().items_center().child(icon)))
             .child(
                 div()
                     .flex_shrink(1.)
@@ -1547,8 +1548,15 @@ impl GitPanel {
             .filter(|(_, tag)| matches_query(&query, [tag.name.as_str(), tag.message.as_deref().unwrap_or(""), tag.commit.as_str()]))
             .map(|(index, tag)| {
                 let previous = self.tags.get(index + 1);
-                let mut row = Row::new(("tag", index), Icon::new(IconName::Tag).size(IconSize::XSmall).color(colors.subtle_foreground), tag.name.clone());
-                row.secondary = Some(tag.message.clone().filter(|message| !message.is_empty()).unwrap_or_else(|| short_hash(&tag.commit).to_string()).into());
+                // The version bright and its pre-release part dimmed beside it, so releases stand
+                // out from their betas; no icon on every row, the hash and message in the tooltip.
+                let (version, prerelease) = match tag.name.split_once('-') {
+                    Some((version, rest)) if version.chars().any(|c| c.is_ascii_digit()) => (version.to_string(), Some(rest.to_string())),
+                    _ => (tag.name.clone(), None),
+                };
+                let mut row = Row::new(("tag", index), div(), version);
+                row.icon = None;
+                row.secondary = prerelease.map(Into::into);
                 if !tag.date.is_empty() {
                     row.meta.push(caption(model::relative_date(&tag.date, now), colors).into_any_element());
                 }
@@ -1569,10 +1577,10 @@ impl GitPanel {
                 );
                 let base = previous.map_or_else(|| "HEAD".to_string(), |tag| tag.name.clone());
                 let tooltip = format!(
-                    "{}{}\n{}\nClick to see what changed since {base}",
+                    "{} · {}{}\nClick to see what changed since {base}",
                     tag.name,
-                    tag.message.as_ref().map(|message| format!("\n{message}")).unwrap_or_default(),
-                    tag.commit
+                    short_hash(&tag.commit),
+                    tag.message.as_ref().filter(|message| !message.is_empty()).map(|message| format!("\n{message}")).unwrap_or_default(),
                 );
                 let target = tag.name.clone();
                 row.render(colors)
