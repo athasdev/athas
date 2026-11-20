@@ -190,7 +190,6 @@ impl InboxPanel {
             .px(px(8.))
             .py(px(6.))
             .rounded(metrics::RADIUS_LG)
-            .cursor_pointer()
             .when(open, |this| this.bg(colors.accent.opacity(0.6)))
             .hover(|style| style.bg(colors.accent.opacity(0.6)))
             .on_click(cx.listener(move |this, _, window, cx| match &action {

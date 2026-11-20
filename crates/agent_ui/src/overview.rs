@@ -8,8 +8,6 @@
 //! an outside agent (Claude Code, Codex, Gemini) without such a choice asks that agent's own
 //! command line instead, so it runs on the account the session already uses.
 
-use std::path::PathBuf;
-
 use gpui::{AnyElement, App, ClickEvent, Context, Hsla, IntoElement, ParentElement, SharedString, Styled, Task, div, prelude::*, px, relative};
 use serde::{Deserialize, Serialize};
 use theme::ActiveTheme;
@@ -21,6 +19,9 @@ use crate::{
 };
 
 const PAGE_WIDTH: f32 = 760.;
+/// The Changes page's file list: its first width, and the least it can be dragged to.
+pub const CHANGES_LIST_WIDTH: f32 = 280.;
+const CHANGES_LIST_MIN_WIDTH: f32 = 180.;
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub enum SessionPage {
@@ -403,6 +404,17 @@ fn generate(digest: String, writers: Vec<Writer>, cx: &mut App) -> Option<Task<R
 }
 
 impl SessionView {
+    /// Shows a page by name (`overview`, `changes`, `issues`, else the chat): for screenshots.
+    pub fn show_page_named(&mut self, name: &str, cx: &mut Context<Self>) {
+        self.page = match name {
+            "overview" => SessionPage::Overview,
+            "changes" => SessionPage::Changes,
+            "issues" => SessionPage::Issues,
+            _ => SessionPage::Chat,
+        };
+        cx.notify();
+    }
+
     pub(crate) fn set_page(&mut self, page: SessionPage, cx: &mut Context<Self>) {
         self.page = page;
         match page {
@@ -554,7 +566,6 @@ impl SessionView {
 
     pub(crate) fn render_overview(&mut self, cx: &mut Context<Self>) -> AnyElement {
         let colors = cx.theme().colors.clone();
-        let theme = cx.theme().clone();
         let creator = account::AccountStore::global(cx)
             .and_then(|store| store.read(cx).user().map(|user| user.name.clone().filter(|name| !name.trim().is_empty()).or_else(|| user.github_username.clone()).unwrap_or_else(|| user.email.clone())))
             .unwrap_or_else(|| "You".to_string());
@@ -567,97 +578,111 @@ impl SessionView {
                 _ => None,
             })
             .and_then(|at| chrono::DateTime::from_timestamp_millis(i64::try_from(at).ok()?))
-            .map(|at| at.with_timezone(&chrono::Local).format("%b %-d, %H:%M").to_string());
+            .map(|at| at.with_timezone(&chrono::Local).format("%b %-d, %Y").to_string());
         let agent = crate::acp::agents::display_name(&self.info.agent);
-        let prompts = self.transcript.entries.iter().filter(|entry| matches!(entry, Entry::User(_))).count();
         let changed = summary::changes(&self.transcript).files.len();
+        let running = self.is_running();
         let writing = self.overview_task.is_some();
         let stale = self.transcript.overview.as_ref().is_some_and(|overview| overview.entries != self.transcript.entries.len());
+        let overview = self.transcript.overview.clone();
+        let (done, total) = overview.as_ref().map(|overview| (overview.done.len(), overview.done.len() + overview.remaining.len())).unwrap_or((0, 0));
 
-        let dot = || div().text_color(colors.subtle_foreground).child("·");
-        let meta = div()
+        // Title, with the overview's one action where an issue page keeps "Close issue".
+        let action = (overview.is_some() && !writing && !running).then(|| {
+            Button::new("overview-refresh", if stale { "Update overview" } else { "Regenerate" })
+                .leading_icon(IconName::ArrowClockwise)
+                .variant(ButtonVariant::Outline)
+                .size(ButtonSize::Small)
+                .on_click(cx.listener(|this, _: &ClickEvent, _, cx| this.write_overview(cx)))
+        });
+        let header = div().flex().items_start().gap(px(16.)).child(self.page_title(cx).flex_1().min_w_0()).children(action);
+
+        // Properties, as chips: state, agent, who started it, when, progress, files.
+        let chip = |leading: AnyElement, label: String| {
+            div()
+                .flex()
+                .items_center()
+                .gap(px(6.))
+                .h(px(28.))
+                .px(px(10.))
+                .rounded(metrics::RADIUS_MD)
+                .border_1()
+                .border_color(colors.border)
+                .text_size(typography::TEXT_SM)
+                .text_color(colors.foreground)
+                .child(leading)
+                .child(label)
+        };
+        let icon = |name: IconName, tint: Hsla| Icon::new(name).size(IconSize::Small).color(tint).into_any_element();
+        let (state_icon, state) = if running {
+            (icon(IconName::PlayCircle, colors.primary), "Running")
+        } else if total > 0 && done == total {
+            (icon(IconName::CheckCircle, colors.success), "Done")
+        } else if total > 0 {
+            (ui::ProgressCircle::new(done as f32 * 100. / total as f32).tone(ui::ProgressTone::Warning).size(px(14.)).into_any_element(), "In progress")
+        } else {
+            (icon(IconName::CircleDotted, colors.muted_foreground), "Idle")
+        };
+        let chips = div()
             .flex()
             .flex_wrap()
-            .items_center()
-            .gap(px(6.))
-            .text_size(typography::TEXT_SM)
-            .text_color(colors.muted_foreground)
-            .child(ui::Avatar::new(&creator).size(px(18.)))
-            .child(div().text_color(colors.foreground).font_weight(typography::MEDIUM).child(creator.clone()))
-            .child(format!("started this with {agent}"))
-            .children(started.map(|started| div().flex().gap(px(6.)).child(dot()).child(started)))
-            .child(dot())
-            .child(format!("{prompts} {}", if prompts == 1 { "prompt" } else { "prompts" }))
-            .when(changed > 0, |this| this.child(dot()).child(format!("{changed} {} changed", if changed == 1 { "file" } else { "files" })));
+            .gap(px(8.))
+            .child(chip(state_icon, state.to_string()))
+            .child(chip(crate::model_vendor::agent_mark(&self.info.agent, px(14.), colors.muted_foreground), agent.clone()))
+            .child(chip(ui::Avatar::new(&creator).size(px(16.)).into_any_element(), creator.clone()))
+            .children(started.map(|started| chip(icon(IconName::Calendar, colors.muted_foreground), started)))
+            .when(total > 0, |this| {
+                this.child(chip(ui::ProgressCircle::new(done as f32 * 100. / total as f32).tone(ui::ProgressTone::Success).size(px(14.)).into_any_element(), format!("{done} / {total} tasks")))
+            })
+            .when(changed > 0, |this| this.child(chip(icon(IconName::GitDiff, colors.muted_foreground), format!("{changed} {} changed", if changed == 1 { "file" } else { "files" }))));
 
-        let card = |title: &'static str, icon: IconName, tint: Hsla, items: &[String]| {
+        let section_label = |name: IconName, label: &'static str| {
             div()
-                .flex_1()
-                .min_w(px(260.))
                 .flex()
-                .flex_col()
-                .gap(px(10.))
-                .p(px(14.))
-                .rounded(metrics::RADIUS_LG)
-                .bg(colors.raised)
-                .shadow(theme.shadows.raised.clone())
-                .child(
-                    div()
-                        .flex()
-                        .items_center()
-                        .gap(px(8.))
-                        .text_size(typography::TEXT_SM)
-                        .font_weight(typography::MEDIUM)
-                        .text_color(colors.muted_foreground)
-                        .child(div().flex().items_center().justify_center().size(px(20.)).rounded_full().bg(tint.opacity(0.14)).child(Icon::new(icon).size(IconSize::XSmall).color(tint)))
-                        .child(title)
-                        .child(div().text_color(colors.subtle_foreground).child(items.len().to_string())),
-                )
-                .child(if items.is_empty() {
-                    div().text_size(typography::TEXT_SM).text_color(colors.subtle_foreground).child("Nothing here.")
-                } else {
-                    div().flex().flex_col().gap(px(8.)).children(items.iter().map(|item| {
-                        div()
-                            .flex()
-                            .items_start()
-                            .gap(px(10.))
-                            .text_size(typography::TEXT_SM)
-                            .line_height(relative(1.5))
-                            .child(div().flex_none().mt(px(7.)).size(px(5.)).rounded_full().bg(tint))
-                            .child(div().flex_1().min_w_0().text_color(colors.foreground).child(item.clone()))
-                    }))
-                })
+                .items_center()
+                .gap(px(8.))
+                .text_size(typography::TEXT_SM)
+                .text_color(colors.muted_foreground)
+                .child(Icon::new(name).size(IconSize::Small).color(colors.muted_foreground))
+                .child(label)
         };
 
-        let body: AnyElement = match (&self.transcript.overview, writing, &self.overview_error) {
-            (Some(overview), _, _) => div()
-                .flex()
-                .flex_col()
-                .gap(px(20.))
-                .child(div().text_size(px(14.)).line_height(relative(1.6)).text_color(colors.foreground).child(overview.about.clone()))
-                .child(
-                    div()
-                        .flex()
-                        .flex_wrap()
-                        .gap(px(12.))
-                        .child(card("Done", IconName::Check, colors.git_added, &overview.done))
-                        .child(card("Not done yet", IconName::CircleDotted, colors.warning, &overview.remaining)),
-                )
-                .into_any_element(),
+        // About: the model's account, or where it stands.
+        let about: AnyElement = match (&overview, writing, &self.overview_error) {
+            (Some(overview), _, _) => {
+                let note: SharedString = if writing {
+                    "Updating…".into()
+                } else if stale {
+                    "The session went on since this was written".into()
+                } else if overview.source.is_empty() {
+                    "Written by AI from the session".into()
+                } else {
+                    format!("Written by {} from the session", overview.source).into()
+                };
+                let tint = if stale && !writing { colors.warning } else { colors.subtle_foreground };
+                div()
+                    .flex()
+                    .flex_col()
+                    .gap(px(10.))
+                    .child(div().text_size(px(14.)).line_height(relative(1.65)).text_color(colors.foreground).child(overview.about.clone()))
+                    .child(
+                        div()
+                            .flex()
+                            .items_center()
+                            .gap(px(6.))
+                            .text_size(typography::TEXT_CAPTION)
+                            .text_color(tint)
+                            .child(Icon::new(if stale && !writing { IconName::Clock } else { IconName::Sparkle }).size(IconSize::XSmall).color(tint))
+                            .child(note),
+                    )
+                    .into_any_element()
+            }
             (None, true, _) => div()
                 .flex()
                 .flex_col()
                 .gap(px(10.))
                 .child(ui::Skeleton::new("overview-line-1").h(px(12.)).w(relative(0.92)))
                 .child(ui::Skeleton::new("overview-line-2").h(px(12.)).w(relative(0.7)))
-                .child(
-                    div()
-                        .flex()
-                        .gap(px(12.))
-                        .pt(px(10.))
-                        .child(ui::Skeleton::new("overview-card-1").h(px(120.)).flex_1().rounded(metrics::RADIUS_LG))
-                        .child(ui::Skeleton::new("overview-card-2").h(px(120.)).flex_1().rounded(metrics::RADIUS_LG)),
-                )
                 .into_any_element(),
             (None, false, Some(error)) => ui::Alert::new()
                 .tone(ui::Tone::Warning)
@@ -669,42 +694,143 @@ impl SessionView {
             (None, false, None) => div()
                 .text_size(typography::TEXT_SM)
                 .text_color(colors.muted_foreground)
-                .child(if self.is_running() { "The overview is written once the agent finishes this turn." } else { "No overview yet." })
+                .child(if running { "The overview is written once the agent finishes this turn." } else { "No overview yet." })
                 .into_any_element(),
         };
+        let about = div().flex().flex_col().gap(px(10.)).child(section_label(IconName::TextAlignLeft, "About")).child(about);
 
-        let footer = self.transcript.overview.as_ref().map(|overview| {
-            let note: SharedString = if writing {
-                "Updating…".into()
-            } else if stale {
-                "The session went on since this was written".into()
-            } else if overview.source.is_empty() {
-                "Written by AI from the session".into()
-            } else {
-                format!("Written by {} from the session", overview.source).into()
+        // Tasks: what is done and what is not, as one list with its progress.
+        let tasks = overview.as_ref().filter(|_| total > 0).map(|overview| {
+            let row = |text: &String, finished: bool| {
+                div()
+                    .flex()
+                    .items_start()
+                    .gap(px(10.))
+                    .py(px(7.))
+                    .px(px(12.))
+                    .text_size(typography::TEXT_SM)
+                    .line_height(relative(1.5))
+                    .child(
+                        div().flex_none().pt(px(2.)).child(if finished {
+                            Icon::new(IconName::CheckCircle).size(IconSize::Small).color(colors.success)
+                        } else {
+                            Icon::new(IconName::CircleDotted).size(IconSize::Small).color(colors.muted_foreground)
+                        }),
+                    )
+                    .child(div().flex_1().min_w_0().text_color(if finished { colors.muted_foreground } else { colors.foreground }).child(text.clone()))
             };
-            let tint = if stale && !writing { colors.warning } else { colors.subtle_foreground };
+            let fill = done as f32 / total as f32;
             div()
                 .flex()
-                .items_center()
-                .gap(px(6.))
-                .text_size(typography::TEXT_CAPTION)
-                .text_color(tint)
-                .child(Icon::new(if stale && !writing { IconName::Clock } else { IconName::Sparkle }).size(IconSize::XSmall).color(tint))
-                .child(div().flex_1().child(note))
-                .when(!writing && !self.is_running(), |this| {
-                    this.child(
-                        Button::new("overview-refresh", if stale { "Update" } else { "Regenerate" })
-                            .leading_icon(IconName::ArrowClockwise)
-                            .variant(ButtonVariant::Ghost)
-                            .size(ButtonSize::Small)
-                            .on_click(cx.listener(|this, _: &ClickEvent, _, cx| this.write_overview(cx))),
-                    )
-                })
+                .flex_col()
+                .gap(px(2.))
+                .child(
+                    div()
+                        .flex()
+                        .items_center()
+                        .gap(px(10.))
+                        .h(px(36.))
+                        .px(px(8.))
+                        .rounded(metrics::RADIUS_MD)
+                        .bg(colors.segment_track)
+                        .child(div().flex().items_center().justify_center().size(px(22.)).rounded(px(6.)).bg(colors.primary.opacity(0.16)).child(Icon::new(IconName::ListChecks).size(IconSize::XSmall).color(colors.primary)))
+                        .child(div().text_size(typography::TEXT_SM).font_weight(typography::MEDIUM).text_color(colors.foreground).child("Tasks"))
+                        .child(div().text_size(typography::TEXT_SM).text_color(colors.subtle_foreground).child(total.to_string()))
+                        .child(div().flex_1())
+                        .child(div().w(px(72.)).h(px(4.)).rounded_full().bg(colors.border).child(div().h_full().w(relative(fill)).rounded_full().bg(colors.success)))
+                        .child(div().text_size(typography::TEXT_SM).text_color(colors.muted_foreground).child(format!("{done} done"))),
+                )
+                .children(overview.remaining.iter().map(|item| row(item, false)))
+                .children(overview.done.iter().map(|item| row(item, true)))
         });
 
-        let content = div().flex().flex_col().gap(px(20.)).child(div().flex().flex_col().gap(px(10.)).child(self.page_title(cx)).child(meta)).child(body).children(footer);
+        let content = div()
+            .flex()
+            .flex_col()
+            .gap(px(28.))
+            .child(div().flex().flex_col().gap(px(14.)).child(header).child(chips))
+            .child(about)
+            .children(tasks)
+            .children(self.render_activity(&creator, &agent, cx));
         self.page("session-overview", content)
+    }
+
+    /// The session's history as a timeline: prompts, files the agent changed, commands it ran,
+    /// steps that failed.
+    fn render_activity(&self, creator: &str, agent: &str, cx: &mut Context<Self>) -> Option<AnyElement> {
+        let colors = cx.theme().colors.clone();
+        let events = activity(&self.transcript);
+        if events.is_empty() {
+            return None;
+        }
+        const SHOWN: usize = 8;
+        let all = self.expanded.contains("overview-activity-all");
+        let hidden = if all { 0 } else { events.len().saturating_sub(SHOWN) };
+        let now = workspace::now_ms();
+        let count = events.len();
+        let rows: Vec<AnyElement> = events
+            .into_iter()
+            .enumerate()
+            .skip(hidden)
+            .map(|(index, event)| {
+                let (actor, leading) = match event.kind {
+                    ActivityKind::Started | ActivityKind::Asked => (creator.to_string(), ui::Avatar::new(creator).size(px(20.)).into_any_element()),
+                    ActivityKind::Edited => (agent.to_string(), activity_icon(IconName::PencilLine, colors.muted_foreground, &colors)),
+                    ActivityKind::Ran => (agent.to_string(), activity_icon(IconName::Terminal, colors.muted_foreground, &colors)),
+                    ActivityKind::Failed => (agent.to_string(), activity_icon(IconName::WarningCircle, colors.destructive, &colors)),
+                };
+                let last = index + 1 == count;
+                let mut line = div().flex().flex_wrap().items_baseline().gap_x(px(5.)).text_size(typography::TEXT_SM).line_height(relative(1.5));
+                line = line.child(div().font_weight(typography::MEDIUM).text_color(colors.foreground).child(actor));
+                for (text, strong) in event.parts {
+                    line = line.child(div().text_color(if strong { colors.foreground } else { colors.muted_foreground }).child(text));
+                }
+                if let Some(at) = event.at {
+                    line = line.child(div().text_color(colors.subtle_foreground).child(format!("· {}", ago(at, now))));
+                }
+                div()
+                    .flex()
+                    .gap(px(12.))
+                    .child(
+                        // The rail: the event's mark, and a line down to the next one.
+                        div()
+                            .flex_none()
+                            .w(px(20.))
+                            .flex()
+                            .flex_col()
+                            .items_center()
+                            .child(div().flex_none().size(px(20.)).flex().items_center().justify_center().child(leading))
+                            .when(!last, |this| this.child(div().flex_1().w(px(1.)).min_h(px(10.)).bg(colors.border))),
+                    )
+                    .child(div().flex_1().min_w_0().pb(px(if last { 0. } else { 14. })).child(line))
+                    .into_any_element()
+            })
+            .collect();
+        let more = (hidden > 0 || (all && count > SHOWN)).then(|| {
+            let label = if all { "Show less".to_string() } else { format!("Show {hidden} earlier") };
+            Button::new("overview-activity-more", label).variant(ButtonVariant::Ghost).size(ButtonSize::Small).on_click(cx.listener(|this, _: &ClickEvent, _, cx| {
+                if !this.expanded.remove("overview-activity-all") {
+                    this.expanded.insert("overview-activity-all".into());
+                }
+                cx.notify();
+            }))
+        });
+        Some(
+            div()
+                .flex()
+                .flex_col()
+                .gap(px(14.))
+                .child(div().flex().items_center().justify_between().child(div().text_size(px(14.)).font_weight(typography::SEMIBOLD).text_color(colors.foreground).child("Activity")).children(more))
+                .child(div().flex().flex_col().children(rows))
+                .into_any_element(),
+        )
+    }
+
+    /// Opens the Changes page on `path`, from the top of its diff.
+    pub(crate) fn show_change(&mut self, path: std::path::PathBuf, cx: &mut Context<Self>) {
+        self.changes_file = Some(path);
+        self.changes_scroll.scroll_to_item(0, gpui::ScrollStrategy::Top);
+        self.set_page(SessionPage::Changes, cx);
     }
 
     pub(crate) fn render_changes(&mut self, cx: &mut Context<Self>) -> AnyElement {
@@ -716,129 +842,237 @@ impl SessionView {
             return self.page("session-changes", empty);
         }
         let (additions, deletions) = files.iter().fold((0, 0), |(added, removed), (file, _)| (added + file.additions, removed + file.deletions));
-        let summary = div()
+        let root = self.info.cwd.clone();
+        let selected = self.changes_file.clone().filter(|path| files.iter().any(|(file, _)| file.path == *path)).unwrap_or_else(|| files[0].0.path.clone());
+        let counts = |added: usize, removed: usize| {
+            div()
+                .flex_none()
+                .flex()
+                .gap(px(6.))
+                .text_size(typography::TEXT_CAPTION)
+                .when(added > 0, |this| this.child(div().text_color(colors.git_added).child(format!("+{added}"))))
+                .when(removed > 0, |this| this.child(div().text_color(colors.git_deleted).child(format!("−{removed}"))))
+        };
+        let file_icon = |name: &str, cx: &mut Context<Self>| match extensions::icon_for(name, false, false, cx) {
+            Some(source) => gpui::img(source).flex_none().size(px(14.)).into_any_element(),
+            None => Icon::new(IconName::File).size(IconSize::Small).color(colors.subtle_foreground).into_any_element(),
+        };
+        let name_of = |path: &std::path::Path| path.file_name().map(|name| name.to_string_lossy().into_owned()).unwrap_or_else(|| path.display().to_string());
+
+        // Left: every changed file, latest first, with the totals and the full review on top.
+        let list_header = div()
+            .flex_none()
             .flex()
             .items_center()
-            .gap(px(12.))
-            .p(px(14.))
-            .rounded(metrics::RADIUS_LG)
-            .bg(colors.raised)
-            .shadow(theme.shadows.raised.clone())
+            .gap(px(8.))
+            .h(px(36.))
+            .px(px(12.))
+            .border_b_1()
+            .border_color(colors.divider)
+            .text_size(typography::TEXT_SM)
+            .child(div().font_weight(typography::MEDIUM).text_color(colors.foreground).child(format!("{} {}", files.len(), if files.len() == 1 { "file" } else { "files" })))
+            .child(counts(additions, deletions))
+            .child(div().flex_1())
             .child(
+                Button::icon("changes-review", IconName::GitDiff)
+                    .size(ButtonSize::XSmall)
+                    .tooltip("Review all changes")
+                    .on_click(cx.listener(|this, _: &ClickEvent, _, cx| this.open_review(cx))),
+            );
+        let mut rows: Vec<AnyElement> = Vec::new();
+        for (position, (file, _)) in files.iter().enumerate() {
+            let name = name_of(&file.path);
+            let folder = relative_folder(&file.path, root.as_deref());
+            let active = file.path == selected;
+            let path = file.path.clone();
+            let hover = colors.segment_track;
+            let name_color = if file.status == ToolStatus::Failed {
+                colors.destructive
+            } else if file.created {
+                colors.git_added
+            } else {
+                colors.foreground
+            };
+            rows.push(
                 div()
+                    .id(("changes-file", position))
                     .flex()
-                    .flex_col()
-                    .gap(px(4.))
-                    .flex_1()
-                    .min_w_0()
-                    .child(div().text_size(px(14.)).font_weight(typography::SEMIBOLD).child(format!("{} {} changed", files.len(), if files.len() == 1 { "file" } else { "files" })))
+                    .items_center()
+                    .gap(px(8.))
+                    .h(px(28.))
+                    .px(px(8.))
+                    .rounded(metrics::RADIUS_MD)
+                    .when(active, |this| this.bg(colors.segment_knob).shadow(theme.shadows.raised_inset.clone()))
+                    .when(!active, |this| this.hover(move |style| style.bg(hover)))
+                    .on_click(cx.listener(move |this, _: &ClickEvent, _, cx| {
+                        this.changes_file = Some(path.clone());
+                        this.changes_scroll.scroll_to_item(0, gpui::ScrollStrategy::Top);
+                        cx.notify();
+                    }))
+                    .child(file_icon(&name, cx))
                     .child(
                         div()
                             .flex()
-                            .items_center()
-                            .gap(px(8.))
-                            .text_size(typography::TEXT_SM)
-                            .child(div().text_color(colors.git_added).child(format!("+{additions}")))
-                            .child(div().text_color(colors.git_deleted).child(format!("−{deletions}")))
-                            .child(change_blocks(additions, deletions, &colors)),
-                    ),
-            )
+                            .items_baseline()
+                            .gap(px(6.))
+                            .flex_1()
+                            .min_w_0()
+                            .overflow_hidden()
+                            .child(div().flex_none().text_size(typography::TEXT_SM).text_color(name_color).child(name))
+                            .children(folder.map(|folder| div().min_w_0().truncate().text_size(typography::TEXT_CAPTION).text_color(colors.subtle_foreground).child(folder))),
+                    )
+                    .child(counts(file.additions, file.deletions))
+                    .into_any_element(),
+            );
+        }
+        let width = self.changes_width;
+        let resizing = self.changes_drag.is_some();
+        let line = colors.primary;
+        let list = div()
+            .relative()
+            .flex_none()
+            .w(px(width))
+            .h_full()
+            .flex()
+            .flex_col()
+            .border_r_1()
+            .border_color(colors.divider)
+            .child(list_header)
+            .child(div().id("changes-files").flex_1().min_h_0().overflow_y_scroll().p(px(6.)).flex().flex_col().gap(px(1.)).children(rows))
             .child(
-                Button::new("changes-review", "Review changes")
-                    .leading_icon(IconName::GitDiff)
-                    .size(ButtonSize::Small)
-                    .on_click(cx.listener(|this, _: &ClickEvent, _, cx| this.open_review(cx))),
+                // Drag to resize; double-click puts the width back.
+                div()
+                    .id("changes-resize")
+                    .absolute()
+                    .top_0()
+                    .bottom_0()
+                    .right(px(-3.))
+                    .w(px(6.))
+                    .flex()
+                    .justify_center()
+                    .cursor_col_resize()
+                    .group("changes-resize")
+                    .child(div().w(px(1.)).h_full().when(resizing, |this| this.bg(line)).group_hover("changes-resize", move |style| style.bg(line)))
+                    .on_mouse_down(
+                        gpui::MouseButton::Left,
+                        cx.listener(|this, event: &gpui::MouseDownEvent, _, cx| {
+                            this.changes_drag = Some((event.position.x, this.changes_width));
+                            cx.stop_propagation();
+                            cx.notify();
+                        }),
+                    )
+                    .on_click(cx.listener(|this, event: &ClickEvent, _, cx| {
+                        if event.click_count() == 2 {
+                            this.changes_width = CHANGES_LIST_WIDTH;
+                            cx.notify();
+                        }
+                    })),
             );
 
-        let many = files.len() > 6;
-        let root = self.info.cwd.clone();
-        let mut cards: Vec<AnyElement> = Vec::new();
-        for (position, (file, edits)) in files.into_iter().enumerate() {
-            let key = format!("changes-toggle-{}", file.path.display());
-            // Few files show open; many start folded.
-            let open = self.expanded.contains(&key) == many;
-            let name = file.path.file_name().map(|name| name.to_string_lossy().into_owned()).unwrap_or_else(|| file.path.display().to_string());
-            let folder = relative_folder(&file.path, root.as_deref());
-            let icon = match extensions::icon_for(&name, false, false, cx) {
-                Some(source) => gpui::img(source).flex_none().size(px(16.)).into_any_element(),
-                None => Icon::new(IconName::File).size(IconSize::Small).color(colors.subtle_foreground).into_any_element(),
-            };
-            let path: PathBuf = file.path.clone();
-            let failed = file.status == ToolStatus::Failed;
-            let hover = colors.accent;
-            let header = div()
-                .id(("changes-file", position))
-                .flex()
-                .items_center()
-                .gap(px(8.))
-                .h(px(40.))
-                .px(px(12.))
-                .when(open, |this| this.border_b_1().border_color(colors.divider))
-                .cursor_pointer()
-                .hover(move |style| style.bg(hover))
-                .on_click(cx.listener({
-                    let key = key.clone();
-                    move |this, _: &ClickEvent, _, cx| {
-                        if !this.expanded.remove(&key) {
-                            this.expanded.insert(key.clone());
-                        }
+        // Right: the picked file, its whole diff filling the page (every edit, oldest first).
+        let (file, edits) = files.into_iter().find(|(file, _)| file.path == selected).expect("the selected file is one of the changes");
+        let name = name_of(&file.path);
+        let folder = relative_folder(&file.path, root.as_deref());
+        let open_path = file.path.clone();
+        let header = div()
+            .flex_none()
+            .flex()
+            .items_center()
+            .gap(px(8.))
+            .h(px(36.))
+            .px(px(14.))
+            .border_b_1()
+            .border_color(colors.divider)
+            .child(file_icon(&name, cx))
+            .child(div().flex_none().text_size(typography::TEXT_SM).font_weight(typography::MEDIUM).text_color(colors.foreground).child(name))
+            .children(folder.map(|folder| div().min_w_0().truncate().text_size(typography::TEXT_CAPTION).text_color(colors.subtle_foreground).child(folder)))
+            .child(div().flex_1())
+            .when(file.created, |this| this.child(ui::Badge::new("New").label_color(colors.git_added)))
+            .when(file.status == ToolStatus::Failed, |this| this.child(ui::Badge::new("Failed").label_color(colors.destructive)))
+            .when(edits.len() > 1, |this| this.child(div().text_size(typography::TEXT_CAPTION).text_color(colors.subtle_foreground).child(format!("{} edits", edits.len()))))
+            .child(counts(file.additions, file.deletions).text_size(typography::TEXT_SM))
+            .child(
+                Button::icon("changes-open", IconName::SquareArrowUp)
+                    .size(ButtonSize::XSmall)
+                    .tooltip("Open file")
+                    .on_click(cx.listener(move |this, _: &ClickEvent, _, cx| this.open_file(open_path.clone(), cx))),
+            );
+
+        let (rows, spans) = change_rows(&file.path, &edits);
+        let (rows, spans): (std::rc::Rc<Vec<ChangeRow>>, crate::render::LineSpans) = (std::rc::Rc::new(rows), std::rc::Rc::new(spans));
+        let widest = rows
+            .iter()
+            .enumerate()
+            .max_by_key(|(_, row)| match row {
+                ChangeRow::Diff(crate::diff::NumberedRow::Line { text, .. }) => text.len(),
+                _ => 0,
+            })
+            .map(|(row, _)| row);
+        let count = rows.len();
+        let (row_colors, row_theme) = (colors.clone(), theme.clone());
+        let diff = gpui::uniform_list("changes-diff", count, move |range: std::ops::Range<usize>, _, _| {
+            range
+                .filter_map(|index| {
+                    Some(match rows.get(index)? {
+                        ChangeRow::Edit(number, of) => div()
+                            .flex()
+                            .items_center()
+                            .min_w_full()
+                            .h(px(crate::render::DIFF_ROW_HEIGHT))
+                            .px(px(10.))
+                            .bg(row_colors.surface)
+                            .text_color(row_colors.muted_foreground)
+                            .child(format!("Edit {number} of {of}"))
+                            .into_any_element(),
+                        ChangeRow::Diff(row) => crate::render::diff_row(index, row, &spans, &row_colors, &row_theme),
+                    })
+                })
+                .collect()
+        })
+        .with_horizontal_sizing_behavior(gpui::ListHorizontalSizingBehavior::Unconstrained)
+        .with_width_from_item(widest)
+        .track_scroll(&self.changes_scroll)
+        .flex_1()
+        .min_h_0();
+        let diff = div()
+            .flex_1()
+            .min_h_0()
+            .flex()
+            .flex_col()
+            .bg(colors.background)
+            .font_family(typography::MONO_FONT)
+            .text_size(typography::TEXT_CAPTION)
+            .line_height(px(crate::render::DIFF_ROW_HEIGHT))
+            .child(ui::with_scrollbar(diff, ui::Scrollbar::uniform("changes-diff-scrollbar", &self.changes_scroll)));
+        let detail = div().flex_1().min_w_0().h_full().flex().flex_col().child(header).child(diff);
+
+        div()
+            .id("session-changes")
+            .flex_1()
+            .min_h_0()
+            .flex()
+            .on_mouse_move(cx.listener(|this, event: &gpui::MouseMoveEvent, window, cx| {
+                let Some((start_x, start_width)) = this.changes_drag else { return };
+                if !event.dragging() {
+                    this.changes_drag = None;
+                    cx.notify();
+                    return;
+                }
+                let max = (f32::from(window.viewport_size().width) * 0.6).max(CHANGES_LIST_MIN_WIDTH);
+                this.changes_width = (start_width + f32::from(event.position.x - start_x)).clamp(CHANGES_LIST_MIN_WIDTH, max);
+                cx.notify();
+            }))
+            .on_mouse_up(
+                gpui::MouseButton::Left,
+                cx.listener(|this, _: &gpui::MouseUpEvent, _, cx| {
+                    if this.changes_drag.take().is_some() {
                         cx.notify();
                     }
-                }))
-                .child(Icon::new(if open { IconName::ChevronDown } else { IconName::ChevronRight }).size(IconSize::XSmall).color(colors.subtle_foreground))
-                .child(icon)
-                .child(
-                    div()
-                        .flex()
-                        .items_baseline()
-                        .gap(px(8.))
-                        .flex_1()
-                        .min_w_0()
-                        .child(div().flex_none().text_size(typography::TEXT_SM).font_weight(typography::MEDIUM).text_color(colors.foreground).child(name))
-                        .children(folder.map(|folder| div().min_w_0().truncate().text_size(typography::TEXT_CAPTION).text_color(colors.subtle_foreground).child(folder))),
-                )
-                .when(file.created, |this| this.child(ui::Badge::new("New").label_color(colors.git_added)))
-                .when(failed, |this| this.child(ui::Badge::new("Failed").label_color(colors.destructive)))
-                .when(file.edits > 1, |this| this.child(div().text_size(typography::TEXT_CAPTION).text_color(colors.subtle_foreground).child(format!("{} edits", file.edits))))
-                .child(
-                    div()
-                        .flex()
-                        .gap(px(6.))
-                        .text_size(typography::TEXT_SM)
-                        .when(file.additions > 0, |this| this.child(div().text_color(colors.git_added).child(format!("+{}", file.additions))))
-                        .when(file.deletions > 0, |this| this.child(div().text_color(colors.git_deleted).child(format!("−{}", file.deletions)))),
-                )
-                .child(
-                    Button::icon(("changes-open", position), IconName::SquareArrowUp)
-                        .size(ButtonSize::XSmall)
-                        .tooltip("Open file")
-                        .on_click(cx.listener(move |this, _: &ClickEvent, _, cx| {
-                            cx.stop_propagation();
-                            this.open_file(path.clone(), cx);
-                        })),
-                );
-            let body = open.then(|| {
-                let count = edits.len();
-                let diffs: Vec<AnyElement> = edits
-                    .into_iter()
-                    .enumerate()
-                    .map(|(number, edit)| {
-                        let diff = self.render_diff(edit.entry, edit.content, &file.path, edit.old.as_deref(), &edit.new, false, cx);
-                        div()
-                            .flex()
-                            .flex_col()
-                            .gap(px(6.))
-                            .when(count > 1, |this| this.child(div().text_size(typography::TEXT_CAPTION).text_color(colors.subtle_foreground).child(format!("Edit {} of {count}", number + 1))))
-                            .child(diff)
-                            .into_any_element()
-                    })
-                    .collect();
-                div().flex().flex_col().gap(px(10.)).p(px(10.)).children(diffs)
-            });
-            cards.push(div().rounded(metrics::RADIUS_LG).bg(colors.raised).shadow(theme.shadows.raised.clone()).overflow_hidden().child(header).children(body).into_any_element());
-        }
-        let content = div().flex().flex_col().gap(px(12.)).child(summary).children(cards);
-        self.page("session-changes", content)
+                }),
+            )
+            .child(list)
+            .child(detail)
+            .into_any_element()
     }
 
     pub(crate) fn render_issues(&mut self, cx: &mut Context<Self>) -> AnyElement {
@@ -871,7 +1105,6 @@ impl SessionView {
                     .min_h(px(44.))
                     .px(px(14.))
                     .when(index > 0, |this| this.border_t_1().border_color(colors.divider))
-                    .cursor_pointer()
                     .hover(move |style| style.bg(hover))
                     .child(Icon::new(IconName::CircleDot).size(IconSize::Small).color(colors.git_added))
                     .child(
@@ -903,41 +1136,139 @@ impl SessionView {
     }
 }
 
-/// Five blocks, as GitHub draws a change's size: green for added lines, red for removed, the
-/// rest empty. A side with any lines gets at least one block.
-fn change_blocks(additions: usize, deletions: usize, colors: &theme::ThemeColors) -> gpui::Div {
-    let (green, red) = block_split(additions, deletions);
-    div().flex().gap(px(2.)).children((0..5).map(|block| {
-        let color = if block < green {
-            colors.git_added
-        } else if block < green + red {
-            colors.git_deleted
-        } else {
-            colors.foreground.opacity(0.12)
-        };
-        div().size(px(8.)).rounded(px(2.)).bg(color)
-    }))
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ActivityKind {
+    Started,
+    Asked,
+    Edited,
+    Ran,
+    Failed,
 }
 
-fn block_split(additions: usize, deletions: usize) -> (usize, usize) {
-    let total = additions + deletions;
-    if total == 0 {
-        return (0, 0);
+/// One line of the Activity timeline: what happened after its actor's name, as plain and
+/// emphasized parts, and when.
+#[derive(Clone, Debug, PartialEq)]
+pub struct ActivityEvent {
+    pub kind: ActivityKind,
+    pub parts: Vec<(String, bool)>,
+    pub at: Option<u64>,
+}
+
+/// The session's history, oldest first: each prompt, then what the agent did for it (the files
+/// it changed, the commands it ran, the steps that failed).
+pub fn activity(transcript: &Transcript) -> Vec<ActivityEvent> {
+    fn clip(text: &str, max: usize) -> String {
+        let text = text.split_whitespace().collect::<Vec<_>>().join(" ");
+        if text.chars().count() <= max { text } else { format!("{}…", text.chars().take(max).collect::<String>()) }
     }
-    let mut green = ((additions * 5) as f32 / total as f32).round() as usize;
-    let mut red = 5 - green;
-    if additions > 0 && green == 0 {
-        green = 1;
-        red -= 1;
+    #[derive(Default)]
+    struct Turn {
+        files: Vec<String>,
+        commands: usize,
+        failed: Vec<(String, Option<u64>)>,
+        at: Option<u64>,
     }
-    if deletions > 0 && red == 0 {
-        red = 1;
-        green -= 1;
+    fn flush(turn: &mut Turn, events: &mut Vec<ActivityEvent>) {
+        let turn = std::mem::take(turn);
+        if !turn.files.is_empty() {
+            let mut parts = vec![("changed".to_string(), false)];
+            let shown = turn.files.len().min(2);
+            parts.push((turn.files[..shown].join(", "), true));
+            if turn.files.len() > shown {
+                parts.push((format!("and {} more", turn.files.len() - shown), false));
+            }
+            events.push(ActivityEvent { kind: ActivityKind::Edited, parts, at: turn.at });
+        }
+        if turn.commands > 0 {
+            let label = format!("{} {}", turn.commands, if turn.commands == 1 { "command" } else { "commands" });
+            events.push(ActivityEvent { kind: ActivityKind::Ran, parts: vec![("ran".into(), false), (label, true)], at: turn.at });
+        }
+        for (title, at) in turn.failed {
+            events.push(ActivityEvent { kind: ActivityKind::Failed, parts: vec![("hit a failed step:".into(), false), (title, true)], at });
+        }
     }
-    if deletions == 0 {
-        red = 0;
+
+    let mut events = Vec::new();
+    let mut turn = Turn::default();
+    let mut prompts = 0;
+    for entry in &transcript.entries {
+        match entry {
+            Entry::User(message) => {
+                flush(&mut turn, &mut events);
+                let text = clip(follow_ups::strip_context_preamble(&message.text), 90);
+                if text.is_empty() {
+                    continue;
+                }
+                let (kind, verb) = if prompts == 0 { (ActivityKind::Started, "started the session:") } else { (ActivityKind::Asked, "asked") };
+                prompts += 1;
+                events.push(ActivityEvent { kind, parts: vec![(verb.into(), false), (format!("“{text}”"), true)], at: message.sent_at });
+            }
+            Entry::ToolCall(call) => {
+                turn.at = turn.at.or(call.started_at);
+                if call.status == ToolStatus::Failed {
+                    turn.failed.push((clip(&call.title, 70), call.started_at));
+                    continue;
+                }
+                for part in &call.content {
+                    if let ToolContent::Diff { path, .. } = part {
+                        let name = path.file_name().map(|name| name.to_string_lossy().into_owned()).unwrap_or_else(|| path.display().to_string());
+                        if !turn.files.contains(&name) {
+                            turn.files.push(name);
+                        }
+                    }
+                }
+                if call.kind == crate::thread::ToolKind::Execute {
+                    turn.commands += 1;
+                }
+            }
+            _ => {}
+        }
     }
-    (green, red)
+    flush(&mut turn, &mut events);
+    events
+}
+
+/// A timeline mark: a small icon in a soft circle.
+fn activity_icon(name: IconName, tint: Hsla, colors: &theme::ThemeColors) -> AnyElement {
+    div().size(px(20.)).flex().items_center().justify_center().rounded_full().bg(colors.segment_track).child(Icon::new(name).size(IconSize::XSmall).color(tint)).into_any_element()
+}
+
+/// "now", "5m ago", "2d ago".
+fn ago(at: u64, now: u64) -> String {
+    match workspace::relative_time(at, now) {
+        now_label if now_label == "now" => "just now".into(),
+        age => format!("{age} ago"),
+    }
+}
+
+/// A row of the Changes page's diff: a divider before each edit of a file edited more than once,
+/// or a diff row.
+pub enum ChangeRow {
+    Edit(usize, usize),
+    Diff(crate::diff::NumberedRow),
+}
+
+/// Every edit of `path` as one run of rows, with each row's highlight spans.
+fn change_rows(path: &std::path::Path, edits: &[FileEdit]) -> (Vec<ChangeRow>, Vec<Vec<(std::ops::Range<usize>, editor::SyntaxKind)>>) {
+    use crate::diff::NumberedRow;
+    let language = path.extension().map(|extension| extension.to_string_lossy().into_owned());
+    let mut rows = Vec::new();
+    let mut spans = Vec::new();
+    for (number, edit) in edits.iter().enumerate() {
+        if edits.len() > 1 {
+            rows.push(ChangeRow::Edit(number + 1, edits.len()));
+            spans.push(Vec::new());
+        }
+        let numbered = crate::diff::numbered_rows(&crate::diff::diff_rows(edit.old.as_deref().unwrap_or(""), &edit.new));
+        // Highlighted as one text so tokens that depend on earlier lines stay right.
+        let code = numbered.iter().map(|row| if let NumberedRow::Line { text, .. } = row { text.as_str() } else { "" }).collect::<Vec<_>>().join("\n");
+        let highlights = crate::render::code_line_spans(language.as_deref(), &code);
+        for (line, row) in numbered.into_iter().enumerate() {
+            spans.push(highlights.get(line).cloned().unwrap_or_default());
+            rows.push(ChangeRow::Diff(row));
+        }
+    }
+    (rows, spans)
 }
 
 /// The folder of `path`, relative to the project when it is inside it.
@@ -998,10 +1329,17 @@ mod tests {
     }
 
     #[test]
-    fn change_blocks_show_both_sides() {
-        assert_eq!(block_split(0, 0), (0, 0));
-        assert_eq!(block_split(10, 0), (5, 0));
-        assert_eq!(block_split(69, 2), (4, 1));
-        assert_eq!(block_split(1, 99), (1, 4));
+    fn activity_groups_each_turn_after_its_prompt() {
+        let transcript: Transcript = serde_json::from_value(serde_json::json!({ "entries": [
+            { "type": "user", "text": "Fix the sync", "sentAt": 1 },
+            { "type": "toolCall", "id": "a", "title": "Edit a.rs", "kind": "edit", "status": "completed",
+              "content": [ { "type": "diff", "path": "/p/a.rs", "newText": "x" } ] },
+            { "type": "toolCall", "id": "b", "title": "cargo test", "kind": "execute", "status": "completed" },
+            { "type": "toolCall", "id": "c", "title": "cargo clippy", "kind": "execute", "status": "failed" },
+            { "type": "user", "text": "Now the progress bar", "sentAt": 2 }
+        ] }))
+        .unwrap();
+        let kinds: Vec<ActivityKind> = activity(&transcript).iter().map(|event| event.kind).collect();
+        assert_eq!(kinds, [ActivityKind::Started, ActivityKind::Edited, ActivityKind::Ran, ActivityKind::Failed, ActivityKind::Asked]);
     }
 }

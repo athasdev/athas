@@ -327,7 +327,6 @@ impl SkillsView {
                 .px(px(8.))
                 .py(px(6.))
                 .rounded(metrics::RADIUS_MD)
-                .cursor_pointer()
                 .when(selected, |this| this.bg(colors.selected))
                 .when(!selected, |this| this.hover(|style| style.bg(colors.accent)))
                 .on_click(cx.listener(move |this, _: &ClickEvent, _, cx| {

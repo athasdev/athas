@@ -383,6 +383,9 @@ fn main() -> Result<()> {
             _ => {
                 let info = SessionInfo { id: "snapshot".into(), title: "Snapshot".into(), agent: "athas".into(), cwd: Some(project.clone()) };
                 let session = cx.new(|cx| SessionView::new(info, window, cx));
+                if let Ok(page) = std::env::var("ATHAS_SNAPSHOT_SESSION_PAGE") {
+                    session.update(cx, |session, cx| session.show_page_named(&page, cx));
+                }
                 if let Ok(menu) = std::env::var("ATHAS_SNAPSHOT_COMPOSER_MENU") {
                     session.update(cx, |session, cx| session.show_composer_menu(&menu, window, cx));
                 }

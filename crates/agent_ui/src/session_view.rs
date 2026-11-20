@@ -309,6 +309,12 @@ pub struct SessionView {
     /// The project's open issues (number, title, url), read when the Issues page first shows.
     pub(crate) open_issues: Option<Vec<(u64, String, String)>>,
     pub(crate) issues_task: Option<Task<()>>,
+    /// The file the Changes page shows; the latest change when none is picked.
+    pub(crate) changes_file: Option<PathBuf>,
+    /// The Changes page's file list width, and the drag resizing it (start x, start width).
+    pub(crate) changes_width: f32,
+    pub(crate) changes_drag: Option<(gpui::Pixels, f32)>,
+    pub(crate) changes_scroll: gpui::UniformListScrollHandle,
     /// Why the agent process went away on its own, until it runs again.
     pub(crate) agent_disconnected: Option<String>,
     /// The draft went to another window with the session; closing this view leaves it alone.
@@ -596,6 +602,10 @@ impl SessionView {
             overview_task: None,
             overview_error: None,
             open_issues: None,
+            changes_file: None,
+            changes_width: crate::overview::CHANGES_LIST_WIDTH,
+            changes_drag: None,
+            changes_scroll: gpui::UniformListScrollHandle::new(),
             issues_task: None,
             agent_disconnected: None,
             draft_handed_off: false,

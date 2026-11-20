@@ -567,7 +567,6 @@ impl CloudAgentsView {
                         .px(px(12.))
                         .py(px(8.))
                         .when(index > 0, |this| this.border_t_1().border_color(colors.border))
-                        .cursor_pointer()
                         .hover(|style| style.bg(colors.accent))
                         .on_click(move |_, _, cx| workbench_api::open_resource(cx, super::RUN_KIND, &id, &title))
                         .child(status_pill(run.status, cx))

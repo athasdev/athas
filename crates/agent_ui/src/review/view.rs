@@ -239,7 +239,6 @@ impl ReviewView {
                             .truncate()
                             .text_size(typography::TEXT_CAPTION)
                             .text_color(colors.muted_foreground)
-                            .cursor_pointer()
                             .hover(|style| style.text_color(colors.foreground))
                             .on_click(move |_, _, cx| Self::open(open_path.clone(), Some(line), cx))
                             .child(summary),
@@ -309,7 +308,6 @@ impl ReviewView {
                             .gap(px(6.))
                             .flex_1()
                             .min_w_0()
-                            .cursor_pointer()
                             .on_click(cx.listener(move |this, _: &ClickEvent, _, cx| {
                                 if !this.collapsed.remove(&toggle_path) {
                                     this.collapsed.insert(toggle_path.clone());

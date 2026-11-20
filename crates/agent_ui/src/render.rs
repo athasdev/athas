@@ -27,7 +27,6 @@ use crate::{
 
 /// The transcript's column, as wide as Athas's `chatContentWidth`.
 const CONTENT_WIDTH: f32 = 760.;
-const DIFF_LINE_LIMIT: usize = 400;
 const OUTPUT_LINE_LIMIT: usize = 200;
 /// How tall an open tool step grows before its body scrolls.
 const TOOL_BODY_MAX_HEIGHT: f32 = 320.;
@@ -36,6 +35,8 @@ const TOOL_BODY_MAX_HEIGHT: f32 = 320.;
 const TOOL_GROUP_MAX_HEIGHT: f32 = 225.;
 /// Rows a diff shows inside the transcript before the user asks for the rest (`DIFF_PREVIEW_ROWS`).
 const DIFF_PREVIEW_ROWS: usize = 16;
+/// A diff row's height; the diff box sets it as its line height.
+pub(crate) const DIFF_ROW_HEIGHT: f32 = 19.;
 /// A prompt shows this many lines until the user asks for the rest.
 const PROMPT_LINES: usize = 8;
 
@@ -132,7 +133,8 @@ impl Render for SessionView {
             crate::overview::SessionPage::Issues if !empty => self.render_issues(cx),
             _ => body,
         };
-        let body = self.with_side_column(body, window, cx);
+        // The Changes page uses the whole width for its file list and diff.
+        let body = if self.page == crate::overview::SessionPage::Changes && !empty { body } else { self.with_side_column(body, window, cx) };
         div()
             .id("agent-session")
             .key_context("AgentSession")
@@ -897,7 +899,6 @@ impl SessionView {
                     .text_size(typography::TEXT_SM)
                     .text_color(colors.subtle_foreground)
                     .hover(|style| style.text_color(colors.foreground))
-                    .cursor_pointer()
                     .child(Icon::new(IconName::Brain).size(IconSize::Small).color(if thinking { colors.primary } else { colors.subtle_foreground }))
                     .child(label)
                     .child(disclosure(expanded, colors.subtle_foreground))
@@ -1353,71 +1354,24 @@ impl SessionView {
         let rows = diff::diff_rows(old.unwrap_or(""), new);
         let (added, removed) = diff::stats(&rows);
         let numbered = diff::numbered_rows(&rows);
-        // `ToolDiff`: sixteen rows until the user asks for the rest.
-        let expand_key = format!("diff-{index}-{content_index}");
+        // The transcript shows a preview; the whole diff is on the Changes page.
         let fold_key = format!("diff-fold-{index}-{content_index}");
-        let show_all = self.expanded.contains(&expand_key);
         let folded = caption && self.expanded.contains(&fold_key);
-        let limit = numbered.len().min(DIFF_LINE_LIMIT);
-        let shown = limit.min(if show_all { DIFF_LINE_LIMIT } else { DIFF_PREVIEW_ROWS });
-        let hidden = limit - shown;
-        let truncated = numbered.len() > DIFF_LINE_LIMIT;
+        let shown = numbered.len().min(DIFF_PREVIEW_ROWS);
+        let hidden = numbered.len() - shown;
         let display = display_path(path, self.info.cwd.as_deref());
         let open = path.clone();
+        let show_path = path.clone();
         // Highlighted as one text so tokens that depend on earlier lines stay right.
         let language = path.extension().map(|extension| extension.to_string_lossy().into_owned());
         let code = numbered[..shown].iter().map(|row| if let NumberedRow::Line { text, .. } = row { text.as_str() } else { "" }).collect::<Vec<_>>().join("\n");
         let spans = code_line_spans(language.as_deref(), &code);
         let theme = cx.theme().clone();
-        let number = |value: Option<usize>| {
-            div()
-                .w(px(40.))
-                .flex_none()
-                .px(px(8.))
-                .border_r_1()
-                .border_color(colors.divider)
-                .flex()
-                .justify_end()
-                .text_color(colors.subtle_foreground)
-                .child(value.map(|value| value.to_string()).unwrap_or_default())
-        };
-        let row_element = |(row_index, row): (usize, &NumberedRow)| -> AnyElement {
-            match row {
-                NumberedRow::Header(range) => div()
-                    .flex()
-                    .min_w_full()
-                    .bg(colors.surface)
-                    .text_color(colors.subtle_foreground)
-                    .child(div().w(px(100.)).flex_none().px(px(8.)).border_r_1().border_color(colors.divider).flex().justify_end().child("@@"))
-                    .child(div().px(px(10.)).whitespace_nowrap().child(range.clone()))
-                    .into_any_element(),
-                NumberedRow::Line { kind, text, old, new } => {
-                    let (marker, bar, marker_color) = match kind {
-                        LineKind::Added => ("+", Some(colors.git_added), colors.git_added),
-                        LineKind::Removed => ("-", Some(colors.git_deleted), colors.git_deleted),
-                        LineKind::Context => (" ", None, colors.subtle_foreground),
-                    };
-                    let line_spans = spans.get(row_index).map(Vec::as_slice).unwrap_or_default();
-                    div()
-                        .relative()
-                        .flex()
-                        .min_w_full()
-                        .when_some(bar, |this, bar| {
-                            this.bg(bar.opacity(0.14)).child(div().absolute().left_0().top_0().bottom_0().w(px(2.)).bg(bar))
-                        })
-                        .child(number(*old))
-                        .child(number(*new))
-                        .child(div().w(px(20.)).flex_none().flex().justify_center().text_color(marker_color).child(marker))
-                        .child(div().pl(px(2.)).pr(px(10.)).whitespace_nowrap().text_color(colors.foreground).child(crate::inline_edit::styled_code_line(text, line_spans, &theme)))
-                        .into_any_element()
-                }
-            }
-        };
         let lines: Vec<AnyElement> = if numbered.is_empty() {
             // A no-op edit still says so.
             vec![div().px(px(10.)).text_color(colors.subtle_foreground).child("No changes").into_any_element()]
         } else {
-            numbered[..shown].iter().enumerate().map(row_element).collect()
+            numbered[..shown].iter().enumerate().map(|(row, item)| diff_row(row, item, &spans, &colors, &theme)).collect()
         };
         let diff_box = div()
             .w_full()
@@ -1438,7 +1392,6 @@ impl SessionView {
                         .bg(colors.surface)
                         .when(!folded, |this| this.border_b_1().border_color(colors.divider))
                         .text_size(typography::TEXT_SM)
-                        .cursor_pointer()
                         .hover(|style| style.bg(colors.accent))
                         .on_click(cx.listener(move |this, _: &ClickEvent, _, cx| {
                             if !this.expanded.remove(&fold_key) {
@@ -1470,22 +1423,9 @@ impl SessionView {
                         .bg(colors.background)
                         .font_family(typography::MONO_FONT)
                         .text_size(typography::TEXT_CAPTION)
-                        .line_height(px(19.))
+                        .line_height(px(DIFF_ROW_HEIGHT))
                         .child(div().flex().flex_col().min_w_full().children(lines)),
                 )
-                .when(truncated && (show_all || hidden == 0), |this| {
-                    this.child(
-                        div()
-                            .px(px(10.))
-                            .py(px(6.))
-                            .border_t_1()
-                            .border_color(colors.divider)
-                            .bg(colors.surface)
-                            .text_size(typography::TEXT_SM)
-                            .text_color(colors.subtle_foreground)
-                            .child("Diff preview truncated"),
-                    )
-                })
             });
         div()
             .flex()
@@ -1493,21 +1433,16 @@ impl SessionView {
             .gap(px(4.))
             .min_w_0()
             .child(diff_box)
-            .when(hidden > 0 && !show_all && !folded, |this| {
+            .when(hidden > 0 && !folded, |this| {
                 this.child(
                     div()
                         .id(("expand-diff", index * 100 + content_index))
                         .self_start()
                         .text_size(typography::TEXT_SM)
                         .text_color(colors.primary)
-                        .cursor_pointer()
                         .hover(|style| style.underline())
-                        .on_click(cx.listener(move |this, _: &ClickEvent, _, cx| {
-                            this.expanded.insert(expand_key.clone());
-                            this.entry_changed(index);
-                            cx.notify();
-                        }))
-                        .child(format!("Expand diff ({hidden} more {})", if hidden == 1 { "line" } else { "lines" })),
+                        .on_click(cx.listener(move |this, _: &ClickEvent, _, cx| this.show_change(show_path.clone(), cx)))
+                        .child(format!("Show all {} lines", numbered.len())),
                 )
             })
             .into_any_element()
@@ -1675,7 +1610,6 @@ impl SessionView {
                         .gap(px(8.))
                         .h(px(30.))
                         .px(px(10.))
-                        .cursor_pointer()
                         .on_click(cx.listener(|this, _: &ClickEvent, _, cx| {
                             this.plan_collapsed = !this.plan_collapsed;
                             cx.notify();
@@ -2674,7 +2608,6 @@ impl SessionView {
                 .h(px(28.))
                 .px(px(8.))
                 .rounded(metrics::RADIUS_MD)
-                .cursor_pointer()
                 .when(selected, |this| this.bg(colors.selected))
                 .when(!selected, |this| this.hover(|style| style.bg(colors.accent)))
                 .on_click(cx.listener(move |this, _: &ClickEvent, _, cx| this.accept_completion(index, cx)))
@@ -3032,6 +2965,53 @@ fn settings_or_default(cx: &App) -> settings::Settings {
 /// Whether Settings' Terminal feature is on, which `!commands` need (`coreFeatures.terminal`).
 pub(crate) fn terminal_enabled(cx: &App) -> bool {
     cx.try_global::<settings::SettingsStore>().is_none_or(|_| settings::get(cx).core_features.terminal)
+}
+
+/// One row of a diff: a hunk header, or a line with its numbers, marker and highlighted text.
+pub(crate) fn diff_row(row_index: usize, row: &crate::diff::NumberedRow, spans: &LineSpans, colors: &theme::ThemeColors, theme: &theme::Theme) -> AnyElement {
+    use crate::diff::NumberedRow;
+    let number = |value: Option<usize>| {
+        div()
+            .w(px(40.))
+            .flex_none()
+            .px(px(8.))
+            .border_r_1()
+            .border_color(colors.divider)
+            .flex()
+            .justify_end()
+            .text_color(colors.subtle_foreground)
+            .child(value.map(|value| value.to_string()).unwrap_or_default())
+    };
+    match row {
+        NumberedRow::Header(range) => div()
+            .flex()
+            .min_w_full()
+            .h(px(DIFF_ROW_HEIGHT))
+            .bg(colors.surface)
+            .text_color(colors.subtle_foreground)
+            .child(div().w(px(100.)).flex_none().px(px(8.)).border_r_1().border_color(colors.divider).flex().justify_end().child("@@"))
+            .child(div().px(px(10.)).whitespace_nowrap().child(range.clone()))
+            .into_any_element(),
+        NumberedRow::Line { kind, text, old, new } => {
+            let (marker, bar, marker_color) = match kind {
+                LineKind::Added => ("+", Some(colors.git_added), colors.git_added),
+                LineKind::Removed => ("-", Some(colors.git_deleted), colors.git_deleted),
+                LineKind::Context => (" ", None, colors.subtle_foreground),
+            };
+            let line_spans = spans.get(row_index).map(Vec::as_slice).unwrap_or_default();
+            div()
+                .relative()
+                .flex()
+                .min_w_full()
+                .h(px(DIFF_ROW_HEIGHT))
+                .when_some(bar, |this, bar| this.bg(bar.opacity(0.14)).child(div().absolute().left_0().top_0().bottom_0().w(px(2.)).bg(bar)))
+                .child(number(*old))
+                .child(number(*new))
+                .child(div().w(px(20.)).flex_none().flex().justify_center().text_color(marker_color).child(marker))
+                .child(div().pl(px(2.)).pr(px(10.)).whitespace_nowrap().text_color(colors.foreground).child(crate::inline_edit::styled_code_line(text, line_spans, theme)))
+                .into_any_element()
+        }
+    }
 }
 
 fn colors(cx: &App) -> theme::ThemeColors {
