@@ -629,6 +629,8 @@ impl Render for Menu {
         let colors = &theme.colors;
         let icons = self.icon_visibility();
         let entity = cx.entity().downgrade();
+        let viewport = window.viewport_size();
+        let own_bounds = self.bounds;
 
         let rows: Vec<AnyElement> = self
             .entries
@@ -684,6 +686,12 @@ impl Render for Menu {
                     let is_submenu = item.is_submenu() || open_submenu.is_some();
                     let has_trailing = item.shortcut.is_some() || item.trailing.is_some() || is_submenu || item.checked.is_some() || item.external;
                     let submenu = open_submenu.map(|open| open.menu.clone());
+                    // A submenu opens to the right, or to the left when the right has no room for
+                    // it; snapping it into the window instead slid it over this menu's rows.
+                    let opens_left = submenu.as_ref().is_some_and(|menu| {
+                        let width = menu.read(cx).bounds.map_or(px(240.), |bounds| bounds.size.width);
+                        own_bounds.is_some_and(|own| own.right() + px(8.) + width > viewport.width - px(8.))
+                    });
                     let disabled = item.disabled;
                     div()
                         .id(index)
@@ -755,12 +763,13 @@ impl Render for Menu {
                             .on_click(cx.listener(move |this, _, window, cx| this.activate(index, window, cx)))
                         })
                         .children(submenu.map(|menu| {
-                            div().absolute().top_0().left_full().child(
+                            let side = if opens_left { div().absolute().top_0().right_full() } else { div().absolute().top_0().left_full() };
+                            side.child(
                                 deferred(
                                     anchored()
-                                        .anchor(Anchor::TopLeft)
+                                        .anchor(if opens_left { Anchor::TopRight } else { Anchor::TopLeft })
                                         .snap_to_window_with_margin(px(8.))
-                                        .child(div().ml(px(8.)).mt(px(-4.)).child(menu)),
+                                        .child(div().when(opens_left, |this| this.mr(px(8.))).when(!opens_left, |this| this.ml(px(8.))).mt(px(-4.)).child(menu)),
                                 )
                                 .with_priority(2),
                             )
