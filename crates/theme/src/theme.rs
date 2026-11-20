@@ -366,21 +366,19 @@ fn shadows(dark: bool, edge: Hsla) -> ThemeShadows {
                 shadow(black(0.12), 2., 4., 0., false),
             ],
             raised_inset: vec![shadow(edge, 0., 0., 1., true), shadow(black(0.25), -1., 0., 0., true)],
+            // Few, soft layers: stacked wide blurs band into visible rings in GPUI, and a solid
+            // dark ring outside the inner edge reads as a second border.
             popover: vec![
                 shadow(edge, 0., 0., 1., true),
-                // GPUI's blur spreads further than CSS's for the same radius, so the CSS
-                // values (`--shadow-popover`) are softened here to look the same.
-                shadow(black(0.32), 0., 0., 1., false),
-                shadow(black(0.12), 1., 3., 0., false),
-                shadow(black(0.16), 4., 10., -4., false),
-                shadow(black(0.12), 8., 18., -8., false),
+                shadow(black(0.18), 0., 0., 1., false),
+                shadow(black(0.16), 1., 3., 0., false),
+                shadow(black(0.26), 6., 18., -4., false),
             ],
             dialog: vec![
                 shadow(edge, 0., 0., 1., true),
-                shadow(black(0.36), 0., 0., 1., false),
-                shadow(black(0.24), 2., 6., 0., false),
-                shadow(black(0.32), 12., 24., -6., false),
-                shadow(black(0.4), 32., 64., -12., false),
+                shadow(black(0.2), 0., 0., 1., false),
+                shadow(black(0.18), 2., 6., 0., false),
+                shadow(black(0.34), 16., 40., -10., false),
             ],
         }
     } else {
