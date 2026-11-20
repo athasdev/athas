@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Question or idea to discuss
+    url: https://github.com/athasdev/athas/discussions
+    about: Ask how something works or talk an idea through before it becomes a request.
+  - name: Chat on Discord
+    url: https://discord.gg/DD8F38wFMv
+    about: Quick questions and help from the community.
+  - name: Documentation
+    url: https://athas.dev/docs
+    about: Guides for installing, using and extending Athas.

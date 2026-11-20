@@ -8,25 +8,48 @@ See [setup guides](https://athas.dev/docs/contributing) for your platform.
 
 Prerequisites:
 
-- [Rust](https://rustup.rs)
-- [Bun](https://bun.sh)
-- [Node.js 24.19.0](https://nodejs.org)
+- [Rust](https://rustup.rs): the toolchain in `rust-toolchain.toml` installs itself on the first
+  build.
+- On Linux, the libraries listed in the [README](README.md#development).
 
 ```bash
-bun install
-bun dev
+cargo run -p athas
 ```
+
+The development build keeps its data in its own folder (`dev.athas.gpui`), apart from an
+installed Athas.
+
+## Project layout
+
+- `crates/`: the app, one crate per part (`workbench` is the window's shell, `editor`, `agent_ui`,
+  `git_panel`, `terminal_view`, `settings_ui`, ...; `ui` and `theme` hold the shared controls and
+  design tokens).
+- `core/`: the Rust crates the app is built on (git, LSP, terminal, database, ACP, ...), a
+  workspace of their own that the app uses by path.
+- `extensions/official/`: the official extension manifests.
+
+## Checking the UI without a window
+
+`athas_snapshot` renders the workbench with the GPU into a PNG, without opening a window:
+
+```bash
+cargo run -p athas_snapshot -- out.png dark session 1280 820
+```
+
+Scenes include `project`, `session`, `files`, `git`, `github`, `settings` and `palette`; the
+crate's documentation lists every scene and option. `ATHAS_SNAPSHOT_PROJECT=/some/folder` opens a
+real folder and `ATHAS_SNAPSHOT_THEME=tokyo-night` picks a theme.
 
 ## Before Submitting
 
-1. Code passes checks: `bun check`
-2. Auto-fix issues: `bun fix`
-3. Formatting only when needed: `bun format`
-4. App runs: `bun dev`
-5. Run release validation when touching release flow: `bun release:check`
-6. Rebase on master: `git rebase origin/master`
-7. Squash commits into logical units
-8. Read and agree to the
+1. The workspace builds: `cargo check --workspace --all-targets`
+2. Tests pass for the crates you changed: `cargo test -p <crate> --lib`
+3. Code is formatted: `cargo fmt`
+4. The web build still compiles when you change shared UI:
+   `cargo check --target wasm32-unknown-unknown -p athas_web`
+5. Rebase on main: `git rebase origin/main`
+6. Squash commits into logical units
+7. Read and agree to the
    [Contributor License and Feedback Agreement](CONTRIBUTOR_LICENSE_AND_FEEDBACK_AGREEMENT.md)
    by checking the box in the pull request
 
@@ -53,5 +76,5 @@ requests without the agreement checked can't be merged.
 - Use `crates/<crate>/tests/` for integration tests that exercise the crate through its public API.
 - Add focused regression tests for behavior changes and bug fixes instead of targeting a coverage
   percentage.
-- Run one crate or test while iterating with `cargo test -p <crate> <test-name>`, then run
-  `bun check:rust` before submitting Rust changes.
+- Run one crate or test while iterating with `cargo test -p <crate> <test-name>`, then run the
+  checks under [Before Submitting](#before-submitting).

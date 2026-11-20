@@ -1,0 +1,56 @@
+name: Bug report
+description: Something doesn't work the way it should.
+labels: ["Bug"]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What you did, what you expected, and what happened instead.
+      placeholder: I opened a project over SSH and the file tree stayed empty.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: The shortest steps that show it. Leave out what doesn't matter.
+      placeholder: |
+        1. Open a project
+        2. ...
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Athas version
+      description: The version you're running.
+      placeholder: 0.19.0-beta.1
+    validations:
+      required: true
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Platform
+      options:
+        - macOS (Apple silicon)
+        - macOS (Intel)
+        - Windows (x64)
+        - Windows (ARM)
+        - Linux (x64)
+        - Linux (ARM)
+    validations:
+      required: true
+  - type: input
+    id: os
+    attributes:
+      label: OS version
+      placeholder: macOS 15.4, Windows 11 24H2, Ubuntu 24.04 (Wayland)
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs, screenshots or a recording
+      description: |
+        A screenshot or recording helps a lot for anything you can see. For crashes, attach the log:
+        `~/Library/Logs/dev.athas.app/Athas.log` on macOS, `%LOCALAPPDATA%\dev.athas.app\logs` on Windows,
+        `~/.local/share/dev.athas.app/logs` on Linux.

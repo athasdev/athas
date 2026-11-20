@@ -1,0 +1,20 @@
+name: Feature request
+description: Something Athas could do, or do better.
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What are you trying to do?
+      description: The task or workflow, and what gets in the way today. A problem is more useful than a solution.
+      placeholder: When an agent edits several files, I can't tell which ones it changed without opening each.
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: What would help?
+      description: How you picture it working, if you have an idea. Screenshots of other tools are welcome.
+  - type: textarea
+    id: workaround
+    attributes:
+      label: How do you work around it now?
