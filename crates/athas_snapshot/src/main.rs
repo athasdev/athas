@@ -22,7 +22,7 @@
 //! (extensions installed there instead of the app's folder), `ATHAS_SNAPSHOT_FOLDERS` (folders
 //! added to the project's workspace, separated by `:`),
 //! `ATHAS_SNAPSHOT_PROJECT`, `ATHAS_SNAPSHOT_FILE`, `ATHAS_SNAPSHOT_RESOURCE`,
-//! `ATHAS_SNAPSHOT_THEME`, `ATHAS_SNAPSHOT_SETTLE_MS`, `ATHAS_SNAPSHOT_COMMAND` (a command id run
+//! `ATHAS_SNAPSHOT_THEME`, `ATHAS_SNAPSHOT_SETTLE_MS`, `ATHAS_SNAPSHOT_GIT_TAB` (the Source Control tab shown), `ATHAS_SNAPSHOT_COMMAND` (a command id run
 //! after the scene, such as `help.showWhatsNew`), `ATHAS_SNAPSHOT_TAB_MENU` (a tab's context menu,
 //! by index), `ATHAS_SNAPSHOT_SESSION_MENU=x,y` (the session in front's More actions menu), `ATHAS_SNAPSHOT_KEYS` (keystrokes typed after
 //! it, separated by spaces), `ATHAS_SNAPSHOT_RUN_ACTION=new` (the New run action dialog), and `ATHAS_SNAPSHOT_AGENT_EDIT=1`, which
@@ -309,6 +309,14 @@ fn main() -> Result<()> {
                 window.dispatch_action(action, cx);
             }
         })?;
+        cx.run_until_parked();
+    }
+    // `ATHAS_SNAPSHOT_GIT_TAB=<name>`: the Source Control panel on that tab (`tags`, `branches`, ...).
+    if let Ok(name) = std::env::var("ATHAS_SNAPSHOT_GIT_TAB") {
+        cx.run_until_parked();
+        cx.update(|cx| {
+            window.update(cx, |workbench, _, cx| workbench.open_git_tab(&name, cx)).ok();
+        });
         cx.run_until_parked();
     }
     // `ATHAS_SNAPSHOT_TAB_MENU=<index>`: the context menu of that tab of the front group.

@@ -537,6 +537,14 @@ impl Focusable for Workbench {
 }
 
 impl Workbench {
+    /// Shows a tab of the Source Control panel by its name (`tags`, `branches`, ...), for
+    /// headless snapshots.
+    pub fn open_git_tab(&mut self, name: &str, cx: &mut Context<Self>) {
+        if let Some((git, _)) = &self.git_panel {
+            git.update(cx, |git, cx| git.open_tab(name, cx));
+        }
+    }
+
     pub fn new(store: Option<Rc<dyn StateStore>>, window: &mut Window, cx: &mut Context<Self>) -> Self {
         let state = store
             .as_ref()
