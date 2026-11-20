@@ -395,7 +395,9 @@ fn docker() {
         lines.extend(read.as_array().unwrap().iter().cloned());
         thread::sleep(Duration::from_millis(50));
     }
-    assert!(lines[0]["Line"]["text"].as_str().unwrap().ends_with("request 1"));
+    // stdout and stderr are read on separate threads, so only each pipe's own order holds.
+    let first_stdout = lines.iter().find(|line| line["Line"]["stderr"] == json!(false)).expect("a stdout line");
+    assert!(first_stdout["Line"]["text"].as_str().unwrap().ends_with("request 1"));
     call(&workspace, "docker.logsStop", json!({ "stream": stream }));
     assert!(workspace.call("docker.logsRead", &params(json!({ "stream": stream }))).is_err());
 }
