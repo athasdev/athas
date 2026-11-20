@@ -1,0 +1,54 @@
+name: CI
+
+on:
+  push:
+    branches: [main, gpui]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+jobs:
+  check:
+    name: Check and test (macOS)
+    runs-on: macos-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install Rust (rust-toolchain.toml)
+        run: rustup show active-toolchain || rustup toolchain install
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: gpui-ci-macos
+
+      - name: Check the workspace
+        run: cargo check --workspace --all-targets --locked
+
+      - name: Unit tests
+        run: cargo test --workspace --lib --locked
+
+  wasm:
+    name: Check the web build (wasm)
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install Rust (rust-toolchain.toml)
+        run: rustup show active-toolchain || rustup toolchain install
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: gpui-ci-wasm
+
+      - name: Check athas_web
+        run: cargo check --target wasm32-unknown-unknown -p athas_web --locked
