@@ -34,7 +34,7 @@ jobs:
         run: cargo check --workspace --all-targets --locked
 
       - name: Unit tests
-        run: cargo test --workspace --lib --locked
+        run: cargo test --workspace --lib --locked --no-fail-fast
 
   wasm:
     name: Check the web build (wasm)
