@@ -8,8 +8,10 @@ Athas is a native Rust app built on GPUI (desktop + wasm). Work happens on the `
   of its own that the app uses by path. Edit them here like any other code.
 - `extensions/official/`: the extension manifests (embedded by `core/ai`, read by tests).
 
-Remaining work and test findings: `REMAINING.md`, `BUGS.md`, `BUGHUNT.md`. Port status:
-`PORTING.md` (regenerate with `python3 scripts/porting.py`).
+Working notes live in `.notes/`, untracked (excluded in `.git/info/exclude`): remaining work and
+test findings (`REMAINING.md`, `BUGS.md`, `BUGHUNT.md`), the task log (`WORKLOG.md`), port status
+(`PORTING.md`, regenerate with `python3 .notes/scripts/porting.py`), the file-by-file audits
+(`audits/`) and `visual-parity.md`.
 
 ## Iteration loop (the user tests the running app)
 
