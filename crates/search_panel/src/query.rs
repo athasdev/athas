@@ -13,9 +13,13 @@ pub struct SearchOptions {
 
 /// The pattern handed to the index, and whether it is a regular expression or plain text.
 #[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Default)]
 pub struct GrepPattern {
     pub pattern: String,
     pub is_regex: bool,
+    /// The query as typed, with its toggles: what other tools (remote `rg`/`grep`) search for.
+    /// `pattern` is shaped for the index's query parser (`\x20`, `(?i:…)`) that only it reads.
+    pub typed: Option<(String, SearchOptions)>,
 }
 
 /// Builds the index pattern the way the Tauri backend does: literals are escaped, whole words get
@@ -29,7 +33,7 @@ pub fn grep_pattern(query: &str, options: SearchOptions) -> GrepPattern {
     // (`foo  bar` became `foo bar`, leading spaces went), and reads `!word` as an exclusion and
     // `/dir/` or `*.ext` as path filters. Spaces become `\x20` and a leading `!`, `/` or `*` or
     // a trailing `/` a class, so the text is searched as typed and Replace finds what was shown.
-    GrepPattern { pattern: parser_safe(&pattern), is_regex: true }
+    GrepPattern { pattern: parser_safe(&pattern), is_regex: true, typed: Some((query.to_string(), options)) }
 }
 
 fn parser_safe(pattern: &str) -> String {
@@ -163,7 +167,7 @@ mod tests {
     fn case_sensitive_literals_stay_plain_text() {
         // Escaped as a literal; regex mode keeps the index's query syntax out of the way.
         let pattern = grep_pattern("value.*", options(true, false, false));
-        assert_eq!(pattern, GrepPattern { pattern: r"value\.\*".into(), is_regex: true });
+        assert_eq!(pattern, GrepPattern { pattern: r"value\.\*".into(), is_regex: true, typed: Some(("value.*".into(), options(true, false, false))) });
     }
 
     #[test]
@@ -178,7 +182,7 @@ mod tests {
     #[test]
     fn insensitive_literals_are_escaped_into_an_inline_group() {
         let pattern = grep_pattern("value.*", options(false, false, false));
-        assert_eq!(pattern, GrepPattern { pattern: r"(?i:value\.\*)".into(), is_regex: true });
+        assert_eq!(pattern, GrepPattern { pattern: r"(?i:value\.\*)".into(), is_regex: true, typed: Some(("value.*".into(), options(false, false, false))) });
     }
 
     #[test]

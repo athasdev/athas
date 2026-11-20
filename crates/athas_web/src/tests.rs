@@ -108,7 +108,7 @@ fn search_pages() {
     std::fs::create_dir_all(root.join("src")).unwrap();
     std::fs::write(root.join("src/lib.rs"), "// é needle\nlet needle = Needle;\n").unwrap();
     std::fs::write(root.join("notes.md"), "needle\n").unwrap();
-    let pattern = GrepPattern { pattern: "(?i:needle)".into(), is_regex: true };
+    let pattern = GrepPattern { pattern: "(?i:needle)".into(), is_regex: true, typed: None };
     let page = grep(&*local, &root, &[root.clone()], &pattern, &PathFilter::new("src/**", "")).unwrap();
     assert_eq!(page.files.len(), 1);
     let file = &page.files[0];
@@ -117,7 +117,7 @@ fn search_pages() {
     assert_eq!(&file.matches[0].text[6..12], "needle");
     assert_eq!(file.matches[1].ranges, vec![(4, 10), (13, 19)]);
     assert_eq!(page.next_offset, 0);
-    let literal = GrepPattern { pattern: "Needle".into(), is_regex: false };
+    let literal = GrepPattern { pattern: "Needle".into(), is_regex: false, typed: None };
     assert_eq!(grep(&*local, &root, &[root.clone()], &literal, &PathFilter::default()).unwrap().files[0].match_count(), 1);
     assert!(grep(&*local, &root, &[PathBuf::from("/elsewhere")], &literal, &PathFilter::default()).unwrap().files.is_empty());
 }

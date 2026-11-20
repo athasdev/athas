@@ -1,5 +1,5 @@
 //! Project search in SSH and WSL roots (`provider-content-search.ts`): the project index only
-//! sees local folders, so these roots are searched on their own machine with `rg` (or `grep -P`
+//! sees local folders, so these roots are searched on their own machine with `rg` (or `grep`
 //! where ripgrep is missing) through the remote crates' command runners.
 
 use std::{
@@ -62,18 +62,38 @@ fn quote(value: &str) -> String {
     format!("'{}'", value.replace('\'', "'\\''"))
 }
 
-/// The search run in `directory`: ripgrep with the index's pattern (the same regex dialect), else
-/// GNU grep with Perl expressions, or fixed strings for a plain search. No matches is not a failure.
+/// The search run in `directory`, with ripgrep where the machine has it, else grep. No matches is
+/// not a failure.
+///
+/// The query goes as typed, with the toggles as flags (`-F`, `-i`, `-w`), not as the index's
+/// pattern: that one is shaped for the index's query parser (`\x20`, `(?i:…)`), which only GNU
+/// grep's `-P` reads, and BSD or BusyBox grep have no `-P`. A regex search uses `-P` where grep
+/// has it, else `-E`.
 pub(crate) fn script(directory: &str, pattern: &GrepPattern) -> String {
-    let quoted = quote(&pattern.pattern);
-    let rg_mode = if pattern.is_regex { "" } else { " -F" };
-    let grep_mode = if pattern.is_regex { "-P" } else { "-F" };
+    let (query, regex, flags) = match &pattern.typed {
+        Some((query, options)) => {
+            let mut flags = String::new();
+            if !options.case_sensitive {
+                flags.push_str(" -i");
+            }
+            if options.whole_word {
+                flags.push_str(" -w");
+            }
+            (query.as_str(), options.use_regex, flags)
+        }
+        None => (pattern.pattern.as_str(), pattern.is_regex, String::new()),
+    };
+    let quoted = quote(query);
+    let rg_mode = if regex { "" } else { " -F" };
+    let grep_mode = if regex { "$mode" } else { "-F" };
     format!(
         "cd {dir} || exit 2\n\
          if command -v rg >/dev/null 2>&1; then\n  \
-         rg --null --line-number --no-heading --color never --no-messages --max-count {PER_FILE_MATCHES}{rg_mode} -e {quoted} .\n\
+         rg --null --line-number --no-heading --color never --no-messages --max-count {PER_FILE_MATCHES}{rg_mode}{flags} -e {quoted} .\n\
          else\n  \
-         grep -rIHn --null --exclude-dir=.git --exclude-dir=node_modules --max-count={PER_FILE_MATCHES} {grep_mode} -e {quoted} .\n\
+         mode=-E\n  \
+         echo x | grep -qP x 2>/dev/null && mode=-P\n  \
+         grep -rIHn --null --exclude-dir=.git --exclude-dir=node_modules --max-count={PER_FILE_MATCHES} {grep_mode}{flags} -e {quoted} .\n\
          fi\n\
          status=$?\n\
          [ $status -le 1 ] || exit $status\n",
@@ -154,13 +174,25 @@ mod tests {
 
     #[test]
     fn quotes_the_pattern_and_folder() {
-        let literal = GrepPattern { pattern: "it's".into(), is_regex: false };
+        let literal = GrepPattern { pattern: "it's".into(), is_regex: false, typed: None };
         let script = script("/srv/my app", &literal);
         assert!(script.starts_with("cd '/srv/my app' || exit 2\n"));
         assert!(script.contains("rg --null") && script.contains(" -F -e 'it'\\''s' ."));
         assert!(script.contains("grep -rIHn --null") && script.contains("-F -e 'it'\\''s' ."));
-        let regex = GrepPattern { pattern: "(?i:a+)".into(), is_regex: true };
-        assert!(script_contains(&regex, "-P -e '(?i:a+)'"));
+        let regex = GrepPattern { pattern: "(?i:a+)".into(), is_regex: true, typed: None };
+        assert!(script_contains(&regex, "$mode -e '(?i:a+)'"));
+    }
+
+    #[test]
+    fn sends_the_query_as_typed_with_the_toggles_as_flags() {
+        // Plain text with spaces, case-insensitive: fixed strings and `-i`, not `\x20` or `(?i:…)`.
+        let plain = grep_pattern("a  b", SearchOptions::default());
+        assert!(script_contains(&plain, " -F -i -e 'a  b' ."));
+        assert!(!script_contains(&plain, "\\x20"));
+        let word = grep_pattern("foo", SearchOptions { case_sensitive: true, whole_word: true, use_regex: false });
+        assert!(script_contains(&word, " -F -w -e 'foo' ."));
+        let regex = grep_pattern("fo+", SearchOptions { case_sensitive: true, whole_word: false, use_regex: true });
+        assert!(script_contains(&regex, "$mode -e 'fo+' ."));
     }
 
     fn script_contains(pattern: &GrepPattern, needle: &str) -> bool {
