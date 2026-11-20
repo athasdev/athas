@@ -102,7 +102,9 @@ impl Workbench {
                         .bottom(metrics::WORKBENCH_GAP)
                         .left(metrics::WORKBENCH_GAP + metrics::RAIL_CONTROL)
                         .w(px(288.))
-                        .bg(cx.theme().colors.surface)
+                        // Solid even with glass on: it floats over the centre, not the desktop,
+                        // and a see-through surface showed the editor's text under the tool.
+                        .bg(gpui::Hsla { a: 1., ..cx.theme().colors.surface })
                         .shadow(cx.theme().shadows.popover.clone())
                         .occlude()
                         .child(self.render_sidebar(false, window, cx)),
