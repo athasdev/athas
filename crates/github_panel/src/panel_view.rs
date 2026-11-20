@@ -149,100 +149,41 @@ impl GitHubPanel {
         div().flex().flex_1().min_h_0().items_center().justify_center().child(state).into_any_element()
     }
 
-    /// The sections (`StreamTabs` on `SidebarTabBar`): a full-width segmented track whose
-    /// sections turn icon-only when the widest label (with the active count) plus 16px no longer
-    /// fits an equal share of it; the count shows in the tooltip.
-    fn render_tabs(&self, colors: &ThemeColors, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
-        let badge = |count: usize| (count > 0).then(|| if count > 99 { "99+".to_string() } else { count.to_string() });
-        let count_of = |section: Section| if section == Section::PullRequests { self.pulls.len() } else { 0 };
-        let text_width = |text: String, window: &mut Window| {
-            let mut font = window.text_style().font();
-            font.weight = typography::MEDIUM;
-            let run = gpui::TextRun { len: text.len(), font, color: colors.foreground, background_color: None, underline: None, strikethrough: None };
-            window.text_system().shape_line(text.into(), typography::TEXT_CHROME, &[run], None).width
-        };
-        let widest = self
-            .sections
-            .iter()
-            .map(|section| {
-                let label = text_width(section.title().to_string(), window);
-                match badge(count_of(*section)).filter(|_| self.section == *section) {
-                    Some(badge) => label + px(4.) + text_width(badge, window),
-                    None => label,
-                }
-            })
-            .fold(px(0.), |a, b| a.max(b));
-        let compact = self.tabs_width.get() / (self.sections.len().max(1) as f32) < widest + px(16.);
-        let knob = cx.theme().shadows.raised_inset.clone();
-        let width = self.tabs_width.clone();
-        div()
-            .flex()
-            .flex_none()
-            .items_center()
-            .h(px(36.))
-            .px(px(6.))
-            .child(
-                div()
-                    .relative()
-                    .flex()
-                    .flex_1()
-                    .min_w_0()
-                    .items_center()
-                    .gap(px(2.))
-                    .p(px(2.))
-                    .rounded_full()
-                    .bg(colors.segment_track)
-                    .children(self.sections.iter().copied().map(|section| {
-                        let active = self.section == section;
-                        let count = count_of(section);
-                        let fg = if active { colors.foreground } else { colors.subtle_foreground };
-                        let hover = colors.foreground;
-                        let tooltip = if count > 0 { format!("{} ({count})", section.title()) } else { section.title().to_string() };
-                        div()
-                            .id(SharedString::from(format!("github-tab-{}", section.id())))
-                            .flex()
-                            .flex_1()
-                            .min_w_0()
-                            .items_center()
-                            .justify_center()
-                            .gap(px(4.))
-                            .h(metrics::CHROME_CONTROL)
-                            .px(px(8.))
-                            .rounded_full()
-                            .text_size(typography::TEXT_CHROME)
-                            .font_weight(typography::MEDIUM)
-                            .whitespace_nowrap()
-                            .text_color(fg)
-                            .when(active, |this| this.bg(colors.segment_knob).shadow(knob.clone()))
-                            .hover(move |style| style.text_color(hover))
-                            .map(|this| {
-                                if compact {
-                                    this.child(Icon::new(section.icon()).size(IconSize::Custom(px(14.))).color(fg))
-                                } else {
-                                    this.child(div().min_w_0().truncate().child(section.title())).children(
-                                        badge(count).filter(|_| active).map(|badge| div().flex_none().text_color(colors.subtle_foreground).child(badge)),
-                                    )
-                                }
-                            })
-                            .anchored_tooltip({ let tip: SharedString = (tooltip).into(); move || ui::Tooltip::new(tip.clone()) })
-                            .on_click(cx.listener(move |this, _, _, cx| this.show_section(section, cx)))
-                    }))
-                    .child(
-                        gpui::canvas(
-                            move |bounds, window, _| {
-                                if width.replace(bounds.size.width) != bounds.size.width {
-                                    window.request_animation_frame();
-                                }
-                            },
-                            |_, _, _, _| {},
-                        )
-                        .absolute()
-                        .size_full(),
-                    ),
-            )
+    /// The panel's header, as every sidebar tool has one: the section in front as a switcher
+    /// listing every section by name and count (an icon-only track was hard to read), and the
+    /// panel's buttons at the end.
+    fn render_tabs(&mut self, _colors: &ThemeColors, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        let sections: Vec<(Section, usize)> =
+            self.sections.iter().map(|section| (*section, if *section == Section::PullRequests { self.pulls.len() } else { 0 })).collect();
+        let current = self.section;
+        let open = crate::menus::is_open(&self.open_menu, "github-sections");
+        let switcher = ui::section_switcher("github-sections", current.title(), open, cx, cx.listener(move |panel, event: &ClickEvent, window, cx| {
+                let entries = sections
+                    .iter()
+                    .map(|&(section, count)| {
+                        let mut item = crate::menus::item(section.title(), cx, move |panel, _, cx| panel.show_section(section, cx))
+                            .icon(section.icon())
+                            .checked(section == current);
+                        if count > 0 {
+                            item = item.trailing_text(count.to_string());
+                        }
+                        MenuEntry::Item(item)
+                    })
+                    .collect();
+                let position = event.position();
+                crate::menus::show(panel, "github-sections", entries, gpui::point(position.x - px(8.), position.y + px(10.)), Anchor::TopLeft, window, cx);
+            }));
+        let actions = self.render_header_buttons(cx);
+        div().flex_none().px(px(8.)).pb(px(2.)).child(ui::SectionLabel::title(switcher).trailing(actions))
     }
 
-    /// The repository and branch, with the repository menu.
+    /// The header before there are sections to switch between (signed out, still checking):
+    /// the tool's name, so the sidebar's tools all start the same way.
+    fn render_title_only(&mut self, cx: &mut Context<Self>) -> impl IntoElement {
+        let actions = self.render_header_buttons(cx);
+        div().flex_none().px(px(8.)).pb(px(2.)).child(ui::SectionLabel::new("GitHub").trailing(actions))
+    }
+
     fn render_bar(&self, colors: &ThemeColors, cx: &mut Context<Self>) -> impl IntoElement {
         let (name, branch) = match self.repository() {
             Some(repo) => (repo.slug.name.clone(), repo.branch.clone()),
@@ -890,9 +831,14 @@ impl Render for GitHubPanel {
         let stuck = self.stuck_group();
         self.shown_groups.borrow_mut().clear();
         let body = match (&self.repo, &self.auth) {
-            (_, Auth::Checking) | (RepoState::Detecting, Auth::Authenticated(_)) => {
-                widgets::fill_message("Checking GitHub account…", None, None, &colors).into_any_element()
-            }
+            (_, Auth::Checking) | (RepoState::Detecting, Auth::Authenticated(_)) => div()
+                .flex()
+                .flex_col()
+                .flex_1()
+                .min_h_0()
+                .child(self.render_title_only(cx))
+                .child(widgets::fill_message("Checking GitHub account…", None, None, &colors))
+                .into_any_element(),
             (_, Auth::Authenticated(_)) => {
                 let rows = match (&self.repo, self.section) {
                     (RepoState::Missing(error), _) => vec![self.render_repo_missing(error.clone(), &colors, cx)],
@@ -913,7 +859,7 @@ impl Render for GitHubPanel {
                     .child(self.render_list(rows, stuck, &colors, cx))
                     .into_any_element()
             }
-            _ => self.render_auth(&colors, cx),
+            _ => div().flex().flex_col().flex_1().min_h_0().child(self.render_title_only(cx)).child(self.render_auth(&colors, cx)).into_any_element(),
         };
         div()
             .id("github-panel")

@@ -60,7 +60,7 @@ pub use field::{Field, FieldOrientation, FieldSeparator, InputGroup, InputGroupV
 pub use icon::{Icon, IconName, IconSize};
 pub use item::{GroupedSection, GroupedSectionVariant, Item, ItemMedia, ItemSize, ItemVariant, item_group};
 pub use kbd::{Kbd, shortcut_text};
-pub use list::{SectionHeader, SectionLabel, SidebarListItem, SidebarListItemTone};
+pub use list::{SectionHeader, SectionLabel, SidebarListItem, SidebarListItemTone, section_switcher};
 pub use loading::{Shimmer, Skeleton, Spinner, ThinkingOrb, ThinkingOrbState, shimmer_band};
 pub use menu::{CloseSubmenu, Menu, MenuEntry, MenuItem, MenuItemTone, MenuQuerySource, MenuSize, OVERLAY_MAX_HEIGHT, OVERLAY_MAX_WIDTH, OpenMenu};
 pub use message::{Attachment, AttachmentState, Message, ResourceSection, ResourceSummary, message_action};

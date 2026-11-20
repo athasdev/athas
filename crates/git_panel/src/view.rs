@@ -8,7 +8,7 @@ use gpui::{
     SharedString, Window, div, point, prelude::*, px, relative,
 };
 use theme::{ActiveTheme, ThemeColors};
-use ui::{Button, ButtonSize, ButtonVariant, EmptyState, Icon, IconName, IconSize, Plane, metrics, typography};
+use ui::{Button, ButtonSize, ButtonVariant, EmptyState, Icon, IconName, IconSize, MenuItem, Plane, metrics, typography};
 
 use crate::{
     DraftKind, GitPanel, NoticeAction, RepoState, Section, Tab, Tone,
@@ -242,111 +242,56 @@ impl GitPanel {
             .into_any_element()
     }
 
-    fn render_tabs(&self, colors: &ThemeColors, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+    /// The panel's header, as every sidebar tool has one: the section in front as a switcher
+    /// that lists every section by name (an icon-only track was hard to read), and the panel's
+    /// buttons at the end.
+    fn render_tabs(&mut self, _colors: &ThemeColors, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let repositories = self.repository_paths().len();
         let mut tabs = vec![
-            ("git-tab-changes", "Changes", IconName::GitDiff, self.file_count(), Tab::Changes),
-            ("git-tab-branches", "Branches", IconName::GitBranch, self.branches.len(), Tab::Branches),
-            ("git-tab-worktrees", "Worktrees", IconName::Nodes, self.worktrees.len(), Tab::Worktrees),
+            ("Changes", IconName::GitDiff, self.file_count(), Tab::Changes),
+            ("Branches", IconName::GitBranch, self.branches.len(), Tab::Branches),
+            ("Worktrees", IconName::Nodes, self.worktrees.len(), Tab::Worktrees),
         ];
         if self.is_visible("remotes") {
-            tabs.push(("git-tab-remotes", "Remotes", IconName::Globe, self.remotes.len(), Tab::Remotes));
+            tabs.push(("Remotes", IconName::Globe, self.remotes.len(), Tab::Remotes));
         }
         if self.is_visible("tags") {
-            tabs.push(("git-tab-tags", "Tags", IconName::Tag, self.tags.len(), Tab::Tags));
+            tabs.push(("Tags", IconName::Tag, self.tags.len(), Tab::Tags));
         }
         if repositories > 1 {
-            tabs.push(("git-tab-repositories", "Repos", IconName::FolderOpen, repositories, Tab::Repositories));
+            tabs.push(("Repositories", IconName::FolderOpen, repositories, Tab::Repositories));
         }
-        let badge = |count: usize| (count > 0).then(|| if count > 99 { "99+".to_string() } else { count.to_string() });
-        // `SidebarTabBar`: sections give way to their icons when the widest label (with the active
-        // section's count) plus 16px no longer fits an equal share of the track.
-        let text_width = |text: String, window: &mut Window| {
-            let mut font = window.text_style().font();
-            font.weight = typography::MEDIUM;
-            let run = gpui::TextRun { len: text.len(), font, color: colors.foreground, background_color: None, underline: None, strikethrough: None };
-            window.text_system().shape_line(text.into(), typography::TEXT_CHROME, &[run], None).width
-        };
-        let widest = tabs
-            .iter()
-            .map(|(_, label, _, count, which)| {
-                let label_width = text_width(label.to_string(), window);
-                match badge(*count).filter(|_| self.tab == *which) {
-                    Some(badge) => label_width + px(4.) + text_width(badge, window),
-                    None => label_width,
-                }
-            })
-            .fold(px(0.), |a, b| a.max(b));
-        let track = self.width.get() - px(12.);
-        let compact = track / (tabs.len() as f32) < widest + px(16.);
-        let tab = |(id, label, icon, count, which): (&'static str, &'static str, IconName, usize, Tab), cx: &mut Context<Self>| {
-            let active = self.tab == which;
-            let tooltip = if count > 0 { format!("{label} ({count})") } else { label.to_string() };
-            let (fg, hover) = (if active { colors.foreground } else { colors.subtle_foreground }, colors.foreground);
-            div()
-                .id(id)
-                .flex()
-                .flex_1()
-                .min_w_0()
-                .items_center()
-                .justify_center()
-                .gap(px(4.))
-                .h(metrics::CHROME_CONTROL)
-                .px(px(8.))
-                .rounded_full()
-                .text_size(typography::TEXT_CHROME)
-                .font_weight(typography::MEDIUM)
-                .whitespace_nowrap()
-                .text_color(fg)
-                .when(active, |this| this.bg(colors.segment_knob).shadow(cx.theme().shadows.raised_inset.clone()))
-                .hover(move |style| style.text_color(hover))
-                .map(|this| {
-                    if compact {
-                        this.child(Icon::new(icon).size(IconSize::Custom(px(14.))).color(fg))
-                    } else {
-                        this.child(div().min_w_0().truncate().child(label)).children(
-                            badge(count).filter(|_| active).map(|badge| div().flex_none().text_color(colors.subtle_foreground).child(badge)),
-                        )
-                    }
-                })
-                .anchored_tooltip(move || ui::Tooltip::new(tooltip.clone()))
-                .on_click(cx.listener(move |this, _, _, cx| this.show_tab(which, cx)))
-        };
-        let width = self.width.clone();
-        div()
-            .relative()
-            .flex()
-            .flex_none()
-            .items_center()
-            .h(px(36.))
-            .px(px(6.))
-            .child(
-                div()
-                    .flex()
-                    .flex_1()
-                    .min_w_0()
-                    .items_center()
-                    .gap(px(2.))
-                    .p(px(2.))
-                    .rounded_full()
-                    .bg(colors.segment_track)
-                    .children(tabs.into_iter().map(|item| tab(item, cx))),
-            )
-            .child(
-                gpui::canvas(
-                    move |bounds, window, _| {
-                        if width.replace(bounds.size.width) != bounds.size.width {
-                            window.request_animation_frame();
+        let label = tabs.iter().find(|tab| tab.3 == self.tab).map_or("Changes", |tab| tab.0);
+        let open = self.menu_is_open("git-sections");
+        let this = cx.weak_entity();
+        let switcher = ui::section_switcher("git-sections", label, open, cx, cx.listener(move |panel, event: &ClickEvent, window, cx| {
+                let entries = tabs
+                    .iter()
+                    .map(|&(label, icon, count, which)| {
+                        let this = this.clone();
+                        let mut item = MenuItem::new(label).icon(icon).checked(panel.tab == which).on_select(move |_, cx| {
+                            this.update(cx, |panel, cx| panel.show_tab(which, cx)).ok();
+                        });
+                        if count > 0 {
+                            item = item.trailing_text(count.to_string());
                         }
-                    },
-                    |_, _, _, _| {},
-                )
-                .absolute()
-                .size_full(),
-            )
+                        item.into()
+                    })
+                    .collect();
+                let position = event.position();
+                panel.show_menu("git-sections", entries, point(position.x - px(8.), position.y + px(10.)), Anchor::TopLeft, window, cx);
+            }));
+        let actions = self.render_header_buttons(cx);
+        div().flex_none().px(px(8.)).pb(px(2.)).child(ui::SectionLabel::title(switcher).trailing(actions))
     }
 
-    /// The repository and branch, and the push/pull button.
+    /// The header before there are sections (no repository yet, still loading): the tool's
+    /// name, so the sidebar's tools all start the same way.
+    fn render_title_only(&mut self, cx: &mut Context<Self>) -> impl IntoElement {
+        let actions = self.render_header_buttons(cx);
+        div().flex_none().px(px(8.)).pb(px(2.)).child(ui::SectionLabel::new("Source Control").trailing(actions))
+    }
+
     fn render_identity(&self, colors: &ThemeColors, cx: &mut Context<Self>) -> impl IntoElement {
         let repo_name = self
             .repo_root()
@@ -1700,7 +1645,10 @@ impl Render for GitPanel {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let colors = cx.theme().colors.clone();
         let body = match &self.repo {
-            RepoState::Missing { error } => self.render_missing(error.clone(), cx),
+            RepoState::Missing { error } => {
+                let missing = self.render_missing(error.clone(), cx);
+                div().flex().flex_col().flex_1().min_h_0().child(self.render_title_only(cx)).child(missing).into_any_element()
+            }
             RepoState::Ready(_) if self.tree.is_some() => {
                 let content = match self.tab {
                     Tab::Changes => div()
@@ -1730,19 +1678,27 @@ impl Render for GitPanel {
             }
             _ => div()
                 .flex()
+                .flex_col()
                 .flex_1()
-                .items_center()
-                .justify_center()
-                .text_size(typography::TEXT_SM)
-                .text_color(colors.subtle_foreground)
-                .child("Loading Git status…")
+                .min_h_0()
+                .child(self.render_title_only(cx))
+                .child(
+                    div()
+                        .flex()
+                        .flex_1()
+                        .items_center()
+                        .justify_center()
+                        .text_size(typography::TEXT_SM)
+                        .text_color(colors.subtle_foreground)
+                        .child("Loading Git status…"),
+                )
                 .into_any_element(),
         };
         div()
             .id("git-panel")
             .track_focus(&self.focus_handle)
-            // The sidebar plane, which the pinned section header is painted with too.
-            .bg(colors.surface)
+            // No fill of its own: it sits on the sidebar like the other tools. A surface fill
+            // made it a darker box than Files with glass on, where surface is the more opaque.
             .flex()
             .flex_col()
             .flex_1()

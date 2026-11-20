@@ -123,14 +123,8 @@ impl Workbench {
                 .file_tree
                 .as_ref()
                 .map(|(tree, _)| tree.update(cx, |tree, cx| tree.render_header_actions(window, cx))),
-            SidebarView::Git => self
-                .git_panel
-                .as_ref()
-                .map(|(git, _)| git.update(cx, |git, cx| git.render_header_actions(window, cx))),
-            SidebarView::GitHub => self
-                .github_panel
-                .as_ref()
-                .map(|(github, _)| github.update(cx, |github, cx| github.render_header_actions(window, cx))),
+            // Source Control and GitHub put their buttons in their own header, beside the
+            // section switcher.
             _ => None,
         };
         // The top row belongs to the window's controls; a tool's own buttons get a row of their

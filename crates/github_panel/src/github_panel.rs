@@ -292,8 +292,6 @@ pub struct GitHubPanel {
     pub(crate) open_menu: Option<OpenMenu>,
     loaded_at: Option<Instant>,
     prefetched: bool,
-    /// The section track's width, for when labels give way to icons.
-    pub(crate) tabs_width: std::rc::Rc<std::cell::Cell<gpui::Pixels>>,
     _subscriptions: Vec<Subscription>,
     _poll: Task<()>,
 }
@@ -391,7 +389,6 @@ impl GitHubPanel {
             open_menu: None,
             loaded_at: None,
             prefetched: false,
-            tabs_width: Default::default(),
             _subscriptions: subscriptions,
             _poll: poll,
         };

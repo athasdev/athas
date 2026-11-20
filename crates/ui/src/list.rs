@@ -245,12 +245,19 @@ impl RenderOnce for SidebarListItem {
 #[derive(IntoElement)]
 pub struct SectionLabel {
     label: SharedString,
+    /// Shown in place of the label, such as a button that switches what the section shows.
+    title: Option<AnyElement>,
     trailing: Option<AnyElement>,
 }
 
 impl SectionLabel {
     pub fn new(label: impl Into<SharedString>) -> Self {
-        Self { label: label.into(), trailing: None }
+        Self { label: label.into(), title: None, trailing: None }
+    }
+
+    /// A section title that is an element of its own, at the label's place and height.
+    pub fn title(title: impl IntoElement) -> Self {
+        Self { label: SharedString::default(), title: Some(title.into_any_element()), trailing: None }
     }
 
     pub fn trailing(mut self, element: impl IntoElement) -> Self {
@@ -273,11 +280,47 @@ impl RenderOnce for SectionLabel {
             .text_size(typography::TEXT_SM)
             .font_weight(typography::MEDIUM)
             .text_color(colors.muted_foreground)
-            .child(div().flex_1().min_w_0().truncate().child(self.label))
+            .map(|this| match self.title {
+                Some(title) => this.child(div().flex().flex_1().min_w_0().items_center().child(title)),
+                None => this.child(div().flex_1().min_w_0().truncate().child(self.label)),
+            })
             .children(self.trailing.map(|trailing| {
                 div().flex().flex_none().items_center().gap(px(2.)).child(trailing)
             }))
     }
+}
+
+/// A section title that switches what the section shows: the title in the label's own style
+/// with a small chevron, brighter while hovered or while its menu is open. Sits in
+/// `SectionLabel::title`, its text where a label's text would be.
+pub fn section_switcher(
+    id: impl Into<ElementId>,
+    label: impl Into<SharedString>,
+    open: bool,
+    cx: &App,
+    on_click: impl Fn(&ClickEvent, &mut Window, &mut App) + 'static,
+) -> AnyElement {
+    let colors = &cx.theme().colors;
+    let (rest, bright) = (colors.muted_foreground, colors.foreground);
+    div()
+        .id(id.into())
+        .flex()
+        .items_center()
+        .gap(px(4.))
+        .min_w_0()
+        .h(metrics::CHROME_CONTROL)
+        // Out to the label's inset, so the text lines up with the other tools' titles.
+        .ml(px(-6.))
+        .px(px(6.))
+        .rounded(metrics::RADIUS_MD)
+        .text_color(if open { bright } else { rest })
+        .when(open, |this| this.bg(colors.accent))
+        .hover(move |style| style.text_color(bright))
+        .cursor_pointer()
+        .child(div().min_w_0().truncate().child(label.into()))
+        .child(Icon::new(IconName::ChevronDown).size(IconSize::XSmall).color(if open { bright } else { rest }))
+        .on_click(on_click)
+        .into_any_element()
 }
 
 /// A section that folds: its title with a chevron that turns while folded.
