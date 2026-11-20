@@ -345,13 +345,16 @@ impl OnboardingView {
                     .flex()
                     .flex_col()
                     .flex_1()
+                    // Without it the column keeps its text's full width, and a long description
+                    // runs past the card instead of wrapping.
+                    .min_w_0()
                     .gap(px(2.))
                     .child(div().text_size(typography::TEXT_SM).text_color(colors.foreground).child(label))
                     .children(description.map(|description| {
                         div().text_size(typography::TEXT_CAPTION).text_color(colors.subtle_foreground).child(description)
                     })),
             )
-            .child(control)
+            .child(div().flex_none().child(control))
             .into_any_element()
     }
 
