@@ -1974,6 +1974,7 @@ impl Editor {
                 .items_center()
                 .justify_center()
                 .bg(background)
+                .rounded_b(ui::metrics::ISLAND_RADIUS)
                 .child(EmptyState::new(title).icon(IconName::FileText).message(message)),
         )
     }
@@ -2060,7 +2061,9 @@ impl Render for Editor {
             .flex_1()
             .size_full()
             .min_h_0()
+            // Rounded at the bottom like its island, so it never squares the island's corners.
             .bg(background)
+            .rounded_b(ui::metrics::ISLAND_RADIUS)
             .on_action(cx.listener(Self::save))
             .on_action(cx.listener(Self::find))
             .on_action(cx.listener(Self::find_replace))

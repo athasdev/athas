@@ -304,7 +304,11 @@ impl Element for EditorElement {
         cx: &mut App,
     ) {
         let Some(mut state) = state.take() else { return };
-        window.paint_quad(fill(bounds, state.background));
+        // Rounded at the bottom like the island the editor sits in: where it reaches the island's
+        // bottom edge a square fill covered the island's rounded corners; elsewhere the corner
+        // shows the island's own background, the same colour.
+        let radius = ui::metrics::ISLAND_RADIUS;
+        window.paint_quad(fill(bounds, state.background).corner_radii(gpui::Corners { top_left: px(0.), top_right: px(0.), bottom_right: radius, bottom_left: radius }));
         let focus_handle = self.editor.read(cx).focus_handle.clone();
         window.handle_input(&focus_handle, ElementInputHandler::new(state.text_bounds, self.editor.clone()), cx);
         window.set_cursor_style(if state.link { CursorStyle::PointingHand } else { CursorStyle::IBeam }, &state.text_hitbox);
