@@ -681,7 +681,6 @@ impl GitPanel {
             let key = format!("{prefix}:{dir}");
             let collapsed = nested && self.collapsed_folders.contains(&key);
             if nested {
-                let hover = colors.accent;
                 rows = rows.child(
                     div()
                         .id(SharedString::from(format!("git-folder-{key}")))
@@ -691,7 +690,7 @@ impl GitPanel {
                         .h(metrics::LIST_ROW)
                         .px(px(8.))
                         .rounded(metrics::RADIUS_MD)
-                        .hover(move |style| style.bg(hover))
+                        .map(|this| ui::sidebar_row(this, false, false, cx))
                         .child(
                             Icon::new(if collapsed { IconName::ChevronRight } else { IconName::ChevronDown })
                                 .size(IconSize::XSmall)
@@ -971,7 +970,6 @@ impl GitPanel {
             let hash = commit.hash.clone();
             let base = commit.hash.clone();
             let open = commit.clone();
-            let hover_bg = colors.accent;
             let expanded = selected.then(|| {
                 let totals = self.open_commit_totals;
                 div()
@@ -1028,8 +1026,7 @@ impl GitPanel {
                 .py(px(6.))
                 .px(px(8.))
                 .rounded(metrics::RADIUS_MD)
-                .when(selected, |this| this.bg(colors.selected))
-                .when(!selected, |this| this.hover(move |style| style.bg(hover_bg)))
+                .map(|this| ui::sidebar_row(this, selected, false, cx))
                 .on_drag(self.commit_drag(&commit), |dragged, _, _, cx| dragged.preview(cx))
                 .on_click(cx.listener(move |this, _, _, cx| this.open_commit(&open, cx)))
                 .child(

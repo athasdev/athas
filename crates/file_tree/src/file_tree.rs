@@ -2246,7 +2246,6 @@ impl FileTree {
             .flatten()
             .map(|size| div().flex_none().child(ui::Badge::new(format_directory_size(size))));
 
-        let hover_bg = colors.accent;
         let content = div()
             .flex()
             .flex_1()
@@ -2259,8 +2258,7 @@ impl FileTree {
             .rounded(metrics::RADIUS)
             .border_1()
             .border_color(if has_ring { colors.focus_ring } else { gpui::transparent_black() })
-            .when(highlighted, |this| this.bg(colors.raised).shadow(theme.shadows.raised_inset.clone()))
-            .when(!highlighted && editing.is_none(), |this| this.hover(move |style| style.bg(hover_bg)))
+            .map(|this| if editing.is_none() { ui::sidebar_row(this, highlighted, false, cx) } else { this.text_color(colors.foreground) })
             .when(row.ignored, |this| this.opacity(0.5))
             .when(cut, |this| this.italic().opacity(0.4))
             .children(arrow)

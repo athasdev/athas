@@ -922,11 +922,9 @@ impl SearchView {
                 let syntax: Vec<(Range<usize>, gpui::Hsla)> = spans.iter().map(|(range, kind)| (range.clone(), kind.color(&theme))).collect();
                 let (text, highlights) = styled_line(text, ranges, &syntax, highlight);
                 let text = StyledText::new(if text.is_empty() { " ".to_string() } else { text }).with_highlights(highlights);
-                let hover = colors.accent;
                 let number = *number;
                 base.id(SharedString::from(format!("search-line-{file_index}-{line_index}")))
-                    .when(selected, |this| this.bg(if focused { colors.selected_emphasized } else { colors.selected }))
-                    .when(!selected, |this| this.hover(move |style| style.bg(hover)))
+                    .map(|this| ui::sidebar_row(this, selected, focused, cx))
                     .child(
                         div()
                             .flex_none()

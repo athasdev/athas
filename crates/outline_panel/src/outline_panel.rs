@@ -526,10 +526,8 @@ impl Render for OutlinePanel {
                     .pr(px(8.))
                     .rounded(px(5.))
                     .text_size(typography::TEXT_SM)
-                    .text_color(if is_active { colors.foreground } else { colors.muted_foreground })
-                    .when(is_active, |this| this.bg(colors.selected))
+                    .map(|this| ui::sidebar_row(this, is_active, false, cx))
                     .when(is_selected, |this| this.border_1().border_color(colors.focus_ring))
-                    .when(!is_active, |this| this.hover(|style| style.bg(colors.accent).text_color(colors.foreground)))
                     .on_click(cx.listener(move |panel, _, window, cx| {
                         panel.selected = Some(index);
                         panel.jump(selection, window, cx);

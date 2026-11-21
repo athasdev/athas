@@ -748,7 +748,6 @@ impl DiagnosticsPanel {
         let diagnostic = &problem.diagnostic;
         let (summary, description) = split_message(&diagnostic.message);
         let wrap = self.preferences.wrap_messages;
-        let hover = colors.accent;
         let selected = self.menu_problem.as_ref().is_some_and(|(open, _)| open.key() == problem.key());
         let cursor = self.cursor.as_ref().is_some_and(|key| *key == problem.key());
         let ring = colors.focus_ring;
@@ -773,8 +772,7 @@ impl DiagnosticsPanel {
                     .text_size(typography::TEXT_SM)
                     .border_1()
                     .border_color(if cursor { ring } else { gpui::transparent_black() })
-                    .when(selected, |this| this.bg(colors.accent))
-                    .hover(move |style| style.bg(hover))
+                    .map(|this| ui::sidebar_row(this, selected, false, cx))
                     .child(div().pt(px(2.)).flex_none().child(severity_icon(diagnostic.severity, cx)))
                     .child(
                         div()

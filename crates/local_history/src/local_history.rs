@@ -580,7 +580,6 @@ impl PickerDelegate for LocalHistoryDelegate {
                 .into_any_element(),
             None => div().truncate().text_color(colors.foreground).child(entry_title(entry)).into_any_element(),
         };
-        let hover = colors.accent;
         div()
             .flex()
             .items_center()
@@ -592,8 +591,7 @@ impl PickerDelegate for LocalHistoryDelegate {
             .py(px(8.))
             .rounded(metrics::RADIUS_LG)
             .text_size(typography::TEXT_BASE)
-            .when(selected, |this| this.bg(colors.selected))
-            .when(!selected, |this| this.hover(move |style| style.bg(hover)))
+            .map(|this| ui::sidebar_row(this, selected, false, cx))
             .child(Icon::new(IconName::History).size(IconSize::Small).color(colors.subtle_foreground))
             .child(
                 div()
