@@ -221,6 +221,16 @@ pub fn resolve(entry: &ServerEntry, paths: &SearchPaths) -> Option<Launch> {
     None
 }
 
+/// Whether `entry` is installed as a JavaScript package but there is no Node.js or Bun to run it.
+pub fn missing_runtime(entry: &ServerEntry, paths: &SearchPaths) -> bool {
+    if !matches!(entry.runtime.as_str(), "bun" | "node") || paths.javascript_runtime().is_some() {
+        return false;
+    }
+    let folder = if entry.runtime == "bun" { "bun" } else { "npm" };
+    let package = entry.package.as_deref().map(package_identity).unwrap_or_else(|| entry.command.clone());
+    paths.athas_data_dirs.iter().any(|dir| node_entrypoint(&dir.join("tools").join(folder).join(&package).join("node_modules").join(&package), &entry.command).is_some())
+}
+
 /// `@scope/name@1.2` → `@scope/name`, `name@1` → `name` (the folder Athas installs into).
 pub fn package_identity(spec: &str) -> String {
     if let Some(scoped) = spec.strip_prefix('@')

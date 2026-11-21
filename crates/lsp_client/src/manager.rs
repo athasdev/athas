@@ -5,6 +5,7 @@ use std::{
     collections::HashMap,
     path::{Path, PathBuf},
     sync::{Arc, Weak},
+    time::{Duration, Instant},
 };
 
 use lsp_types::{
@@ -69,7 +70,13 @@ impl Default for ProcessLauncher {
 
 impl Launcher for ProcessLauncher {
     fn launch(&self, id: ServerId, name: &str, entry: &ServerEntry, root: &Path, events: EventSink) -> Result<Arc<LanguageServer>, OpenError> {
-        let launch = registry::resolve(entry, &self.paths).ok_or_else(|| OpenError::NotInstalled { server: name.to_string() })?;
+        let Some(launch) = registry::resolve(entry, &self.paths) else {
+            return Err(if registry::missing_runtime(entry, &self.paths) {
+                OpenError::Failed { server: name.to_string(), message: "it needs Node.js or Bun, and neither is installed".to_string() }
+            } else {
+                OpenError::NotInstalled { server: name.to_string() }
+            });
+        };
         let mut options = entry.initialization_options.clone();
         if name == "jdtls"
             && let Some(bundle) = self.paths.java_debug_bundle()
@@ -89,7 +96,37 @@ pub struct ServerKey {
 
 enum Slot {
     Running(Arc<LanguageServer>),
-    Unavailable(OpenError),
+    /// A server that cannot run, and how often starting it failed, to try a failed start again
+    /// after a growing wait.
+    Unavailable { error: OpenError, failures: u32, since: Instant },
+}
+
+/// Starts that fail are tried again this many times, after 5, 15 and 45 seconds.
+const MAX_RETRIES: u32 = 3;
+
+fn retry_delay(failures: u32) -> Duration {
+    Duration::from_secs(5 * 3u64.pow(failures.saturating_sub(1)))
+}
+
+impl Slot {
+    fn unavailable(error: OpenError, failures: u32) -> Self {
+        Slot::Unavailable { error, failures, since: Instant::now() }
+    }
+
+    /// Whether a failed start is due another try; a server that is not installed waits for an install.
+    fn due_for_retry(&self) -> bool {
+        match self {
+            Slot::Unavailable { error: OpenError::Failed { .. }, failures, since } => *failures <= MAX_RETRIES && since.elapsed() >= retry_delay(*failures),
+            _ => false,
+        }
+    }
+
+    fn failures(&self) -> u32 {
+        match self {
+            Slot::Unavailable { failures, .. } => *failures,
+            Slot::Running(_) => 0,
+        }
+    }
 }
 
 /// A file open in a server. The editor holds it; dropping it closes the file in the server.
@@ -166,9 +203,10 @@ impl ServerManager {
         let key = ServerKey { server: language.server.clone(), root: root.clone() };
         let running = match self.servers.get(&key) {
             Some(Slot::Running(server)) if server.is_running() => Some(server.clone()),
-            Some(Slot::Unavailable(error)) => return Err(error.clone()),
+            Some(slot @ Slot::Unavailable { error, .. }) if !slot.due_for_retry() => return Err(error.clone()),
             _ => None,
         };
+        let failures = self.servers.get(&key).map_or(0, Slot::failures);
         let server = match running {
             Some(server) => server,
             None => {
@@ -181,7 +219,7 @@ impl ServerManager {
                         server
                     }
                     Err(error) => {
-                        self.servers.insert(key, Slot::Unavailable(error.clone()));
+                        self.servers.insert(key, Slot::unavailable(error.clone(), failures + 1));
                         return Err(error);
                     }
                 }
@@ -208,7 +246,7 @@ impl ServerManager {
     pub fn server(&self, id: ServerId) -> Option<Arc<LanguageServer>> {
         match self.servers.get(self.names.get(&id)?)? {
             Slot::Running(server) => Some(server.clone()),
-            Slot::Unavailable(_) => None,
+            Slot::Unavailable { .. } => None,
         }
     }
 
@@ -223,7 +261,7 @@ impl ServerManager {
 
     /// Why a server could not start, by key.
     pub fn unavailable(&self) -> Vec<(ServerKey, OpenError)> {
-        self.servers.iter().filter_map(|(key, slot)| if let Slot::Unavailable(error) = slot { Some((key.clone(), error.clone())) } else { None }).collect()
+        self.servers.iter().filter_map(|(key, slot)| if let Slot::Unavailable { error, .. } = slot { Some((key.clone(), error.clone())) } else { None }).collect()
     }
 
     /// A server process ended: the next file that needs it starts it again.
@@ -234,7 +272,8 @@ impl ServerManager {
         {
             match error {
                 Some(message) if server.capabilities().is_none() => {
-                    self.servers.insert(key.clone(), Slot::Unavailable(OpenError::Failed { server: key.server.clone(), message }));
+                    let failures = self.servers.get(&key).map_or(0, Slot::failures);
+                    self.servers.insert(key.clone(), Slot::unavailable(OpenError::Failed { server: key.server.clone(), message }, failures + 1));
                 }
                 _ => {
                     self.servers.remove(&key);
@@ -303,5 +342,19 @@ impl ServerManager {
 impl Drop for ServerManager {
     fn drop(&mut self) {
         self.shutdown_all();
+    }
+}
+
+#[cfg(test)]
+mod retry_tests {
+    use super::*;
+
+    #[test]
+    fn failed_starts_wait_longer_each_time_and_give_up() {
+        assert_eq!([1, 2, 3].map(retry_delay), [Duration::from_secs(5), Duration::from_secs(15), Duration::from_secs(45)]);
+        let failed = |failures| Slot::Unavailable { error: OpenError::Failed { server: "s".into(), message: "m".into() }, failures, since: Instant::now() - Duration::from_secs(60) };
+        assert!(failed(1).due_for_retry());
+        assert!(!failed(MAX_RETRIES + 1).due_for_retry());
+        assert!(!Slot::unavailable(OpenError::NotInstalled { server: "s".into() }, 1).due_for_retry());
     }
 }
