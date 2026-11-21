@@ -44,7 +44,7 @@ impl Render for DraggedResourcePreview {
             .gap(px(6.))
             .max_w(px(280.))
             .px(px(8.))
-            .py(px(3.))
+            .py(px(2.))
             .rounded(metrics::RADIUS)
             .bg(colors.overlay)
             .shadow(cx.theme().shadows.popover.clone())

@@ -416,7 +416,7 @@ impl Render for DraggedEntryPreview {
         let colors = cx.theme().colors.clone();
         div()
             .px(px(8.))
-            .py(px(3.))
+            .py(px(2.))
             .rounded(metrics::RADIUS)
             .bg(colors.overlay)
             .shadow(cx.theme().shadows.popover.clone())

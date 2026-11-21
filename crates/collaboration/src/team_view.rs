@@ -362,7 +362,7 @@ impl TeamView {
             .overflow_y_scroll()
             .px(px(12.))
             .pb(px(16.))
-            .gap(px(18.))
+            .gap(px(16.))
             .children(self.error.clone().map(|error| div().px(px(6.)).child(widgets::error_text(error, cx))))
             .when(sections.is_empty(), |this| {
                 this.child(div().px(px(6.)).py(px(8.)).text_size(typography::TEXT_SM).text_color(colors.subtle_foreground).child("Nothing here yet"))

@@ -320,7 +320,7 @@ impl ReviewView {
                             .when(file.created, |this| {
                                 this.child(
                                     div()
-                                        .px(px(5.))
+                                        .px(px(4.))
                                         .rounded(metrics::RADIUS)
                                         .bg(colors.success_soft)
                                         .text_size(typography::TEXT_CAPTION)
@@ -400,7 +400,7 @@ impl Render for ReviewView {
                 .min_h_0()
                 .overflow_y_scroll()
                 .scrollbar(window, cx)
-                .child(div().w_full().flex().justify_center().px(px(16.)).py(px(12.)).child(div().w_full().max_w(px(900.)).flex().flex_col().gap(px(18.)).children(files)))
+                .child(div().w_full().flex().justify_center().px(px(16.)).py(px(12.)).child(div().w_full().max_w(px(900.)).flex().flex_col().gap(px(16.)).children(files)))
                 .into_any_element()
         };
         div()

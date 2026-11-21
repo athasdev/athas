@@ -534,7 +534,7 @@ impl GitPanel {
             .items_center()
             .gap(px(2.))
             .h(BAR_HEIGHT)
-            .pl(px(14.))
+            .pl(px(12.))
             .pr(px(8.))
             .child(div().flex_1().min_w_0().child(input))
             .children(trailing)
@@ -1086,7 +1086,7 @@ impl GitPanel {
                                     this.child(
                                         div()
                                             .flex_none()
-                                            .px(px(5.))
+                                            .px(px(4.))
                                             .rounded_full()
                                             .bg(colors.primary_soft)
                                             .text_color(colors.primary)

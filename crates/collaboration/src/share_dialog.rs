@@ -381,6 +381,6 @@ impl Render for ShareDialog {
                     cx.emit(DismissEvent);
                 }
             }))
-            .child(widgets::dialog("Share to web", div().flex().flex_col().gap(px(14.)).children(body), footer, cx))
+            .child(widgets::dialog("Share to web", div().flex().flex_col().gap(px(12.)).children(body), footer, cx))
     }
 }

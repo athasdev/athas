@@ -766,8 +766,8 @@ impl DiagnosticsPanel {
                     .items_start()
                     .gap(px(8.))
                     // 1px less than the 8/6 padding for the keyboard ring's border.
-                    .px(px(7.))
-                    .py(px(5.))
+                    .px(px(6.))
+                    .py(px(4.))
                     .rounded(metrics::RADIUS_MD)
                     .text_size(typography::TEXT_SM)
                     .border_1()

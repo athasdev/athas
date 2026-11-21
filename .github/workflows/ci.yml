@@ -36,6 +36,11 @@ jobs:
       - name: Unit tests
         run: cargo test --workspace --lib --locked --no-fail-fast
 
+      # Advisory: it reports spacing off the scale and hover states using the wrong colour, and
+      # does not fail the build. Run it with `--strict` locally to have it exit non-zero.
+      - name: Design guard
+        run: python3 scripts/check-design.py
+
   wasm:
     name: Check the web build (wasm)
     runs-on: ubuntu-latest

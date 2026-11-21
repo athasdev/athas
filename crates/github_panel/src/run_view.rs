@@ -636,7 +636,7 @@ impl RunView {
             if !selected {
                 continue;
             }
-            let mut steps = div().flex().flex_col().gap(px(1.)).my(px(4.)).ml(px(14.)).pl(px(6.)).border_l_1().border_color(colors.divider);
+            let mut steps = div().flex().flex_col().gap(px(1.)).my(px(4.)).ml(px(12.)).pl(px(6.)).border_l_1().border_color(colors.divider);
             if job.steps.is_empty() {
                 steps = steps.child(div().px(px(8.)).py(px(6.)).text_size(typography::TEXT_SM).text_color(colors.subtle_foreground).child("No steps reported yet"));
             }

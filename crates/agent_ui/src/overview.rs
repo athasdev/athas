@@ -515,7 +515,7 @@ impl SessionView {
                                     .justify_center()
                                     .h(px(16.))
                                     .min_w(px(16.))
-                                    .px(px(5.))
+                                    .px(px(4.))
                                     .rounded_full()
                                     .bg(if active { colors.foreground.opacity(0.1) } else { colors.segment_track })
                                     .text_size(typography::TEXT_CAPTION)
@@ -552,7 +552,7 @@ impl SessionView {
             .flex_col()
             .items_center()
             .px(px(CONTENT_PADDING))
-            .pt(px(28.))
+            .pt(px(24.))
             .pb(px(48.))
             .child(div().w_full().max_w(px(CONTENT_WIDTH)).flex().flex_col().gap(px(24.)).child(content))
             .into_any_element()
@@ -713,7 +713,7 @@ impl SessionView {
                     .flex()
                     .items_start()
                     .gap(px(10.))
-                    .py(px(7.))
+                    .py(px(6.))
                     .px(px(12.))
                     .text_size(typography::TEXT_SM)
                     .line_height(relative(1.5))
@@ -754,8 +754,8 @@ impl SessionView {
         let content = div()
             .flex()
             .flex_col()
-            .gap(px(28.))
-            .child(div().flex().flex_col().gap(px(14.)).child(header).child(chips))
+            .gap(px(24.))
+            .child(div().flex().flex_col().gap(px(12.)).child(header).child(chips))
             .child(about)
             .children(tasks)
             .children(self.render_activity(&creator_person, &agent, cx));
@@ -787,7 +787,7 @@ impl SessionView {
                     ActivityKind::Failed => (agent.to_string(), activity_icon(IconName::WarningCircle, colors.destructive, &colors)),
                 };
                 let last = index + 1 == count;
-                let mut line = div().flex().flex_wrap().items_baseline().gap_x(px(5.)).text_size(typography::TEXT_SM).line_height(relative(1.5));
+                let mut line = div().flex().flex_wrap().items_baseline().gap_x(px(4.)).text_size(typography::TEXT_SM).line_height(relative(1.5));
                 line = line.child(div().font_weight(typography::MEDIUM).text_color(colors.foreground).child(actor));
                 for (text, strong) in event.parts {
                     line = line.child(div().text_color(if strong { colors.foreground } else { colors.muted_foreground }).child(text));
@@ -826,7 +826,7 @@ impl SessionView {
             div()
                 .flex()
                 .flex_col()
-                .gap(px(14.))
+                .gap(px(12.))
                 .child(div().flex().items_center().justify_between().child(div().text_size(px(14.)).font_weight(typography::SEMIBOLD).text_color(colors.foreground).child("Activity")).children(more))
                 .child(div().flex().flex_col().children(rows))
                 .into_any_element(),
@@ -987,7 +987,7 @@ impl SessionView {
             .items_center()
             .gap(px(8.))
             .h(px(36.))
-            .px(px(14.))
+            .px(px(12.))
             .border_b_1()
             .border_color(colors.divider)
             .child(file_icon(&name, cx))
@@ -1110,7 +1110,7 @@ impl SessionView {
                     .items_center()
                     .gap(px(10.))
                     .min_h(px(44.))
-                    .px(px(14.))
+                    .px(px(12.))
                     .when(index > 0, |this| this.border_t_1().border_color(colors.divider))
                     .hover(move |style| style.bg(hover))
                     .child(Icon::new(IconName::CircleDot).size(IconSize::Small).color(colors.git_added))

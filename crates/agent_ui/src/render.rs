@@ -891,7 +891,7 @@ impl SessionView {
             .when(expanded, |this| {
                 this.child(
                     div()
-                        .ml(px(22.))
+                        .ml(px(20.))
                         .mt(px(2.))
                         .mb(px(6.))
                         .text_size(typography::TEXT_SM)
@@ -1119,7 +1119,7 @@ impl SessionView {
                 this.child(
                     div()
                         .id(("tool-call-body", index))
-                        .ml(px(22.))
+                        .ml(px(20.))
                         .mt(px(4.))
                         .mb(px(8.))
                         .when(capped, |this| this.max_h(px(TOOL_BODY_MAX_HEIGHT)))
@@ -1311,7 +1311,7 @@ impl SessionView {
                     .child(div().min_w_0().truncate().child(name))
                     .children(line.map(|line| div().flex_none().text_color(colors.subtle_foreground).child(format!("line {line}"))))
                     .when_some(open, |this, (path, line)| {
-                        this.hover(|style| style.bg(colors.selected).text_color(colors.foreground))
+                        this.hover(|style| style.bg(colors.accent).text_color(colors.foreground))
                             .on_click(cx.listener(move |this, _: &ClickEvent, _, cx| this.open_location(path.clone(), line, cx)))
                     })
             }))
@@ -1985,10 +1985,10 @@ impl SessionView {
                                 .items_start()
                                 .gap(px(8.))
                                 .px(px(8.))
-                                .py(px(5.))
+                                .py(px(4.))
                                 .rounded(px(8.))
                                 .when(chosen, |this| this.bg(colors.selected))
-                                .hover(|this| this.bg(colors.selected))
+                                .hover(|this| this.bg(colors.accent))
                                 .on_click(cx.listener(move |this, _: &ClickEvent, _, cx| this.choose_elicitation_option(&name, &value, cx)))
                                 .child(div().pt(px(2.)).child(Icon::new(mark).size(IconSize::Small).color(if chosen { colors.primary } else { colors.subtle_foreground })))
                                 .child(
@@ -2108,7 +2108,7 @@ impl SessionView {
                 .id(SharedString::from(format!("attachment-group-{kind:?}")))
                 .flex()
                 .items_center()
-                .gap(px(5.))
+                .gap(px(4.))
                 .h(px(24.))
                 .px(px(6.))
                 .rounded(metrics::RADIUS_MD)
@@ -2179,7 +2179,7 @@ impl SessionView {
                             .items_center()
                             .gap(px(8.))
                             .px(px(4.))
-                            .py(px(3.))
+                            .py(px(2.))
                             .rounded(metrics::RADIUS_MD)
                             .child(media)
                             .child(
@@ -2600,7 +2600,7 @@ impl SessionView {
                 .child(div().flex_1().min_w_0().truncate().text_color(colors.subtle_foreground).child(detail))
                 .when_some(badge, |this, badge| {
                     this.child(
-                        div().flex_none().px(px(5.)).rounded(metrics::RADIUS).bg(colors.accent).text_size(typography::TEXT_CAPTION).text_color(colors.muted_foreground).child(badge),
+                        div().flex_none().px(px(4.)).rounded(metrics::RADIUS).bg(colors.accent).text_size(typography::TEXT_CAPTION).text_color(colors.muted_foreground).child(badge),
                     )
                 });
             div()
@@ -3012,7 +3012,6 @@ fn attachment_kind_icon(kind: crate::attachment_groups::Kind) -> IconName {
         Kind::Images => IconName::Image,
         Kind::Selections => IconName::TextAlignLeft,
         Kind::Terminals => IconName::Terminal,
-        Kind::Databases => IconName::Database,
         Kind::GitHub => IconName::Github,
         Kind::Problems => IconName::Warning,
         Kind::Chats => IconName::ChatBubbleText,

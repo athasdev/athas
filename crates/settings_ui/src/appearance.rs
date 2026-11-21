@@ -219,5 +219,5 @@ pub fn theme_choices(cx: &App) -> AnyElement {
     } else {
         rows.push(theme_grid(None, "theme", is_dark(&settings.theme, cx), cx));
     }
-    div().flex().flex_col().gap(px(14.)).px(px(10.)).py(px(12.)).children(rows).into_any_element()
+    div().flex().flex_col().gap(px(12.)).px(px(10.)).py(px(12.)).children(rows).into_any_element()
 }

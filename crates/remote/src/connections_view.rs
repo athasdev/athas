@@ -705,7 +705,7 @@ impl ConnectionsView {
             } else {
                 "No connections match."
             };
-            list = list.child(div().py(px(18.)).flex().justify_center().text_color(colors.subtle_foreground).child(message));
+            list = list.child(div().py(px(16.)).flex().justify_center().text_color(colors.subtle_foreground).child(message));
         }
         div().flex().flex_col().child(div().px(px(16.)).pb(px(6.)).child(self.filter.clone())).child(list.scrollbar(window, cx))
     }
@@ -745,7 +745,7 @@ impl ConnectionsView {
             .flex_col()
             .gap(px(16.))
             .px(px(16.))
-            .pb(px(14.))
+            .pb(px(12.))
             .child(
                 field_set("Connection", "Name the workspace and enter a host, IP address, or SSH config alias.", cx).child(
                     div()
@@ -807,7 +807,7 @@ impl ConnectionsView {
             .flex()
             .gap(px(12.))
             .px(px(16.))
-            .pb(px(14.))
+            .pb(px(12.))
             .child(div().pt(px(2.)).child(Icon::new(icon).size(IconSize::Medium).color(colors.subtle_foreground)))
             .child(
                 div()
@@ -827,7 +827,7 @@ impl ConnectionsView {
         let mut list = div().id("folder-rows").flex().flex_col().h(px(280.)).overflow_y_scroll().px(px(10.)).pb(px(8.));
         match folders {
             None => {
-                list = list.child(div().py(px(18.)).flex().justify_center().text_color(colors.subtle_foreground).child("Loading…"));
+                list = list.child(div().py(px(16.)).flex().justify_center().text_color(colors.subtle_foreground).child("Loading…"));
             }
             Some(folders) => {
                 let selected = self.selected;
@@ -857,7 +857,7 @@ impl ConnectionsView {
                     );
                 }
                 if folders.is_empty() {
-                    list = list.child(div().py(px(18.)).flex().justify_center().text_color(colors.subtle_foreground).child("No folders here"));
+                    list = list.child(div().py(px(16.)).flex().justify_center().text_color(colors.subtle_foreground).child("No folders here"));
                 }
             }
         }
@@ -920,7 +920,7 @@ impl Render for ConnectionsView {
                     .flex_col()
                     .gap(px(10.))
                     .px(px(16.))
-                    .pb(px(14.))
+                    .pb(px(12.))
                     .child(
                         div()
                             .text_size(typography::TEXT_SM)
@@ -1037,7 +1037,7 @@ impl Render for ConnectionsView {
                     .items_center()
                     .gap(px(8.))
                     .px(px(16.))
-                    .pt(px(14.))
+                    .pt(px(12.))
                     .pb(px(10.))
                     .when(back, |this| {
                         this.child(

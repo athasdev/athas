@@ -447,11 +447,11 @@ impl Workbench {
                         .flex_col()
                         .gap(px(4.))
                         .px(px(4.))
-                        .py(px(3.))
+                        .py(px(2.))
                         .rounded(px(4.))
                         .when(!url.is_empty(), |this| {
                             this.cursor_pointer()
-                                .hover(|style| style.bg(colors.selected))
+                                .hover(|style| style.bg(colors.accent))
                                 .on_click(move |_, _, cx| cx.open_url(&url))
                         })
                         .tooltip(ui::Tooltip::text(row.detail.clone()))

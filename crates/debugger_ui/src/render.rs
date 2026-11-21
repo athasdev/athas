@@ -734,7 +734,7 @@ impl DebuggerView {
                         .items_center()
                         .gap(px(6.))
                         .mb(px(4.))
-                        .ml(px(18.))
+                        .ml(px(16.))
                         .px(px(6.))
                         .h(ROW)
                         .rounded(metrics::RADIUS_MD)
@@ -748,7 +748,7 @@ impl DebuggerView {
             .when(editing.is_none() && !detail.is_empty(), |this| {
                 this.child(
                     div()
-                        .ml(px(18.))
+                        .ml(px(16.))
                         .mb(px(4.))
                         .truncate()
                         .font_family(typography::MONO_FONT)

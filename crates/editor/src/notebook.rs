@@ -59,7 +59,7 @@ impl Render for CellDragPreview {
         let colors = &cx.theme().colors;
         div()
             .px(px(8.))
-            .py(px(3.))
+            .py(px(2.))
             .rounded(px(4.))
             .bg(colors.overlay)
             .border_1()
@@ -406,8 +406,8 @@ impl Editor {
                     .flex()
                     .flex_col()
                     .items_center()
-                    .px(px(22.))
-                    .pt(px(18.))
+                    .px(px(20.))
+                    .pt(px(16.))
                     .pb(px(32.))
                     .children(items.into_iter().map(|item| div().w_full().max_w(px(MAX_WIDTH)).child(item)))
                     .scrollbar_with(&self.notebook.scroll),
@@ -538,7 +538,7 @@ impl Editor {
             .drag_over::<CellDrag>(move |style, _, _, _| style.border_color(colors.primary.opacity(0.5)))
             .on_drop(cx.listener(move |editor, drag: &CellDrag, window, cx| editor.move_notebook_cell(drag.0, index, window, cx)))
             .when(selected, |this| this.child(div().absolute().top(px(4.)).bottom(px(4.)).left_0().w(px(2.)).rounded_full().bg(colors.primary)))
-            .child(div().flex_none().w(px(58.)).pt(px(31.)).flex().justify_end().child(handle))
+            .child(div().flex_none().w(px(58.)).pt(px(32.)).flex().justify_end().child(handle))
             .child(
                 div()
                     .flex()

@@ -961,7 +961,7 @@ impl Render for TextArea {
                     .rounded(metrics::RADIUS)
                     .bg(colors.raised)
                     .shadow(theme.shadows.raised.clone())
-                    .when(focused, |this| this.border_1().border_color(colors.focus_ring).px(px(7.)).py(px(3.)))
+                    .when(focused, |this| this.border_1().border_color(colors.focus_ring).px(px(6.)).py(px(2.)))
             })
             .child(TextAreaText { composer: cx.entity() })
     }

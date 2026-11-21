@@ -117,7 +117,7 @@ pub fn dialog(title: impl Into<SharedString>, body: impl IntoElement, footer: Ve
                 .font_weight(typography::SEMIBOLD)
                 .child(title.into()),
         )
-        .child(div().flex().flex_col().gap(px(14.)).px(px(20.)).pb(px(16.)).child(body))
+        .child(div().flex().flex_col().gap(px(12.)).px(px(20.)).pb(px(16.)).child(body))
         .child(
             div()
                 .flex()

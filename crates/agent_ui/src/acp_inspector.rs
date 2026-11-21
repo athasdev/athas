@@ -233,7 +233,7 @@ impl AcpInspectorView {
                     .px(px(12.))
                     .text_size(typography::TEXT_SM)
                     .when(open, |row| row.bg(colors.selected))
-                    .hover(|row| row.bg(colors.selected))
+                    .hover(|row| row.bg(colors.accent))
                     .on_click(cx.listener(move |this, _: &ClickEvent, _, cx| this.toggle(&key, cx)))
                     .child(Icon::new(if open { IconName::ChevronDown } else { IconName::ChevronRight }).size(IconSize::XSmall).color(colors.subtle_foreground))
                     .child(cell(92.).font_family(typography::MONO_FONT).text_color(colors.muted_foreground).child(traffic::format_time(message.timestamp_ms)))

@@ -470,7 +470,7 @@ impl KeybindingsEditor {
             .items_center()
             .gap(px(8.))
             // Clear of the Settings window's close button in the corner above.
-            .pr(px(28.))
+            .pr(px(24.))
             .child(
                 Button::icon("keybindings-back", IconName::ArrowLeft)
                     .tooltip("Back to Keybindings")

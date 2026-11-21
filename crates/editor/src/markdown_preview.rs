@@ -855,7 +855,7 @@ impl Look {
                         .flex_1()
                         .min_w(px(60.))
                         .px(px(10.))
-                        .py(px(5.))
+                        .py(px(4.))
                         .border_r_1()
                         .border_color(self.border)
                         .when(align == Align::Center, |this| this.justify_center())
@@ -1052,7 +1052,7 @@ impl Render for MarkdownPreview {
                             .flex_col()
                             .gap(px(14. * TYPESET_PREVIEW_FLOW))
                             .max_w(px(768.))
-                            .px(px(28.))
+                            .px(px(24.))
                             .py(px(20.))
                             .children(blocks.iter().enumerate().map(|(index, block)| {
                                 let element = look.block(index, block, &theme);

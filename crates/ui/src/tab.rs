@@ -172,7 +172,7 @@ impl RenderOnce for Tab {
             .items_center()
             .gap(metrics::CHROME_GAP)
             .h(metrics::TAB)
-            .when(self.stretch, |this| this.flex_1().min_w_0().justify_center().px(px(22.)))
+            .when(self.stretch, |this| this.flex_1().min_w_0().justify_center().px(px(20.)))
             .when(!self.stretch, |this| this.flex_none().min_w(px(80.)).max_w(metrics::TAB_MAX_WIDTH).pl(px(12.)).pr(px(24.)))
             .rounded_full()
             .text_size(typography::TEXT_CHROME)
