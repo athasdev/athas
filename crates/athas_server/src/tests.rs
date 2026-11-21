@@ -322,53 +322,6 @@ fn socket_sessions() {
     send(&mut second, &ClientMessage::Call { id: 2, method: "terminal.close".into(), params: params(json!({ "id": terminal })) });
 }
 
-#[test]
-fn databases() {
-    let (dir, workspace) = workspace();
-    let state = tempfile::tempdir().unwrap();
-    let connections = state.path().join("connections.json");
-    workspace.set_database_paths(Some(connections.clone()), Some(state.path().join("history.json")));
-    let file = dir.path().join("app.db");
-    std::fs::write(&file, b"").unwrap();
-    let connection = json!({ "id": "local", "name": "App", "db_type": "sqlite", "file_path": file.to_string_lossy() });
-
-    call(&workspace, "database.test", json!({ "connection": connection }));
-    let handle = call(&workspace, "database.open", json!({ "connection": connection }));
-    let handle = handle.as_str().unwrap();
-    call(&workspace, "database.run", json!({ "handle": handle, "sql": "CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT NOT NULL)" }));
-    assert_eq!(call(&workspace, "database.insert", json!({ "handle": handle, "table": "users", "columns": ["name"], "values": ["Ada"] })), json!(1));
-    call(&workspace, "database.insert", json!({ "handle": handle, "table": "users", "columns": ["name"], "values": ["Linus"] }));
-    let objects = call(&workspace, "database.objects", json!({ "handle": handle }));
-    assert_eq!(objects[0]["name"], "users");
-    let columns = call(&workspace, "database.columns", json!({ "handle": handle, "table": "users" }));
-    assert_eq!(columns[0]["primary_key"], true);
-    let request = json!({ "table": "users", "filters": [], "search": "", "search_columns": [], "sort": ["name", "Desc"], "page_size": 10, "offset": 0 });
-    let page = call(&workspace, "database.page", json!({ "handle": handle, "request": request }));
-    assert_eq!(page["total"], 2);
-    assert_eq!(page["result"]["rows"][0], json!([2, "Linus"]));
-    let identity = json!({ "columns": ["id"], "values": [1] });
-    call(&workspace, "database.update", json!({ "handle": handle, "table": "users", "columns": ["name"], "values": ["Grace"], "identity": identity }));
-    call(&workspace, "database.delete", json!({ "handle": handle, "table": "users", "identity": { "columns": ["id"], "values": [2] } }));
-    let outcome = call(&workspace, "database.run", json!({ "handle": handle, "sql": "SELECT name FROM users" }));
-    assert_eq!(outcome["result"]["rows"], json!([["Grace"]]));
-    assert_eq!(workspace.call("database.run", &params(json!({ "handle": handle, "sql": "SELECT * FROM nope" }))).unwrap_err().code, "database_failed");
-    call(&workspace, "database.close", json!({ "handle": handle }));
-    assert!(workspace.call("database.objects", &params(json!({ "handle": handle }))).is_err());
-
-    // Saved connections keep their connection strings' passwords on the server.
-    let secret = json!({ "id": "pg", "name": "Prod", "db_type": "postgres", "connection_string": "postgres://app:hunter2@db:5432/app" });
-    call(&workspace, "database.saveConnections", json!({ "connections": [secret] }));
-    let listed = call(&workspace, "database.connections", json!({}));
-    assert_eq!(listed[0]["connection_string"], "postgres://app:••••@db:5432/app");
-    assert!(!listed.to_string().contains("hunter2"));
-    call(&workspace, "database.saveConnections", json!({ "connections": listed }));
-    assert!(std::fs::read_to_string(&connections).unwrap().contains("hunter2"));
-
-    call(&workspace, "database.saveHistory", json!({ "key": "sqlite:file:app", "history": ["SELECT 1", "SELECT 2"] }));
-    assert_eq!(call(&workspace, "database.loadHistory", json!({ "key": "sqlite:file:app" })), json!(["SELECT 1", "SELECT 2"]));
-    assert_eq!(workspace.call("database.dropEverything", &Map::new()).unwrap_err().code, "invalid_request");
-}
-
 #[cfg(unix)]
 #[test]
 fn docker() {

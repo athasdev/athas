@@ -118,7 +118,7 @@ impl Integration {
             Integration::Mcp => "Give agents tools from your apps and services",
             Integration::Agents => "Coding agents that run in Athas with their own accounts",
             Integration::Skills => "Reusable instructions you can hand to any agent",
-            Integration::Extensions => "Languages, themes and databases for the editor",
+            Integration::Extensions => "Languages, themes and icons for the editor",
         }
     }
 
@@ -1432,7 +1432,7 @@ impl AiSettingsView {
         }
         rows.push(row(
             if first { "No MCP servers" } else { "Add a server" },
-            first.then(|| "Give agents tools: GitHub, a database, a browser…".into()),
+            first.then(|| "Give agents tools: GitHub, a browser, Docker…".into()),
             Button::new("mcp-add", "Add server").variant(ButtonVariant::Default).size(ButtonSize::Small).leading_icon(IconName::Plus).on_click(cx.listener(|this, _: &ClickEvent, window, cx| this.open_mcp_editor(None, window, cx))),
             first,
             cx,
@@ -2487,7 +2487,7 @@ impl AiSettingsView {
         let mut entries: Vec<(extensions::CatalogEntry, extensions::ExtensionStatus)> = extensions
             .entries()
             .into_iter()
-            .filter(|entry| matches!(entry.kind, ExtensionKind::Language | ExtensionKind::Theme | ExtensionKind::IconTheme | ExtensionKind::Database))
+            .filter(|entry| matches!(entry.kind, ExtensionKind::Language | ExtensionKind::Theme | ExtensionKind::IconTheme))
             .filter(|entry| matches_query(query, &[&entry.manifest.display_name, &entry.manifest.description]))
             .map(|entry| {
                 let status = extensions.status(&entry.manifest.id, current);

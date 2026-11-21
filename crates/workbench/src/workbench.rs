@@ -91,8 +91,6 @@ actions!(
         MinimizeWindow,
         ZoomWindow,
         ToggleFullscreen,
-        OpenDatabase,
-        NewDatabaseConnection,
         OpenDocker,
         OpenDocs,
         OpenChangelog,
@@ -216,8 +214,6 @@ const COMMANDS: fn(&mut App) = |cx| {
     keymap::register(cx, "window.toggleFullscreenMac", ToggleFullscreen);
     keymap::register(cx, "workbench.showProjectSearch", ShowGlobalSearch);
     keymap::register(cx, "workbench.openGlobalSearchInTab", ShowGlobalSearch);
-    keymap::register(cx, "database.connect", OpenDatabase);
-    keymap::register(cx, "database.newConnection", NewDatabaseConnection);
     keymap::register(cx, "docker.open", OpenDocker);
     keymap::register(cx, "window.quit", Quit);
     detached::register(cx);
@@ -2758,15 +2754,7 @@ impl Render for Workbench {
                 notifications::clear(cx);
                 cx.notify();
             }))
-            // Database and Docker open as command palette pages (`database-command`, `docker-command`).
-            .on_action(cx.listener(|this, _: &OpenDatabase, window, cx| {
-                let root = this.state.active_project().filter(|project| !project.is_remote()).map(|project| PathBuf::from(&project.path));
-                let picker = database_view::connections_picker(root.as_deref(), window, cx);
-                this.open_modal(picker, window, cx);
-            }))
-            .on_action(cx.listener(|this, _: &NewDatabaseConnection, _, cx| {
-                this.update_state(cx, |state| state.open_resource("database", database_view::NEW_CONNECTION_ID, "New Connection"))
-            }))
+            // Docker opens as a command palette page (`docker-command`).
             .on_action(cx.listener(|this, _: &OpenDocker, window, cx| {
                 let root = this.state.active_project().filter(|project| !project.is_remote()).map(|project| PathBuf::from(&project.path));
                 let picker = docker_view::docker_picker(root, window, cx);

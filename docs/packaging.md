@@ -87,15 +87,8 @@ The GitHub views call GitHub from the server (`github.*`) with the server's cred
 active and whom it belongs to, never the token. AI drafts for issues and pull requests use the
 page's AI settings and read the repository's status and branch diff from the server.
 
-The database views open their databases on the server (`database.*`): the server owns the drivers,
-the saved connections and their passwords (the desktop app's list and keychain entries), and the
-browser only ever gets connection strings with their passwords hidden; a password typed into the
-connection form goes to the server, which keeps it. Queries, schema, row edits, MongoDB and Redis
-browsing, query history and PostgreSQL subscriptions run there through the desktop's engines. The
-Docker view runs the server's `docker` CLI (`docker.*`; `ATHAS_DOCKER_PROGRAM` replaces it, as on
-desktop), with host paths kept inside the workspace and followed logs polled from the server.
-`ATHAS_SERVER_DATABASES=DIR` keeps the server's saved connections and query history in `DIR`
-instead of sharing the desktop app's.
+The Docker view runs the server's `docker` CLI (`docker.*`; `ATHAS_DOCKER_PROGRAM` replaces it, as
+on desktop), with host paths kept inside the workspace and followed logs polled from the server.
 
 Browser tabs and HTML previews are frames laid over the canvas. Previews load from the server's
 `/preview/<key>/…`, a key (`preview.base`) that only reads workspace files, served sandboxed so a

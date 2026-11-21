@@ -1,7 +1,6 @@
 //! `athas-server [--root DIR] [--listen ADDR] [--token TOKEN] [--web DIR]`: serves a folder to the
 //! web workbench. The token comes from `--token`, then `ATHAS_SERVER_TOKEN`, else a random one is
-//! made and printed with the address to open. `ATHAS_SERVER_DATABASES` keeps the database views'
-//! saved connections and history in that folder instead of the desktop app's.
+//! made and printed with the address to open.
 
 use std::{io::Read as _, net::TcpListener, path::PathBuf, sync::Arc};
 
@@ -39,9 +38,6 @@ fn main() -> Result<()> {
         None => random_token()?,
     };
     let workspace = Workspace::open(&root)?;
-    if let Some(dir) = std::env::var_os("ATHAS_SERVER_DATABASES").filter(|dir| !dir.is_empty()).map(PathBuf::from) {
-        workspace.set_database_paths(Some(dir.join("database-connections.json")), Some(dir.join("database-history.json")));
-    }
     let listener = TcpListener::bind(&listen).with_context(|| format!("listening on {listen}"))?;
     let address = listener.local_addr()?;
     println!("athas-server: serving {} on http://{address}", workspace.root().display());

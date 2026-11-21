@@ -147,8 +147,6 @@ pub const COMMAND_ORDER: &[&str] = &[
     "github.refresh",
     "github.checkAuthentication",
     "github.connectAccount",
-    "database.connect",
-    "database.newConnection",
     "docker.open",
     "team.open",
     "team.shareSession",

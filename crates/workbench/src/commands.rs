@@ -267,7 +267,6 @@ impl Workbench {
                     workspace::TabItem::Session { .. } => "Agent".to_string(),
                     workspace::TabItem::Resource { kind, .. } => match kind.as_str() {
                         "browser" => "Browser",
-                        "database" => "Database",
                         "git-diff" => "Diff",
                         "github-issue" => "Issue",
                         "github-run" => "Workflow run",

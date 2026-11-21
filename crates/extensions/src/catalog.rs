@@ -20,7 +20,6 @@ pub enum ExtensionKind {
     Language,
     Theme,
     IconTheme,
-    Database,
     Ai,
     Integration,
     Mcp,
@@ -29,11 +28,10 @@ pub enum ExtensionKind {
 }
 
 impl ExtensionKind {
-    pub const ALL: [ExtensionKind; 9] = [
+    pub const ALL: [ExtensionKind; 8] = [
         ExtensionKind::Language,
         ExtensionKind::Theme,
         ExtensionKind::IconTheme,
-        ExtensionKind::Database,
         ExtensionKind::Ai,
         ExtensionKind::Integration,
         ExtensionKind::Mcp,
@@ -47,7 +45,6 @@ impl ExtensionKind {
             ExtensionKind::Language => "language",
             ExtensionKind::Theme => "theme",
             ExtensionKind::IconTheme => "icon-theme",
-            ExtensionKind::Database => "database",
             ExtensionKind::Ai => "ai",
             ExtensionKind::Integration => "integration",
             ExtensionKind::Mcp => "mcp",
@@ -61,7 +58,6 @@ impl ExtensionKind {
             ExtensionKind::Language => "Languages",
             ExtensionKind::Theme => "Themes",
             ExtensionKind::IconTheme => "Icons",
-            ExtensionKind::Database => "Databases",
             ExtensionKind::Ai => "AI",
             ExtensionKind::Integration => "Apps",
             ExtensionKind::Mcp => "MCP",
@@ -81,8 +77,6 @@ impl ExtensionKind {
             ExtensionKind::Agent
         } else if manifest.languages().next().is_some() {
             ExtensionKind::Language
-        } else if manifest.databases().next().is_some() {
-            ExtensionKind::Database
         } else if manifest.themes().next().is_some() {
             ExtensionKind::Theme
         } else if manifest.icon_themes().next().is_some() {
@@ -98,7 +92,6 @@ impl ExtensionKind {
                 Some(Category::Theme) => ExtensionKind::Theme,
                 Some(Category::IconTheme) => ExtensionKind::IconTheme,
                 Some(Category::Language | Category::Linter | Category::Formatter) => ExtensionKind::Language,
-                Some(Category::Database) => ExtensionKind::Database,
                 Some(Category::Ai) => ExtensionKind::Ai,
                 Some(Category::Agent) => ExtensionKind::Agent,
                 Some(Category::Skill) => ExtensionKind::Skill,
@@ -119,7 +112,7 @@ pub enum ExtensionIcon {
 
 #[derive(Clone, Debug)]
 pub struct CatalogEntry {
-    /// The extension's folder on the CDN (`database/postgres`).
+    /// The extension's folder on the CDN (`language/rust`).
     pub path: String,
     pub manifest: Arc<ExtensionManifest>,
     pub icon: Option<ExtensionIcon>,
@@ -225,21 +218,20 @@ mod tests {
     #[test]
     fn every_official_manifest_parses() {
         let catalog = Catalog::bundled();
-        assert_eq!(catalog.entries().len(), 90);
+        assert_eq!(catalog.entries().len(), 84);
         let count = |kind| catalog.entries().iter().filter(|entry| entry.kind == kind).count();
         assert_eq!(count(ExtensionKind::Language), 47);
         assert_eq!(count(ExtensionKind::Mcp), 21);
         assert_eq!(count(ExtensionKind::Agent), 7);
-        assert_eq!(count(ExtensionKind::Database), 6);
         assert_eq!(count(ExtensionKind::Skill), 3);
         assert_eq!(count(ExtensionKind::IconTheme), 2);
         assert_eq!(count(ExtensionKind::Theme), 1);
         assert_eq!(count(ExtensionKind::Ai), 1);
         assert_eq!(count(ExtensionKind::Integration), 2);
         assert!(catalog.entries().iter().all(|entry| entry.icon.is_some()));
-        let postgres = catalog.get("athas.database.postgres").unwrap();
-        assert_eq!(postgres.path, "database/postgres");
-        assert!(postgres.manifest.package_for("darwin-arm64").is_some());
+        let theme = catalog.get("athas.theme.vercel").unwrap();
+        assert_eq!(theme.path, "theme/vercel");
+        assert!(theme.manifest.package_for("darwin-arm64").is_some());
     }
 
     #[test]
@@ -254,7 +246,7 @@ mod tests {
             ExtensionManifest::from_json(&json).unwrap_or_else(|error| panic!("{}: {error:#}", path.display()));
             count += 1;
         }
-        assert_eq!(count, 90);
+        assert_eq!(count, 84);
     }
 
     #[test]

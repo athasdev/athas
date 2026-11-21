@@ -24,11 +24,6 @@ pub struct ExtensionManifest {
     #[serde(default)]
     pub languages: Vec<LanguageContribution>,
     #[serde(default)]
-    pub databases: Vec<DatabaseContribution>,
-    /// The old name of `databases`.
-    #[serde(default)]
-    pub database_providers: Vec<DatabaseContribution>,
-    #[serde(default)]
     pub agents: Vec<AgentContribution>,
     #[serde(default)]
     pub ai_providers: Vec<serde_json::Value>,
@@ -64,7 +59,6 @@ pub struct ExtensionManifest {
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Deserialize, Serialize)]
 pub enum Category {
     Language,
-    Database,
     #[serde(rename = "AI")]
     Ai,
     Integration,
@@ -87,8 +81,6 @@ pub enum Category {
 pub struct Contributes {
     #[serde(default)]
     pub languages: Vec<LanguageContribution>,
-    #[serde(default)]
-    pub databases: Vec<DatabaseContribution>,
     #[serde(default)]
     pub agents: Vec<AgentContribution>,
     #[serde(default)]
@@ -118,21 +110,6 @@ pub struct LanguageContribution {
     #[serde(default)]
     pub filename_patterns: Vec<String>,
     pub first_line: Option<String>,
-}
-
-#[derive(Clone, Debug, Deserialize, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct DatabaseContribution {
-    pub id: String,
-    pub label: String,
-    pub is_file_based: bool,
-    pub protocol_version: f64,
-    pub default_port: Option<f64>,
-    #[serde(default)]
-    pub file_extensions: Vec<String>,
-    /// The provider binary inside the package, by platform (`darwin-arm64`).
-    #[serde(default)]
-    pub sidecar: BTreeMap<String, String>,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -407,10 +384,6 @@ impl ExtensionManifest {
 
     pub fn languages(&self) -> impl Iterator<Item = &LanguageContribution> {
         self.languages.iter().chain(&self.contributes.languages)
-    }
-
-    pub fn databases(&self) -> impl Iterator<Item = &DatabaseContribution> {
-        self.databases.iter().chain(&self.database_providers).chain(&self.contributes.databases)
     }
 
     pub fn agents(&self) -> impl Iterator<Item = &AgentContribution> {

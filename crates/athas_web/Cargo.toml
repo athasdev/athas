@@ -25,7 +25,6 @@ terminal_view = { path = "../terminal_view" }
 lsp_client = { path = "../lsp_client" }
 agent_ui = { path = "../agent_ui" }
 github_panel = { path = "../github_panel" }
-database_view = { path = "../database_view", default-features = false }
 docker_view = { path = "../docker_view" }
 workbench_api = { path = "../workbench_api" }
 futures = "0.3"

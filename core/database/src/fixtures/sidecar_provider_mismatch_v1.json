@@ -1,9 +1,0 @@
-{
-  "protocolVersion": 1,
-  "providerId": "redis",
-  "command": "query_sqlite",
-  "payload": {
-    "path": "/tmp/app.sqlite",
-    "query": "SELECT 1"
-  }
-}

@@ -28,6 +28,5 @@ editor = { path = "../editor" }
 browser_view = { path = "../browser_view" }
 # Recorded GitHub pages for the `detached-pr` scene.
 github_panel = { path = "../github_panel", features = ["snapshot"] }
-# The command palette's database and Docker pages (`database-palette`, `docker-palette`).
-database_view = { path = "../database_view" }
+# The command palette's Docker page (`docker-palette`).
 docker_view = { path = "../docker_view" }

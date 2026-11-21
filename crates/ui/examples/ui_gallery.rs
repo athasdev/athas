@@ -269,10 +269,10 @@ impl Gallery {
                             .child(
                                 Item::new("i2")
                                     .variant(ItemVariant::List)
-                                    .media(ItemMedia::Icon(IconName::Database))
-                                    .title("Postgres")
-                                    .description("localhost:5432")
-                                    .action(Button::new("i2b", "Connect").size(ButtonSize::Small)),
+                                    .media(ItemMedia::Icon(IconName::Cube))
+                                    .title("Docker")
+                                    .description("3 containers running")
+                                    .action(Button::new("i2b", "Open").size(ButtonSize::Small)),
                             ),
                     )
                     .child(
@@ -486,8 +486,7 @@ impl Gallery {
                             .gap(px(10.))
                             .child(BrandMark::athas().size(px(20.)))
                             .child(BrandMark::github().size(px(20.)))
-                            .children(["claude-acp", "gemini-cli", "github-copilot-cli", "opencode"].into_iter().filter_map(|agent| BrandMark::agent(agent)).map(|mark| mark.size(px(20.))))
-                            .children(["postgres", "athas.database.sqlite", "redis"].into_iter().filter_map(|provider| BrandMark::database(provider)).map(|mark| mark.size(px(20.)))),
+                            .children(["claude-acp", "gemini-cli", "github-copilot-cli", "opencode"].into_iter().filter_map(|agent| BrandMark::agent(agent)).map(|mark| mark.size(px(20.)))),
                     ),
             )
             .child(

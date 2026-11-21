@@ -143,7 +143,7 @@ localStorage (from `localstorage-export.json` when present, else WebKit's
 | `workspace-tabs-storage-<window>`, `athas-tab-sessions` | not imported: open project tabs, editor tabs and terminal layouts start fresh (the recent list has the projects) |
 | `athas-recent-files`, `actions-storage`, `terminal-sessions:*`, `terminal-profiles` | not imported (history-like; GPUI formats differ) |
 | `athas-ai-chat-settings-v7`, `athas-agent-session-panels-v1`, `athas-session-pull-requests-v1`, `athas-continuous-agents-v1`, `athas-cloud-agents-v1`, `athas.intelligence.*`, `athas-codex-integration-settings` | not imported. `athas-continuous-agents-v1` → `continuous-agents.json` and the intelligence allowlists → `agent-allowlist.json` are the next candidates |
-| `athas-debugger-*`, `athas:database:sql-history:*`, `diagnostics-pane-prefs`, `athas:git-stream-sections`, `athas-workspace-management`, `athas-whats-new`, `athas-contextual-tips-v1`, `athas.settingsSync.meta`, collaboration/sharing device ids, `athas-extension:*`, `athas.generated-ui-extensions`, `athas.installedLanguages`, appearance/font caches | not imported |
+| `athas-debugger-*`, `diagnostics-pane-prefs`, `athas:git-stream-sections`, `athas-workspace-management`, `athas-whats-new`, `athas-contextual-tips-v1`, `athas.settingsSync.meta`, collaboration/sharing device ids, `athas-extension:*`, `athas.generated-ui-extensions`, `athas.installedLanguages`, appearance/font caches | not imported |
 
 Keychain (service `com.code.athas`, account = key; GPUI uses the same account names under
 `dev.athas.app`):
@@ -154,8 +154,6 @@ Keychain (service `com.code.athas`, account = key; GPUI uses the same account na
 | `ai_token_<provider>` | **copied** for the providers the Tauri app knew (openai, anthropic, gemini, grok, mistral, deepseek, openrouter, qwen, vercel and a few more) |
 | `github_token` (via Athas account) | **copied** (GPUI does not use it yet) |
 | `github_pat` | **copied** to `dev.athas.app.github` / `personal-access-token` |
-| `db_saved_connections` (the saved DB connection list itself, JSON) | **imported** into `database-connections.json` (same shape) |
-| `db_cred_<id>` | **copied** for every saved connection |
 | `remote_cred_<id>` | **copied** for every connection in `remote-connections.json` |
 | `mcp_server_<id>` | **copied** for every server in `settings.json` `mcpServers` |
 | `extension:<id>:<key>` | not copied (keys are not enumerable; extensions ask again) |
@@ -316,9 +314,9 @@ Checklist (the user's call; nothing here touches the athas repository):
    (`package.json`, `bun.lock`, vite config) except what `scripts/release/` needs (bun is still
    used by `release-assets.mjs`, notes generation and package managers). **Keep** the shared Rust
    crates the GPUI workspace path-depends on today (`../athas/crates/{project, version-control,
-   github, database, docker, browser, claude-ide, wsl, runtime, fff-search, test-support}`, plus
-   `#[path]` includes of `github/src/models.rs`, `serde_helpers.rs`,
-   `database/src/sql_common.rs` and `docker/src/types.rs` in a build script) and
+   github, docker, browser, claude-ide, wsl, runtime, fff-search, test-support}`, plus
+   `#[path]` includes of `github/src/models.rs`, `serde_helpers.rs` and
+   `docker/src/types.rs` in a build script) and
    `extensions/official` (read by `extensions::catalog` and `lsp_client::generate`). Move them
    under `crates/` (renaming the clashes, e.g. `athas-extensions` vs GPUI's `extensions`) or a
    `shared/` folder, and drop the Tauri-only crates (`ai`, `lsp`, `extensions` installer …) once

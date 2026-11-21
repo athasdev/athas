@@ -75,7 +75,7 @@ pub use scroll_area::{AlwaysShowScrollbars, ScrollArea, Scrollbar, WithScrollbar
 pub use select::{Select, SelectEvent, SelectOption, SelectSearch, SelectVariant, SelectWidth};
 pub use step_slider::{StepSlider, StepSliderStep};
 pub use surfaces::{
-    BrandMark, HoverCard, Table, TableColumn, TableRow, ViewerErrorState, ViewerLayout, ViewerLoadingState, ViewerState, agent_brand_image, checkerboard, database_brand_image,
+    BrandMark, HoverCard, Table, TableColumn, TableRow, ViewerErrorState, ViewerLayout, ViewerLoadingState, ViewerState, agent_brand_image, checkerboard,
 };
 pub use switch::Switch;
 pub use tab::Tab;

@@ -436,7 +436,6 @@ pub(crate) fn call(workspace: &Workspace, method: &str, params: &Params) -> Resu
         }
         method if method.starts_with(web_protocol::github::METHOD_PREFIX) => crate::github::call(workspace, method, params),
         "preview.base" => Ok(json!({ "path": format!("{}{}/", crate::serve::PREVIEW_PREFIX, workspace.preview_key) })),
-        method if method.starts_with(database_view::relay::METHOD_PREFIX) => crate::services::database(workspace, method, params),
         method if method.starts_with(docker_view::relay::METHOD_PREFIX) => crate::services::docker(workspace, method, params),
         "git.status" => Ok(serde_json::to_value(git::parse_status(&git_run(root, &["status", "--porcelain=v2", "--branch", "-z"])?)).unwrap_or_default()),
         "git.diff" => {

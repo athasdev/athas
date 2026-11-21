@@ -1,6 +1,0 @@
-{
-  "protocolVersion": 1,
-  "providerId": "sqlite",
-  "command": "__panic_for_test",
-  "payload": {}
-}

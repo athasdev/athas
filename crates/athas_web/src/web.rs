@@ -396,7 +396,6 @@ fn install_server(server: Server, info: WorkspaceInfo) -> (PathBuf, Arc<Server>,
     git_panel::set_discover(git.clone());
     github_panel::relay::set_transport(Arc::new(crate::GitHubRelay::new(transport.clone())));
     let services = Arc::new(crate::ServiceRelay::new(transport.clone()));
-    database_view::relay::set_transport(services.clone());
     docker_view::relay::set_transport(services);
     match transport.call("preview.base", serde_json::json!({})) {
         Ok(answer) => {

@@ -1,7 +1,6 @@
 use std::path::{Path, PathBuf};
 
 use agent_ui::{SessionInfo, SessionView, SessionViewEvent};
-use database_view::DatabaseView;
 use docker_view::DockerView;
 use editor::{Editor, EditorEvent};
 use gpui::{AnyView, Context, FocusHandle, Focusable, Subscription, Window, prelude::*};
@@ -523,11 +522,7 @@ impl Workbench {
             TabItem::File { path } => {
                 let path = PathBuf::from(path);
                 let backend = crate::remote_projects::file_backend(&path);
-                if backend.is_none() && database_view::is_database_file(&path) {
-                    let connection = Some(path.to_string_lossy().into_owned());
-                    let database = cx.new(|cx| DatabaseView::new(connection, window, cx));
-                    CentreView { focus: Some(database.focus_handle(cx)), view: database.into(), _subscription: None, editor: None, session: None }
-                } else if viewer::can_view(&path) && backend.is_none() {
+                if viewer::can_view(&path) && backend.is_none() {
                     let viewer = cx.new(|cx| FileViewer::open(path, window, cx));
                     CentreView { focus: Some(viewer.focus_handle(cx)), view: viewer.into(), _subscription: None, editor: None, session: None }
                 } else if backend.is_none()
@@ -738,11 +733,6 @@ impl Workbench {
                         SearchEvent::OpenFile { path, line, column } => this.open_file_at(path.clone(), *line, *column, cx),
                     });
                     CentreView { focus: Some(search.focus_handle(cx)), view: search.into(), _subscription: Some(subscription), editor: None, session: None }
-                }
-                "database" => {
-                    let connection = (!id.is_empty()).then(|| id.clone());
-                    let database = cx.new(|cx| DatabaseView::new(connection, window, cx));
-                    CentreView { focus: Some(database.focus_handle(cx)), view: database.into(), _subscription: None, editor: None, session: None }
                 }
                 "problems" => {
                     let view = self.ensure_diagnostics(window, cx)?;

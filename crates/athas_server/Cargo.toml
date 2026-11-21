@@ -12,9 +12,6 @@ path = "src/athas_server.rs"
 name = "athas-server"
 path = "src/main.rs"
 
-[features]
-duckdb = ["database_view/duckdb"]
-
 [dependencies]
 anyhow.workspace = true
 serde_json.workspace = true
@@ -31,8 +28,7 @@ serde.workspace = true
 # `github.*` calls GitHub with the old app's client; git2 reads the repository's remotes.
 athas-github = { path = "../../core/github" }
 git2 = { version = "0.20", default-features = false, features = ["vendored-libgit2"] }
-# `database.*` and `docker.*` run the desktop views' own engines.
-database_view = { path = "../database_view" }
+# `docker.*` runs the desktop view's own engine.
 docker_view = { path = "../docker_view" }
 # The AI draft prompt's status and diff summaries.
 github_panel = { path = "../github_panel" }

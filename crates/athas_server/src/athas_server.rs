@@ -164,12 +164,6 @@ impl Workspace {
         self.github.set_backend(backend);
     }
 
-    /// Keeps the database views' saved connections and history in these files instead of the
-    /// desktop app's.
-    pub fn set_database_paths(&self, connections: Option<PathBuf>, history: Option<PathBuf>) {
-        self.services.set_database_paths(connections, history);
-    }
-
     /// Runs `program` in place of `docker` for the Docker view.
     pub fn set_docker_program(&self, program: std::ffi::OsString) {
         self.services.set_docker_program(program);

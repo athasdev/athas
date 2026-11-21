@@ -10,7 +10,6 @@ pub(crate) fn kind_icon(kind: ExtensionKind) -> IconName {
         ExtensionKind::Language => IconName::Code,
         ExtensionKind::Theme => IconName::Palette,
         ExtensionKind::IconTheme => IconName::Files,
-        ExtensionKind::Database => IconName::Database,
         ExtensionKind::Ai => IconName::Sparkle,
         ExtensionKind::Integration => IconName::PuzzlePiece,
         ExtensionKind::Mcp => IconName::PlugsConnected,

@@ -60,7 +60,6 @@ fn tab_summary(title: &str, kind: &str, id: &str) -> String {
         "github-run" => format!("GitHub action run: {title} (#{id})"),
         "github-release" => format!("GitHub release: {title} (ID: {id})"),
         "github-deployment" => format!("GitHub deployment: {title} (ID: {id})"),
-        "database" => format!("Database: {title}"),
         _ => format!("{title} ({kind})"),
     }
 }

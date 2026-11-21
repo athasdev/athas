@@ -106,7 +106,6 @@ pub fn app_menus(cx: &App) -> Vec<Menu> {
             MenuItem::action("Run Script or Task…", ShowRunActions),
         ]),
         Menu::new("Tools").items([
-            MenuItem::action("Database…", OpenDatabase),
             MenuItem::action("Docker…", OpenDocker),
             MenuItem::separator(),
             MenuItem::action("Preferences", OpenSettings),

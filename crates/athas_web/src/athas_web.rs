@@ -3,7 +3,7 @@
 //! over the workspace protocol (`web_protocol`).
 //!
 //! The backends the workbench asks for (files, editor buffers, git, diffs and blame, search,
-//! terminals, language servers, agents, GitHub, databases, Docker) are plain Rust over a [`Transport`], so they are tested natively
+//! terminals, language servers, agents, GitHub, Docker) are plain Rust over a [`Transport`], so they are tested natively
 //! against an in-process server. The browser's transport makes blocking calls with synchronous
 //! `POST /call` requests, the way the workbench's file system and git interfaces expect, and
 //! listens on the workspace socket for file changes, terminal output and language servers'

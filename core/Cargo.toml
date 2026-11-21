@@ -17,7 +17,6 @@ members = [
   "github",
   "fff-search",
   "debugger",
-  "database",
   "browser",
   "docker",
   "claude-ide",

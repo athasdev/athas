@@ -1,6 +1,6 @@
 //! Athas extensions: the catalog of official extensions, what is installed and enabled, the
 //! installer, and what enabled extensions contribute (themes, icon themes, languages with
-//! their tools, MCP servers, agents, skills and database providers).
+//! their tools, MCP servers, agents and skills).
 //!
 //! Everything lives in the [`Extensions`] global; observe it to redraw when something is
 //! installed, removed, enabled or disabled.
@@ -32,7 +32,7 @@ pub use catalog::{CDN_BASE_URL, Catalog, CatalogEntry, ExtensionIcon, ExtensionK
 pub use icon_theme::{DEFAULT_ICON_THEME, IconTheme};
 pub use languages::{LanguageDefinition, LanguageTools};
 pub use manifest::{
-    AgentContribution, DatabaseContribution, ExtensionManifest, McpServerConfig, McpServerContribution,
+    AgentContribution, ExtensionManifest, McpServerConfig, McpServerContribution,
     SkillContribution, ToolDescriptor,
 };
 use store::InstalledStore;
@@ -321,16 +321,6 @@ impl Extensions {
             .flat_map(|(id, manifest)| {
                 let folder = self.store.dir().map(|dir| dir.join(id));
                 manifest.skills().map(|skill| (id.to_string(), skill.clone(), folder.clone())).collect::<Vec<_>>()
-            })
-            .collect()
-    }
-
-    /// Enabled database providers, with the folder holding their sidecar binaries.
-    pub fn databases(&self) -> Vec<(String, DatabaseContribution, Option<PathBuf>)> {
-        self.active_manifests()
-            .flat_map(|(id, manifest)| {
-                let folder = self.store.dir().map(|dir| dir.join(id));
-                manifest.databases().map(|database| (id.to_string(), database.clone(), folder.clone())).collect::<Vec<_>>()
             })
             .collect()
     }

@@ -5,9 +5,9 @@
 //!
 //! Imported here: keybindings (`keymaps-storage`), recent folders (`athas-code-recent-folders`),
 //! saved run actions (`terminal-custom-actions`), update choices (`athas-update-preferences`),
-//! custom themes, installed extensions, local history, saved database connections
-//! (`db_saved_connections`), agent chats (`chat_history.db`) and secrets (account token, AI keys,
-//! the GitHub token, database, SSH and MCP secrets). Settings and remote connections are read
+//! custom themes, installed extensions, local history, agent chats (`chat_history.db`) and
+//! secrets (account token, AI keys, the GitHub token, SSH and MCP secrets). Settings and remote
+//! connections are read
 //! by their own stores (`settings::legacy_path`, `remote::connections`), language tools and
 //! agents in place (`lsp_client::registry`, `agent_ui::acp::agents`).
 //!
@@ -169,7 +169,6 @@ impl Import<'_> {
         report.note("custom themes", self.custom_themes());
         report.note("extensions", self.extensions());
         report.note("local history", self.local_history());
-        report.note("database connections", self.database_connections());
         report.note("chats", self.chats());
         report.note("secrets", self.secrets());
         let marker = json!({
@@ -339,21 +338,6 @@ impl Import<'_> {
         Ok(true)
     }
 
-    /// The Tauri app kept the list itself in the keychain (`db_saved_connections`).
-    fn database_connections(&self) -> anyhow::Result<bool> {
-        let Some(list) = self.tauri_database_connections() else { return Ok(false) };
-        if list.is_empty() {
-            return Ok(false);
-        }
-        write_new(&self.data_dir.join("database-connections.json"), &serde_json::to_string_pretty(&list)?, false)
-    }
-
-    fn tauri_database_connections(&self) -> Option<Vec<Value>> {
-        let text = self.secrets.tauri("db_saved_connections")?;
-        let list: Vec<Value> = serde_json::from_str(&text).ok()?;
-        Some(list.into_iter().filter(|connection| connection.get("id").and_then(Value::as_str).is_some()).collect())
-    }
-
     /// Each chat of `chat_history.db` as a session transcript in `sessions/`, dated by its last
     /// message, so the history lists it.
     fn chats(&self) -> anyhow::Result<bool> {
@@ -390,11 +374,6 @@ impl Import<'_> {
         moves.extend(FIXED_SECRETS.iter().map(|account| same(account)));
         moves.extend(AI_PROVIDERS.iter().map(|provider| same(&format!("ai_token_{provider}"))));
         moves.push(("github_pat".into(), self.github_service.to_string(), "personal-access-token".into()));
-        for connection in self.tauri_database_connections().unwrap_or_default() {
-            if let Some(id) = connection.get("id").and_then(Value::as_str) {
-                moves.push(same(&format!("db_cred_{id}")));
-            }
-        }
         if let Some(Value::Object(connections)) = read_json(&self.tauri_dir.join("remote-connections.json")) {
             moves.extend(connections.keys().map(|id| same(&format!("remote_cred_{id}"))));
         }
@@ -563,7 +542,7 @@ fn write_new(path: &Path, text: &str, replace: bool) -> anyhow::Result<bool> {
     }
     let temp = path.with_extension("import-tmp");
     std::fs::write(&temp, text)?;
-    // Imported files can hold secrets (database connection strings with passwords).
+    // Imported files can hold secrets (tokens, connection strings with passwords).
     #[cfg(unix)]
     {
         use std::os::unix::fs::PermissionsExt as _;
@@ -667,10 +646,8 @@ mod tests {
             ("athas_auth_token", "session"),
             ("ai_token_anthropic", "sk-ant"),
             ("github_pat", "ghp_x"),
-            ("db_cred_db1", "pg-pass"),
             ("remote_cred_conn-1", "ssh-pass"),
             ("mcp_server_github_1", r#"{"env":[],"headers":[]}"#),
-            ("db_saved_connections", r#"[{"id":"db1","name":"Prod","db_type":"postgres","host":"db","port":5432,"database":"app","username":"me"}]"#),
         ] {
             secrets.tauri.insert(account.into(), value.into());
         }
@@ -720,18 +697,14 @@ mod tests {
 
         assert_eq!(std::fs::read_to_string(data.join("local_history/abc/snapshots/1")).unwrap(), "old text");
 
-        let connections: Vec<Value> = serde_json::from_str(&std::fs::read_to_string(data.join("database-connections.json")).unwrap()).unwrap();
-        assert_eq!(connections[0]["db_type"], "postgres");
-
         let app = secrets.app.borrow();
         let get = |service: &str, account: &str| app.get(&(service.to_string(), account.to_string())).cloned();
         assert_eq!(get("dev.athas.app", "athas_auth_token").as_deref(), Some("session"));
         assert_eq!(get("dev.athas.app", "ai_token_anthropic").as_deref(), Some("sk-ant"));
         assert_eq!(get("dev.athas.app.github", "personal-access-token").as_deref(), Some("ghp_x"));
-        assert_eq!(get("dev.athas.app", "db_cred_db1").as_deref(), Some("pg-pass"));
         assert_eq!(get("dev.athas.app", "remote_cred_conn-1").as_deref(), Some("ssh-pass"));
         assert!(get("dev.athas.app", "mcp_server_github_1").is_some());
-        assert_eq!(app.len(), 6);
+        assert_eq!(app.len(), 5);
 
         let marker: Value = serde_json::from_str(&std::fs::read_to_string(data.join(MARKER_FILE)).unwrap()).unwrap();
         assert_eq!(marker["version"], 1);

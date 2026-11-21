@@ -168,7 +168,6 @@ fn menus() -> Vec<(&'static str, ui::IconName, Vec<Option<Item>>)> {
             "Tools",
             IconName::Wrench,
             vec![
-                command("Databases", "database.connect", None),
                 None,
                 command("Preferences", "workbench.openSettings", None),
                 command("Integrations", "view.showIntegrations", None),

@@ -1568,20 +1568,6 @@
   "icon": "List"
  },
  {
-  "id": "database.connect",
-  "title": "Open Database\u2026",
-  "category": "Database",
-  "description": "Open a saved connection or a database file in this project",
-  "icon": "Database"
- },
- {
-  "id": "database.newConnection",
-  "title": "New Connection\u2026",
-  "category": "Database",
-  "description": "Connect to a database server or open a database file",
-  "icon": "Database"
- },
- {
   "id": "docker.open",
   "title": "Open Docker\u2026",
   "category": "Docker",

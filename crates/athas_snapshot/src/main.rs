@@ -3,15 +3,14 @@
 //!
 //! `cargo run -p athas_snapshot -- out.png [dark|light] [scene] [width] [height]`
 //! Scenes: `project` (default), `session`, `empty`, `hidden-sidebar`, `terminal`, `archived`,
-//! `files`, `git`, `github`, `search`, `browser`, `browser-blank`, `database`, `docker`, `palette`, `quick-open`, `settings`,
+//! `files`, `git`, `github`, `search`, `browser`, `browser-blank`, `docker`, `palette`, `quick-open`, `settings`,
 //! `themes`, `keybindings`, `appearance`, `ai-settings`, `remote`, `project-picker`, `new-project`,
 //! `new-project-details`, `icon-picker` (`ATHAS_SNAPSHOT_ICON=emoji:🚀` sets the project's icon
 //! first), `close-guard`, `unsaved` (with `ATHAS_SNAPSHOT_FILE`), `menu-bar`, `folder-picker`, `window-tabs` (three windows grouped as native tabs, with a
 //! pinned editor tab), `sessions-more` (a project with more sessions than its list shows) and
 //! `session-rename` (a session row being renamed), `session-placeholder` (session `s2` in its own window, its tab
-//! holding the stand-in), `database-palette` / `docker-palette` (the
-//! command palette's database and Docker pages over `ATHAS_SNAPSHOT_PROJECT`), `database:<preview>` (the Database tab in a
-//! `DatabaseView::preview` state, such as `database:sql:select * from users`), `detached-pr` / `detached-issue` (a GitHub page in its own window, from recorded data), `bottom-buffers` (the last tab moved into the
+//! holding the stand-in), `docker-palette` (the command palette's Docker page over
+//! `ATHAS_SNAPSHOT_PROJECT`), `detached-pr` / `detached-issue` (a GitHub page in its own window, from recorded data), `bottom-buffers` (the last tab moved into the
 //! bottom pane) and `bottom-debugger` (Run and Debug in the bottom pane).
 //! Environment:
 //! `ATHAS_SNAPSHOT_SCROLLBARS=1` (every overlay scrollbar's thumb shown, as if hovered),
@@ -260,7 +259,7 @@ fn main() -> Result<()> {
     let overlay = args.get(5).cloned().or_else(|| match scene.as_str() {
         "palette" | "quick-open" | "settings" | "themes" | "keybindings" | "appearance" | "ai-settings" | "notifications" | "run" | "account" | "remote"
         | "project-picker" | "new-project" | "new-project-details" | "icon-picker" | "close-guard" | "menu-bar" | "folder-picker" | "session-rename"
-        | "database-palette" | "docker-palette" => Some(scene.clone()),
+        | "docker-palette" => Some(scene.clone()),
         _ => None,
     });
     if let Some(overlay) = overlay {
@@ -268,11 +267,6 @@ fn main() -> Result<()> {
             window
                 .update(cx, |workbench, window, cx| match overlay.as_str() {
                     "palette" => workbench.command_palette(&workbench::CommandPalette, window, cx),
-                    "database-palette" => {
-                        let root = std::env::var("ATHAS_SNAPSHOT_PROJECT").ok().map(std::path::PathBuf::from);
-                        let picker = database_view::connections_picker(root.as_deref(), window, cx);
-                        workbench.open_modal(picker, window, cx);
-                    }
                     "docker-palette" => {
                         let root = std::env::var("ATHAS_SNAPSHOT_PROJECT").ok().map(std::path::PathBuf::from);
                         let picker = docker_view::docker_picker(root, window, cx);
@@ -472,24 +466,6 @@ fn main() -> Result<()> {
             std::thread::sleep(std::time::Duration::from_millis(60));
         }
     }
-    // `database:<preview>` (such as `database:sql:select * from users`): the Database tab in
-    // that preview state, as `DatabaseView::preview` sets it up.
-    if let Some(preview) = scene.strip_prefix("database:") {
-        cx.update(|cx| {
-            window
-                .update(cx, |workbench, window, cx| {
-                    if let Some(view) = workbench.active_centre_view().and_then(|view| view.downcast::<database_view::DatabaseView>().ok()) {
-                        view.update(cx, |view, cx| view.preview(preview, window, cx));
-                    }
-                })
-                .ok();
-        });
-        for _ in 0..6 {
-            cx.update_window(window.into(), |_, window, _| window.refresh())?;
-            cx.run_until_parked();
-            std::thread::sleep(std::time::Duration::from_millis(settle_ms / 6));
-        }
-    }
     // A close with unsaved changes: edit the file once its editor has loaded it.
     if scene == "unsaved" {
         cx.update(|cx| {
@@ -606,9 +582,6 @@ fn scene_state(scene: &str) -> WorkspaceState {
             });
             state.open_resource("browser", "snapshot", title);
         }
-        "database" => state.open_resource("database", "", "Database"),
-        // With `ATHAS_SNAPSHOT_FILE` (a `.sqlite` file) the file's own Database tab is the one in front.
-        scene if scene.starts_with("database:") && std::env::var_os("ATHAS_SNAPSHOT_FILE").is_none() => state.open_resource("database", "", "Database"),
         "docker" => state.open_resource("docker", "", "Docker"),
         "extensions" => state.open_resource("extensions", "", "Integrations"),
         "debugger" => state.open_resource("debugger", "", "Run and Debug"),

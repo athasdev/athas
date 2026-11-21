@@ -317,7 +317,7 @@ pub struct Settings {
     pub enterprise_allowed_extension_ids: Vec<String>,
     #[serde(rename = "lastSettingsTab")]
     pub last_settings_tab: String,
-    /// One of: all, core, language, theme, icon-theme, snippet, database, ai, integration, skill, agent.
+    /// One of: all, core, language, theme, icon-theme, snippet, ai, integration, skill, agent.
     #[serde(rename = "extensionsActiveTab")]
     pub extensions_active_tab: String,
     #[serde(rename = "maxOpenTabs")]

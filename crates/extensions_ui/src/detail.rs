@@ -475,14 +475,6 @@ fn render_contributions(entry: &CatalogEntry, colors: &ThemeColors, cx: &mut Con
         };
         items.push(item("Skill", div().child(skill.name.clone()), (!detail.is_empty()).then(|| detail.into()), colors));
     }
-    for database in manifest.databases() {
-        let detail = if database.is_file_based {
-            format!("File based · {}", database.file_extensions.join(" "))
-        } else {
-            database.default_port.map_or("Server".into(), |port| format!("Default port {port}"))
-        };
-        items.push(item("Database provider", div().child(database.label.clone()), Some(detail.into()), colors));
-    }
     for integration in manifest.integrations() {
         items.push(item("App", div().child(integration.name.clone()), integration.description.clone().map(Into::into), colors));
     }

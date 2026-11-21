@@ -8,10 +8,6 @@ publish.workspace = true
 [lib]
 path = "src/workbench.rs"
 
-[features]
-# DuckDB files in the database view: `cargo build -p athas --features duckdb` (builds its C++ engine).
-duckdb = ["database_view/duckdb"]
-
 [dependencies]
 gpui.workspace = true
 anyhow.workspace = true
@@ -55,7 +51,6 @@ browser_view = { path = "../browser_view" }
 
 [target.'cfg(not(target_family = "wasm"))'.dependencies]
 # Views over local services.
-database_view = { path = "../database_view" }
 docker_view = { path = "../docker_view" }
 remote = { path = "../remote", features = ["editor", "git_panel", "terminal_view"] }
 wsl = { path = "../wsl" }
@@ -64,7 +59,6 @@ dirs = "6"
 # New Project clones with the same git command the old app ran.
 athas_version_control = { package = "athas-version-control", path = "../../core/version-control" }
 
-# On the web the database and Docker views run on the workspace server (`relay`).
+# On the web the Docker view runs on the workspace server (`relay`).
 [target.'cfg(target_family = "wasm")'.dependencies]
-database_view = { path = "../database_view", default-features = false }
 docker_view = { path = "../docker_view" }

@@ -205,7 +205,7 @@ impl RenderOnce for HoverCard {
             .max_w(OVERLAY_MAX_WIDTH)
             .when_some(self.size.width(), |this, width| this.w(width))
             .map(|this| if self.preview { this.overflow_hidden() } else { this.p(px(12.)).gap(px(8.)) })
-            .rounded(px(12.))
+            .rounded(crate::metrics::RADIUS_XL)
             .bg(theme.colors.overlay)
             .shadow(theme.shadows.popover.clone())
             .font_family(typography::UI_FONT)
@@ -435,19 +435,6 @@ pub fn agent_brand_image(agent: &str) -> Option<&'static str> {
     })
 }
 
-/// The artwork of a database, by provider or extension id (`getDatabaseBrandImage`).
-pub fn database_brand_image(provider: &str) -> Option<&'static str> {
-    Some(match provider.strip_prefix("athas.database.").unwrap_or(provider) {
-        "sqlite" => "extensions/icons/athas.database.sqlite.svg",
-        "duckdb" => "extensions/icons/athas.database.duckdb.svg",
-        "postgres" => "extensions/icons/athas.database.postgres.svg",
-        "mysql" => "extensions/icons/athas.database.mysql.svg",
-        "mongodb" => "extensions/icons/athas.database.mongodb.svg",
-        "redis" => "extensions/icons/athas.database.redis.svg",
-        _ => return None,
-    })
-}
-
 /// A third party's mark in its own colours (`brand-marks.tsx`): not a UI icon, so it keeps its
 /// artwork instead of taking the text colour.
 #[derive(IntoElement)]
@@ -475,10 +462,6 @@ impl BrandMark {
         agent_brand_image(agent).map(|path| Self { source: BrandSource::Image(path), size: px(16.) })
     }
 
-    pub fn database(provider: &str) -> Option<Self> {
-        database_brand_image(provider).map(|path| Self { source: BrandSource::Image(path), size: px(16.) })
-    }
-
     pub fn size(mut self, size: Pixels) -> Self {
         self.size = size;
         self
@@ -502,9 +485,7 @@ mod tests {
     fn brand_images_resolve_like_athas() {
         assert_eq!(agent_brand_image("antigravity-acp"), Some("extensions/icons/athas.agent.antigravity.svg"));
         assert_eq!(agent_brand_image("unknown"), None);
-        assert_eq!(database_brand_image("athas.database.postgres"), database_brand_image("postgres"));
-        assert_eq!(database_brand_image("oracle"), None);
-        for path in ["icons/athas_mark.png", "extensions/icons/athas.agent.claude-acp.svg", "extensions/icons/athas.database.redis.svg"] {
+        for path in ["icons/athas_mark.png", "extensions/icons/athas.agent.claude-acp.svg", "extensions/icons/athas.agent.opencode.svg"] {
             assert!(std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../assets").join(path).exists(), "{path}");
         }
     }

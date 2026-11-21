@@ -934,7 +934,6 @@ impl Workbench {
                 if kind == "extensions" && title == "Extensions" { "Integrations".to_string() } else { title.clone() },
                 match kind.as_str() {
                     "search" => IconName::Search,
-                    "database" => IconName::Database,
                     "docker" => IconName::Package,
                     "extensions" => IconName::PuzzlePiece,
                     "debugger" => IconName::Bug,

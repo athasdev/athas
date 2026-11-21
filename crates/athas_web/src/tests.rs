@@ -489,38 +489,6 @@ fn github_views_relay_through_the_server() {
 }
 
 #[test]
-fn database_views_relay_through_the_server() {
-    use database_view::relay::{self, RemoteBackend};
-
-    let (_dir, root, local, _events) = setup();
-    let state = tempfile::tempdir().unwrap();
-    local.workspace.set_database_paths(Some(state.path().join("connections.json")), Some(state.path().join("history.json")));
-    relay::set_transport(Arc::new(ServiceRelay::new(local.clone())));
-
-    let file = root.join("notes.sqlite");
-    std::fs::write(&file, b"").unwrap();
-    let connection: database_view::SavedConnection =
-        serde_json::from_value(serde_json::json!({ "id": "notes", "name": "Notes", "db_type": "sqlite", "file_path": file.to_string_lossy() })).unwrap();
-    RemoteBackend::test(&connection, None).unwrap();
-    let backend = RemoteBackend::open(&connection, None).unwrap();
-    assert_eq!(backend.file_path(), Some(file.as_path()));
-    backend.run("CREATE TABLE notes (id INTEGER PRIMARY KEY, body TEXT)").unwrap();
-    assert_eq!(backend.insert("notes", &["body".into()], &[Value::from("hello")]).unwrap(), 1);
-    assert_eq!(backend.objects().unwrap()[0].name, "notes");
-    assert!(backend.columns("notes").unwrap()[0].primary_key);
-    let outcome = backend.run("SELECT body FROM notes").unwrap();
-    assert_eq!(outcome.result.rows, vec![vec![Value::from("hello")]]);
-    assert_eq!(backend.info(1).unwrap().tables, 1);
-    backend.close();
-    assert!(backend.objects().is_err());
-
-    relay::save_connections(std::slice::from_ref(&connection)).unwrap();
-    assert_eq!(relay::connections().unwrap(), vec![connection]);
-    relay::save_history("sqlite:file:notes", &["SELECT 1".into()]).unwrap();
-    assert_eq!(relay::load_history("sqlite:file:notes").unwrap(), vec!["SELECT 1".to_string()]);
-}
-
-#[test]
 fn html_previews_load_from_the_server() {
     let root = Path::new("/work/site");
     assert_eq!(

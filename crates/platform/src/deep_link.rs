@@ -37,8 +37,7 @@ const SETTINGS_TABS: [&str; 18] = [
     "file-explorer",
 ];
 
-const EXTENSION_CATEGORIES: [&str; 9] =
-    ["all", "language", "theme", "icon-theme", "database", "ai", "integration", "skill", "agent"];
+const EXTENSION_CATEGORIES: [&str; 8] = ["all", "language", "theme", "icon-theme", "ai", "integration", "skill", "agent"];
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum DeepLink {

@@ -5,10 +5,6 @@ version.workspace = true
 license.workspace = true
 publish.workspace = true
 
-[features]
-# DuckDB files in the database view, off by default (builds DuckDB's C++ engine from source).
-duckdb = ["workbench/duckdb"]
-
 [dependencies]
 gpui.workspace = true
 gpui_platform.workspace = true

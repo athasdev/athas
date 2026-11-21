@@ -1,5 +1,5 @@
-//! The database and Docker views' relays: their calls go to the workspace server, which opens the
-//! databases and runs the `docker` CLI there (`database.*`, `docker.*`).
+//! The Docker view's relay: its calls go to the workspace server, which runs the `docker` CLI
+//! there (`docker.*`).
 
 use std::sync::Arc;
 
@@ -18,12 +18,6 @@ impl ServiceRelay {
 
     fn call(&self, method: &str, params: Value) -> Result<Value, String> {
         self.transport.call(method, params).map_err(|error| error.message)
-    }
-}
-
-impl database_view::relay::DatabaseTransport for ServiceRelay {
-    fn call(&self, method: &str, params: Value) -> Result<Value, String> {
-        ServiceRelay::call(self, method, params)
     }
 }
 

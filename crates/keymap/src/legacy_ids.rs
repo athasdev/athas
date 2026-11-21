@@ -142,7 +142,6 @@ const LEGACY_PALETTE_IDS: &[(&str, &str)] = &[
     ("github-refresh", "github.refresh"),
     ("github-check-auth", "github.checkAuthentication"),
     ("github-connect-account", "github.connectAccount"),
-    ("database-connect", "database.connect"),
     ("ai-open-agent-window", "ai.openAgentInNewWindow"),
     ("ai-toggle-follow-agent", "ai.toggleFollowAgent"),
     ("ai-cycle-agent-mode", "ai.cycleAgentMode"),
@@ -192,7 +191,7 @@ mod tests {
         assert_eq!(migrate_legacy_command_id("git-push"), "git.push");
         assert_eq!(migrate_legacy_command_id("open-settings-tab-keyboard"), "preferences.openSettingsTab.keyboard");
         assert_eq!(migrate_legacy_command_id("extension-command:demo.run"), "extension-command:demo.run");
-        assert_eq!(legacy_command_ids().len(), 164);
+        assert_eq!(legacy_command_ids().len(), 163);
     }
 
     #[test]
