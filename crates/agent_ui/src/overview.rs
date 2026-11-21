@@ -839,7 +839,7 @@ impl SessionView {
         let files = file_edits(&self.transcript);
         if files.is_empty() {
             let empty = ui::EmptyState::new("No changes yet").icon(IconName::GitDiff).message("Files the agent creates or edits in this session show here, with their diffs.");
-            return self.page("session-changes", empty);
+            return self.page("session-changes", div().w_full().flex().justify_center().pt(px(72.)).child(empty));
         }
         let (additions, deletions) = files.iter().fold((0, 0), |(added, removed), (file, _)| (added + file.additions, removed + file.deletions));
         let root = self.info.cwd.clone();
@@ -1081,7 +1081,7 @@ impl SessionView {
         let issues = linked_issues(&self.transcript);
         if issues.is_empty() {
             let empty = ui::EmptyState::new("No linked issues").icon(IconName::CircleDot).message("Issues this session links to, or that you add as context with @, show here.");
-            return self.page("session-issues", empty);
+            return self.page("session-issues", div().w_full().flex().justify_center().pt(px(72.)).child(empty));
         }
         let open = self.open_issues.clone().unwrap_or_default();
         let count = issues.len();
