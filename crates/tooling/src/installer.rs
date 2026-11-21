@@ -908,18 +908,47 @@ impl ToolInstaller {
 
     /// Reuses a managed binary under `tools_dir` or downloads the configured one there.
     async fn install_binary_in(tools_dir: &Path, config: &ToolConfig, command_name: &str) -> Result<PathBuf, ToolError> {
-        if let Some(path) = Self::existing_managed_binary(tools_dir, config, command_name)? {
+        let existing = Self::existing_managed_binary(tools_dir, config, command_name)?;
+        let Some(url) = config.download_url.as_ref() else {
+            return existing.ok_or_else(|| {
+                ToolError::NotFound(format!(
+                    "{} (not found in system locations and no managed binary download URL configured)",
+                    command_name
+                ))
+            });
+        };
+
+        let Some(path) = existing else {
+            return Self::download_managed_binary(tools_dir, config, command_name, url).await;
+        };
+        if !Self::managed_binary_outdated(tools_dir, &config.name, url) {
             return Ok(path);
         }
-
-        if let Some(url) = config.download_url.as_ref() {
-            Self::download_binary(&Self::binary_install_dir_in(tools_dir, &config.name), &config.name, command_name, url).await
-        } else {
-            Err(ToolError::NotFound(format!(
-                "{} (not found in system locations and no managed binary download URL configured)",
-                command_name
-            )))
+        // The pinned release moved on; keep the old binary if the new one can't be fetched.
+        match Self::download_managed_binary(tools_dir, config, command_name, url).await {
+            Ok(updated) => Ok(updated),
+            Err(error) => {
+                log::warn!("Updating {} failed, keeping the installed version: {}", config.name, error);
+                Ok(path)
+            }
         }
+    }
+
+    async fn download_managed_binary(tools_dir: &Path, config: &ToolConfig, command_name: &str, url: &str) -> Result<PathBuf, ToolError> {
+        let path = Self::download_binary(&Self::binary_install_dir_in(tools_dir, &config.name), &config.name, command_name, url).await?;
+        let _ = fs::write(Self::binary_source_path(tools_dir, &config.name), url);
+        Ok(path)
+    }
+
+    /// Where the URL a managed binary came from is kept, next to its folder.
+    fn binary_source_path(tools_dir: &Path, name: &str) -> PathBuf {
+        tools_dir.join("binary").join(format!("{name}.source"))
+    }
+
+    /// An install made from another URL than the configured one. Installs from before the URL
+    /// was recorded count as current.
+    fn managed_binary_outdated(tools_dir: &Path, name: &str, url: &str) -> bool {
+        fs::read_to_string(Self::binary_source_path(tools_dir, name)).is_ok_and(|installed| installed.trim() != url)
     }
 
     pub async fn install_managed(data_dir: &Path, config: &ToolConfig) -> Result<PathBuf, ToolError> {

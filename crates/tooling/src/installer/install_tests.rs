@@ -425,6 +425,29 @@ async fn binary_tools_reuse_managed_installs_before_downloading() {
     assert!(ToolInstaller::is_installed_in(empty_tools.path(), &without_url).unwrap());
 }
 
+#[tokio::test]
+async fn binary_tools_update_when_the_pinned_download_changes() {
+    let server = FixtureServer::start(vec![("/v1", Reply::Body(b"one".to_vec())), ("/v2", Reply::Body(b"two".to_vec()))]);
+    let tools = tempfile::tempdir().unwrap();
+    let mut tool = config(UNKNOWN_TOOL, ToolRuntime::Binary);
+
+    tool.download_url = Some(server.url("/v1"));
+    let path = ToolInstaller::install_binary_in(tools.path(), &tool, UNKNOWN_TOOL).await.unwrap();
+    assert_eq!(fs::read(&path).unwrap(), b"one");
+    assert_eq!(ToolInstaller::install_binary_in(tools.path(), &tool, UNKNOWN_TOOL).await.unwrap(), path);
+    assert_eq!(server.hits(), 1);
+
+    tool.download_url = Some(server.url("/v2"));
+    let path = ToolInstaller::install_binary_in(tools.path(), &tool, UNKNOWN_TOOL).await.unwrap();
+    assert_eq!(fs::read(&path).unwrap(), b"two");
+    assert_eq!(server.hits(), 2);
+
+    // A newer pin that can't be fetched leaves the working install in place.
+    tool.download_url = Some(server.url("/gone"));
+    let path = ToolInstaller::install_binary_in(tools.path(), &tool, UNKNOWN_TOOL).await.unwrap();
+    assert_eq!(fs::read(&path).unwrap(), b"two");
+}
+
 #[test]
 fn resolves_tool_paths_for_each_runtime() {
     let tools = tempfile::tempdir().unwrap();
