@@ -18,7 +18,7 @@ use crate::{
     thread::{Entry, PlanStatus, ToolContent, ToolStatus, Transcript},
 };
 
-const PAGE_WIDTH: f32 = 760.;
+use crate::render::{CONTENT_PADDING, CONTENT_WIDTH};
 /// The Changes page's file list: its first width, and the least it can be dragged to.
 pub const CHANGES_LIST_WIDTH: f32 = 280.;
 const CHANGES_LIST_MIN_WIDTH: f32 = 180.;
@@ -551,10 +551,10 @@ impl SessionView {
             .flex()
             .flex_col()
             .items_center()
-            .px(px(24.))
+            .px(px(CONTENT_PADDING))
             .pt(px(28.))
             .pb(px(48.))
-            .child(div().w_full().max_w(px(PAGE_WIDTH)).flex().flex_col().gap(px(24.)).child(content))
+            .child(div().w_full().max_w(px(CONTENT_WIDTH)).flex().flex_col().gap(px(24.)).child(content))
             .into_any_element()
     }
 

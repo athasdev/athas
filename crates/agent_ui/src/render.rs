@@ -26,7 +26,9 @@ use crate::{
 };
 
 /// The transcript's column, as wide as Athas's `chatContentWidth`.
-const CONTENT_WIDTH: f32 = 760.;
+pub(crate) const CONTENT_WIDTH: f32 = 760.;
+/// The side padding every page of the session (chat, overview, issues) keeps around its column.
+pub(crate) const CONTENT_PADDING: f32 = 24.;
 const OUTPUT_LINE_LIMIT: usize = 200;
 /// How tall an open tool step grows before its body scrolls.
 const TOOL_BODY_MAX_HEIGHT: f32 = 320.;
@@ -103,7 +105,7 @@ impl Render for SessionView {
                         .w_full()
                         .flex()
                         .justify_center()
-                        .px(px(16.))
+                        .px(px(CONTENT_PADDING))
                         .pb(px(12.))
                         .child(
                             div()
@@ -133,8 +135,7 @@ impl Render for SessionView {
             crate::overview::SessionPage::Issues if !empty => self.render_issues(cx),
             _ => body,
         };
-        // The Changes page uses the whole width for its file list and diff.
-        let body = if self.page == crate::overview::SessionPage::Changes && !empty { body } else { self.with_side_column(body, window, cx) };
+        let body = self.with_side_column(body, window, cx);
         div()
             .id("agent-session")
             .key_context("AgentSession")
@@ -256,7 +257,7 @@ impl SessionView {
             .w_full()
             .flex()
             .justify_center()
-            .px(px(16.))
+            .px(px(CONTENT_PADDING))
             .pt(top)
             .when(last, |this| this.pb(px(16.)))
             .when_some(pinned_room, |this, room| this.min_h(room).items_start())
