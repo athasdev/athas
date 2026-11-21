@@ -2247,6 +2247,7 @@ impl FileTree {
             .map(|size| div().flex_none().child(ui::Badge::new(format_directory_size(size))));
 
         let content = div()
+            .id(("file-tree-row-content", index))
             .flex()
             .flex_1()
             .min_w_0()
@@ -2258,7 +2259,7 @@ impl FileTree {
             .rounded(metrics::RADIUS)
             .border_1()
             .border_color(if has_ring { colors.focus_ring } else { gpui::transparent_black() })
-            .map(|this| if editing.is_none() { ui::sidebar_row(this, highlighted, false, cx) } else { this.text_color(colors.foreground) })
+            .when(highlighted, |this| ui::sidebar_row(this, true, false, cx))
             .when(row.ignored, |this| this.opacity(0.5))
             .when(cut, |this| this.italic().opacity(0.4))
             .children(arrow)
@@ -2274,7 +2275,13 @@ impl FileTree {
             .h(self.type_scale().row_height())
             .text_size(self.type_scale().sm())
             .line_height(gpui::relative(typography::LEADING_ROW))
-            .text_color(colors.foreground)
+            .map(|this| {
+                if editing.is_some() || highlighted {
+                    this.text_color(colors.foreground)
+                } else {
+                    ui::sidebar_row(this, false, false, cx)
+                }
+            })
             .child(content)
             .children(guides.into_iter().flatten());
         if editing.is_none() && !row.draft {
