@@ -3,8 +3,6 @@
 
 mod binary;
 mod csv;
-mod image_edit;
-mod image_editor;
 mod pdf;
 
 use std::{
@@ -17,13 +15,13 @@ use std::{
 };
 
 use gpui::{
-    AnyElement, App, Bounds, ClipboardItem, Context, DismissEvent, Entity, FocusHandle, Focusable, IntoElement, ListAlignment, ListState,
-    MouseButton, MouseDownEvent, MouseMoveEvent, ObjectFit, Pixels, Point, Render, RenderImage, ScrollEvent,
+    Anchor, AnyElement, App, Bounds, ClipboardItem, Context, DismissEvent, Entity, FocusHandle, Focusable, IntoElement, ListAlignment,
+    ListState, MouseButton, MouseDownEvent, MouseMoveEvent, ObjectFit, Pixels, Point, Render, RenderImage, ScrollEvent,
     ScrollHandle, SharedString, Subscription, Task, UniformListScrollHandle, Window, canvas, deferred, div, img, list, prelude::*, px,
     uniform_list,
 };
 use theme::ActiveTheme;
-use ui::{Button, ButtonSize, EmptyState, IconName, PathBreadcrumb, WithScrollbar, metrics, pane_actions, pane_header, typography};
+use ui::{Button, ButtonSize, EmptyState, IconName, MenuEntry, MenuItem, OpenMenu, PathBreadcrumb, WithScrollbar, metrics, pane_actions, pane_header, typography};
 
 const IMAGE_EXTENSIONS: &[&str] = &["png", "jpg", "jpeg", "gif", "webp", "bmp", "ico", "svg"];
 /// Zoom levels the zoom buttons step through.
@@ -166,17 +164,11 @@ struct ImageState {
     offset: Point<Pixels>,
     drag: Option<Point<Pixels>>,
     bounds: Rc<Cell<Bounds<Pixels>>>,
-    edits: image_editor::ImageEdits,
 }
 
 impl ImageState {
-    /// The size of the image as edited, else as opened.
-    fn shown_size(&self) -> Option<(u32, u32)> {
-        self.edits.current().map(|image| image.size).or(self.size)
-    }
-
     fn fit(&self) -> f32 {
-        let Some((width, height)) = self.shown_size() else { return 1. };
+        let Some((width, height)) = self.size else { return 1. };
         let bounds = self.bounds.get().size;
         fit_scale((width as f32, height as f32), (f32::from(bounds.width) - 48., f32::from(bounds.height) - 48.))
     }
@@ -355,14 +347,9 @@ impl FileViewer {
         }
     }
 
-    /// Reloads the view when the file changed on disk, unless an image has unsaved edits.
+    /// Reloads the view when the file changed on disk.
     fn file_changed(&mut self, stamp: Option<(std::time::SystemTime, u64)>, cx: &mut Context<Self>) {
         if stamp.is_none() || stamp == self.stamp || matches!(self.content, Content::Loading) {
-            return;
-        }
-        if let Content::Image(state) = &self.content
-            && state.edits.current().is_some()
-        {
             return;
         }
         let Some(kind) = Kind::of(&self.path) else { return };
@@ -403,7 +390,6 @@ impl FileViewer {
                 offset: Point::default(),
                 drag: None,
                 bounds: Rc::new(Cell::new(Bounds::default())),
-                edits: Default::default(),
             }),
             Ok(Loaded::Csv { text, bytes }) => {
                 let delimiter = if extension(&self.path) == "tsv" { csv::Delimiter::Tab } else { csv::detect_delimiter(&text) };
@@ -499,17 +485,30 @@ impl FileViewer {
         cx.notify();
     }
 
+    /// Show in Finder and Copy Path, on right-clicking the image.
+    fn image_context_menu(&mut self, event: &MouseDownEvent, window: &mut Window, cx: &mut Context<Self>) {
+        let weak = cx.weak_entity();
+        let item = |label: &str, icon: IconName, run: fn(&FileViewer, &mut App)| {
+            let weak = weak.clone();
+            MenuEntry::from(MenuItem::new(label.to_string()).icon(icon).on_select(move |_, cx| {
+                weak.update(cx, |this, cx| run(this, cx)).ok();
+            }))
+        };
+        let entries = vec![
+            item("Show in Finder", IconName::FolderOpen, |this, cx| cx.reveal_path(&this.path)),
+            item("Copy Path", IconName::Copy, |this, cx| cx.write_to_clipboard(ClipboardItem::new_string(this.path.to_string_lossy().into_owned()))),
+        ];
+        self.menu = Some(OpenMenu::new("image-context", entries, event.position, Anchor::TopLeft, window, cx, |this: &mut Self, _| this.menu = None));
+        cx.notify();
+    }
+
     fn render_image(&self, state: &ImageState, cx: &mut Context<Self>) -> AnyElement {
         let colors = cx.theme().colors.clone();
         let zoom = state.effective_zoom();
-        let source: gpui::ImageSource = match state.edits.current() {
-            Some(edited) => edited.render.clone().into(),
-            None => self.path.clone().into(),
-        };
-        let image = img(source).flex_none().with_fallback(|| {
+        let image = img(self.path.clone()).flex_none().with_fallback(|| {
             EmptyState::new("Could not load this image").icon(IconName::Image).into_any_element()
         });
-        let image = match (state.zoom, state.shown_size()) {
+        let image = match (state.zoom, state.size) {
             (Some(zoom), Some((width, height))) => image
                 .w(px(width as f32 * zoom))
                 .h(px(height as f32 * zoom))
@@ -521,35 +520,23 @@ impl FileViewer {
         };
         let bounds = state.bounds.clone();
         let dragging = state.drag.is_some();
-        let edit_controls = self.edit_controls(cx);
-        let has_edit_controls = !edit_controls.is_empty();
         let toolbar = self
             .toolbar(Some(extension(&self.path).to_ascii_uppercase()), cx)
-            .children(edit_controls)
-            .when(has_edit_controls, |this| this.child(chrome_separator(&colors)))
             .child(self.zoom_controls("viewer", zoom, cx, |this, step, cx| match step {
                 Some(up) => this.step_image_zoom(up, cx),
                 None => this.zoom_image(None, cx),
             }))
             .child(self.open_button(cx));
-        let (format, bytes) = match state.edits.current() {
-            Some(edited) => (edited.format.label().to_ascii_uppercase(), edited.bytes.len() as u64),
-            None => (extension(&self.path).to_ascii_uppercase(), state.bytes),
-        };
-        // `Zoom: 100%  Type: PNG  320 × 200px`, the size on the right, and how much an edit
-        // changed it.
+        // `Zoom: 100%  Type: PNG  320 × 200px`, and the size on the right.
+        let format = extension(&self.path).to_ascii_uppercase();
         let mut info = vec![format!("Zoom: {}", percent(zoom))];
         if !format.is_empty() {
             info.push(format!("Type: {format}"));
         }
-        if let Some((width, height)) = state.shown_size() {
+        if let Some((width, height)) = state.size {
             info.push(format!("{width} × {height}px"));
         }
-        if state.edits.current().is_some() && state.bytes > 0 && bytes != state.bytes {
-            let change = ((bytes as f64 - state.bytes as f64) / state.bytes as f64 * 100.).round().abs() as i64;
-            info.push(format!("{}{change}%", if bytes < state.bytes { "↓" } else { "↑" }));
-        }
-        let info = StatusText { start: info, end: Some(format!("Size: {}", binary::format_size(bytes))) };
+        let info = StatusText { start: info, end: Some(format!("Size: {}", binary::format_size(state.bytes))) };
         div()
             .flex()
             .flex_col()
@@ -607,8 +594,7 @@ impl FileViewer {
                             .absolute()
                             .size_full(),
                     )
-                    .child(image)
-                    .children(self.render_image_overlays(cx)),
+                    .child(image),
             )
             .child(self.status_bar(info, cx))
             .into_any_element()
