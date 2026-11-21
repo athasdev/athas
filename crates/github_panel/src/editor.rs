@@ -47,11 +47,12 @@ pub(crate) fn block_insertion(text: &str, cursor: usize, snippet: &str) -> Strin
     if at_line_start { snippet.to_string() } else { format!("\n{snippet}") }
 }
 
-/// A Markdown field: Write shows the text, Preview renders it the way the page will.
+/// A Markdown field: the text, with the page's rendering of it live underneath.
 pub struct MarkdownEditor {
     id: SharedString,
     area: Entity<TextArea>,
-    preview: Option<Vec<Block>>,
+    /// The text last parsed and its blocks, so typing re-parses only when the text changed.
+    preview: Option<(String, Vec<Block>)>,
     repository_url: Option<String>,
     open_menu: Option<OpenMenu>,
     disabled: bool,
@@ -117,7 +118,6 @@ impl MarkdownEditor {
 
     pub fn set_text(&mut self, text: &str, cx: &mut Context<Self>) {
         self.area.update(cx, |area, cx| area.set_text(text, cx));
-        self.preview = None;
         cx.notify();
     }
 
@@ -135,23 +135,7 @@ impl MarkdownEditor {
         self.repository_url = url;
     }
 
-    pub fn focus(&self, window: &mut Window, cx: &mut App) {
-        window.focus(&self.area.focus_handle(cx), cx);
-    }
-
-    pub fn show_write(&mut self, cx: &mut Context<Self>) {
-        self.preview = None;
-        cx.notify();
-    }
-
-    fn show_preview(&mut self, cx: &mut Context<Self>) {
-        let text = self.text(cx);
-        self.preview = Some(markdown::parse(&text, self.repository_url.as_deref()));
-        cx.notify();
-    }
-
     fn insert_block(&mut self, snippet: &'static str, window: &mut Window, cx: &mut Context<Self>) {
-        self.preview = None;
         self.area.update(cx, |area, cx| {
             let cursor = area.cursor();
             let text = block_insertion(area.text(), cursor, snippet);
@@ -246,7 +230,7 @@ impl MarkdownEditor {
     }
 
     fn render_format_bar(&self, cx: &mut Context<Self>) -> Option<impl IntoElement> {
-        if self.preview.is_some() || self.disabled || self.area.read(cx).selected_range().is_empty() {
+        if self.disabled || self.area.read(cx).selected_range().is_empty() {
             return None;
         }
         let button = |id: &str, label: &'static str, tooltip: &'static str, marker: &'static str, cx: &mut Context<Self>| {
@@ -347,20 +331,10 @@ impl Render for MarkdownEditor {
     fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let theme = cx.theme().clone();
         let colors = &theme.colors;
-        let writing = self.preview.is_none();
-        let tab = |id: &str, label: &'static str, active: bool| {
-            Button::new(SharedString::from(format!("{}-{id}", self.id)), label).variant(ButtonVariant::Tab).size(ButtonSize::Small).active(active)
-        };
         let header = div()
             .flex()
             .items_center()
             .gap(px(2.))
-            .ml(px(-6.))
-            .child(tab("write", "Write", writing).on_click(cx.listener(|this, _, window, cx| {
-                this.show_write(cx);
-                this.focus(window, cx);
-            })))
-            .child(tab("preview", "Preview", !writing).on_click(cx.listener(|this, _, _, cx| this.show_preview(cx))))
             .child(div().flex_1())
             .children(self.render_format_bar(cx))
             .child(
@@ -374,16 +348,28 @@ impl Render for MarkdownEditor {
                         menus::show(this, "blocks", entries, below(event), Anchor::TopRight, window, cx);
                     })),
             );
-        let body = match &self.preview {
-            None => div()
-                .min_h(px(80.))
-                .capture_key_down(cx.listener(Self::on_key))
-                .child(self.area.clone())
-                .children(self.render_slash_menu(colors, &theme, cx))
-                .into_any_element(),
-            Some(blocks) if blocks.is_empty() => div().min_h(px(80.)).py(px(4.)).text_size(typography::TEXT_SM).text_color(colors.subtle_foreground).child("Nothing to preview yet.").into_any_element(),
-            Some(blocks) => div().id(SharedString::from(format!("{}-preview", self.id))).min_h(px(80.)).max_h(px(420.)).overflow_y_scroll().py(px(4.)).child(markdown::render(blocks, &self.id, cx)).into_any_element(),
-        };
+        let text = self.text(cx);
+        if text.trim().is_empty() {
+            self.preview = None;
+        } else if self.preview.as_ref().is_none_or(|(parsed, _)| *parsed != text) {
+            let blocks = markdown::parse(&text, self.repository_url.as_deref());
+            self.preview = Some((text, blocks));
+        }
+        let preview = self.preview.as_ref().map(|(_, blocks)| {
+            div()
+                .id(SharedString::from(format!("{}-preview", self.id)))
+                .max_h(px(420.))
+                .overflow_y_scroll()
+                .pt(px(10.))
+                .border_t_1()
+                .border_color(colors.divider)
+                .child(markdown::render(blocks, &self.id, cx))
+        });
+        let body = div()
+            .min_h(px(80.))
+            .capture_key_down(cx.listener(Self::on_key))
+            .child(self.area.clone())
+            .children(self.render_slash_menu(colors, &theme, cx));
         div()
             .flex()
             .flex_col()
@@ -397,6 +383,7 @@ impl Render for MarkdownEditor {
             .shadow(theme.shadows.raised.clone())
             .child(header)
             .child(body)
+            .children(preview)
             .children(self.open_menu.as_ref().map(|menu| menu.render()))
     }
 }

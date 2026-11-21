@@ -88,7 +88,7 @@ pub fn run_status_icon(state: &RunState, size: IconSize, colors: &ThemeColors) -
 }
 
 pub fn avatar(login: &str, size: f32) -> Avatar {
-    Avatar::new(login).size(px(size))
+    Avatar::new(login).size(px(size)).image(Some(format!("https://avatars.githubusercontent.com/{login}?s=64")))
 }
 
 pub fn caption(text: impl Into<SharedString>, colors: &ThemeColors) -> Div {

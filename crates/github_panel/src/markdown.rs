@@ -84,6 +84,7 @@ pub enum Block {
     List { start: Option<u64>, items: Vec<ListItem> },
     Table { header: Vec<Inline>, rows: Vec<Vec<Inline>> },
     Rule,
+    Image { src: String, alt: String },
 }
 
 #[derive(Clone, Debug, Default, PartialEq)]
@@ -116,6 +117,8 @@ struct Builder<'a> {
     bold: usize,
     italic: usize,
     links: Vec<String>,
+    /// An image's address and alt text, while its tag is open.
+    image: Option<(String, String)>,
     repo_url: Option<&'a str>,
 }
 
@@ -153,6 +156,10 @@ impl Builder<'_> {
             code.push_str(text);
             return;
         }
+        if let Some((_, alt)) = &mut self.image {
+            alt.push_str(text);
+            return;
+        }
         let style = self.style();
         if let Some(link) = self.links.last().cloned() {
             self.inline().push(text, style, Some(&link));
@@ -170,9 +177,8 @@ impl Builder<'_> {
                 HtmlPiece::Text(text) => self.text(&text),
                 HtmlPiece::Break => self.inline().push("\n", SpanStyle::default(), None),
                 HtmlPiece::Image { src, alt } => {
-                    let label = if alt.is_empty() { "Image".to_string() } else { alt };
-                    let style = self.style();
-                    self.inline().push(&label, style, Some(&src));
+                    self.flush();
+                    self.push_block(Block::Image { src, alt });
                 }
             }
         }
@@ -289,6 +295,7 @@ pub fn parse(source: &str, repo_url: Option<&str>) -> Vec<Block> {
         bold: 0,
         italic: 0,
         links: Vec::new(),
+        image: None,
         repo_url,
     };
     for event in Parser::new_ext(source, options) {
@@ -339,8 +346,8 @@ pub fn parse(source: &str, repo_url: Option<&str>) -> Vec<Block> {
                 Tag::Strikethrough => builder.style.strike = true,
                 Tag::Link { dest_url, .. } => builder.links.push(dest_url.to_string()),
                 Tag::Image { dest_url, .. } => {
-                    builder.links.push(dest_url.to_string());
-                    builder.style.italic = true;
+                    builder.flush();
+                    builder.image = Some((dest_url.to_string(), String::new()));
                 }
                 _ => {}
             },
@@ -400,8 +407,9 @@ pub fn parse(source: &str, repo_url: Option<&str>) -> Vec<Block> {
                     builder.links.pop();
                 }
                 TagEnd::Image => {
-                    builder.links.pop();
-                    builder.style.italic = false;
+                    if let Some((src, alt)) = builder.image.take() {
+                        builder.push_block(Block::Image { src, alt });
+                    }
                 }
                 _ => {}
             },
@@ -607,6 +615,21 @@ fn render_block(block: &Block, id: &str, counter: &mut usize, cx: &App) -> AnyEl
             table.into_any_element()
         }
         Block::Rule => div().h(px(1.)).my(px(4.)).bg(colors.divider).into_any_element(),
+        Block::Image { src, alt } => div()
+            .flex()
+            .min_w_0()
+            .child(
+                gpui::img(src.clone())
+                    .max_w_full()
+                    .max_h(px(420.))
+                    .rounded(metrics::RADIUS_MD)
+                    .with_fallback({
+                        let alt = SharedString::from(if alt.is_empty() { "Image".to_string() } else { alt.clone() });
+                        let muted = colors.subtle_foreground;
+                        move || div().text_size(typography::TEXT_SM).text_color(muted).child(alt.clone()).into_any_element()
+                    }),
+            )
+            .into_any_element(),
     }
 }
 
@@ -724,7 +747,7 @@ mod tests {
 
     #[test]
     fn links_urls_references_and_images() {
-        let blocks = parse("See [docs](https://a.dev), fixes #12 by @mehmet. https://x.io/y. ![logo](https://img/l.png)", Some("https://github.com/o/r"));
+        let blocks = parse("See [docs](https://a.dev), fixes #12 by @mehmet. https://x.io/y.\n\n![logo](https://img/l.png)", Some("https://github.com/o/r"));
         let Block::Paragraph(inline) = &blocks[0] else { panic!() };
         let links: Vec<_> = inline.links.iter().map(|(range, url)| (&inline.text[range.clone()], url.as_str())).collect();
         assert_eq!(
@@ -734,17 +757,15 @@ mod tests {
                 ("#12", "https://github.com/o/r/issues/12"),
                 ("@mehmet", "https://github.com/mehmet"),
                 ("https://x.io/y", "https://x.io/y"),
-                ("logo", "https://img/l.png"),
             ]
         );
+        assert_eq!(blocks[1], Block::Image { src: "https://img/l.png".into(), alt: "logo".into() });
     }
 
     #[test]
     fn strips_html_but_keeps_images_and_breaks() {
         let blocks = parse("<!-- template -->\n<p align=\"center\"><img src=\"https://i/a.png\" alt=\"Shot\"></p>\n\nline<br>next", None);
-        let Block::Paragraph(first) = &blocks[0] else { panic!("{blocks:?}") };
-        assert_eq!(first.text, "Shot");
-        assert_eq!(first.links[0].1, "https://i/a.png");
+        assert_eq!(blocks[0], Block::Image { src: "https://i/a.png".into(), alt: "Shot".into() });
         assert_eq!(text(&blocks[1]), "line\nnext");
     }
 }

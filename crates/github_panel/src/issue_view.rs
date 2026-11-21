@@ -378,7 +378,6 @@ impl IssueView {
                     store::bump(cx);
                     this.composer.update(cx, |editor, cx| {
                         editor.set_text("", cx);
-                        editor.show_write(cx);
                     });
                     match outcome {
                         Outcome::IssueComment(comment) => this.with_comments(|comments| comments.push(comment), cx),

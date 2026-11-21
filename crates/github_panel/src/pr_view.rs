@@ -398,7 +398,6 @@ impl PullRequestView {
                 Ok(_) => {
                     this.composer.update(cx, |editor, cx| {
                         editor.set_text("", cx);
-                        editor.show_write(cx);
                     });
                     this.load(cx);
                 }
