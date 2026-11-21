@@ -220,6 +220,12 @@ impl MessageUsage {
 #[serde(default, rename_all = "camelCase")]
 pub struct Thought {
     pub text: String,
+    /// When the thought began and when it last grew, in milliseconds since the epoch, so a
+    /// group of steps can say how long the agent worked.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub started_at: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub updated_at: Option<u64>,
 }
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -756,8 +762,10 @@ impl Transcript {
     fn append_thought(&mut self, text: &str, new_thought: bool) -> Applied {
         if !new_thought && let Some(Entry::Thought(thought)) = self.entries.last_mut() {
             thought.text.push_str(text);
+            thought.updated_at = Some(now_ms());
         } else {
-            self.entries.push(Entry::Thought(Thought { text: text.to_string() }));
+            let now = now_ms();
+            self.entries.push(Entry::Thought(Thought { text: text.to_string(), started_at: Some(now), updated_at: Some(now) }));
         }
         Applied { entry: Some(self.entries.len() - 1), session: false }
     }
@@ -913,7 +921,7 @@ mod tests {
         assert_eq!(transcript.apply(agent_chunk(", world")).entry, Some(2));
         transcript.apply(update(json!({ "sessionUpdate": "tool_call", "toolCallId": "t1", "title": "Read file", "kind": "read" })));
         assert_eq!(transcript.apply(agent_chunk("Done")).entry, Some(4));
-        assert_eq!(transcript.entries[1], Entry::Thought(Thought { text: "Let me look.".into() }));
+        assert!(matches!(&transcript.entries[1], Entry::Thought(thought) if thought.text == "Let me look."));
         assert_eq!(transcript.entries[2], Entry::Agent(AgentMessage { message_id: None, text: "Hello, world".into(), ..Default::default() }));
         assert!(matches!(&transcript.entries[4], Entry::Agent(message) if message.text == "Done"));
     }

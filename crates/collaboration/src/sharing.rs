@@ -325,7 +325,7 @@ mod tests {
         Transcript {
             entries: vec![
                 Entry::User(UserMessage { text: "Fix /Users/alex/code/app/src/main.rs please".into(), ..Default::default() }),
-                Entry::Thought(Thought { text: "private reasoning".into() }),
+                Entry::Thought(Thought { text: "private reasoning".into(), ..Default::default() }),
                 Entry::Agent(AgentMessage { message_id: None, text: "Edited `C:\\Users\\alex\\main.rs` and ~/notes.md".into(), ..Default::default() }),
                 Entry::Notice(Notice { kind: NoticeKind::Stopped, text: "Stopped".into() }),
                 Entry::Agent(AgentMessage { message_id: None, text: "  ".into(), ..Default::default() }),

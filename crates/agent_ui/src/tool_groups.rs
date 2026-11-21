@@ -78,9 +78,9 @@ pub fn format_duration(ms: Option<u64>) -> Option<String> {
     ms.filter(|ms| *ms >= 1000).map(|ms| format_elapsed((ms + 500) / 1000))
 }
 
-/// The run of two or more tool calls in a row that holds `index`.
+/// The run of tool calls and thoughts in a row that holds `index`: one group, however short.
 pub fn run_at(entries: &[Entry], index: usize) -> Option<Range<usize>> {
-    let is_call = |index: usize| matches!(entries.get(index), Some(Entry::ToolCall(_)));
+    let is_call = |index: usize| matches!(entries.get(index), Some(Entry::ToolCall(_) | Entry::Thought(_)));
     if !is_call(index) {
         return None;
     }
@@ -92,7 +92,7 @@ pub fn run_at(entries: &[Entry], index: usize) -> Option<Range<usize>> {
     while is_call(end) {
         end += 1;
     }
-    (end - start >= 2).then_some(start..end)
+    Some(start..end)
 }
 
 fn is_file_kind(kind: ToolKind) -> bool {
@@ -259,24 +259,30 @@ impl SessionView {
             Entry::ToolCall(call) => Some(call),
             _ => None,
         });
-        let summary = summarize_live(calls, self.is_running());
+        let live = self.is_running() && run.end == self.transcript.entries.len();
+        let summary = summarize_live(calls, live);
         let open = self.group_open(&run);
         let colors = cx.theme().colors.clone();
-        let title = match (&summary.running, summary.started_at) {
-            (Some(_), Some(start)) => {
-                let elapsed = crate::thread::now_ms().saturating_sub(start) / 1000;
-                Some(if elapsed > 0 { format!("Working {}", format_elapsed(elapsed)) } else { "Working".to_string() })
+        let (mut started, mut ended) = (summary.started_at, summary.started_at.zip(summary.duration_ms).map(|(start, ms)| start + ms));
+        for entry in &self.transcript.entries[run.clone()] {
+            if let Entry::Thought(thought) = entry {
+                started = [started, thought.started_at].into_iter().flatten().min();
+                ended = [ended, thought.updated_at].into_iter().flatten().max();
             }
-            (Some(_), None) => Some("Working".to_string()),
-            (None, _) => format_duration(summary.duration_ms).map(|duration| format!("Worked for {duration}")),
+        }
+        let thinking = live && summary.running.is_none() && matches!(self.transcript.entries.get(run.end - 1), Some(Entry::Thought(_)));
+        // One title for the whole group: what it is doing while it works, how long it took after.
+        let (title, detail) = if live {
+            let elapsed = started.map_or(0, |start| crate::thread::now_ms().saturating_sub(start) / 1000);
+            let title = if elapsed > 0 { format!("Working {}", format_elapsed(elapsed)) } else { "Working".to_string() };
+            (title, summary.running.clone().or_else(|| thinking.then(|| "Thinking".to_string())))
+        } else {
+            let seconds = started.zip(ended).map(|(start, end)| (end.saturating_sub(start) + 500) / 1000);
+            let title = seconds.map_or_else(|| "Worked".to_string(), |seconds| format!("Worked for {}", format_elapsed(seconds.max(1))));
+            (title, summary.background.as_ref().map(|background| format!("{background} still running")))
         };
-        let live = summary.running.is_none() && summary.background.is_some();
-        let detail = match (&summary.running, &summary.background) {
-            (Some(running), _) => running.clone(),
-            (None, Some(background)) => format!("{} · {background} still running", describe(&summary)),
-            (None, None) => describe(&summary),
-        };
-        let running = summary.running.is_some();
+        let running = live;
+        let dot = !live && summary.background.is_some();
         // `canReview`: the run changed lines and the chat has edits waiting for review.
         let can_review = self.review_totals.0 > 0 && summary.additions + summary.deletions > 0;
         Some(
@@ -291,11 +297,11 @@ impl SessionView {
                 .text_color(colors.muted_foreground)
                 .hover(|style| style.text_color(colors.foreground))
                 .on_click(cx.listener(move |this, _: &ClickEvent, _, cx| this.toggle_group(run.clone(), cx)))
-                .child(if summary.running.is_none() && live {
+                .child(if dot {
                     div().flex_none().size(px(14.)).flex().items_center().justify_center().child(div().size(px(6.)).rounded_full().bg(colors.success)).into_any_element()
                 } else {
                     // A spinner while it works, the error mark once a step failed, else the list.
-                    let (icon, color) = if summary.running.is_some() {
+                    let (icon, color) = if running {
                         (IconName::CircleDotted, if summary.failed > 0 { colors.destructive } else { colors.primary })
                     } else if summary.failed > 0 {
                         (IconName::WarningCircle, colors.destructive)
@@ -310,9 +316,11 @@ impl SessionView {
                         .flex()
                         .items_baseline()
                         .overflow_hidden()
-                        .children(title.map(|title| div().flex_none().child(format!("{title} · "))))
-                        // The running step's text shimmers (`<Shimmer active={isRunning}>`).
-                        .child(div().min_w_0().truncate().child(ui::Shimmer::new(("tool-group-detail", index), detail).active(running))),
+                        .child(div().flex_none().child(title))
+                        // The live step's text shimmers (`<Shimmer active={isRunning}>`).
+                        .children(detail.map(|detail| {
+                            div().min_w_0().truncate().child(ui::Shimmer::new(("tool-group-detail", index), format!(" · {detail}")).active(running))
+                        })),
                 )
                 .when(summary.additions + summary.deletions > 0, |this| {
                     this.child(div().text_color(colors.git_added).child(format!("+{}", summary.additions)))
@@ -396,8 +404,15 @@ mod tests {
     }
 
     #[test]
-    fn a_lone_call_keeps_its_row() {
-        let entries = vec![Entry::ToolCall(call("1", ToolKind::Read, "/p/a.rs", ToolStatus::Completed))];
-        assert_eq!(run_at(&entries, 0), None);
+    fn thoughts_and_calls_share_one_group() {
+        let entries = vec![
+            Entry::Thought(Default::default()),
+            Entry::ToolCall(call("1", ToolKind::Read, "/p/a.rs", ToolStatus::Completed)),
+            Entry::Agent(Default::default()),
+            Entry::ToolCall(call("2", ToolKind::Read, "/p/b.rs", ToolStatus::Completed)),
+        ];
+        assert_eq!(run_at(&entries, 1), Some(0..2));
+        assert_eq!(run_at(&entries, 3), Some(3..4));
+        assert_eq!(run_at(&entries, 2), None);
     }
 }

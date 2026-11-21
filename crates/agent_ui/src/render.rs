@@ -201,8 +201,7 @@ impl SessionView {
         let content = match entry {
             Entry::User(message) => self.render_user_message(index, &message, cx),
             Entry::Agent(message) => self.render_agent_message(index, &message.text, cx),
-            Entry::Thought(thought) => self.render_thought(index, &thought.text, cx),
-            Entry::ToolCall(call) => {
+            Entry::Thought(_) | Entry::ToolCall(_) => {
                 match self.render_group_header(index, cx) {
                     // A group: its summary, and while open all its steps in one box that shows
                     // about eight rows and scrolls the rest. It follows the newest step while the
@@ -214,6 +213,7 @@ impl SessionView {
                             .flatten()
                             .filter_map(|step| match self.transcript.entries.get(step) {
                                 Some(Entry::ToolCall(call)) => Some(self.render_tool_call(step, call, false, window, cx)),
+                                Some(Entry::Thought(thought)) => Some(self.render_thought(step, &thought.text, cx)),
                                 _ => None,
                             })
                             .collect();
@@ -242,7 +242,7 @@ impl SessionView {
                         });
                         div().flex().flex_col().gap(px(6.)).child(header).children(body).into_any_element()
                     }
-                    None => self.render_tool_call(index, &call, true, window, cx),
+                    None => div().into_any_element(),
                 }
             }
             Entry::Notice(notice) if notice.kind == NoticeKind::Error => self.render_error(index, &notice.text, cx),
@@ -693,10 +693,6 @@ impl SessionView {
             .children(self.render_cloud_tool_calls(index, cx))
             .children(self.render_cloud_run_actions(index, cx))
             .when(!running_last && reply_end, |this| {
-                let (turn_usage, usage) = match &self.transcript.entries[index] {
-                    Entry::Agent(message) => (message.turn_usage.clone(), message.usage.as_ref().and_then(|usage| usage.label())),
-                    _ => (None, None),
-                };
                 this.child(
                     div()
                         .flex()
@@ -711,20 +707,7 @@ impl SessionView {
                                     .tooltip("Copy response as Markdown")
                                     .on_click(move |_, _, cx| cx.write_to_clipboard(gpui::ClipboardItem::new_string(copy_text.clone()))),
                             ),
-                        )
-                        .when_some(turn_usage, |this, turn_usage| {
-                            this.child(
-                                div()
-                                    .id(("turn-usage", index))
-                                    .px(px(4.))
-                                    .anchored_tooltip({
-                                        let text: SharedString = turn_usage.describe().into();
-                                        move || ui::Tooltip::new(text.clone())
-                                    })
-                                    .child(turn_usage.label()),
-                            )
-                        })
-                        .when_some(usage, |this, usage| this.child(div().px(px(4.)).child(usage))),
+                        ),
                 )
             })
             .text_color(colors.foreground)

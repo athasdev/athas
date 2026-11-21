@@ -2892,7 +2892,11 @@ impl SessionView {
             .entries
             .iter()
             .enumerate()
-            .filter(|(_, entry)| matches!(entry, Entry::ToolCall(call) if call.status.is_running() && call.started_at.is_some()))
+            .filter(|(index, entry)| match entry {
+                Entry::ToolCall(call) => call.status.is_running() && call.started_at.is_some(),
+                Entry::Thought(_) => self.is_running() && index + 1 == self.transcript.entries.len(),
+                _ => false,
+            })
             .map(|(index, _)| index)
             .collect();
         if running.is_empty() {
