@@ -110,6 +110,9 @@ pub struct Notifications {
     items: Vec<Notification>,
     /// Ids of notifications shown as toasts right now.
     toasts: Vec<SharedString>,
+    /// Toasts that report what the user just did ("Link copied") and are not kept: they show and
+    /// fade, and never reach the Inbox or its unread count.
+    passing: Vec<Notification>,
     next_id: u64,
     /// Sources still fetching their first list, such as the GitHub inbox: the Inbox shows them
     /// loading instead of empty.
@@ -135,7 +138,7 @@ impl Notifications {
     }
 
     pub fn toasts(&self) -> impl Iterator<Item = &Notification> {
-        self.toasts.iter().filter_map(|id| self.items.iter().find(|item| item.id == *id))
+        self.toasts.iter().filter_map(|id| self.items.iter().chain(&self.passing).find(|item| item.id == *id))
     }
 
     pub fn has_toast(&self, id: &str) -> bool {
@@ -148,12 +151,26 @@ impl Notifications {
     }
 
     pub fn get(&self, id: &str) -> Option<&Notification> {
-        self.items.iter().find(|item| item.id.as_ref() == id)
+        self.items.iter().chain(&self.passing).find(|item| item.id.as_ref() == id)
     }
 }
 
-/// Records a notification and shows it as a toast. A notification with the id of an earlier one
-/// replaces it, as a progress message that later succeeds does.
+/// Whether a notification belongs in the Inbox, not only in a toast. The Inbox keeps what the
+/// user may need to come back to: failures, warnings that explain themselves, anything with a
+/// button or that stays, and what agents report. Plain confirmations of the user's own action
+/// ("Link copied", "Settings exported") and plain hints ("Open a local file first.") only toast.
+fn keeps_history(kind: NotificationKind, category: NotificationCategory, description: &Option<SharedString>, options: &ToastOptions) -> bool {
+    options.action.is_some()
+        || options.secondary_action.is_some()
+        || options.sticky
+        || category == NotificationCategory::Agent
+        || kind == NotificationKind::Error
+        || (kind == NotificationKind::Warning && description.is_some())
+}
+
+/// Shows a notification as a toast and, when it is worth coming back to, keeps it in the
+/// history. A notification with the id of an earlier one replaces it, as a progress message
+/// that later succeeds does.
 pub fn notify(
     cx: &mut App,
     kind: NotificationKind,
@@ -180,29 +197,36 @@ pub fn notify_with(
         store.next_id += 1;
         format!("notification-{}", store.next_id).into()
     });
+    let kept = keeps_history(kind, category, &description, &options);
     store.items.retain(|item| item.id != id);
-    store.items.insert(
-        0,
-        Notification {
-            id: id.clone(),
-            message: message.into(),
-            description,
-            kind,
-            category,
-            created_at: now_ms(),
-            read: false,
-            action: options.action,
-            secondary_action: options.secondary_action,
-            sticky: options.sticky,
-            on_dismiss: options.on_dismiss,
-        },
-    );
-    store.items.truncate(MAX_NOTIFICATIONS);
+    store.passing.retain(|item| item.id != id);
+    let notification = Notification {
+        id: id.clone(),
+        message: message.into(),
+        description,
+        kind,
+        category,
+        created_at: now_ms(),
+        // A passing toast is seen as it shows; it has nothing to read later.
+        read: !kept,
+        action: options.action,
+        secondary_action: options.secondary_action,
+        sticky: options.sticky,
+        on_dismiss: options.on_dismiss,
+    };
+    if kept {
+        store.items.insert(0, notification);
+        store.items.truncate(MAX_NOTIFICATIONS);
+    } else {
+        store.passing.push(notification);
+    }
     store.toasts.retain(|toast| *toast != id);
     store.toasts.push(id.clone());
     if store.toasts.len() > 3 {
         store.toasts.remove(0);
     }
+    let shown = store.toasts.clone();
+    store.passing.retain(|item| shown.contains(&item.id));
     id
 }
 
@@ -249,12 +273,14 @@ pub fn error(cx: &mut App, message: impl Into<SharedString>, description: Option
 }
 
 pub fn dismiss_toast(cx: &mut App, id: &SharedString) {
-    cx.default_global::<Notifications>().toasts.retain(|toast| toast != id);
+    let store = cx.default_global::<Notifications>();
+    store.toasts.retain(|toast| toast != id);
+    store.passing.retain(|item| item.id != *id);
 }
 
 /// The user closed the toast: puts it away and tells whoever asked (`toast:dismissed`).
 pub fn close_toast(cx: &mut App, id: &SharedString) {
-    let on_dismiss = cx.default_global::<Notifications>().items.iter().find(|item| item.id == *id).and_then(|item| item.on_dismiss.clone());
+    let on_dismiss = cx.default_global::<Notifications>().get(id).and_then(|item| item.on_dismiss.clone());
     dismiss_toast(cx, id);
     if let Some(on_dismiss) = on_dismiss {
         on_dismiss(cx);
@@ -282,6 +308,7 @@ pub fn mark_all_read(cx: &mut App) {
 pub fn clear(cx: &mut App) {
     let store = cx.default_global::<Notifications>();
     store.items.clear();
+    store.passing.clear();
     store.toasts.clear();
 }
 
@@ -870,12 +897,12 @@ mod tests {
     #[gpui::test]
     fn the_inbox_reads_new_notifications_without_looping(cx: &mut gpui::TestAppContext) {
         cx.update(|cx| {
-            info(cx, "before");
+            error(cx, "before", None);
         });
         let _inbox = cx.new(InboxPanel::new);
         cx.update(|cx| {
             assert_eq!(cx.global::<Notifications>().unread(), 0, "opening the Inbox reads what is there");
-            info(cx, "while open");
+            error(cx, "while open", None);
         });
         cx.run_until_parked();
         cx.update(|cx| assert_eq!(cx.global::<Notifications>().unread(), 0, "what arrives while it is open is read too"));
@@ -885,7 +912,7 @@ mod tests {
     fn notify_keeps_a_short_history(cx: &mut gpui::TestAppContext) {
         cx.update(|cx| {
             for index in 0..25 {
-                info(cx, format!("message {index}"));
+                error(cx, format!("message {index}"), None);
             }
             let store = cx.global::<Notifications>();
             assert_eq!(store.items().len(), MAX_NOTIFICATIONS);
@@ -898,15 +925,42 @@ mod tests {
     }
 
     #[gpui::test]
+    fn confirmations_only_toast(cx: &mut gpui::TestAppContext) {
+        cx.update(|cx| {
+            info(cx, "Link copied");
+            notify(cx, NotificationKind::Success, NotificationCategory::Athas, "Settings exported", None, None);
+            notify(cx, NotificationKind::Warning, NotificationCategory::Athas, "Open a local file first.", None, None);
+            let store = cx.global::<Notifications>();
+            assert!(store.items().is_empty(), "confirmations and plain hints are not kept");
+            assert_eq!(store.unread(), 0);
+            assert_eq!(store.toasts().count(), 3, "but they still show");
+
+            error(cx, "Save failed", None);
+            notify(cx, NotificationKind::Warning, NotificationCategory::Athas, "keymap.json: 1 entry skipped", Some("bad key".into()), None);
+            notify_with(
+                cx,
+                NotificationKind::Success,
+                NotificationCategory::Athas,
+                "Update ready",
+                None,
+                None,
+                ToastOptions { action: Some(NotificationAction::new("Restart", |_, _| {})), ..Default::default() },
+            );
+            assert_eq!(cx.global::<Notifications>().items().len(), 3, "failures, explained warnings and actionable ones are kept");
+            assert_eq!(cx.global::<Notifications>().passing.len(), 0, "passing toasts leave with the stack's oldest");
+        });
+    }
+
+    #[gpui::test]
     fn the_list_groups_sections_and_searches_every_field(cx: &mut gpui::TestAppContext) {
         cx.update(|cx| {
             notify(cx, NotificationKind::Info, NotificationCategory::Agent, "Agent finished", None, None);
             let saved = error(cx, "Save failed", Some("disk full".into()));
-            notify(cx, NotificationKind::Success, NotificationCategory::Athas, "Pushed main", None, None);
+            notify(cx, NotificationKind::Error, NotificationCategory::Athas, "Push rejected", None, None);
             let items = cx.global::<Notifications>().items().to_vec();
             let now = now_ms();
             let order: Vec<&str> = visible(&items, None, "", now).into_iter().map(|index| items[index].message.as_ref()).collect();
-            assert_eq!(order, ["Pushed main", "Save failed", "Agent finished"], "Athas first, then Agent, newest first");
+            assert_eq!(order, ["Push rejected", "Save failed", "Agent finished"], "Athas first, then Agent, newest first");
             let found: Vec<&str> = visible(&items, None, "disk error", now).into_iter().map(|index| items[index].message.as_ref()).collect();
             assert_eq!(found, ["Save failed"], "description and kind are searched");
             assert!(visible(&items, Some(NotificationCategory::GitHub), "", now).is_empty());
