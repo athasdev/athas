@@ -67,8 +67,10 @@ fn main() {
         if let Some(window) = window {
             window
                 .update(cx, move |_, window, _| {
-                    window.on_next_frame(move |window, cx| {
-                        platform::gpu::log_gpu(window);
+                    // As soon as the window exists, not on its first frame: a window that never
+                    // presents is the case this line is for, and it would never reach a frame.
+                    platform::gpu::log_gpu(window);
+                    window.on_next_frame(move |_, cx| {
                         logging::startup_milestone("workbench:first-frame");
                         telemetry::record_startup(cx, started.elapsed());
                     });
