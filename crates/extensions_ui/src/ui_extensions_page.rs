@@ -249,14 +249,9 @@ impl ExtensionsView {
             cx.emit(crate::ExtensionsViewEvent::TitleChanged("Integrations".into()));
             cx.notify();
         });
-        div()
-            .flex()
-            .flex_col()
-            .flex_1()
-            .min_h_0()
-            .child(
-                pane_header(cx)
-                    .px(px(12.))
+        let embedded = self.embedded();
+        let header = pane_header(cx)
+                    .px(if embedded { px(0.) } else { px(12.) })
                     .child(
                         div()
                             .flex()
@@ -265,23 +260,12 @@ impl ExtensionsView {
                             .child(Button::icon("ui-extension-back", IconName::ArrowLeft).size(ButtonSize::Small).variant(ButtonVariant::Ghost).tooltip("Back").on_click(back))
                             .child(PaneTitle::new(extension.name.clone()).icon(IconName::Sparkle).detail(format!("Generated · {}", extension.contribution_type.label()))),
                     )
-                    .child(pane_actions().gap(px(6.)).child(state_badge(&extension, registration.as_ref()))),
-            )
-            .child(
-                div()
-                    .id("ui-extension-detail")
-                    .flex_1()
-                    .min_h_0()
-                    .overflow_y_scroll()
-                    .child(
-                        div()
+                    .child(pane_actions().gap(px(6.)).child(state_badge(&extension, registration.as_ref())));
+        let body = div()
                             .flex()
                             .flex_col()
                             .w_full()
-                            .max_w(px(860.))
-                            .mx_auto()
-                            .px(px(16.))
-                            .pb(px(24.))
+                            .when(!embedded, |this| this.max_w(px(860.)).mx_auto().px(px(16.)).pb(px(24.)))
                             .child(div().pt(px(8.)).text_size(typography::TEXT_BASE).text_color(colors.muted_foreground).child(extension.description.clone()))
                             .children(error.map(|error| {
                                 ui::Alert::new().tone(Tone::Danger).icon(IconName::WarningCircle).title("The extension stopped").description(error).into_any_element()
@@ -335,10 +319,19 @@ impl ExtensionsView {
                                     .text_size(typography::TEXT_CAPTION)
                                     .text_color(colors.foreground)
                                     .children(extension.code.lines().map(|line| div().whitespace_nowrap().child(if line.is_empty() { " ".to_string() } else { line.to_string() }))),
-                            ),
-                    )
-                    .scrollbar_with(&self.detail_scroll),
-            )
+                            );
+
+        // As a page of Settings the page scrolls the extension; on its own the view does.
+        if embedded {
+            return div().flex().flex_col().w_full().gap(px(8.)).child(header).child(body).into_any_element();
+        }
+        div()
+            .flex()
+            .flex_col()
+            .flex_1()
+            .min_h_0()
+            .child(header)
+            .child(div().id("ui-extension-detail").flex_1().min_h_0().overflow_y_scroll().child(body).scrollbar_with(&self.detail_scroll))
             .into_any_element()
     }
 }

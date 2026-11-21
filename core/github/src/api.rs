@@ -1145,6 +1145,22 @@ pub fn github_check_auth(github_token: Option<String>) -> Result<GitHubAuthStatu
    }
 }
 
+/// The signed-in account's Copilot allowance, or `None` when the account has no Copilot, the
+/// token cannot read it, or the answer's shape moved on. Never an error: the footer hides the row.
+pub fn github_copilot_allowance(
+   github_token: Option<String>,
+) -> Option<crate::copilot::CopilotAllowance> {
+   let api = GitHubApi::new_authenticated(github_token).ok()?;
+   // The endpoint speaks plain JSON, not the versioned `vnd.github+json` media type.
+   let body = api
+      .get_text("/copilot_internal/user", "application/json")
+      .inspect_err(|error| log::debug!("Copilot allowance unavailable: {error}"))
+      .ok()?;
+   crate::copilot::parse_allowance(&body)
+      .inspect_err(|error| log::debug!("Copilot allowance unreadable: {error}"))
+      .ok()
+}
+
 fn is_github_authentication_error(error: &str) -> bool {
    error.starts_with("GitHub authentication failed.")
 }

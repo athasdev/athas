@@ -1,7 +1,7 @@
 //! The workbench's shared controls, drawn the way `src/ui` draws them in the web workbench.
 
 mod assets;
-mod avatar;
+pub mod avatar;
 mod badge;
 mod breadcrumb;
 mod button;
@@ -42,7 +42,7 @@ mod tooltip;
 pub mod typography;
 
 pub use assets::{Assets, load_fonts};
-pub use avatar::Avatar;
+pub use avatar::{Avatar, Person};
 pub use badge::{Badge, Marker, MarkerVariant, StatusDot, Tone};
 pub use breadcrumb::{Breadcrumb, PathBreadcrumb};
 pub use button::{Button, ButtonSize, ButtonTone, ButtonVariant, Plane};

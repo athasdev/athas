@@ -55,22 +55,41 @@ pub enum ExtensionsViewEvent {
     SelectIconTheme,
 }
 
-/// The category filter: everything, or one kind.
+/// The category filter: everything, what is installed, or one kind.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum Filter {
     All,
+    Installed,
     Kind(ExtensionKind),
 }
 
 impl Filter {
     fn from_setting(value: &str) -> Self {
+        if value == "installed" {
+            return Filter::Installed;
+        }
         ExtensionKind::from_id(value).map_or(Filter::All, Filter::Kind)
     }
 
     fn setting(self) -> &'static str {
         match self {
             Filter::All => "all",
+            Filter::Installed => "installed",
             Filter::Kind(kind) => kind.id(),
+        }
+    }
+
+    /// Whether the catalog heads its rows by kind: one heading per kind when the filter mixes
+    /// them, a single heading of its own when it does not.
+    fn grouped(self) -> bool {
+        !matches!(self, Filter::Kind(_))
+    }
+
+    fn admits(self, entry: &CatalogEntry, status: &ExtensionStatus) -> bool {
+        match self {
+            Filter::All => true,
+            Filter::Installed => status.installed || status.operation.is_some(),
+            Filter::Kind(kind) => entry.kind == kind,
         }
     }
 }
@@ -86,6 +105,8 @@ pub struct ExtensionsView {
     ui_views: std::collections::HashMap<String, gpui::Entity<ExtensionView>>,
     list_scroll: ScrollHandle,
     detail_scroll: ScrollHandle,
+    /// Set when the view is a page of Settings: it flows in that page, which scrolls it.
+    page_scroll: Option<ScrollHandle>,
     _subscriptions: Vec<Subscription>,
 }
 
@@ -117,7 +138,7 @@ impl ExtensionsView {
             cx.observe_global::<ui_extensions::UiExtensions>(|_, cx| cx.notify()),
             cx.subscribe(&search, |this, input, event: &TextInputEvent, cx| match event {
                 TextInputEvent::Changed(_) => {
-                    this.list_scroll.scroll_to_item(0);
+                    this.scroll_to_top();
                     cx.notify();
                 }
                 TextInputEvent::Cancelled => input.update(cx, |input, cx| input.set_text("", cx)),
@@ -138,7 +159,30 @@ impl ExtensionsView {
             ui_views: Default::default(),
             list_scroll: ScrollHandle::new(),
             detail_scroll: ScrollHandle::new(),
+            page_scroll: None,
             _subscriptions: subscriptions,
+        }
+    }
+
+    /// Makes the view a page of Settings: no scroller or title of its own, the page's
+    /// `scroll` scrolls it.
+    pub fn embed_in_page(&mut self, scroll: ScrollHandle) {
+        self.page_scroll = Some(scroll);
+    }
+
+    pub(crate) fn embedded(&self) -> bool {
+        self.page_scroll.is_some()
+    }
+
+    /// Back to the top of whatever scrolls the view.
+    pub(crate) fn scroll_to_top(&self) {
+        let top = gpui::point(px(0.), px(0.));
+        match &self.page_scroll {
+            Some(scroll) => scroll.set_offset(top),
+            None => {
+                self.list_scroll.set_offset(top);
+                self.detail_scroll.set_offset(top);
+            }
         }
     }
 
@@ -146,7 +190,7 @@ impl ExtensionsView {
     pub fn open_extension(&mut self, id: &str, cx: &mut Context<Self>) {
         let Some(entry) = extensions::get(cx).entry(id) else { return };
         self.selected = Some(id.to_string());
-        self.detail_scroll.set_offset(gpui::point(px(0.), px(0.)));
+        self.scroll_to_top();
         extensions::refresh_tool_status(id, cx).detach();
         cx.emit(ExtensionsViewEvent::TitleChanged(entry.manifest.display_name.clone().into()));
         cx.notify();
@@ -170,14 +214,21 @@ impl ExtensionsView {
         });
     }
 
-    fn back(&mut self, cx: &mut Context<Self>) {
+    pub(crate) fn back(&mut self, cx: &mut Context<Self>) {
         if self.selected.take().is_some() | self.selected_ui.take().is_some() {
+            self.scroll_to_top();
             cx.emit(ExtensionsViewEvent::TitleChanged("Integrations".into()));
             cx.notify();
         }
     }
 
     fn on_back(&mut self, _: &Back, _: &mut Window, cx: &mut Context<Self>) {
+        // Escape leaves an extension's page. With the catalog open there is nothing to leave,
+        // so it belongs to whatever holds the view — the Settings dialog closes on it.
+        if self.selected.is_none() && self.selected_ui.is_none() {
+            cx.propagate();
+            return;
+        }
         self.back(cx);
     }
 
@@ -193,7 +244,7 @@ impl ExtensionsView {
     fn set_filter(&mut self, filter: Filter, cx: &mut Context<Self>) {
         let value = filter.setting().to_string();
         settings::update(cx, |settings| settings.extensions_active_tab = value);
-        self.list_scroll.scroll_to_item(0);
+        self.scroll_to_top();
         cx.notify();
     }
 
@@ -238,12 +289,12 @@ impl ExtensionsView {
         let mut entries: Vec<(CatalogEntry, ExtensionStatus)> = extensions
             .entries()
             .into_iter()
-            .filter(|entry| filter == Filter::All || filter == Filter::Kind(entry.kind))
             .filter(|entry| query.is_empty() || matches_query(entry, &query))
             .map(|entry| {
                 let status = extensions.status(&entry.manifest.id, settings);
                 (entry, status)
             })
+            .filter(|(entry, status)| filter.admits(entry, status))
             .collect();
         entries.sort_by(|(a, _), (b, _)| {
             (a.kind, a.manifest.display_name.to_lowercase()).cmp(&(b.kind, b.manifest.display_name.to_lowercase()))
@@ -251,7 +302,26 @@ impl ExtensionsView {
         entries
     }
 
-    /// The page's header (`WorkbenchContent`): "Integrations" over the count, the search at the end.
+    /// How many integrations the catalog could show, and how many it does.
+    fn counts(&self, visible: usize, cx: &App) -> String {
+        let extensions = extensions::get(cx);
+        let total = extensions.entries().len();
+        let narrowed = visible != total;
+        let mut detail = if narrowed {
+            format!("{visible} of {total} integrations")
+        } else {
+            format!("{total} integration{}", if total == 1 { "" } else { "s" })
+        };
+        let installed = extensions.installed_count();
+        if installed > 0 {
+            detail.push_str(&format!(" · {installed} installed"));
+        }
+        detail
+    }
+
+    /// The page's header (`WorkbenchContent`): "Integrations" over the count, the search at the
+    /// end. As a page of Settings the title is the page's own, so only the count and the search
+    /// are left, on one line.
     fn render_header(&self, visible: usize, colors: &ThemeColors, cx: &mut Context<Self>) -> impl IntoElement {
         let extensions = extensions::get(cx);
         let settings = settings::get(cx);
@@ -260,26 +330,45 @@ impl ExtensionsView {
             .iter()
             .filter(|entry| extensions.status(&entry.manifest.id, settings).update_available)
             .count();
-        let mut detail = format!("{visible} integration{} · {} installed", if visible == 1 { "" } else { "s" }, extensions.installed_count());
+        let mut detail = self.counts(visible, cx);
         if updates > 0 {
             detail.push_str(&format!(" · {updates} update{}", if updates == 1 { "" } else { "s" }));
         }
+        let embedded = self.embedded();
         div()
             .flex()
             .flex_wrap()
             .items_center()
             .justify_between()
             .gap(px(16.))
-            .mb(px(26.))
+            .mb(if embedded { px(12.) } else { px(26.) })
+            // Settings floats its close button over the top right corner of the page.
+            .when(embedded, |this| this.pr(px(32.)))
             .min_w_0()
             .child(
                 div()
                     .flex()
                     .flex_col()
                     .flex_1()
-                    .min_w(px(256.))
-                    .child(div().text_size(typography::TEXT_LG).line_height(px(21.)).font_weight(typography::MEDIUM).text_color(colors.foreground).child("Integrations"))
-                    .child(div().mt(px(2.)).text_size(typography::TEXT_SM).line_height(px(20.)).text_color(colors.subtle_foreground).child(detail)),
+                    .min_w(px(224.))
+                    .when(!embedded, |this| {
+                        this.child(
+                            div()
+                                .text_size(typography::TEXT_LG)
+                                .line_height(px(21.))
+                                .font_weight(typography::MEDIUM)
+                                .text_color(colors.foreground)
+                                .child("Integrations"),
+                        )
+                    })
+                    .child(
+                        div()
+                            .when(!embedded, |this| this.mt(px(2.)))
+                            .text_size(typography::TEXT_SM)
+                            .line_height(px(20.))
+                            .text_color(colors.subtle_foreground)
+                            .child(detail),
+                    ),
             )
             .child(
                 div()
@@ -299,19 +388,25 @@ impl ExtensionsView {
             )
     }
 
-    /// The category tabs: a segmented control, labels only (`EXTENSION_FILTERS`).
+    /// The category tabs: a segmented control, labels only (`EXTENSION_FILTERS`). "Installed"
+    /// comes first after "All", so what is in use is one click away instead of buried under
+    /// the catalog.
     fn render_filters(&self, cx: &mut Context<Self>) -> impl IntoElement {
         let active = self.filter(cx);
-        let entries = extensions::get(cx).entries();
+        let extensions = extensions::get(cx);
+        let entries = extensions.entries();
         let mut triggers = vec![ui::TabsTrigger::new(Filter::All.setting(), "All")];
+        if extensions.installed_count() > 0 {
+            triggers.push(ui::TabsTrigger::new(Filter::Installed.setting(), "Installed"));
+        }
         for kind in ExtensionKind::ALL {
             if entries.iter().any(|entry| entry.kind == kind) {
                 triggers.push(ui::TabsTrigger::new(Filter::Kind(kind).setting(), kind.label()));
             }
         }
         let view = cx.entity().downgrade();
-        div().id("extensions-filters").flex().mb(px(20.)).min_w_0().overflow_x_scroll().child(
-            ui::Tabs::new("extensions-filter-tabs", triggers, active.setting()).on_change(move |value, _, cx| {
+        div().id("extensions-filters").flex().flex_none().mb(px(16.)).min_w_0().child(
+            ui::Tabs::new("extensions-filter-tabs", triggers, active.setting()).wrap().on_change(move |value, _, cx| {
                 let filter = Filter::from_setting(value);
                 view.update(cx, |this, cx| this.set_filter(filter, cx)).ok();
             }),
@@ -351,7 +446,8 @@ impl ExtensionsView {
     }
 
     /// One catalog row (`ExtensionCatalogCard`): the icon tile, name and description, and the
-    /// state at the end; installing happens on the extension's page.
+    /// state at the end. An extension that is not installed yet carries its own Install, so the
+    /// catalog installs in place; the row still opens the extension's page.
     fn render_row(&self, entry: &CatalogEntry, status: &ExtensionStatus, colors: &ThemeColors, cx: &mut Context<Self>) -> AnyElement {
         let id = entry.manifest.id.clone();
         let manifest = &entry.manifest;
@@ -377,6 +473,27 @@ impl ExtensionsView {
             None if status.installed && status.error.is_none() && has_tool_issue(&id, cx) => {
                 Some(widgets::badge("Issue", widgets::Tone::Danger, colors).into_any_element())
             }
+            None if !status.installed && !status.blocked => {
+                let install_id = id.clone();
+                // One Install on every row of a 90-row catalog is noise, so it waits for the
+                // row to be hovered; it keeps its place either way.
+                Some(
+                    div()
+                        .invisible()
+                        .group_hover(ROW_GROUP, |style| style.visible())
+                        .child(
+                            Button::new(SharedString::from(format!("extension-install-{id}")), "Install")
+                                .size(ButtonSize::Small)
+                                .variant(ButtonVariant::Ghost)
+                                .on_click(cx.listener(move |this, _, _, cx| {
+                                    // The row opens the extension's page; its button only installs.
+                                    cx.stop_propagation();
+                                    this.install(&install_id, cx);
+                                })),
+                        )
+                        .into_any_element(),
+                )
+            }
             None => status_badge(status, colors),
         };
         let description: SharedString =
@@ -385,6 +502,7 @@ impl ExtensionsView {
         let view = cx.entity().downgrade();
         let mut item = ui::Item::new(SharedString::from(format!("extension-{id}")))
             .variant(ui::ItemVariant::List)
+            .hover_group(ROW_GROUP)
             .media(ui::ItemMedia::Element(extension_icon(entry, px(32.), colors)))
             .title(manifest.display_name.clone())
             .description(description)
@@ -418,7 +536,7 @@ impl ExtensionsView {
                 )
                 .into_any_element();
         }
-        let grouped = self.filter(cx) == Filter::All;
+        let grouped = self.filter(cx).grouped();
         let mut sections: Vec<AnyElement> = Vec::new();
         let mut rows: Vec<AnyElement> = Vec::new();
         let mut current_kind: Option<ExtensionKind> = None;
@@ -448,10 +566,14 @@ impl ExtensionsView {
     fn filter_label(&self, cx: &App) -> &'static str {
         match self.filter(cx) {
             Filter::All => "All",
+            Filter::Installed => "Installed",
             Filter::Kind(kind) => kind.label(),
         }
     }
 }
+
+/// The hover group of a catalog row, so its Install shows only under the pointer.
+const ROW_GROUP: &str = "extension-row";
 
 fn has_tool_issue(id: &str, cx: &App) -> bool {
     extensions::get(cx).tool_statuses(id).is_some_and(|statuses| statuses.issue().is_some())
@@ -477,27 +599,21 @@ impl Render for ExtensionsView {
             None if let Some(id) = self.selected_ui.clone() => self.render_generated_detail(&id, &colors, cx),
             None => {
                 let entries = self.visible_entries(cx);
-                div()
-                    .id("extensions-list")
-                    .flex_1()
-                    .min_h_0()
-                    .overflow_y_scroll()
-                    .child(
-                        div()
-                            .flex()
-                            .flex_col()
-                            .w_full()
-                            .max_w(px(768.))
-                            .mx_auto()
-                            .px(px(24.))
-                            .py(px(20.))
-                            .children(self.render_catalog_notice(&colors, cx))
-                            .child(self.render_header(entries.len(), &colors, cx))
-                            .child(self.render_filters(cx))
-                            .child(self.render_catalog(&entries, &colors, cx)),
-                    )
-                    .scrollbar_with(&self.list_scroll)
-                    .into_any_element()
+                let catalog = div()
+                    .flex()
+                    .flex_col()
+                    .w_full()
+                    .when(!self.embedded(), |this| this.max_w(px(768.)).mx_auto().px(px(24.)).py(px(20.)))
+                    .children(self.render_catalog_notice(&colors, cx))
+                    .child(self.render_header(entries.len(), &colors, cx))
+                    .child(self.render_filters(cx))
+                    .child(self.render_catalog(&entries, &colors, cx));
+                // As a page of Settings the page scrolls the catalog; on its own the view does.
+                if self.embedded() {
+                    catalog.into_any_element()
+                } else {
+                    div().id("extensions-list").flex_1().min_h_0().overflow_y_scroll().child(catalog).scrollbar_with(&self.list_scroll).into_any_element()
+                }
             }
         };
         div()
@@ -507,9 +623,10 @@ impl Render for ExtensionsView {
             .on_action(cx.listener(Self::on_focus_search))
             .flex()
             .flex_col()
-            .size_full()
             .min_h_0()
-            .bg(colors.surface)
+            // Embedded it is one block of a Settings page, which gives it its width and ground.
+            .when(!self.embedded(), |this| this.size_full().bg(colors.surface))
+            .when(self.embedded(), |this| this.w_full())
             .text_color(colors.foreground)
             .font_family(typography::UI_FONT)
             .child(body)

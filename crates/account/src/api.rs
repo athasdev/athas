@@ -30,19 +30,23 @@ pub struct AuthUser {
     pub id: i64,
     pub email: String,
     pub name: Option<String>,
+    // The service answers in camelCase; the aliases keep older servers and the snake_case
+    // fixtures working. Without them the picture and the GitHub login were always missing and
+    // every avatar fell back to an initial.
+    #[serde(alias = "avatarUrl")]
     pub avatar_url: Option<String>,
     pub provider: Option<String>,
+    #[serde(alias = "githubUsername")]
     pub github_username: Option<String>,
+    #[serde(alias = "subscriptionStatus")]
     pub subscription_status: Option<String>,
-    #[serde(rename = "subscriptionStatus")]
-    pub subscription_status_camel: Option<String>,
     pub created_at: Option<String>,
 }
 
 impl AuthUser {
     /// Whether the user record itself says Pro, before the plan has loaded.
     pub fn is_pro_snapshot(&self) -> bool {
-        self.subscription_status.as_deref() == Some("pro") || self.subscription_status_camel.as_deref() == Some("pro")
+        self.subscription_status.as_deref() == Some("pro")
     }
 }
 
@@ -684,6 +688,29 @@ mod tests {
         assert_eq!(reported.credits.unwrap().used_cents, 500);
 
         assert_eq!(SubscriptionInfo::parse(&json!({ "status": "gold" })), None);
+    }
+
+    #[test]
+    fn reads_the_user_however_the_service_spells_its_fields() {
+        // What `/api/auth/me` actually answers: the account row, in camelCase.
+        let camel: AuthUser = serde_json::from_value(json!({
+            "id": 7,
+            "email": "sam@example.com",
+            "name": "Sam",
+            "avatarUrl": "https://cdn/a.png",
+            "githubUsername": "sam",
+            "subscriptionStatus": "pro",
+        }))
+        .unwrap();
+        assert_eq!(camel.avatar_url.as_deref(), Some("https://cdn/a.png"));
+        assert_eq!(camel.github_username.as_deref(), Some("sam"));
+        assert!(camel.is_pro_snapshot());
+
+        let snake: AuthUser =
+            serde_json::from_value(json!({ "avatar_url": "https://cdn/b.png", "github_username": "sam", "subscription_status": "pro" })).unwrap();
+        assert_eq!(snake.avatar_url.as_deref(), Some("https://cdn/b.png"));
+        assert_eq!(snake.github_username.as_deref(), Some("sam"));
+        assert!(snake.is_pro_snapshot());
     }
 
     #[test]

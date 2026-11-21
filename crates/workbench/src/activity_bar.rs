@@ -240,7 +240,7 @@ impl Workbench {
                             .leading(
                                 Avatar::new(&crate::web_chrome::web_chrome(cx).and_then(|chrome| (chrome.account_name)(cx)).unwrap_or_else(|| account::avatar_name(cx)))
                                     .size(px(16.))
-                                    .image(account::AccountStore::global(cx).and_then(|store| store.read(cx).avatar_url())),
+                                    .image(ui::avatar::account(cx).and_then(|me| me.picture())),
                             )
                             .active(self.account_menu.is_some() || self.web_account_menu_open())
                             .tooltip("Account")

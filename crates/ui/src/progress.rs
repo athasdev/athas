@@ -20,7 +20,7 @@ pub enum ProgressTone {
 }
 
 impl ProgressTone {
-    fn color(self, colors: &ThemeColors) -> Hsla {
+    pub fn color(self, colors: &ThemeColors) -> Hsla {
         match self {
             ProgressTone::Default => colors.muted_foreground,
             ProgressTone::Accent => colors.primary,

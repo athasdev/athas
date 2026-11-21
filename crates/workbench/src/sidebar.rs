@@ -411,7 +411,78 @@ impl Workbench {
                 }),
             )
             .child(content);
-        ui::with_scrollbar(list, ui::Scrollbar::new("sessions-scrollbar", &scroll))
+        div()
+            .flex()
+            .flex_col()
+            .flex_1()
+            .min_h_0()
+            .child(ui::with_scrollbar(list, ui::Scrollbar::new("sessions-scrollbar", &scroll)))
+            .children(self.render_account_usage(cx))
+    }
+
+    /// What is left on the accounts the agents run on, under the session list. Nothing at all
+    /// when no account reports an allowance, so a sidebar with nothing connected is unchanged.
+    fn render_account_usage(&self, cx: &mut Context<Self>) -> Option<gpui::AnyElement> {
+        let rows = crate::agent_usage::rows(cx);
+        if rows.is_empty() {
+            return None;
+        }
+        let colors = cx.theme().colors.clone();
+        Some(
+            div()
+                .flex()
+                .flex_col()
+                .flex_none()
+                .gap(px(6.))
+                .px(px(8.))
+                .py(px(8.))
+                .border_t_1()
+                .border_color(colors.border)
+                .children(rows.into_iter().map(|row| {
+                    let colors = colors.clone();
+                    let url = row.url.clone();
+                    div()
+                        .id(row.id)
+                        .flex()
+                        .flex_col()
+                        .gap(px(4.))
+                        .px(px(4.))
+                        .py(px(3.))
+                        .rounded(px(4.))
+                        .when(!url.is_empty(), |this| {
+                            this.cursor_pointer()
+                                .hover(|style| style.bg(colors.selected))
+                                .on_click(move |_, _, cx| cx.open_url(&url))
+                        })
+                        .tooltip(ui::Tooltip::text(row.detail.clone()))
+                        .child(
+                            div()
+                                .flex()
+                                .items_center()
+                                .gap(px(6.))
+                                .text_size(ui::typography::TEXT_CAPTION)
+                                .child(Icon::new(row.icon).size(IconSize::XSmall).color(colors.muted_foreground))
+                                .child(div().flex_1().min_w_0().truncate().text_color(colors.muted_foreground).child(row.label))
+                                .child(div().flex_none().text_color(colors.foreground).child(row.value)),
+                        )
+                        .child(
+                            div()
+                                .h(px(2.))
+                                .w_full()
+                                .overflow_hidden()
+                                .rounded_full()
+                                .bg(colors.accent)
+                                .child(
+                                    div()
+                                        .h_full()
+                                        .w(gpui::relative(row.used_percent / 100.))
+                                        .rounded_full()
+                                        .bg(row.tone.color(&colors)),
+                                ),
+                        )
+                }))
+                .into_any_element(),
+        )
     }
 
     /// A sidebar session row; `emphasized` while the sidebar has focus.

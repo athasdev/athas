@@ -7,7 +7,7 @@ use std::time::Duration;
 
 use account::{
     AccountStore,
-    api::{Collaboration, InboxKind, ReviewState, TeamInboxItem, TeamSharedSession},
+    api::{Collaboration, InboxKind, ReviewState, TeamInboxItem, TeamMember, TeamSharedSession},
     state::Session,
     widgets,
 };
@@ -16,7 +16,7 @@ use gpui::{
     Subscription, Task, Window, div, prelude::*, px,
 };
 use theme::ActiveTheme;
-use ui::{Avatar, Button, ButtonSize, ButtonVariant, EmptyState, IconName, PaneTitle, SidebarListItem, WithScrollbar, pane_actions, pane_header, typography};
+use ui::{Avatar, Button, ButtonSize, ButtonVariant, EmptyState, IconName, PaneTitle, Person, SidebarListItem, WithScrollbar, pane_actions, pane_header, typography};
 
 use crate::{call::call, team};
 
@@ -151,7 +151,7 @@ impl TeamView {
             .into_any_element()
     }
 
-    fn render_inbox(&self, inbox: &[TeamInboxItem], cx: &mut Context<Self>) -> Option<AnyElement> {
+    fn render_inbox(&self, inbox: &[TeamInboxItem], members: &[TeamMember], cx: &mut Context<Self>) -> Option<AnyElement> {
         if inbox.is_empty() {
             return None;
         }
@@ -174,7 +174,7 @@ impl TeamView {
                 let label = format!("{} {}", item.actor_name, inbox_verb(item.kind));
                 let row = SidebarListItem::new(("inbox", item.id as u64), label)
                     .in_content()
-                    .leading(Avatar::new(&item.actor_name))
+                    .leading(Avatar::person(&teammate(members, item.actor_user_id, &item.actor_name), cx))
                     .trailing(trailing)
                     .on_click(cx.listener(move |this, _, _, cx| this.open_inbox_item(&item, cx)));
                 if description.is_empty() { row } else { row.description(description) }.into_any_element()
@@ -190,7 +190,7 @@ impl TeamView {
         Some(self.render_section("For You", (unread > 0).then_some(unread), mark_all, rows, cx))
     }
 
-    fn render_sessions(&self, sessions: &[TeamSharedSession], cx: &mut Context<Self>) -> Option<AnyElement> {
+    fn render_sessions(&self, sessions: &[TeamSharedSession], members: &[TeamMember], cx: &mut Context<Self>) -> Option<AnyElement> {
         if sessions.is_empty() {
             return None;
         }
@@ -206,7 +206,7 @@ impl TeamView {
                 let title = session.title.clone();
                 SidebarListItem::new(("team-session", index), session.title.clone())
                     .in_content()
-                    .leading(presence_avatar(&session.owner_name, session.live, cx))
+                    .leading(presence_avatar(&teammate(members, Some(session.owner_user_id), &session.owner_name), session.live, cx))
                     .description(description)
                     .when_some(review_badge(session.review_state, cx), |row, (label, tone)| row.trailing(widgets::badge(label, Some(tone), cx)))
                     .on_click(cx.listener(move |_, _, _, cx| cx.emit(TeamViewEvent::OpenSession { share_id: share_id.clone(), title: title.clone() })))
@@ -237,6 +237,7 @@ impl TeamView {
             .iter()
             .map(|entry| {
                 let name = team.members.iter().find(|member| member.user_id == entry.user_id).map_or("Teammate".to_string(), |member| member.name.clone());
+                let person = teammate(&team.members, entry.user_id, &name);
                 let detail = entry.cursor_label.clone().or_else(|| {
                     entry.active_file_path.as_deref().and_then(|path| path.rsplit(['/', '\\']).next()).map(str::to_string)
                 });
@@ -246,7 +247,7 @@ impl TeamView {
                 let row = SidebarListItem::new(("here-now", entry.id as u64), name.clone())
                     .in_content()
                     .active(following)
-                    .leading(presence_avatar(&name, true, cx))
+                    .leading(presence_avatar(&person, true, cx))
                     .when(following, |row| row.trailing(div().text_size(typography::TEXT_SM).text_color(colors.subtle_foreground).child("Following")))
                     .on_click(move |_, _, cx| set_following(if following { None } else { user_id }, cx));
                 match detail {
@@ -274,7 +275,7 @@ impl TeamView {
                 }
                 SidebarListItem::new(("member", member.id as u64), member.name.clone())
                     .in_content()
-                    .leading(Avatar::new(&member.name))
+                    .leading(Avatar::person(&Person::new(member.name.clone()).email(member.email.clone()).user_id(member.user_id.unwrap_or_default()), cx))
                     .description(member.email.clone())
                     .trailing(div().flex().items_center().gap(px(6.)).children(trailing))
                     .into_any_element()
@@ -342,8 +343,8 @@ impl TeamView {
             );
         };
         let sections: Vec<AnyElement> = [
-            self.render_inbox(&team.inbox, cx),
-            self.render_sessions(&team.shared_sessions, cx),
+            self.render_inbox(&team.inbox, &team.members, cx),
+            self.render_sessions(&team.shared_sessions, &team.members, cx),
             self.render_here_now(&team, me, cx),
             self.render_members(&team, cx),
             self.render_invitations(&team, cx),
@@ -376,12 +377,25 @@ fn centered(state: EmptyState) -> AnyElement {
     div().flex().flex_1().items_center().justify_center().child(state).into_any_element()
 }
 
+/// A teammate as an avatar needs them: the team knows their id, and the member list their
+/// address, which is what finds their picture.
+fn teammate(members: &[TeamMember], user_id: Option<i64>, name: &str) -> Person {
+    let mut person = Person::new(name.to_string());
+    if let Some(id) = user_id.filter(|id| *id != 0) {
+        person = person.user_id(id);
+        if let Some(member) = members.iter().find(|member| member.user_id == Some(id)) {
+            person = person.email(member.email.clone());
+        }
+    }
+    person
+}
+
 /// An avatar with a green dot while the person is online or the session is live.
-fn presence_avatar(name: &str, online: bool, cx: &App) -> AnyElement {
+fn presence_avatar(person: &Person, online: bool, cx: &App) -> AnyElement {
     let colors = &cx.theme().colors;
     div()
         .relative()
-        .child(Avatar::new(name))
+        .child(Avatar::person(person, cx))
         .when(online, |this| {
             this.child(div().absolute().bottom(px(-1.)).right(px(-1.)).size(px(8.)).rounded_full().bg(colors.success).border_1().border_color(colors.background))
         })

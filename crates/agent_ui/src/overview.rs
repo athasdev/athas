@@ -566,9 +566,16 @@ impl SessionView {
 
     pub(crate) fn render_overview(&mut self, cx: &mut Context<Self>) -> AnyElement {
         let colors = cx.theme().colors.clone();
-        let creator = account::AccountStore::global(cx)
-            .and_then(|store| store.read(cx).user().map(|user| user.name.clone().filter(|name| !name.trim().is_empty()).or_else(|| user.github_username.clone()).unwrap_or_else(|| user.email.clone())))
+        // The session's creator is whoever is signed in, so their avatar is the account's own.
+        let me = ui::avatar::account(cx);
+        let creator = me
+            .as_ref()
+            .map(|me| {
+                let name = me.name.trim();
+                if name.is_empty() { me.github_login.clone().unwrap_or_else(|| me.email.clone()) } else { name.to_string() }
+            })
             .unwrap_or_else(|| "You".to_string());
+        let creator_person = me.map_or_else(|| ui::Person::new(creator.clone()), |me| ui::Person::new(creator.clone()).user_id(me.user_id));
         let started = self
             .transcript
             .entries
@@ -629,7 +636,7 @@ impl SessionView {
             .gap(px(8.))
             .child(chip(state_icon, state.to_string()))
             .child(chip(crate::model_vendor::agent_mark(&self.info.agent, px(14.), colors.muted_foreground), agent.clone()))
-            .child(chip(ui::Avatar::new(&creator).size(px(16.)).into_any_element(), creator.clone()))
+            .child(chip(ui::Avatar::person(&creator_person, cx).size(px(16.)).into_any_element(), creator.clone()))
             .children(started.map(|started| chip(icon(IconName::Calendar, colors.muted_foreground), started)))
             .when(total > 0, |this| {
                 this.child(chip(ui::ProgressCircle::new(done as f32 * 100. / total as f32).tone(ui::ProgressTone::Success).size(px(14.)).into_any_element(), format!("{done} / {total} tasks")))
@@ -751,13 +758,13 @@ impl SessionView {
             .child(div().flex().flex_col().gap(px(14.)).child(header).child(chips))
             .child(about)
             .children(tasks)
-            .children(self.render_activity(&creator, &agent, cx));
+            .children(self.render_activity(&creator_person, &agent, cx));
         self.page("session-overview", content)
     }
 
     /// The session's history as a timeline: prompts, files the agent changed, commands it ran,
     /// steps that failed.
-    fn render_activity(&self, creator: &str, agent: &str, cx: &mut Context<Self>) -> Option<AnyElement> {
+    fn render_activity(&self, creator: &ui::Person, agent: &str, cx: &mut Context<Self>) -> Option<AnyElement> {
         let colors = cx.theme().colors.clone();
         let events = activity(&self.transcript);
         if events.is_empty() {
@@ -774,7 +781,7 @@ impl SessionView {
             .skip(hidden)
             .map(|(index, event)| {
                 let (actor, leading) = match event.kind {
-                    ActivityKind::Started | ActivityKind::Asked => (creator.to_string(), ui::Avatar::new(creator).size(px(20.)).into_any_element()),
+                    ActivityKind::Started | ActivityKind::Asked => (creator.name.to_string(), ui::Avatar::person(creator, cx).size(px(20.)).into_any_element()),
                     ActivityKind::Edited => (agent.to_string(), activity_icon(IconName::PencilLine, colors.muted_foreground, &colors)),
                     ActivityKind::Ran => (agent.to_string(), activity_icon(IconName::Terminal, colors.muted_foreground, &colors)),
                     ActivityKind::Failed => (agent.to_string(), activity_icon(IconName::WarningCircle, colors.destructive, &colors)),

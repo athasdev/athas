@@ -3,6 +3,7 @@
 
 mod activity_bar;
 mod agent_hooks;
+pub mod agent_usage;
 mod centre;
 mod centre_views;
 mod claude_ide_hooks;
@@ -278,10 +279,18 @@ pub fn init(cx: &mut App) {
     more_commands::register(cx);
     agent_commands::register(cx);
     git_commands::register(cx);
-    git_diff::avatar::set_account_lookup(cx, |cx| {
+    // One account lookup for every avatar in the app: commits, the team, GitHub and the activity
+    // bar all ask `ui::avatar` who this is.
+    ui::avatar::set_account_lookup(cx, |cx| {
         let store = account::AccountStore::global(cx)?;
         let user = store.read(cx).user()?.clone();
-        Some(git_diff::avatar::AuthorAccount { email: user.email, avatar_url: user.avatar_url, github_username: user.github_username })
+        Some(ui::avatar::AccountIdentity {
+            user_id: user.id,
+            name: user.name.unwrap_or_default(),
+            email: user.email,
+            avatar_url: user.avatar_url,
+            github_login: user.github_username,
+        })
     });
     editor::set_author_avatar_lookup(cx, git_diff::avatar::author_avatar);
     remote_projects::init(cx);

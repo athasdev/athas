@@ -168,10 +168,12 @@ impl Catalog {
 
     /// Reads the CDN's `manifests.json` (`{ "<folder>": manifest }`). Manifests that do not
     /// match the schema are left out; icons come from the bundled catalog when it knows the
-    /// extension, otherwise from the CDN.
+    /// extension, otherwise from the CDN. The bundled extensions the CDN does not list are
+    /// kept: a CDN that lags behind this build must not make built-in extensions disappear.
     pub fn from_cdn_json(json: &str, base_url: &str, bundled: &Catalog) -> Result<Self> {
         let manifests: BTreeMap<String, serde_json::Value> = serde_json::from_str(json)?;
         let mut entries = Vec::new();
+        let mut listed = std::collections::HashSet::new();
         for (path, value) in manifests {
             let manifest = match serde_json::from_value::<ExtensionManifest>(value) {
                 Ok(manifest) if manifest.validate().is_ok() => manifest,
@@ -188,8 +190,10 @@ impl Catalog {
                     format!("{}/{path}/{}", base_url.trim_end_matches('/'), icon.trim_start_matches("./"))
                 }))
             });
+            listed.insert(manifest.id.clone());
             entries.push(CatalogEntry { path, kind: ExtensionKind::of(&manifest), manifest: Arc::new(manifest), icon });
         }
+        entries.extend(bundled.entries().iter().filter(|entry| !listed.contains(&entry.manifest.id)).cloned());
         Ok(Self { entries })
     }
 
@@ -265,11 +269,25 @@ mod tests {
             "broken": {"id": "x"},
         });
         let catalog = Catalog::from_cdn_json(&json.to_string(), "https://cdn.test/ext/", &bundled).unwrap();
-        assert_eq!(catalog.entries().len(), 2);
+        // The CDN's two manifests, and every bundled extension it does not list.
+        assert_eq!(catalog.entries().len(), bundled.entries().len() + 1);
         assert!(matches!(catalog.get("athas.rust").unwrap().icon, Some(ExtensionIcon::Embedded { .. })));
         assert_eq!(
             catalog.get("athas.newlang").unwrap().icon,
             Some(ExtensionIcon::Remote("https://cdn.test/ext/newlang/icon.svg".into()))
         );
+    }
+
+    /// A CDN that lags behind this build used to replace the catalog outright, which dropped
+    /// every bundled extension it had not published yet (the MCP servers, most of all).
+    #[test]
+    fn the_cdn_catalog_keeps_the_bundled_extensions_it_does_not_list() {
+        let bundled = Catalog::bundled();
+        let rust = &bundled.get("athas.rust").unwrap().manifest;
+        let catalog = Catalog::from_cdn_json(&serde_json::json!({ "rust": rust.as_ref() }).to_string(), "https://cdn.test/ext/", &bundled).unwrap();
+        assert_eq!(catalog.entries().len(), bundled.entries().len());
+        let mcp = |catalog: &Catalog| catalog.entries().iter().filter(|entry| entry.kind == ExtensionKind::Mcp).count();
+        assert_eq!(mcp(&catalog), mcp(&bundled));
+        assert!(catalog.get("athas.mcp.github").is_some());
     }
 }

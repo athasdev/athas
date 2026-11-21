@@ -427,7 +427,10 @@ impl DetachedWindow {
                             .child(title),
                     )
                     .when_some(chrome, |this, chrome| {
-                        this.when_some(chrome.login, |this, login| this.child(ui::Avatar::new(&login).size(px(16.)).image(chrome.avatar_url)))
+                        this.when_some(chrome.login, |this, login| {
+                            // Fall back to the author's GitHub picture when the chrome has none.
+                            this.child(ui::Avatar::new(&login).size(px(16.)).image(chrome.avatar_url.or_else(|| Some(ui::avatar::github_avatar_url(&login)))))
+                        })
                             .child(div().flex_none().child(ui::Badge::new(chrome.state).label_color(chrome.color)))
                     })
             }))

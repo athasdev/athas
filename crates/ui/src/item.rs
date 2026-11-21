@@ -51,6 +51,7 @@ pub struct Item {
     actions: Vec<AnyElement>,
     children: Vec<AnyElement>,
     on_click: Option<ClickHandler>,
+    hover_group: Option<SharedString>,
 }
 
 impl Item {
@@ -67,7 +68,15 @@ impl Item {
             actions: Vec::new(),
             children: Vec::new(),
             on_click: None,
+            hover_group: None,
         }
+    }
+
+    /// Names the row as a hover group, so an action can hide until the row is hovered
+    /// (`div().invisible().group_hover(name, |style| style.visible())`).
+    pub fn hover_group(mut self, group: impl Into<SharedString>) -> Self {
+        self.hover_group = Some(group.into());
+        self
     }
 
     pub fn variant(mut self, variant: ItemVariant) -> Self {
@@ -189,6 +198,7 @@ impl RenderOnce for Item {
         let hover = colors.accent;
         div()
             .id(self.id)
+            .when_some(self.hover_group, |this, group| this.group(group))
             .flex()
             .flex_wrap()
             .items_center()

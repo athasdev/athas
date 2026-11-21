@@ -306,12 +306,13 @@ pub struct Tabs {
     value: SharedString,
     variant: TabsVariant,
     vertical: bool,
+    wrap: bool,
     on_change: Option<Rc<dyn Fn(&SharedString, &mut Window, &mut App)>>,
 }
 
 impl Tabs {
     pub fn new(id: impl Into<ElementId>, triggers: Vec<TabsTrigger>, value: impl Into<SharedString>) -> Self {
-        Self { id: id.into(), triggers, value: value.into(), variant: TabsVariant::Default, vertical: false, on_change: None }
+        Self { id: id.into(), triggers, value: value.into(), variant: TabsVariant::Default, vertical: false, wrap: false, on_change: None }
     }
 
     pub fn variant(mut self, variant: TabsVariant) -> Self {
@@ -321,6 +322,13 @@ impl Tabs {
 
     pub fn vertical(mut self) -> Self {
         self.vertical = true;
+        self
+    }
+
+    /// Runs onto a second row rather than past the edge, so that many tabs in a narrow page
+    /// all stay in sight — the active one most of all.
+    pub fn wrap(mut self) -> Self {
+        self.wrap = true;
         self
     }
 
@@ -336,6 +344,7 @@ impl RenderOnce for Tabs {
         let colors = &theme.colors;
         let variant = self.variant;
         let vertical = self.vertical;
+        let wrap = self.wrap;
         let items = self.triggers.into_iter().enumerate().map(|(index, trigger)| {
             let active = trigger.value == self.value;
             let text = if active { colors.foreground } else { colors.subtle_foreground };
@@ -353,7 +362,13 @@ impl RenderOnce for Tabs {
                 .h(metrics::CHROME_CONTROL)
                 .whitespace_nowrap()
                 .text_color(text)
-                .map(|this| if vertical { this.w_full().justify_start() } else { this.flex_1().justify_center() })
+                .map(|this| match (vertical, wrap) {
+                    (true, _) => this.w_full().justify_start(),
+                    // Wrapped, a tab is as wide as its label; stretching would leave the tabs
+                    // of the last row wider than those of the first.
+                    (false, true) => this.flex_none(),
+                    (false, false) => this.flex_1().justify_center(),
+                })
                 .map(|this| match variant {
                     TabsVariant::Default => this.px(px(12.)).rounded_full().when(active, |this| this.bg(colors.segment_knob).shadow(theme.shadows.raised_inset.clone())),
                     TabsVariant::Line => this.px(px(12.)).child(
@@ -373,14 +388,17 @@ impl RenderOnce for Tabs {
         div()
             .id(self.id)
             .flex()
-            .flex_none()
+            // Wrapping needs a width to wrap within, so the strip may shrink below its content.
+            .map(|this| if wrap { this.min_w_0() } else { this.flex_none() })
             .items_center()
             .map(|this| if vertical { this.flex_col().items_stretch() } else { this.flex_row() })
+            .when(wrap, |this| this.flex_wrap())
             .font_family(typography::UI_FONT)
             .font_weight(typography::MEDIUM)
             .text_size(typography::TEXT_CHROME)
             .map(|this| match variant {
-                TabsVariant::Default => this.gap(px(2.)).p(px(2.)).rounded_full().bg(colors.segment_track),
+                // Over more than one row the stadium shape no longer fits what it holds.
+                TabsVariant::Default => this.gap(px(2.)).p(px(2.)).bg(colors.segment_track).map(|this| if wrap { this.rounded(metrics::RADIUS_LG) } else { this.rounded_full() }),
                 TabsVariant::Line => this.gap(metrics::CHROME_GAP),
                 TabsVariant::Text => this.gap(metrics::CHROME_GAP_TIGHT),
             })

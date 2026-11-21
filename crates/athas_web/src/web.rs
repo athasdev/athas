@@ -772,6 +772,18 @@ fn install_web_chrome(cx: &mut App) {
     use crate::cloud::{WebsiteAccount, pages};
     use workbench::{BranchList, RepositoryEntry, RepositoryGate, WebChrome};
     let api = || crate::cloud::WebsiteApi::new(WebsiteFetch);
+    // The web build keeps its own account, so point the avatars at that one instead of the
+    // desktop account store the workbench installed.
+    ui::avatar::set_account_lookup(cx, |_| match ACCOUNT.with_borrow(Clone::clone) {
+        Some(WebsiteAccount::SignedIn { user, .. }) => Some(ui::avatar::AccountIdentity {
+            user_id: user.id,
+            name: user.name.clone().unwrap_or_default(),
+            email: user.email.clone(),
+            avatar_url: user.avatar_url.clone(),
+            github_login: None,
+        }),
+        _ => None,
+    });
     workbench::set_web_chrome(
         cx,
         WebChrome {

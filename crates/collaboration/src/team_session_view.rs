@@ -11,7 +11,7 @@ use gpui::{
     Subscription, Task, Window, div, prelude::*, px,
 };
 use theme::ActiveTheme;
-use ui::{Avatar, Button, ButtonSize, ButtonVariant, IconName, PaneTitle, TextInput, TextInputEvent, pane_actions, pane_header, typography};
+use ui::{Avatar, Button, ButtonSize, ButtonVariant, IconName, PaneTitle, Person, TextInput, TextInputEvent, pane_actions, pane_header, typography};
 
 use crate::{
     call::call,
@@ -306,7 +306,7 @@ impl TeamSessionView {
                 .into_iter()
                 .map(|(user_id, name)| {
                     Button::new(("teammate", user_id as u64), name.clone())
-                        .leading(Avatar::new(&name))
+                        .leading(Avatar::person(&Person::new(name.clone()).user_id(user_id), cx))
                         .on_click(cx.listener(move |this, _, _, cx| this.send(to, user_id, cx)))
                         .into_any_element()
                 })
@@ -365,7 +365,7 @@ impl TeamSessionView {
         div()
             .flex()
             .gap(px(10.))
-            .child(Avatar::new(&comment.author_name).size(px(24.)))
+            .child(Avatar::person(&Person::new(comment.author_name.clone()).user_id(comment.author_user_id), cx).size(px(24.)))
             .child(
                 div()
                     .flex()

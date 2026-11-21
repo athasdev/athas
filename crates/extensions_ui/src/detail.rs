@@ -27,8 +27,9 @@ pub(crate) fn render(
     let manifest = entry.manifest.clone();
     let status = extensions::get(cx).status(&manifest.id, settings::get(cx));
 
+    let embedded = view.embedded();
     let breadcrumb = pane_header(cx)
-        .px(px(8.))
+        .px(if embedded { px(0.) } else { px(8.) })
         .child(
             Button::icon("extension-back", IconName::ArrowLeft)
                 .size(ButtonSize::Small)
@@ -89,42 +90,34 @@ pub(crate) fn render(
         sections.push(section("Permissions", permissions, colors));
     }
 
+    let body = div()
+        .flex()
+        .flex_col()
+        .gap(px(20.))
+        .w_full()
+        .when(!embedded, |this| this.max_w(px(760.)).mx_auto().px(px(24.)).pt(px(16.)).pb(px(32.)))
+        .child(header)
+        .children(status.error.clone().map(|error| render_error(&manifest.id, error, colors, cx)))
+        .children(
+            tool_statuses
+                .as_ref()
+                .filter(|_| status.installed && status.error.is_none())
+                .and_then(ToolStatuses::issue)
+                .map(|(kind, message)| render_tool_issue(kind, message, colors)),
+        )
+        .children(sections);
+
+    // As a page of Settings the page scrolls the extension; on its own the view does.
+    if embedded {
+        return div().flex().flex_col().w_full().gap(px(12.)).child(breadcrumb).child(body).into_any_element();
+    }
     div()
         .flex()
         .flex_col()
         .flex_1()
         .min_h_0()
         .child(breadcrumb)
-        .child(
-            div()
-                .id("extension-detail")
-                .flex_1()
-                .min_h_0()
-                .overflow_y_scroll()
-                .child(
-                    div()
-                        .flex()
-                        .flex_col()
-                        .gap(px(20.))
-                        .w_full()
-                        .max_w(px(760.))
-                        .mx_auto()
-                        .px(px(24.))
-                        .pt(px(16.))
-                        .pb(px(32.))
-                        .child(header)
-                        .children(status.error.clone().map(|error| render_error(&manifest.id, error, colors, cx)))
-                        .children(
-                            tool_statuses
-                                .as_ref()
-                                .filter(|_| status.installed && status.error.is_none())
-                                .and_then(ToolStatuses::issue)
-                                .map(|(kind, message)| render_tool_issue(kind, message, colors)),
-                        )
-                        .children(sections),
-                )
-                .scrollbar_with(&view.detail_scroll),
-        )
+        .child(div().id("extension-detail").flex_1().min_h_0().overflow_y_scroll().child(body).scrollbar_with(&view.detail_scroll))
         .into_any_element()
 }
 

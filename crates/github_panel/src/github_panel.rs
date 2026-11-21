@@ -10,6 +10,7 @@ mod create_view;
 mod delivery_view;
 mod diff;
 pub mod draft;
+pub mod copilot;
 pub mod gh;
 mod issue_view;
 mod links;

@@ -141,7 +141,7 @@ pub fn avatar_url(user: Option<&AuthUser>) -> Option<String> {
         return Some(url.to_string());
     }
     let login = user.github_username.as_deref().map(str::trim).filter(|login| !login.is_empty())?;
-    Some(format!("https://avatars.githubusercontent.com/{login}?s=64"))
+    Some(ui::avatar::github_avatar_url(login))
 }
 
 #[cfg(test)]
@@ -153,7 +153,7 @@ mod tests {
     #[test]
     fn avatar_prefers_the_accounts_own_picture() {
         let mut user = AuthUser { email: "sam@example.com".into(), github_username: Some("sam".into()), ..Default::default() };
-        assert_eq!(avatar_url(Some(&user)).as_deref(), Some("https://avatars.githubusercontent.com/sam?s=64"));
+        assert_eq!(avatar_url(Some(&user)).as_deref(), Some("https://github.com/sam.png?size=64"));
         user.avatar_url = Some(" https://cdn.example/sam.png ".into());
         assert_eq!(avatar_url(Some(&user)).as_deref(), Some("https://cdn.example/sam.png"));
         user.avatar_url = None;

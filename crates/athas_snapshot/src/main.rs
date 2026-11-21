@@ -17,6 +17,7 @@
 //! `ATHAS_SNAPSHOT_SCROLLBARS=1` (every overlay scrollbar's thumb shown, as if hovered),
 //! `ATHAS_SNAPSHOT_SETTINGS_PAGE` (the page `settings` opens on), `ATHAS_SNAPSHOT_SETTINGS_JSON`
 //! (settings to start from), `ATHAS_SNAPSHOT_SETTINGS_QUERY`, `ATHAS_SNAPSHOT_WORKSPACE_SECTION`, `ATHAS_SNAPSHOT_KEYBINDINGS_EDIT=1`,
+//! `ATHAS_SNAPSHOT_SETTINGS_EXTENSION` (an integration's page on Settings' Integrations),
 //! `ATHAS_SNAPSHOT_REPORT_BUG=1`, `ATHAS_SNAPSHOT_OUTSIDE_SESSIONS=1` (agent sessions outside Athas in the sidebar), `ATHAS_SNAPSHOT_THEME_CREATOR=1` (Create Theme over Settings),
 //! `ATHAS_SNAPSHOT_CUSTOM_THEMES` (a `custom-themes.json` to read), `ATHAS_SNAPSHOT_EXTENSIONS_DIR`
 //! (extensions installed there instead of the app's folder), `ATHAS_SNAPSHOT_FOLDERS` (folders
@@ -103,6 +104,36 @@ fn main() -> Result<()> {
         agent_ui::review::Store::init_global(None);
         let continuous = cx.new(|cx| agent_ui::cloud::ContinuousAgents::new(agent_ui::cloud::continuous::TaskList::load(None), cx));
         agent_ui::cloud::ContinuousAgents::set_global(continuous, cx);
+        if std::env::var_os("ATHAS_SNAPSHOT_ACCOUNT_USAGE").is_some() {
+            // What the sessions footer draws for a connected Athas account and GitHub Copilot.
+            workbench::agent_usage::set_sample_rows(
+                vec![
+                    workbench::agent_usage::athas_row(
+                        &agent_ui::hosted_usage::HostedUsage {
+                            used_percent: 25,
+                            level: agent_ui::hosted_usage::Level::Ok,
+                            remaining_cents: 750,
+                            allowance_cents: 1000,
+                            wallet_balance_cents: None,
+                            resets: Some("Dec 1".into()),
+                        },
+                        "https://athas.dev/dashboard/billing".into(),
+                    ),
+                    workbench::agent_usage::copilot_row(&github_panel::copilot::CopilotAllowance {
+                        plan: Some("individual".into()),
+                        premium: Some(github_panel::copilot::CopilotQuota {
+                            unlimited: false,
+                            remaining: 764,
+                            entitlement: 1500,
+                            percent_remaining: 50.9,
+                        }),
+                        resets_on: Some("2026-12-01".into()),
+                    })
+                    .expect("the sample allowance is metered"),
+                ],
+                cx,
+            );
+        }
         if std::env::var_os("ATHAS_SNAPSHOT_OUTSIDE_SESSIONS").is_some() {
             // Conversations Claude Code and Codex keep for the project outside Athas, from fake agents.
             agent_ui::outside_sessions::set_sidebar_lister(
@@ -266,6 +297,9 @@ fn main() -> Result<()> {
                             }
                             if std::env::var_os("ATHAS_SNAPSHOT_THEME_CREATOR").is_some() {
                                 view.create_theme(window, cx);
+                            }
+                            if let Ok(id) = std::env::var("ATHAS_SNAPSHOT_SETTINGS_EXTENSION") {
+                                view.open_integration(&id, window, cx);
                             }
                         });
                     }

@@ -192,6 +192,15 @@ fn visible_with_access(def: &SettingDef, enterprise: bool, collaboration: bool) 
     }
 }
 
+/// The catalog category an Integrations section stands for (`ExtensionKind::id`).
+fn integrations_category(def: &SettingDef) -> Option<&'static str> {
+    match def.section? {
+        "Agents" => Some("agent"),
+        "MCP Servers" => Some("mcp"),
+        _ => None,
+    }
+}
+
 /// The search target of a row a page's view draws: the first row of its section the page draws
 /// itself, or the view.
 fn view_target(def: &SettingDef) -> JumpTarget {
@@ -643,9 +652,19 @@ impl SettingsView {
     fn open_result(&mut self, index: usize, cx: &mut Context<Self>) {
         let Some(def) = SETTING_DEFS.get(index) else { return };
         self.set_page(def.tab, cx);
+        // An Integrations section is a category of the catalog, which opens showing it. The
+        // page may not have been built yet, and then the stored filter is all it takes.
+        if def.tab == "integrations"
+            && let Some(category) = integrations_category(def)
+        {
+            match self.integrations.clone() {
+                Some(view) => view.update(cx, |view, cx| view.show_category(category, cx)),
+                None => settings::update(cx, |settings| settings.extensions_active_tab = category.to_string()),
+            }
+        }
         let target = if def.kind == SettingKind::View { view_target(def) } else { JumpTarget::Row(index) };
-        // The theme cards head Appearance, which opens at the top.
-        let at_top = def.tab == "appearance" && def.section == Some("Theme") && def.kind == SettingKind::View;
+        // The theme cards head Appearance, and the catalog its own categories; both open at the top.
+        let at_top = def.tab == "integrations" || (def.tab == "appearance" && def.section == Some("Theme") && def.kind == SettingKind::View);
         self.jump = (!at_top).then_some(Jump { target, attempts: 6 });
         self.jump_bounds.set(None);
         self.flash = Some(index);
@@ -1605,6 +1624,26 @@ impl SettingsView {
         elements
     }
 
+    /// The catalog of the Integrations page. It flows in the page and the page scrolls it; it
+    /// used to sit in a 560px box with a scroller of its own inside the page's.
+    fn integrations_view(&mut self, window: &mut Window, cx: &mut Context<Self>) -> Entity<extensions_ui::ExtensionsView> {
+        let scroll = self.scroll.clone();
+        self.integrations
+            .get_or_insert_with(|| {
+                let view = cx.new(|cx| extensions_ui::ExtensionsView::new(window, cx));
+                view.update(cx, |view, _| view.embed_in_page(scroll));
+                view
+            })
+            .clone()
+    }
+
+    /// Opens an integration's page on Integrations; for previews.
+    pub fn open_integration(&mut self, id: &str, window: &mut Window, cx: &mut Context<Self>) {
+        self.set_page("integrations", cx);
+        let view = self.integrations_view(window, cx);
+        view.update(cx, |view, cx| view.open_extension(id, cx));
+    }
+
     fn keybindings_editor(&mut self, window: &mut Window, cx: &mut Context<Self>) -> Entity<KeybindingsEditor> {
         self.keybindings.get_or_insert_with(|| cx.new(|cx| KeybindingsEditor::new(window, cx))).clone()
     }
@@ -1633,21 +1672,7 @@ impl SettingsView {
                 let team = self.team.get_or_insert_with(|| cx.new(|cx| TeamSettings::new(window, cx)));
                 vec![team.clone().into_any_element()]
             }
-            "integrations" => {
-                let view = self.integrations.get_or_insert_with(|| cx.new(|cx| extensions_ui::ExtensionsView::new(window, cx)));
-                let colors = cx.theme().colors.clone();
-                vec![
-                    div()
-                        .h(px(560.))
-                        .flex()
-                        .rounded(metrics::ISLAND_RADIUS)
-                        .bg(colors.raised)
-                        .shadow(cx.theme().shadows.raised.clone())
-                        .overflow_hidden()
-                        .child(view.clone())
-                        .into_any_element(),
-                ]
-            }
+            "integrations" => vec![self.integrations_view(window, cx).into_any_element()],
             _ => Vec::new(),
         }
     }
