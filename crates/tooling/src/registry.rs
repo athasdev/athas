@@ -5,6 +5,7 @@ use super::{
 use std::collections::HashMap;
 
 const CLANGD_VERSION: &str = "22.1.0";
+const SERVE_D_VERSION: &str = "0.7.6";
 const ELIXIR_LS_VERSION: &str = "v0.30.0";
 const TERRAFORM_LS_VERSION: &str = "0.38.6";
 const ZIG_VERSION: &str = "0.16.0";
@@ -61,6 +62,7 @@ impl ToolRegistry {
             "jdtls" => Some(Self::jdtls_download_url()),
             "kotlin-language-server" => Some(Self::kotlin_language_server_download_url()),
             "omnisharp" => Some(Self::omnisharp_download_url()),
+            "serve-d" => Some(Self::serve_d_download_url()),
             "stylua" => Some(Self::stylua_download_url()),
             "terraform-ls" => Some(Self::terraform_ls_download_url()),
             "zig" => Some(Self::zig_download_url()),
@@ -229,6 +231,17 @@ impl ToolRegistry {
         let archive_ext = if std::env::consts::OS == "windows" { "zip" } else { "tar.xz" };
 
         format!("https://ziglang.org/download/{}/zig-{}-{}-{}.{}", ZIG_VERSION, arch, os, ZIG_VERSION, archive_ext)
+    }
+
+    /// serve-d publishes x86_64 builds only (macOS runs it under Rosetta), named by version.
+    fn serve_d_download_url() -> String {
+        let (os, ext) = match std::env::consts::OS {
+            "macos" => ("osx", "tar.xz"),
+            "windows" => ("windows", "zip"),
+            _ => ("linux", "tar.xz"),
+        };
+
+        format!("https://github.com/Pure-D/serve-d/releases/download/v{SERVE_D_VERSION}/serve-d_{SERVE_D_VERSION}-{os}-x86_64.{ext}")
     }
 
     fn zls_download_url() -> String {
@@ -462,7 +475,7 @@ mod tests {
 
     #[test]
     fn supplies_known_download_urls_for_standalone_language_servers() {
-        for name in ["clangd", "jdtls", "kotlin-language-server", "stylua", "terraform-ls", "zig", "zls"] {
+        for name in ["clangd", "jdtls", "kotlin-language-server", "serve-d", "stylua", "terraform-ls", "zig", "zls"] {
             let config = ToolConfig {
                 name: name.to_string(),
                 command: None,
