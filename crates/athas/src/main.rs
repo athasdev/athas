@@ -10,6 +10,9 @@ fn main() {
         exec_path::inherit_login_path();
     }
     logging::init();
+    // Before the application starts: the renderer reads the GPU override when it makes its first
+    // window, and setting an environment variable is only sound while this thread is the only one.
+    platform::gpu::apply_device_override();
     telemetry::install_panic_hook(telemetry::default_store_path());
     let argv: Vec<String> = std::env::args().collect();
     let primary = match platform::startup(&argv) {
@@ -56,9 +59,21 @@ fn main() {
         }
         logging::startup_milestone("workspace:ready");
         cx.activate(true);
-        cx.defer(move |cx| {
-            logging::startup_milestone("workbench:first-frame");
-            telemetry::record_startup(cx, started.elapsed());
-        });
+        // On a frame the window really drew, not merely a deferred callback: a window that is
+        // created but never presented — the GPU it drew on could not reach the display
+        // (athasdev/athas#795) — used to report a first frame all the same, and the log said
+        // Athas had started normally when no window had appeared.
+        let window = cx.windows().into_iter().next();
+        if let Some(window) = window {
+            window
+                .update(cx, move |_, window, _| {
+                    window.on_next_frame(move |window, cx| {
+                        platform::gpu::log_gpu(window);
+                        logging::startup_milestone("workbench:first-frame");
+                        telemetry::record_startup(cx, started.elapsed());
+                    });
+                })
+                .ok();
+        }
     });
 }

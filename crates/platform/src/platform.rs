@@ -8,6 +8,7 @@
 mod accessibility;
 pub mod deep_link;
 mod dispatch;
+pub mod gpu;
 #[cfg(target_os = "macos")]
 mod services;
 #[cfg(target_os = "macos")]
