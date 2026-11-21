@@ -5,9 +5,7 @@ use futures::executor::block_on;
 use serde_json::{Value, json};
 
 use crate::adapter::normalize_generative_view;
-use crate::generate::{ExtensionGenerator, generate_extension, parse_generated_response};
-use crate::generated::{GeneratedStore, normalize_generated_id, read_generated_extension};
-use crate::permissions::{is_network_request_allowed, parse_generated_permissions, validate_generated_permission_usage, validate_generated_source};
+use crate::permissions::is_network_request_allowed;
 use crate::view::{FormValue, Node, collect_form_fields, parse_view};
 use crate::*;
 
@@ -132,57 +130,10 @@ fn checks_network_permissions() {
     assert!(!is_network_request_allowed("https://evil.com", &["*".to_string()]));
 }
 
-#[test]
-fn validates_generated_permissions_and_source() {
-    let permissions = parse_generated_permissions(&json!({ "network": ["https://api.example.com", "https://api.example.com/"], "workspace": "read" })).unwrap();
-    assert_eq!(permissions.network, ["https://api.example.com"]);
-    assert!(parse_generated_permissions(&json!({ "network": ["https://*.example.com"] })).unwrap_err().contains("must be an exact origin"));
-    assert!(parse_generated_permissions(&json!({ "network": ["http://example.com"] })).unwrap_err().contains("must use HTTPS or local HTTP"));
-    assert!(parse_generated_permissions(&json!({ "network": ["https://example.com/api"] })).unwrap_err().contains("must not include a path"));
-    assert!(parse_generated_permissions(&json!({ "settings": ["x"] })).unwrap_err().contains("not supported: settings"));
-    assert!(parse_generated_permissions(&json!({ "network": ["http://localhost:3000"] })).is_ok());
-    assert!(validate_generated_permission_usage("await api.http.request({})", &Permissions::default()).unwrap_err().contains("uses network without requesting"));
-    assert!(validate_generated_permission_usage("1", &permissions).unwrap_err().contains("requests unused network"));
-    assert!(validate_generated_permission_usage("api.http.request(); api.workspace.getCurrent()", &permissions).is_ok());
-
-    for (code, label) in [
-        ("import('x')", "imports"),
-        ("require('fs')", "require"),
-        ("eval('1')", "eval"),
-        ("fetch('/')", "direct network or worker APIs"),
-        ("globalThis.x = 1", "worker global objects"),
-        ("({}).constructor", "dynamic code constructors"),
-        ("window.alert(1)", "browser DOM APIs"),
-    ] {
-        assert_eq!(validate_generated_source(code).unwrap_err(), format!("Generated integration source must not use {label}"), "{code}");
-    }
-    assert!(validate_generated_source("const myself = 1; api.self = 2;").is_ok());
-    assert!(validate_generated_source("  ").is_err());
-}
-
-#[test]
-fn stores_generated_extensions() {
-    let folder = tempfile::tempdir().unwrap();
-    let mut store = GeneratedStore::at(Some(folder.path().join("generated-ui-extensions.json")));
-    assert_eq!(normalize_generated_id("  My Tool!! "), "generated.my-tool");
-    assert!(normalize_generated_id("!!!").starts_with("generated."));
-    let extension = read_generated_extension(&json!({ "id": "My Tool", "name": "My tool", "description": "d", "contributionType": "sidebar", "code": "1" })).unwrap();
-    store.store(&extension).unwrap();
-    store.store(&GeneratedExtension { name: "Renamed".into(), ..extension.clone() }).unwrap();
-    assert_eq!(store.read().len(), 1);
-    assert_eq!(store.read()[0].name, "Renamed");
-    assert!(store.set_disabled("generated.my-tool", true).unwrap().is_some());
-    assert!(store.read()[0].disabled);
-    assert!(store.remove("generated.my-tool").unwrap().is_some());
-    assert!(store.read().is_empty());
-    assert!(read_generated_extension(&json!({ "id": "x", "name": "x", "description": "d", "contributionType": "panel", "code": "1" })).is_none());
-    assert!(read_generated_extension(&json!({ "id": "x", "name": "x", "description": "d", "contributionType": "command", "code": "api.http.request()" })).is_none());
-}
-
 const COUNTER: &str = r#"
 let count = (await api.storage.get("count")) ?? 0;
 api.sidebar.registerView({
-  id: "counter",
+  id: "athas.counter.counter",
   title: "Counter",
   icon: "hash",
   render: () => api.ui.screen({ title: "Counter" },
@@ -192,7 +143,7 @@ api.sidebar.registerView({
       api.ui.input({ name: "amount", label: "Amount", value: String(count) })),
   ),
 });
-api.commands.register({ id: "reset", title: "Reset counter", run: () => { count = 0; api.views.invalidate("counter"); return "reset"; } });
+api.commands.register({ id: "athas.counter.reset", title: "Reset counter", run: () => { count = 0; api.views.invalidate("athas.counter.counter"); return "reset"; } });
 "#;
 
 fn host_with(limits: Limits, timeout: Duration) -> (Host, futures::channel::mpsc::UnboundedReceiver<HostEvent>, tempfile::TempDir) {
@@ -202,16 +153,14 @@ fn host_with(limits: Limits, timeout: Duration) -> (Host, futures::channel::mpsc
     (host, events, folder)
 }
 
-fn generated(id: &str, code: &str) -> GeneratedExtension {
-    GeneratedExtension {
-        id: id.into(),
-        name: id.into(),
-        description: "A test extension".into(),
-        contribution_type: ContributionType::Sidebar,
-        code: code.into(),
-        permissions: Permissions::default(),
-        disabled: false,
-    }
+/// Starts `code` (the body of `activate(api)`) as the extension `athas.<id>` and returns its id;
+/// its contributions name themselves inside that namespace, as an installed extension's do.
+fn load(host: &Host, id: &str, code: &str) -> String {
+    let extension_id = format!("athas.{id}");
+    let manifest = HostManifest { id: extension_id.clone(), name: id.into(), description: "A test extension".into(), ..Default::default() };
+    let source = format!("export async function activate(api) {{\n\"use strict\";\n{code}\n}}\n");
+    block_on(host.load(manifest, Some(source))).unwrap();
+    extension_id
 }
 
 fn metric_value(node: &Node) -> String {
@@ -233,18 +182,17 @@ fn button_action(node: &Node) -> Action {
 #[test]
 fn runs_a_sample_extension_and_round_trips_events() {
     let (host, _events, _folder) = host_with(Limits::default(), Duration::from_secs(10));
-    let id = block_on(host.load_generated(&generated("counter", COUNTER))).unwrap();
-    assert_eq!(id, "generated.counter");
+    let id = load(&host, "counter", COUNTER);
     let store = host.store();
     assert_eq!(store.extensions[&id].state, ExtensionState::Active);
-    let view = &store.sidebar_views["generated.counter.counter"];
+    let view = &store.sidebar_views["athas.counter.counter"];
     assert_eq!((view.title.as_str(), view.icon.as_str()), ("Counter", "hash"));
-    assert_eq!(store.commands["generated.counter.reset"].title, "Reset counter");
+    assert_eq!(store.commands["athas.counter.reset"].title, "Reset counter");
 
     let node = block_on(host.render_view(&id, &view.id)).unwrap();
     assert_eq!(metric_value(&node), "0");
     let action = button_action(&node);
-    assert_eq!(action.command, "generated.counter.__generated.view.generated.counter.counter.inline.1");
+    assert_eq!(action.command, "__generated.view.athas.counter.counter.inline.1");
 
     let revision = host.with_store(|store| store.revision(&view.id));
     block_on(host.execute_view_action(&id, &view.id, &action.command, action.arguments([]))).unwrap();
@@ -257,9 +205,9 @@ fn runs_a_sample_extension_and_round_trips_events() {
     block_on(host.execute_view_action(&id, &view.id, &on_submit.command, on_submit.arguments([json!({ "amount": "41" })]))).unwrap();
     assert_eq!(metric_value(&block_on(host.render_view(&id, &view.id)).unwrap()), "41");
 
-    assert_eq!(block_on(host.run_registered_command("generated.counter.reset", vec![])).unwrap(), json!("reset"));
+    assert_eq!(block_on(host.run_registered_command("athas.counter.reset", vec![])).unwrap(), json!("reset"));
     assert_eq!(metric_value(&block_on(host.render_view(&id, &view.id)).unwrap()), "0");
-    assert!(block_on(host.run_registered_command("generated.other.x", vec![])).unwrap_err().contains("not available"));
+    assert!(block_on(host.run_registered_command("athas.other.x", vec![])).unwrap_err().contains("not available"));
 
     block_on(host.unload(&id));
     assert!(host.store().extensions.is_empty());
@@ -269,12 +217,12 @@ fn runs_a_sample_extension_and_round_trips_events() {
 #[test]
 fn storage_persists_across_reloads() {
     let (host, _events, _folder) = host_with(Limits::default(), Duration::from_secs(10));
-    let extension = generated("counter", COUNTER);
-    let id = block_on(host.load_generated(&extension)).unwrap();
-    let view = "generated.counter.counter";
+    let id = load(&host, "counter", COUNTER);
+    let view = "athas.counter.counter";
     let action = button_action(&block_on(host.render_view(&id, view)).unwrap());
     block_on(host.execute_view_action(&id, view, &action.command, vec![])).unwrap();
-    block_on(host.load_generated(&extension)).unwrap();
+    block_on(host.unload(&id));
+    load(&host, "counter", COUNTER);
     assert_eq!(metric_value(&block_on(host.render_view(&id, view)).unwrap()), "1");
 }
 
@@ -286,62 +234,62 @@ let ticks = 0;
 const interval = setInterval(() => { ticks += 1; if (ticks === 3) clearInterval(interval); }, 5);
 // Waits for the third tick (however slow the machine), then a little longer: a cleared interval
 // must not tick again.
-api.commands.register({ id: "wait", run: () => new Promise((resolve) => {
+api.commands.register({ id: "athas.timers.wait", run: () => new Promise((resolve) => {
   const check = () => (ticks >= 3 ? setTimeout(() => resolve(ticks), 30) : setTimeout(check, 5));
   check();
 }) });
 "#;
-    let id = block_on(host.load_generated(&generated("timers", code))).unwrap();
-    assert_eq!(block_on(host.execute_command(&id, "generated.timers.wait", vec![])).unwrap(), json!(3));
+    let id = load(&host, "timers", code);
+    assert_eq!(block_on(host.execute_command(&id, "athas.timers.wait", vec![])).unwrap(), json!(3));
 }
 
 #[test]
 fn a_runaway_extension_is_stopped() {
     let limits = Limits { turn_budget: Duration::from_millis(200), ..Limits::default() };
     let (host, _events, _folder) = host_with(limits, Duration::from_secs(10));
-    let code = r#"api.commands.register({ id: "spin", run: () => { for (;;) {} } });
-api.commands.register({ id: "ok", run: () => 1 });"#;
-    let id = block_on(host.load_generated(&generated("spin", code))).unwrap();
+    let code = r#"api.commands.register({ id: "athas.spin.spin", run: () => { for (;;) {} } });
+api.commands.register({ id: "athas.spin.ok", run: () => 1 });"#;
+    let id = load(&host, "spin", code);
     let started = std::time::Instant::now();
-    let error = block_on(host.execute_command(&id, "generated.spin.spin", vec![])).unwrap_err();
+    let error = block_on(host.execute_command(&id, "athas.spin.spin", vec![])).unwrap_err();
     assert!(error.contains("time budget"), "{error}");
     assert!(started.elapsed() < Duration::from_secs(3));
     let registration = host.store().extensions[&id].clone();
     assert_eq!(registration.state, ExtensionState::Error);
-    assert!(block_on(host.execute_command(&id, "generated.spin.ok", vec![])).unwrap_err().contains("is not active"));
+    assert!(block_on(host.execute_command(&id, "athas.spin.ok", vec![])).unwrap_err().contains("is not active"));
 }
 
 #[test]
 fn memory_is_capped() {
     let limits = Limits { memory_bytes: 16 * 1024 * 1024, ..Limits::default() };
     let (host, _events, _folder) = host_with(limits, Duration::from_secs(10));
-    let code = r#"api.commands.register({ id: "hog", run: () => { const chunks = []; for (;;) chunks.push("x".repeat(1 << 20) + chunks.length); } });
-api.commands.register({ id: "ok", run: () => "still here" });"#;
-    let id = block_on(host.load_generated(&generated("hog", code))).unwrap();
-    let error = block_on(host.execute_command(&id, "generated.hog.hog", vec![])).unwrap_err();
+    let code = r#"api.commands.register({ id: "athas.hog.hog", run: () => { const chunks = []; for (;;) chunks.push("x".repeat(1 << 20) + chunks.length); } });
+api.commands.register({ id: "athas.hog.ok", run: () => "still here" });"#;
+    let id = load(&host, "hog", code);
+    let error = block_on(host.execute_command(&id, "athas.hog.hog", vec![])).unwrap_err();
     assert!(error.contains("out of memory"), "{error}");
-    assert_eq!(block_on(host.execute_command(&id, "generated.hog.ok", vec![])).unwrap(), json!("still here"));
+    assert_eq!(block_on(host.execute_command(&id, "athas.hog.ok", vec![])).unwrap(), json!("still here"));
 }
 
 #[test]
 fn extensions_are_isolated_and_sandboxed() {
     let (host, _events, _folder) = host_with(Limits::default(), Duration::from_secs(10));
-    let first = block_on(host.load_generated(&generated("first", r#"var shared = "first"; api.commands.register({ id: "read", run: () => typeof shared });"#))).unwrap();
+    let first = load(&host, "first", r#"var shared = "first"; api.commands.register({ id: "athas.first.read", run: () => typeof shared });"#);
     let second = HostManifest { id: "athas.second".into(), name: "Second".into(), ..Default::default() };
     let source = r#"export function activate(api) {
   api.commands.register({ id: "athas.second.read", run: () => [typeof shared, typeof fetch, typeof postMessage, typeof navigator, typeof setTimeout].join() });
 }"#;
-    block_on(host.load(second, Some(source.into()), false)).unwrap();
-    assert_eq!(block_on(host.execute_command(&first, "generated.first.read", vec![])).unwrap(), json!("string"));
+    block_on(host.load(second, Some(source.into()))).unwrap();
+    assert_eq!(block_on(host.execute_command(&first, "athas.first.read", vec![])).unwrap(), json!("string"));
     assert_eq!(block_on(host.execute_command("athas.second", "athas.second.read", vec![])).unwrap(), json!("undefined,undefined,undefined,undefined,function"));
 
     let manifest = HostManifest { id: "athas.sample".into(), name: "Sample".into(), ..Default::default() };
-    let error = block_on(host.load(manifest.clone(), Some("import x from 'fs'; export function activate() {}".into()), false)).unwrap_err();
+    let error = block_on(host.load(manifest.clone(), Some("import x from 'fs'; export function activate() {}".into()))).unwrap_err();
     assert!(error.contains("fs"), "{error}");
-    let error = block_on(host.load(manifest.clone(), Some("export const nothing = 1;".into()), false)).unwrap_err();
+    let error = block_on(host.load(manifest.clone(), Some("export const nothing = 1;".into()))).unwrap_err();
     assert_eq!(error, "Integration must export activate(api)");
     assert_eq!(host.store().extensions["athas.sample"].state, ExtensionState::Error);
-    let error = block_on(host.load(manifest, Some("export function activate(api) { api.sidebar.registerView({ id: 'other.view', render: () => null }); }".into()), false));
+    let error = block_on(host.load(manifest, Some("export function activate(api) { api.sidebar.registerView({ id: 'other.view', render: () => null }); }".into())));
     assert!(error.is_ok());
     assert!(host.store().sidebar_views.is_empty(), "contribution ids outside the extension's namespace are refused");
 }
@@ -349,8 +297,8 @@ fn extensions_are_isolated_and_sandboxed() {
 #[test]
 fn requests_time_out() {
     let (host, _events, _folder) = host_with(Limits::default(), Duration::from_millis(100));
-    let id = block_on(host.load_generated(&generated("slow", r#"api.commands.register({ id: "never", run: () => new Promise(() => {}) });"#))).unwrap();
-    let request = host.execute_command(&id, "generated.slow.never", vec![]);
+    let id = load(&host, "slow", r#"api.commands.register({ id: "athas.slow.never", run: () => new Promise(() => {}) });"#);
+    let request = host.execute_command(&id, "athas.slow.never", vec![]);
     std::thread::sleep(Duration::from_millis(150));
     host.expire_requests();
     assert_eq!(block_on(request).unwrap_err(), "Integration request timed out: executeCommand");
@@ -365,7 +313,7 @@ fn host_calls_follow_permissions() {
   api.commands.register({ id: "athas.calls.clip", run: () => api.clipboard.writeText("x") });
   api.commands.register({ id: "athas.calls.notify", run: (n) => api.notifications.show({ title: "Hello " + n, tone: "success" }) });
 }"#;
-    block_on(host.load(manifest, Some(source.into()), false)).unwrap();
+    block_on(host.load(manifest, Some(source.into()))).unwrap();
     assert_eq!(block_on(host.execute_command("athas.calls", "athas.calls.http", vec![])).unwrap_err(), "Integration does not have network permission");
     assert_eq!(block_on(host.execute_command("athas.calls", "athas.calls.clip", vec![])).unwrap_err(), "Integration does not have clipboard write permission");
     for n in 0..5 {
@@ -383,34 +331,6 @@ fn host_calls_follow_permissions() {
     assert_eq!(titles[0], "Hello 0");
 }
 
-struct MockGenerator(String);
-
-impl ExtensionGenerator for MockGenerator {
-    fn complete(&self, system: String, prompt: String) -> futures::future::LocalBoxFuture<'static, Result<String, String>> {
-        assert!(system.contains("api.sidebar.registerView"));
-        assert_eq!(prompt, "a counter");
-        let reply = self.0.clone();
-        Box::pin(async move { Ok(reply) })
-    }
-}
-
-#[test]
-fn generates_and_installs_from_a_prompt() {
-    let record = json!({ "id": "Counter", "name": "Counter", "description": "Counts clicks.", "contributionType": "sidebar", "code": COUNTER });
-    let reply = format!("Here it is:\n```json\n{}\n```\n", serde_json::to_string_pretty(&record).unwrap());
-    let extension = block_on(generate_extension(&MockGenerator(reply), " a counter ")).unwrap();
-    assert_eq!(extension.name, "Counter");
-    let (host, _events, _folder) = host_with(Limits::default(), Duration::from_secs(10));
-    let id = block_on(host.load_generated(&extension)).unwrap();
-    assert_eq!(metric_value(&block_on(host.render_view(&id, "generated.counter.counter")).unwrap()), "0");
-
-    let bad = json!({ "id": "x", "name": "x", "description": "d", "contributionType": "sidebar", "code": "fetch('/')" }).to_string();
-    assert_eq!(parse_generated_response(&bad).unwrap_err(), "Generated integration source must not use direct network or worker APIs");
-    let unpermitted = json!({ "id": "x", "name": "x", "description": "d", "contributionType": "sidebar", "code": "api.clipboard.writeText('x')" }).to_string();
-    assert!(parse_generated_response(&unpermitted).unwrap_err().contains("clipboard write without requesting permission"));
-    assert!(parse_generated_response("no json here").is_err());
-}
-
 #[test]
 fn editor_settings_overrides_reach_the_app() {
     let (host, mut events, _folder) = host_with(Limits::default(), Duration::from_secs(10));
@@ -420,7 +340,7 @@ fn editor_settings_overrides_reach_the_app() {
   api.commands.register({ id: "athas.zoom.reset", run: () => api.editor.clearSettingOverrides() });
   api.commands.register({ id: "athas.zoom.bad", run: () => api.editor.updateSettings(3) });
 }"#;
-    block_on(host.load(manifest, Some(source.into()), false)).unwrap();
+    block_on(host.load(manifest, Some(source.into()))).unwrap();
     block_on(host.execute_command("athas.zoom", "athas.zoom.big", vec![])).unwrap();
     block_on(host.execute_command("athas.zoom", "athas.zoom.reset", vec![])).unwrap();
     assert_eq!(block_on(host.execute_command("athas.zoom", "athas.zoom.bad", vec![])).unwrap_err(), "Editor settings must be an object");
@@ -449,7 +369,7 @@ fn ai_providers_must_be_contributed() {
   api.commands.register({ id: "athas.provider.configure", run: () => "configured", palette: false });
   api.ai.registerSettingsAction({ id: "athas.provider.settings", providerId: "acme", label: "Acme account", buttonLabel: "Sign in", commandId: "athas.provider.configure" });
 }"#;
-    block_on(host.load(manifest, Some(source.into()), false)).unwrap();
+    block_on(host.load(manifest, Some(source.into()))).unwrap();
     let store = host.store();
     assert_eq!(store.extensions["athas.provider"].state, ExtensionState::Active);
     let provider = &store.ai_providers[0];
@@ -465,7 +385,7 @@ fn ai_providers_must_be_contributed() {
     let source = r#"export function activate(api) {
   api.ai.registerProvider({ id: "acme", buildHeaders: () => ({}), buildPayload: (request) => request, validateApiKey: () => true });
 }"#;
-    block_on(host.load(stray, Some(source.into()), false)).unwrap();
+    block_on(host.load(stray, Some(source.into()))).unwrap();
     let providers = host.store().ai_providers;
     assert_eq!(providers.len(), 1, "an extension cannot take over a provider it does not contribute");
     assert_eq!(providers[0].extension_id, "athas.provider");

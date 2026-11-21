@@ -19,8 +19,6 @@
   let operationQueue = Promise.resolve();
   let renderContext;
   let extensionModule;
-  let activeExtensionId = "";
-  let generatedCompatibility = false;
 
   if (host.timers) {
     const schedule = (handler, delay, args, repeat) => {
@@ -113,9 +111,7 @@
   }
 
   function contributionId(value) {
-    const id = String(value);
-    if (!generatedCompatibility || id.startsWith(`${activeExtensionId}.`)) return id;
-    return `${activeExtensionId}.${id}`;
+    return String(value);
   }
 
   function action(command, ...args) {
@@ -152,18 +148,6 @@
     return items.flat(Infinity).filter(Boolean);
   }
 
-  function legacyChildren(value) {
-    if (Array.isArray(value)) return childNodes(value);
-    return value == null ? [] : childNodes([value]);
-  }
-
-  function legacyText(value) {
-    if (Array.isArray(value)) return value.map(legacyText).join("");
-    if (value == null) return "";
-    if (typeof value === "object") return "";
-    return String(value);
-  }
-
   function treeItems(value) {
     if (!Array.isArray(value)) return [];
     return value.map((value) => {
@@ -182,25 +166,8 @@
     });
   }
 
-  function isLegacyLayoutConfig(value) {
-    return (
-      generatedCompatibility &&
-      value !== null &&
-      typeof value === "object" &&
-      !Array.isArray(value) &&
-      !("type" in value) &&
-      "children" in value
-    );
-  }
-
   const layout = (type) =>
-    (...items) => ({
-      type,
-      children:
-        items.length === 1 && isLegacyLayoutConfig(items[0])
-          ? legacyChildren(items[0].children)
-          : childNodes(items),
-    });
+    (...items) => ({ type, children: childNodes(items) });
 
   const field = (type, options, extra) => ({
     type,
@@ -369,10 +336,7 @@
         title: typeof config.title === "string" ? config.title : undefined,
         description: typeof config.description === "string" ? config.description : undefined,
         variant: config.variant,
-        children:
-          generatedCompatibility && items.length === 0
-            ? legacyChildren(config.children)
-            : childNodes(items),
+        children: childNodes(items),
       }),
       form: (config = {}, ...items) => ({
         type: "form",
@@ -382,22 +346,8 @@
         children: childNodes(items),
         onSubmit: maybeInline(config.onSubmit),
       }),
-      text: (value, tone) => {
-        const config = generatedCompatibility && value && typeof value === "object" ? value : null;
-        return {
-          type: "text",
-          value: config ? legacyText(config.children) : String(value),
-          tone: config && typeof config.tone === "string" ? config.tone : tone,
-        };
-      },
-      badge: (label, tone) => {
-        const config = generatedCompatibility && label && typeof label === "object" ? label : null;
-        return {
-          type: "badge",
-          label: config ? String(config.label ?? "") : String(label),
-          tone: config && typeof config.tone === "string" ? config.tone : tone,
-        };
-      },
+      text: (value, tone) => ({ type: "text", value: String(value), tone }),
+      badge: (label, tone) => ({ type: "badge", label: String(label), tone }),
       metric: (options) => ({
         type: "metric",
         label: String(options.label),
@@ -583,10 +533,6 @@
       for (const commandId of viewInlineActionIds.get(viewId) ?? []) commands.delete(commandId);
       for (const [commandId, handler] of nextRenderContext.handlers) commands.set(commandId, handler);
       viewInlineActionIds.set(viewId, new Set(nextRenderContext.handlers.keys()));
-      if (generatedCompatibility && typeof view === "string") return { type: "text", value: view };
-      if (generatedCompatibility && Array.isArray(view)) {
-        return { type: "stack", children: childNodes(view) };
-      }
       return view;
     }
     if (message.method === "executeCommand") {
@@ -641,8 +587,6 @@
     if (message.type === "activate") {
       void (async () => {
         try {
-          activeExtensionId = message.extensionId;
-          generatedCompatibility = message.compatibility === "generated";
           extensionModule = await host.importModule(message.source, message.extensionId);
           if (typeof extensionModule.activate !== "function") {
             throw new Error("Integration must export activate(api)");

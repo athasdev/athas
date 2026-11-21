@@ -1,29 +1,30 @@
-//! Renders a generated UI extension to a PNG with the GPU but without a window.
+//! Renders a UI extension to a PNG with the GPU but without a window.
 //!
 //! `cargo run -p extensions_ui --example ui_extension_snapshot -- out.png [dark|light] [scene]`
 //! Scenes: `view` (the sample extension's sidebar view), `clicked` (the same after its button
-//! and form ran in the extension), `page` (the extension manager with the extension created from
-//! a prompt by a mocked model, its page open), `catalog` (the Generated group in the catalog).
+//! and form ran in the extension).
 
-use std::rc::Rc;
 use std::sync::Arc;
 
 use anyhow::{Context as _, Result};
-use extension_host::generate::ExtensionGenerator;
 use extension_host::view::Node;
-use extensions_ui::{ExtensionView, ExtensionViewSurface, ExtensionsView, ui_extensions};
+use extension_host::HostManifest;
+use extensions_ui::{ExtensionView, ExtensionViewSurface, ui_extensions};
 use gpui::{AppContext, Context, Entity, HeadlessAppContext, IntoElement, Render, Window, div, prelude::*, px, size};
 use serde_json::json;
 use theme::{ActiveTheme, Appearance};
+
+/// The sample extension's id; its contributions name themselves inside that namespace.
+const EXTENSION_ID: &str = "athas.deploys";
 
 const SAMPLE: &str = r#"
 let deploys = (await api.storage.get("deploys")) ?? 3;
 let target = "staging";
 api.sidebar.registerView({
-  id: "deploys",
+  id: "athas.deploys.deploys",
   title: "Deploys",
   icon: "rocket",
-  render: () => api.ui.screen({ title: "Deploys", actions: [{ label: "Refresh", icon: "arrow-clockwise", action: api.ui.action("refresh") }] },
+  render: () => api.ui.screen({ title: "Deploys", actions: [{ label: "Refresh", icon: "arrow-clockwise", action: api.ui.action("athas.deploys.refresh") }] },
     api.ui.row(
       api.ui.metric({ label: "Deploys today", value: deploys, detail: "+2", tone: "success" }),
       api.ui.metric({ label: "Failed checks", value: 1, detail: "1h", tone: "error" }),
@@ -47,17 +48,8 @@ api.sidebar.registerView({
     api.ui.keyValue({ items: [{ label: "Region", value: "eu-west-1" }, { label: "Commit", value: "a1b2c3d", monospace: true }] }),
   ),
 });
-api.commands.register({ id: "refresh", title: "Refresh deploys", run: () => api.views.invalidate("deploys") });
+api.commands.register({ id: "athas.deploys.refresh", title: "Refresh deploys", run: () => api.views.invalidate("athas.deploys.deploys") });
 "#;
-
-struct Mock(String);
-
-impl ExtensionGenerator for Mock {
-    fn complete(&self, _: String, _: String) -> futures::future::LocalBoxFuture<'static, Result<String, String>> {
-        let reply = self.0.clone();
-        Box::pin(async move { Ok(reply) })
-    }
-}
 
 struct ViewScene {
     view: Entity<ExtensionView>,
@@ -95,25 +87,19 @@ fn main() -> Result<()> {
     })?;
     cx.allow_parking();
 
-    let record = json!({ "id": "deploys", "name": "Deploys", "description": "Recent deploys, build times and a deploy button.", "contributionType": "sidebar", "code": SAMPLE });
-    let extension_id = if scene == "page" || scene == "catalog" {
-        cx.update(|cx| ui_extensions::set_generator(Rc::new(Mock(format!("```json\n{record}\n```"))), cx));
-        let task = cx.update(|cx| ui_extensions::generate("a panel with my recent deploys".into(), cx));
-        wait(&mut cx, task).map_err(anyhow::Error::msg)?
-    } else {
-        let extension = extension_host::generated::read_generated_extension(&record).context("sample record")?;
-        let task = cx.update(|cx| ui_extensions::install(extension, cx));
-        wait(&mut cx, task).map_err(anyhow::Error::msg)?
+    let manifest = HostManifest {
+        id: EXTENSION_ID.into(),
+        name: "Deploys".into(),
+        description: "Recent deploys, build times and a deploy button.".into(),
+        ..Default::default()
     };
+    let source = format!("export async function activate(api) {{\n{SAMPLE}\n}}\n");
+    let host = cx.update(|cx| ui_extensions::host(cx));
+    wait_future(&mut cx, host.load(manifest, Some(source))).map_err(anyhow::Error::msg)?;
+    let extension_id = EXTENSION_ID.to_string();
     let view_id = format!("{extension_id}.deploys");
 
-    let window: gpui::AnyWindowHandle = if scene == "page" || scene == "catalog" {
-        let handle = cx.open_window(size(px(1100.), px(820.)), |window, cx| cx.new(|cx| ExtensionsView::new(window, cx)))?;
-        if scene == "page" {
-            cx.update(|cx| handle.update(cx, |view, _, cx| view.open_ui_extension(&extension_id, cx)).ok());
-        }
-        handle.into()
-    } else {
+    let window: gpui::AnyWindowHandle = {
         let view = cx.update(|cx| cx.new(|cx| ExtensionView::for_extension(extension_id.clone(), view_id.clone(), ExtensionViewSurface::Sidebar, cx)));
         let width = std::env::var("SNAPSHOT_WIDTH").ok().and_then(|width| width.parse().ok()).unwrap_or(360.);
         let handle = cx.open_window(size(px(width), px(1080.)), |_, cx| cx.new(|_| ViewScene { view: view.clone() }))?;
@@ -150,11 +136,7 @@ fn settle(cx: &mut HeadlessAppContext, window: gpui::AnyWindowHandle) -> Result<
     Ok(())
 }
 
-/// Runs the app until `task` finishes.
-fn wait<T: 'static>(cx: &mut HeadlessAppContext, task: gpui::Task<T>) -> T {
-    wait_future(cx, task)
-}
-
+/// Runs the app until `future` finishes.
 fn wait_future<T>(cx: &mut HeadlessAppContext, future: impl std::future::Future<Output = T>) -> T {
     let mut context = std::task::Context::from_waker(std::task::Waker::noop());
     let mut future = std::pin::pin!(future);

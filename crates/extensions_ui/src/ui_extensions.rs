@@ -1,32 +1,23 @@
-//! The app's UI extension host: AI-generated extensions kept in `generated-ui-extensions.json`
-//! (`localStorage` in the browser), started at launch, created from a prompt, paused, resumed and
-//! removed; and installed extensions with a `main` script, started while they are enabled. Host
-//! events become toasts, clipboard writes and opened links.
+//! The app's UI extension host: installed extensions with a `main` script, started while they
+//! are enabled. Host events become toasts, clipboard writes and opened links.
 
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
-use std::rc::Rc;
 use std::sync::Arc;
 use std::time::Duration;
 
-use extension_host::generate::{ExtensionGenerator, generate_extension};
-use extension_host::generated::{GENERATED_STORE_FILE, normalize_generated_id};
 pub use extension_host::SidebarView as SidebarViewInfo;
 pub use extension_host::store::ToolbarPosition;
 use extension_host::{
-    AiProvider, AiSettingsAction, Command, Dialog, ExtensionState, GeneratedExtension, GeneratedStore, Host, HostEvent, HostManifest, HostServices, Limits,
-    Permissions, PlatformWorkers, Registration, SidebarView, ToolbarAction,
+    AiProvider, AiSettingsAction, Command, Dialog, ExtensionState, Host, HostEvent, HostManifest, HostServices, Limits, Permissions, PlatformWorkers,
+    Registration, SidebarView, ToolbarAction,
 };
 use futures::StreamExt as _;
-use gpui::{App, AppContext as _, AsyncApp, BorrowAppContext, ClipboardItem, Global, SharedString, Task};
+use gpui::{App, AppContext as _, AsyncApp, BorrowAppContext, ClipboardItem, Global, SharedString};
 use notifications::{NotificationCategory, NotificationKind};
 
 pub struct UiExtensions {
     host: Host,
-    store: GeneratedStore,
-    generator: Option<Rc<dyn ExtensionGenerator>>,
-    generating: bool,
-    generate_error: Option<SharedString>,
     /// Installed extensions whose `main` script the host was asked to start, with the version
     /// it runs: an update (a new version) unloads the old script and loads the new one.
     installed: std::collections::HashMap<String, String>,
@@ -34,8 +25,7 @@ pub struct UiExtensions {
 
 impl Global for UiExtensions {}
 
-/// Where generated extensions and their storage live: the app's data folder on the desktop,
-/// memory in the browser.
+/// Where extension storage lives: the app's data folder on the desktop, memory in the browser.
 fn default_data_dir() -> Option<PathBuf> {
     #[cfg(not(target_family = "wasm"))]
     return extensions::default_dir().and_then(|dir| dir.parent().map(|parent| parent.to_path_buf()));
@@ -50,17 +40,11 @@ pub(crate) fn init(cx: &mut App) {
     init_with(cx, default_data_dir());
 }
 
-/// Sets up the host with its data in `data_dir` (memory only without one) and starts the stored
-/// extensions that are not paused.
+/// Sets up the host with its data in `data_dir` (memory only without one).
 pub fn init_with(cx: &mut App, data_dir: Option<PathBuf>) {
     let services = Arc::new(HostServices::new(data_dir.as_ref().map(|dir| dir.join("ui-extension-storage")), bridge(), http()));
     let (host, mut events) = Host::new(Arc::new(PlatformWorkers), services, Limits::default());
-    let store = match data_dir {
-        Some(dir) => GeneratedStore::at(Some(dir.join(GENERATED_STORE_FILE))),
-        None => GeneratedStore::local_storage(),
-    };
-    let stored = store.read();
-    cx.set_global(UiExtensions { host: host.clone(), store, generator: None, generating: false, generate_error: None, installed: Default::default() });
+    cx.set_global(UiExtensions { host: host.clone(), installed: Default::default() });
     #[cfg(not(target_family = "wasm"))]
     ai_providers::set_external_providers(Some(Arc::new(ProviderBridge(host.clone()))));
 
@@ -78,20 +62,6 @@ pub fn init_with(cx: &mut App, data_dir: Option<PathBuf>) {
         }
     })
     .detach();
-
-    for extension in stored {
-        if extension.disabled {
-            host.register_disabled(&extension);
-        } else {
-            let task = host.load_generated(&extension);
-            cx.spawn(async move |_| {
-                if let Err(error) = task.await {
-                    eprintln!("ui extensions: {}: {error}", extension.name);
-                }
-            })
-            .detach();
-        }
-    }
 
     sync_installed(cx);
     cx.observe_global::<extensions::Extensions>(sync_installed).detach();
@@ -169,13 +139,12 @@ fn sync_installed(cx: &mut App) {
                 host.unload(&id).await;
             }
             let result = match read.await {
-                Ok(source) => host.load(manifest, Some(source), false).await,
+                Ok(source) => host.load(manifest, Some(source)).await,
                 Err(error) => {
                     host.register_extension(Registration {
                         extension_id: id.clone(),
                         name: Some(manifest.name.clone()),
                         description: Some(manifest.description.clone()),
-                        contribution_type: None,
                         state: ExtensionState::Error,
                         error: Some(error.clone()),
                     });
@@ -392,140 +361,6 @@ pub fn icon(name: &str) -> ui::IconName {
     ui::IconName::from_name(&key).unwrap_or(ui::IconName::PuzzlePiece)
 }
 
-/// Replaces how prompts reach a model (the AI settings' model by default).
-pub fn set_generator(generator: Rc<dyn ExtensionGenerator>, cx: &mut App) {
-    cx.global_mut::<UiExtensions>().generator = Some(generator);
-}
-
-/// Each stored generated extension with what the host knows of it.
-pub fn generated(cx: &App) -> Vec<(GeneratedExtension, Option<Registration>)> {
-    let state = cx.global::<UiExtensions>();
-    let registrations = state.host.store().extensions;
-    state.store.read().into_iter().map(|extension| {
-        let registration = registrations.get(&normalize_generated_id(&extension.id)).cloned();
-        (extension, registration)
-    }).collect()
-}
-
-pub fn is_generating(cx: &App) -> bool {
-    cx.global::<UiExtensions>().generating
-}
-
-pub fn generate_error(cx: &App) -> Option<SharedString> {
-    cx.global::<UiExtensions>().generate_error.clone()
-}
-
-/// Installs a generated record: starts it and, once it runs, keeps it.
-pub fn install(extension: GeneratedExtension, cx: &mut App) -> Task<Result<String, String>> {
-    let task = host(cx).load_generated(&extension);
-    cx.spawn(async move |cx| {
-        let id = task.await?;
-        cx.update(|cx| cx.update_global::<UiExtensions, _>(|state, _| state.store.store(&extension)))?;
-        Ok(id)
-    })
-}
-
-/// Asks the model for an extension that does what `prompt` describes, then installs it.
-pub fn generate(prompt: String, cx: &mut App) -> Task<Result<String, String>> {
-    let generator = cx.global::<UiExtensions>().generator.clone().or_else(|| default_generator(cx));
-    let Some(generator) = generator else {
-        return Task::ready(Err("Creating extensions with AI is not available here".into()));
-    };
-    cx.update_global::<UiExtensions, _>(|state, _| {
-        state.generating = true;
-        state.generate_error = None;
-    });
-    cx.spawn(async move |cx| {
-        let result = match generate_extension(generator.as_ref(), &prompt).await {
-            Ok(extension) => cx.update(|cx| install(extension, cx)).await,
-            Err(error) => Err(error),
-        };
-        cx.update(|cx| {
-            cx.update_global::<UiExtensions, _>(|state, _| {
-                state.generating = false;
-                state.generate_error = result.as_ref().err().map(|error| SharedString::from(error.clone()));
-            })
-        });
-        result
-    })
-}
-
-pub fn set_enabled(extension_id: &str, enabled: bool, cx: &mut App) -> Task<Result<(), String>> {
-    let found = cx.update_global::<UiExtensions, _>(|state, _| state.store.set_disabled(extension_id, !enabled));
-    let extension = match found {
-        Ok(Some(extension)) => extension,
-        Ok(None) => return Task::ready(Err(format!("No generated extension {extension_id}"))),
-        Err(error) => return Task::ready(Err(error)),
-    };
-    let host = host(cx);
-    cx.spawn(async move |_| {
-        if enabled {
-            host.load_generated(&extension).await.map(|_| ())
-        } else {
-            host.unload(&normalize_generated_id(&extension.id)).await;
-            host.register_disabled(&extension);
-            Ok(())
-        }
-    })
-}
-
-pub fn remove(extension_id: &str, cx: &mut App) -> Task<Result<(), String>> {
-    let removed = cx.update_global::<UiExtensions, _>(|state, _| state.store.remove(extension_id));
-    let host = host(cx);
-    let extension_id = extension_id.to_string();
-    cx.spawn(async move |_| {
-        removed?;
-        host.unload(&extension_id).await;
-        host.cleanup_extension(&extension_id);
-        Ok(())
-    })
-}
-
-/// The AI settings' model (Settings > AI), through `ai_providers`.
-#[cfg(not(target_family = "wasm"))]
-fn default_generator(cx: &App) -> Option<Rc<dyn ExtensionGenerator>> {
-    let settings = settings::get(cx);
-    Some(Rc::new(ModelGenerator(ai_providers::ProviderSettings {
-        provider_id: settings.ai_provider_id.clone(),
-        model_id: settings.ai_model_id.clone(),
-        custom_base_url: settings.ai_custombase_url.clone(),
-        custom_model_id: settings.ai_custom_model_id.clone(),
-        ollama_base_url: settings.ollama_base_url.clone(),
-    })))
-}
-
-#[cfg(target_family = "wasm")]
-fn default_generator(_: &App) -> Option<Rc<dyn ExtensionGenerator>> {
-    None
-}
-
-#[cfg(not(target_family = "wasm"))]
-struct ModelGenerator(ai_providers::ProviderSettings);
-
-#[cfg(not(target_family = "wasm"))]
-impl ExtensionGenerator for ModelGenerator {
-    fn complete(&self, system: String, prompt: String) -> futures::future::LocalBoxFuture<'static, Result<String, String>> {
-        let settings = self.0.clone();
-        Box::pin(async move {
-            let connection = ai_providers::Connection::resolve(&settings, ai_providers::Keychain::shared()).map_err(|error| error.to_string())?;
-            let request = ai_providers::Request {
-                system,
-                messages: vec![ai_providers::Message::user(prompt)],
-                max_tokens: connection.default_max_tokens().min(16_000),
-                ..Default::default()
-            };
-            let mut stream = connection.stream(&request).await.map_err(|error| error.to_string())?;
-            let mut text = String::new();
-            while let Some(event) = stream.next().await {
-                if let ai_providers::Event::Text(chunk) = event.map_err(|error| error.to_string())? {
-                    text.push_str(&chunk);
-                }
-            }
-            Ok(text)
-        })
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use gpui::TestAppContext;
@@ -579,7 +414,7 @@ mod tests {
 
         let services = Arc::new(HostServices::detached());
         let (host, _events) = Host::new(Arc::new(PlatformWorkers), services, Limits::default());
-        futures::executor::block_on(host.load(host_manifest, Some(source), false)).unwrap();
+        futures::executor::block_on(host.load(host_manifest, Some(source))).unwrap();
         assert_eq!(host.store().sidebar_views["acme.panel.view"].title, "Acme");
 
         cx.update(|cx| extensions::set_enabled("acme.panel", false, cx).unwrap());

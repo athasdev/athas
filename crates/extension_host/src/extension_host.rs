@@ -5,8 +5,6 @@
 pub mod adapter;
 #[cfg(not(target_family = "wasm"))]
 pub mod engine;
-pub mod generate;
-pub mod generated;
 pub mod host;
 pub mod permissions;
 pub mod services;
@@ -18,7 +16,6 @@ pub mod web_worker;
 
 use std::sync::Arc;
 
-pub use generated::{ContributionType, GeneratedExtension, GeneratedStore, HostManifest};
 pub use store::{AiProvider, AiSettingsAction, Command, Dialog, SidebarView, ToolbarAction, ToolbarPosition};
 pub use host::Host;
 pub use permissions::Permissions;
@@ -28,6 +25,17 @@ pub use view::{Action, Node, parse_view};
 
 /// The worker side of `runtime.js`, for hosts that load it themselves.
 pub const RUNTIME_JS: &str = include_str!("runtime.js");
+
+/// What a UI extension runs as: its id, display name and permissions.
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct HostManifest {
+    pub id: String,
+    pub name: String,
+    pub description: String,
+    pub permissions: Permissions,
+    /// The `aiProviders` the manifest contributes; an extension may register only these.
+    pub ai_providers: Vec<serde_json::Value>,
+}
 
 /// What one extension's worker may use.
 #[derive(Clone, Debug)]

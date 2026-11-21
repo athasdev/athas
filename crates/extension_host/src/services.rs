@@ -12,7 +12,7 @@ use serde_json::{Map, Value};
 use web_time::{Duration, Instant};
 
 use crate::HostEvent;
-use crate::generated::HostManifest;
+use crate::HostManifest;
 use crate::permissions::is_network_request_allowed;
 
 pub const MAX_RESPONSE_BYTES: usize = 5 * 1024 * 1024;

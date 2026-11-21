@@ -1,5 +1,5 @@
-//! The browser's `localStorage` and `fetch`, which the original used for generated extensions,
-//! extension storage and HTTP. Off the browser there is no `localStorage`.
+//! The browser's `localStorage` and `fetch`, which the original used for extension storage and
+//! HTTP. Off the browser there is no `localStorage`.
 
 #[cfg(target_family = "wasm")]
 fn storage() -> Option<web_sys::Storage> {

@@ -9,7 +9,6 @@ mod icon_theme_picker;
 mod install_prompt;
 mod tool_watch;
 pub mod ui_extensions;
-mod ui_extensions_page;
 mod widgets;
 
 use extensions::{CatalogEntry, CatalogSource, ExtensionKind, ExtensionStatus, Extensions, Operation};
@@ -99,10 +98,6 @@ pub struct ExtensionsView {
     search: gpui::Entity<TextInput>,
     /// The extension whose page is open.
     selected: Option<String>,
-    /// The generated UI extension whose page is open.
-    selected_ui: Option<String>,
-    prompt: gpui::Entity<TextInput>,
-    ui_views: std::collections::HashMap<String, gpui::Entity<ExtensionView>>,
     list_scroll: ScrollHandle,
     detail_scroll: ScrollHandle,
     /// Set when the view is a page of Settings: it flows in that page, which scrolls it.
@@ -126,15 +121,7 @@ impl ExtensionsView {
                 .appearance(InputAppearance::Field)
                 .leading_icon(IconName::Search)
         });
-        let prompt = cx.new(|cx| {
-            TextInput::new(window, cx).placeholder("Create an extension: a sidebar that lists my open pull requests").appearance(InputAppearance::Bare)
-        });
         let subscriptions = vec![
-            cx.subscribe(&prompt, |this, _, event: &TextInputEvent, cx| {
-                if *event == TextInputEvent::Confirmed {
-                    this.create_ui_extension(cx);
-                }
-            }),
             cx.observe_global::<ui_extensions::UiExtensions>(|_, cx| cx.notify()),
             cx.subscribe(&search, |this, input, event: &TextInputEvent, cx| match event {
                 TextInputEvent::Changed(_) => {
@@ -154,9 +141,6 @@ impl ExtensionsView {
             focus_handle: cx.focus_handle(),
             search,
             selected: None,
-            selected_ui: None,
-            prompt,
-            ui_views: Default::default(),
             list_scroll: ScrollHandle::new(),
             detail_scroll: ScrollHandle::new(),
             page_scroll: None,
@@ -215,7 +199,7 @@ impl ExtensionsView {
     }
 
     pub(crate) fn back(&mut self, cx: &mut Context<Self>) {
-        if self.selected.take().is_some() | self.selected_ui.take().is_some() {
+        if self.selected.take().is_some() {
             self.scroll_to_top();
             cx.emit(ExtensionsViewEvent::TitleChanged("Integrations".into()));
             cx.notify();
@@ -225,7 +209,7 @@ impl ExtensionsView {
     fn on_back(&mut self, _: &Back, _: &mut Window, cx: &mut Context<Self>) {
         // Escape leaves an extension's page. With the catalog open there is nothing to leave,
         // so it belongs to whatever holds the view — the Settings dialog closes on it.
-        if self.selected.is_none() && self.selected_ui.is_none() {
+        if self.selected.is_none() {
             cx.propagate();
             return;
         }
@@ -553,13 +537,6 @@ impl ExtensionsView {
             let title = if grouped { kind.label() } else { self.filter_label(cx) };
             sections.push(ui::GroupedSection::new(title).children(rows).into_any_element());
         }
-        // Generated extensions are this app's own; they follow the catalog.
-        if grouped && self.search.read(cx).text().trim().is_empty() {
-            let generated = self.render_generated_section(colors, cx);
-            if !generated.is_empty() {
-                sections.push(div().flex().flex_col().gap(px(6.)).children(generated).into_any_element());
-            }
-        }
         div().flex().flex_col().gap(px(24.)).children(sections).into_any_element()
     }
 
@@ -596,7 +573,6 @@ impl Render for ExtensionsView {
         let colors = cx.theme().colors.clone();
         let body = match self.selected.clone().and_then(|id| extensions::get(cx).entry(&id)) {
             Some(entry) => detail::render(self, &entry, &colors, cx),
-            None if let Some(id) = self.selected_ui.clone() => self.render_generated_detail(&id, &colors, cx),
             None => {
                 let entries = self.visible_entries(cx);
                 let catalog = div()
@@ -623,10 +599,11 @@ impl Render for ExtensionsView {
             .on_action(cx.listener(Self::on_focus_search))
             .flex()
             .flex_col()
-            .min_h_0()
             // Embedded it is one block of a Settings page, which gives it its width and ground.
-            .when(!self.embedded(), |this| this.size_full().bg(colors.surface))
-            .when(self.embedded(), |this| this.w_full())
+            // It must keep its full height there: a block that may shrink (`min_h_0`, the
+            // default `flex-shrink`) is squeezed into the page instead of scrolling it.
+            .when(!self.embedded(), |this| this.min_h_0().size_full().bg(colors.surface))
+            .when(self.embedded(), |this| this.w_full().flex_none())
             .text_color(colors.foreground)
             .font_family(typography::UI_FONT)
             .child(body)

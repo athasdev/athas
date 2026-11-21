@@ -89,7 +89,7 @@ fn main() -> Result<()> {
         if let Ok(path) = std::env::var("ATHAS_SNAPSHOT_CUSTOM_THEMES") {
             extensions::set_custom_themes_path(Some(path.into()), cx);
         }
-        // UI extensions run from `ATHAS_SNAPSHOT_UI_EXTENSIONS_DIR` (its `generated-ui-extensions.json`), else none.
+        // UI extension storage lives under `ATHAS_SNAPSHOT_UI_EXTENSIONS_DIR`, in memory without one.
         extensions_ui::ui_extensions::init_with(cx, std::env::var("ATHAS_SNAPSHOT_UI_EXTENSIONS_DIR").ok().map(Into::into));
         extensions_ui::init(cx);
         theme::init(cx, None, appearance, false);

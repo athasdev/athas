@@ -9,7 +9,7 @@ use futures::channel::{mpsc, oneshot};
 use serde_json::{Value, json};
 use web_time::{Duration, Instant};
 
-use crate::generated::{ContributionType, GeneratedExtension, HostManifest, generated_manifest, wrap_generated_source};
+use crate::HostManifest;
 use crate::services::{HostServices, js_string};
 use crate::store::{AiProvider, AiSettingsAction, Command, Dialog, ExtensionState, Registration, SidebarView, Store, ToolbarAction, ToolbarPosition};
 use crate::view::{Node, parse_view};
@@ -126,7 +126,7 @@ impl Host {
 
     /// Starts `source` (an ES module exporting `activate(api)`) for `manifest`; resolves once the
     /// extension is ready or fails to activate.
-    pub fn load(&self, manifest: HostManifest, source: Option<String>, generated: bool) -> impl Future<Output = Result<(), String>> + use<> {
+    pub fn load(&self, manifest: HostManifest, source: Option<String>) -> impl Future<Output = Result<(), String>> + use<> {
         let extension_id = manifest.id.clone();
         let receiver = {
             let mut inner = self.shared.inner.lock().unwrap();
@@ -138,7 +138,6 @@ impl Host {
                         extension_id: extension_id.clone(),
                         name: Some(manifest.name.clone()),
                         description: Some(manifest.description.clone()),
-                        contribution_type: None,
                         state: ExtensionState::Loading,
                         error: None,
                     });
@@ -167,7 +166,6 @@ impl Host {
                                 let activate = json!({
                                     "type": "activate",
                                     "extensionId": extension_id,
-                                    "compatibility": if generated { Value::from("generated") } else { Value::Null },
                                     "source": source,
                                 });
                                 worker.post(activate.to_string());
@@ -192,57 +190,6 @@ impl Host {
                 Some(Ok(receiver)) => receiver.await.unwrap_or_else(|_| Err("Integration was unloaded".into())),
             }
         }
-    }
-
-    /// Installs an AI-generated extension (`installGeneratedUIExtension`): replaces a running copy,
-    /// validates its code and permissions, and starts it.
-    pub fn load_generated(&self, extension: &GeneratedExtension) -> impl Future<Output = Result<String, String>> + use<> {
-        let extension_id = crate::generated::normalize_generated_id(&extension.id);
-        let registration = Registration {
-            extension_id: extension_id.clone(),
-            name: Some(extension.name.clone()),
-            description: Some(extension.description.clone()),
-            contribution_type: Some(extension.contribution_type),
-            state: ExtensionState::Loading,
-            error: None,
-        };
-        let unload = self.is_loaded(&extension_id).then(|| self.unload(&extension_id));
-        let host = self.clone();
-        let prepared = generated_manifest(extension).and_then(|manifest| Ok((manifest, wrap_generated_source(&extension.code)?)));
-        async move {
-            if let Some(unload) = unload {
-                unload.await;
-            } else {
-                host.cleanup_extension(&extension_id);
-            }
-            host.register_extension(registration.clone());
-            let result = match prepared {
-                Ok((manifest, source)) => host.load(manifest, Some(source), true).await,
-                Err(error) => Err(error),
-            };
-            match result {
-                Ok(()) => {
-                    host.register_extension(Registration { state: ExtensionState::Active, ..registration });
-                    Ok(extension_id)
-                }
-                Err(error) => {
-                    host.update_extension_state(&extension_id, ExtensionState::Error, Some(error.clone()));
-                    Err(error)
-                }
-            }
-        }
-    }
-
-    /// Shows a generated extension as installed but stopped.
-    pub fn register_disabled(&self, extension: &GeneratedExtension) {
-        self.register_extension(Registration {
-            extension_id: crate::generated::normalize_generated_id(&extension.id),
-            name: Some(extension.name.clone()),
-            description: Some(extension.description.clone()),
-            contribution_type: Some(extension.contribution_type),
-            state: ExtensionState::Disabled,
-            error: None,
-        });
     }
 
     fn dispose_worker(&self, loaded: &mut Loaded, reason: &str) {
@@ -581,7 +528,4 @@ impl Host {
         }
     }
 
-    pub fn contribution_type(&self, extension_id: &str) -> Option<ContributionType> {
-        self.with_store(|store| store.extensions.get(extension_id).and_then(|registration| registration.contribution_type))
-    }
 }

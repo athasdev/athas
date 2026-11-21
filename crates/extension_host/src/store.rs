@@ -2,8 +2,6 @@
 
 use std::collections::{BTreeMap, HashMap};
 
-use crate::generated::ContributionType;
-
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ExtensionState {
     Loading,
@@ -17,7 +15,6 @@ pub struct Registration {
     pub extension_id: String,
     pub name: Option<String>,
     pub description: Option<String>,
-    pub contribution_type: Option<ContributionType>,
     pub state: ExtensionState,
     pub error: Option<String>,
 }
