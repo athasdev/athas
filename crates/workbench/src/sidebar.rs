@@ -468,9 +468,6 @@ impl Workbench {
             .gap(px(6.))
             .text_size(ui::typography::TEXT_CAPTION)
             .text_color(colors.subtle_foreground)
-            .when(session.unread && !active, |this| {
-                this.child(div().id(gpui::ElementId::Name(format!("session-unread-{}", session.id.0).into())).flex_none().size(px(6.)).rounded_full().bg(colors.primary))
-            })
             .when(cloud, |this| this.child(Icon::new(IconName::Cloud).size(IconSize::XSmall).color(colors.subtle_foreground)))
             .when(session.pinned, |this| {
                 this.child(Icon::new(IconName::Pin).size(IconSize::XSmall).color(colors.subtle_foreground))
@@ -480,6 +477,9 @@ impl Workbench {
         let new_window_id = session.id.clone();
         SidebarListItem::new(gpui::ElementId::Name(format!("session-{}", session.id.0).into()), session.title.clone())
             .leading(leading)
+            .indicator((session.unread && !active).then(|| {
+                div().id(gpui::ElementId::Name(format!("session-unread-{}", session.id.0).into())).flex_none().size(px(6.)).rounded_full().bg(colors.primary)
+            }))
             .trailing(trailing)
             .hover_trailing(
                 Button::icon(gpui::ElementId::Name(format!("session-more-{}", session.id.0).into()), IconName::Dots)

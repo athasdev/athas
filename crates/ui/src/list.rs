@@ -31,6 +31,7 @@ pub struct SidebarListItem {
     leading: Option<AnyElement>,
     trailing: Option<AnyElement>,
     hover_trailing: Option<AnyElement>,
+    indicator: Option<AnyElement>,
     description: Option<SharedString>,
     /// Dimmed text on the label's line, after it (a branch's upstream, a tag's pre-release).
     detail: Option<SharedString>,
@@ -52,6 +53,7 @@ impl SidebarListItem {
             leading: None,
             trailing: None,
             hover_trailing: None,
+            indicator: None,
             description: None,
             detail: None,
             struck: false,
@@ -88,6 +90,12 @@ impl SidebarListItem {
     /// Shown in place of `trailing` while the pointer is over the row, such as row actions.
     pub fn hover_trailing(mut self, element: impl IntoElement) -> Self {
         self.hover_trailing = Some(element.into_any_element());
+        self
+    }
+
+    /// A mark that stays in view while the pointer is over the row, such as an unread dot.
+    pub fn indicator(mut self, element: Option<impl IntoElement>) -> Self {
+        self.indicator = element.map(IntoElement::into_any_element);
         self
     }
 
@@ -241,6 +249,7 @@ impl RenderOnce for SidebarListItem {
                             .child(description)
                     })),
             )
+            .children(self.indicator.map(|indicator| div().flex().flex_none().items_center().child(indicator)))
             .children(self.trailing.map(|trailing| {
                 div()
                     .flex()
@@ -268,6 +277,26 @@ impl RenderOnce for SidebarListItem {
             .when_some(self.on_secondary, |this, handler| {
                 this.on_mouse_down(MouseButton::Right, move |event, window, cx| handler(event, window, cx))
             })
+    }
+}
+
+/// The look every sidebar row shares, so a file, an outline symbol or a search hit reads like a
+/// session: muted text that brightens on hover with no fill, and the active row lifted as a
+/// pill. Rows inside a panel call this instead of filling on hover.
+pub fn sidebar_row<E: Styled + InteractiveElement>(row: E, active: bool, emphasized: bool, cx: &App) -> E {
+    let theme = cx.theme();
+    let colors = &theme.colors;
+    let raised_pill = !theme::glass(cx);
+    let foreground = colors.foreground;
+    if !active {
+        return row.text_color(colors.muted_foreground).hover(move |style| style.text_color(foreground));
+    }
+    let row = row.text_color(foreground);
+    match (emphasized, raised_pill) {
+        (true, true) => row.bg(colors.selected_emphasized).shadow(theme.shadows.raised_inset.clone()),
+        (true, false) => row.bg(colors.selected_emphasized),
+        (false, true) => row.bg(colors.raised).shadow(theme.shadows.raised_inset.clone()),
+        (false, false) => row.bg(colors.selected),
     }
 }
 
