@@ -35,9 +35,12 @@ concurrency:
 # The release is created in this repository with the run's own token.
 permissions:
   contents: write
+  actions: write # prune stale build caches in `assemble`
 
 env:
   CARGO_TERM_COLOR: always
+  CARGO_NET_RETRY: "10"
+  CARGO_INCREMENTAL: "0"
   # The shipping identity: bundle id com.code.athas, data in dev.athas.app (crates/paths).
   ATHAS_IDENTITY: release
   RELEASE_REPO: athasdev/athas
@@ -58,6 +61,9 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
+          if [ "$GITHUB_REF" != "refs/heads/main" ]; then
+            echo "::warning title=Not main::Releasing from $GITHUB_REF; release builds are meant to come from main."
+          fi
           if [[ ! "$TAG" =~ ^v([0-9]+)\.([0-9]+)\.([0-9]+)(-beta\.([1-9][0-9]*))?$ ]]; then
             echo "Invalid release tag: $TAG" >&2; exit 1
           fi
@@ -87,7 +93,7 @@ jobs:
           - { platform: windows-latest, os: windows, artifact: windows-x86_64, target: "" }
           - { platform: windows-latest, os: windows, artifact: windows-aarch64, target: aarch64-pc-windows-msvc }
     runs-on: ${{ matrix.platform }}
-    timeout-minutes: 120
+    timeout-minutes: 90
     env:
       VERSION: ${{ needs.metadata.outputs.version }}
     steps:
@@ -109,6 +115,9 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           shared-key: gpui-release-${{ matrix.artifact }}
+          # A failed build (a flaky signing step, a one-off compile error) still keeps its compiled
+          # dependencies, so the retry starts warm instead of rebuilding OpenSSL and GPUI.
+          cache-on-failure: true
 
       - name: Setup Bun (Tauri bundler CLI)
         uses: oven-sh/setup-bun@v2
@@ -300,7 +309,14 @@ jobs:
           set -euo pipefail
           prerelease=(); [[ "$TAG" == *-* ]] && prerelease=(--prerelease)
           if gh release view "$TAG" --repo "$RELEASE_REPO" >/dev/null 2>&1; then
-            test "$(gh release view "$TAG" --repo "$RELEASE_REPO" --json isDraft --jq .isDraft)" = true
+            if [ "$(gh release view "$TAG" --repo "$RELEASE_REPO" --json isDraft --jq .isDraft)" != true ]; then
+              echo "$TAG is already published; refusing to change it." >&2; exit 1
+            fi
+            # A re-run builds a new commit: point the draft at it and drop assets this run no longer ships.
+            gh release edit "$TAG" --repo "$RELEASE_REPO" --target "$GITHUB_SHA"
+            gh release view "$TAG" --repo "$RELEASE_REPO" --json assets --jq '.assets[].name' | while read -r name; do
+              [ -e "prepared-release/$name" ] || gh release delete-asset "$TAG" "$name" --repo "$RELEASE_REPO" --yes
+            done
           else
             # The tag points at the commit this run built (created when the release is published).
             gh release create "$TAG" --repo "$RELEASE_REPO" --draft "${prerelease[@]}" \
@@ -321,3 +337,31 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ needs.metadata.outputs.tag }}
         run: gh release edit "$TAG" --repo "$RELEASE_REPO" --draft=false
+      - name: Summary
+        if: always()
+        env:
+          TAG: ${{ needs.metadata.outputs.tag }}
+          PUBLISHED: ${{ inputs.publish && vars.AUTO_PUBLISH_RELEASE == 'true' }}
+        run: |
+          url="https://github.com/${RELEASE_REPO}/releases/tag/${TAG}"
+          if [ "$PUBLISHED" = true ]; then
+            echo "### ${TAG} published: ${url}" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "### ${TAG} is a draft: ${url}" >> "$GITHUB_STEP_SUMMARY"
+            echo "Publish it from the release page, or re-run with \`publish\` and AUTO_PUBLISH_RELEASE=true." >> "$GITHUB_STEP_SUMMARY"
+            if [ "${{ inputs.publish }}" = true ]; then
+              echo "::warning title=Not published::\`publish\` was set but the AUTO_PUBLISH_RELEASE variable is not \"true\"."
+            fi
+          fi
+      # GitHub evicts the least recently used caches past 10 GB. Every Cargo.lock change leaves a
+      # full set of stale caches behind, and those push the release caches out. Keep only the
+      # newest cache of each kind (the key minus its trailing Cargo.lock hash).
+      - name: Prune stale build caches
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh cache list --repo "$GITHUB_REPOSITORY" --limit 100 --json id,key,createdAt \
+            --jq '[.[] | select(.key | startswith("v0-rust-gpui-"))]
+                  | group_by(.key | sub("-[^-]+$"; "")) | .[] | sort_by(.createdAt) | .[:-1][] | .id' \
+            | while read -r id; do gh cache delete "$id" --repo "$GITHUB_REPOSITORY"; done
