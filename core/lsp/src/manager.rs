@@ -1658,6 +1658,7 @@ impl LspManager {
          "cpp" | "cc" | "cxx" | "hpp" | "hh" | "hxx" => "cpp",
          "cs" => "csharp",
          "css" => "css",
+         "d" | "di" => "d",
          "dart" => "dart",
          "el" => "elisp",
          "ex" | "exs" => "elixir",

@@ -641,6 +641,43 @@
    "monochromeIcon": false
   },
   {
+   "path": "d",
+   "manifest": {
+    "$schema": "https://athas.dev/schemas/extension.json",
+    "id": "athas.d",
+    "name": "D",
+    "displayName": "D",
+    "version": "1.0.0",
+    "description": "D language support with LSP",
+    "publisher": "Athas",
+    "categories": [
+     "Language"
+    ],
+    "languages": [
+     {
+      "id": "d",
+      "extensions": [
+       ".d",
+       ".di"
+      ],
+      "aliases": [
+       "D",
+       "dlang"
+      ]
+     }
+    ],
+    "capabilities": {
+     "lsp": {
+      "name": "serve-d",
+      "runtime": "binary",
+      "args": []
+     }
+    }
+   },
+   "icon": "extensions/icons/athas.d.svg",
+   "monochromeIcon": false
+  },
+  {
    "path": "dart",
    "manifest": {
     "$schema": "https://athas.dev/schemas/extension.json",

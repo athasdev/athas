@@ -53,6 +53,7 @@ tree-sitter-md = "0.5"
 tree-sitter-toml-ng = "0.7"
 tree-sitter-yaml = "0.7"
 tree-sitter-bash = "0.25"
+tree-sitter-d = "0.8"
 
 [dev-dependencies]
 tempfile = "3"

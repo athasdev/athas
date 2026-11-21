@@ -86,6 +86,15 @@
       "server": "vscode-css-language-server"
     },
     {
+      "id": "d",
+      "extensions": [
+        "d",
+        "di"
+      ],
+      "filenames": [],
+      "server": "serve-d"
+    },
+    {
       "id": "dart",
       "extensions": [
         "dart"
@@ -761,6 +770,16 @@
       "rootMarkers": [
         "Cargo.toml",
         "rust-project.json"
+      ]
+    },
+    "serve-d": {
+      "runtime": "binary",
+      "command": "serve-d",
+      "package": null,
+      "args": [],
+      "initializationOptions": null,
+      "rootMarkers": [
+        "package.json"
       ]
     },
     "solargraph": {

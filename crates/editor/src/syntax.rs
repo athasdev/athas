@@ -332,6 +332,7 @@ static LANGUAGES: LazyLock<Vec<Arc<LanguageConfig>>> = LazyLock::new(|| {
         language("Dart", &["dart"], &[], slash, c_block, None),
         language("PHP", &["php", "phtml"], &[], slash, c_block, None),
         language("Zig", &["zig", "zon"], &[], slash, None, None),
+        language("D", &["d", "di"], &[], slash, c_block, grammar!(tree_sitter_d::LANGUAGE, &[include_str!("queries/d_highlights.scm")])),
         language("Solidity", &["sol"], &[], slash, c_block, None),
         language("Protocol Buffers", &["proto"], &[], slash, c_block, None),
         language("Groovy", &["groovy", "gradle"], &["Jenkinsfile"], slash, c_block, None),
@@ -437,6 +438,7 @@ pub fn language_for_id(id: &str) -> Option<Arc<LanguageConfig>> {
         "sql" => "SQL",
         "xml" => "XML",
         "scss" => "SCSS",
+        "d" | "dlang" => "D",
         _ => return None,
     };
     LANGUAGES.iter().find(|language| language.name == name).cloned()
@@ -1042,6 +1044,14 @@ mod tests {
         assert!(found.contains(&("greet".into(), SyntaxKind::Function)), "{found:?}");
         assert!(found.contains(&("string".into(), SyntaxKind::Type)), "{found:?}");
         assert!(found.contains(&("function".into(), SyntaxKind::Keyword)), "{found:?}");
+    }
+
+    #[test]
+    fn d_files_are_highlighted() {
+        assert_eq!(language_name_for_path(Path::new("app.d")), "D");
+        let spans = spans("app.d", "import std.stdio;\nvoid main() { writeln(\"hi\"); // x\n}\n");
+        assert!(spans.iter().any(|(text, kind)| text == "import" && *kind == SyntaxKind::Keyword), "{spans:?}");
+        assert!(spans.iter().any(|(text, kind)| text.starts_with("\"hi") && *kind == SyntaxKind::String), "{spans:?}");
     }
 
     #[test]

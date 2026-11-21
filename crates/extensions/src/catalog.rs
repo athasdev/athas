@@ -221,9 +221,9 @@ mod tests {
     #[test]
     fn every_official_manifest_parses() {
         let catalog = Catalog::bundled();
-        assert_eq!(catalog.entries().len(), 89);
+        assert_eq!(catalog.entries().len(), 90);
         let count = |kind| catalog.entries().iter().filter(|entry| entry.kind == kind).count();
-        assert_eq!(count(ExtensionKind::Language), 46);
+        assert_eq!(count(ExtensionKind::Language), 47);
         assert_eq!(count(ExtensionKind::Mcp), 21);
         assert_eq!(count(ExtensionKind::Agent), 7);
         assert_eq!(count(ExtensionKind::Database), 6);
@@ -250,7 +250,7 @@ mod tests {
             ExtensionManifest::from_json(&json).unwrap_or_else(|error| panic!("{}: {error:#}", path.display()));
             count += 1;
         }
-        assert_eq!(count, 89);
+        assert_eq!(count, 90);
     }
 
     #[test]
