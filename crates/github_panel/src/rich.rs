@@ -28,7 +28,8 @@ fn style(span: Span, colors: &ThemeColors) -> HighlightStyle {
     let mut style = HighlightStyle::default();
     match span {
         Span::Marker => style.color = Some(colors.subtle_foreground),
-        Span::Heading | Span::Strong => style.font_weight = Some(FontWeight::SEMIBOLD),
+        Span::Heading => style.font_weight = Some(FontWeight::BOLD),
+        Span::Strong => style.font_weight = Some(FontWeight::SEMIBOLD),
         Span::Emphasis => style.font_style = Some(FontStyle::Italic),
         Span::Strikethrough => style.strikethrough = Some(StrikethroughStyle { thickness: px(1.), color: None }),
         Span::Code => {
@@ -44,6 +45,20 @@ fn style(span: Span, colors: &ThemeColors) -> HighlightStyle {
         Span::ListMarker => style.color = Some(colors.primary),
     }
     style
+}
+
+/// How much larger a heading line is drawn than the body text.
+pub fn line_scale(line: &str) -> f32 {
+    let hashes = line.trim_start().bytes().take_while(|byte| *byte == b'#').count();
+    if !line.trim_start()[hashes..].starts_with(' ') {
+        return 1.;
+    }
+    match hashes {
+        1 => 1.7,
+        2 => 1.35,
+        3 => 1.15,
+        _ => 1.,
+    }
 }
 
 /// The styles of `text` for the field, never overlapping.

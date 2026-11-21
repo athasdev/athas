@@ -40,6 +40,9 @@ pub const LINE_HEIGHT: Pixels = px(18.);
 
 /// Styles spans of the text as it is typed: weight, slant, colour, background, strikethrough.
 /// Sizes stay the field's, so every line keeps its height.
+/// How much larger than the body a line's text is drawn, such as a Markdown heading.
+pub type TextAreaLineScale = Rc<dyn Fn(&str) -> f32>;
+
 pub type TextAreaHighlighter = Rc<dyn Fn(&str, &App) -> Vec<(Range<usize>, HighlightStyle)>>;
 
 pub struct TextArea {
@@ -68,6 +71,7 @@ pub struct TextArea {
     mono: bool,
     disabled: bool,
     highlighter: Option<TextAreaHighlighter>,
+    line_scale: Option<TextAreaLineScale>,
 }
 
 /// The text as last painted: one wrapped line per hard line.
@@ -82,6 +86,8 @@ struct LaidOutLine {
     start: usize,
     /// Distance of its first row from the text's top.
     top: Pixels,
+    /// The height of each of its rows.
+    row_height: Pixels,
     wrapped: WrappedLine,
 }
 
@@ -89,7 +95,7 @@ impl TextLayout {
     /// Where `offset` is drawn, relative to the box's top-left.
     fn position_for_offset(&self, offset: usize) -> Option<Point<Pixels>> {
         let line = self.lines.iter().rev().find(|line| line.start <= offset)?;
-        let position = line.wrapped.position_for_index(offset - line.start, self.line_height)?;
+        let position = line.wrapped.position_for_index(offset - line.start, line.row_height)?;
         Some(point(position.x, line.top + position.y))
     }
 
@@ -100,7 +106,7 @@ impl TextLayout {
         }
         let Some(line) = self.lines.iter().rev().find(|line| line.top <= position.y) else { return 0 };
         let local = point(position.x.max(px(0.)), position.y - line.top);
-        match line.wrapped.closest_index_for_position(local, self.line_height) {
+        match line.wrapped.closest_index_for_position(local, line.row_height) {
             Ok(index) | Err(index) => line.start + index,
         }
     }
@@ -110,7 +116,7 @@ impl TextLayout {
     }
 
     fn bottom(&self) -> Pixels {
-        self.lines.last().map_or(px(0.), |line| line.top + line.wrapped.size(self.line_height).height.max(self.line_height))
+        self.lines.last().map_or(px(0.), |line| line.top + line.wrapped.size(line.row_height).height.max(line.row_height))
     }
 }
 
@@ -144,7 +150,14 @@ impl TextArea {
             mono: false,
             disabled: false,
             highlighter: None,
+            line_scale: None,
         }
+    }
+
+    /// Draws some lines larger, each taking one row, or two from 1.5 times up.
+    pub fn line_scale(mut self, scale: impl Fn(&str) -> f32 + 'static) -> Self {
+        self.line_scale = Some(Rc::new(scale));
+        self
     }
 
     /// Styles the text as it is typed, such as Markdown shown live.
@@ -704,20 +717,23 @@ fn highlighted_runs(base: &TextRun, len: usize, mut highlights: Vec<(Range<usize
 }
 
 /// Shapes each hard line of `text` wrapped at `width`.
-fn shape(text: &str, runs: &[TextRun], width: Option<Pixels>, window: &Window) -> Vec<(usize, WrappedLine)> {
-    let font_size = window.text_style().font_size.to_pixels(window.rem_size());
+fn shape(text: &str, runs: &[TextRun], width: Option<Pixels>, scale: Option<&TextAreaLineScale>, window: &Window) -> Vec<(usize, WrappedLine, f32)> {
+    let base_size = window.text_style().font_size.to_pixels(window.rem_size());
     let mut lines = Vec::new();
     let mut start = 0;
     for line in text.split('\n') {
         let end = start + line.len();
         let line_runs = runs_for_range(runs, start..end);
+        let line_scale = scale.map_or(1., |scale| scale(line));
+        let multiple = if line_scale >= 1.5 { 2. } else { 1. };
+        let font_size = base_size * line_scale;
         let shaped = window
             .text_system()
             .shape_text(SharedString::from(line.to_string()), font_size, &line_runs, width, None)
             .ok()
             .and_then(|mut shaped| shaped.pop())
             .unwrap_or_default();
-        lines.push((start, shaped));
+        lines.push((start, shaped, multiple));
         start = end + 1;
     }
     lines
@@ -744,8 +760,8 @@ fn runs_for_range(runs: &[TextRun], range: Range<usize>) -> Vec<TextRun> {
     result
 }
 
-fn rows(lines: &[(usize, WrappedLine)]) -> usize {
-    lines.iter().map(|(_, line)| line.wrap_boundaries().len() + 1).sum()
+fn rows(lines: &[(usize, WrappedLine, f32)]) -> usize {
+    lines.iter().map(|(_, line, multiple)| (line.wrap_boundaries().len() + 1) * *multiple as usize).sum()
 }
 
 impl Element for TextAreaText {
@@ -772,6 +788,7 @@ impl Element for TextAreaText {
         let color = window.text_style().color;
         let runs = text_runs(composer, &text, window, color, cx);
         let (min_rows, max_rows) = (composer.min_rows, composer.max_rows);
+        let line_scale = composer.line_scale.clone();
         let mut style = Style::default();
         style.size.width = relative(1.).into();
         let layout_id = window.request_measured_layout(style, move |known, available, window, _| {
@@ -779,7 +796,7 @@ impl Element for TextAreaText {
                 gpui::AvailableSpace::Definite(width) => Some(width),
                 _ => None,
             });
-            let lines = shape(&text, &runs, width, window);
+            let lines = shape(&text, &runs, width, line_scale.as_ref(), window);
             let visible = rows(&lines).clamp(min_rows, max_rows);
             size(width.unwrap_or(px(0.)), LINE_HEIGHT * visible as f32)
         });
@@ -804,13 +821,14 @@ impl Element for TextAreaText {
             (composer.content.clone(), window.text_style().color)
         };
         let runs = text_runs(composer, &text, window, color, cx);
-        let shaped = shape(&text, &runs, Some(bounds.size.width), window);
+        let shaped = shape(&text, &runs, Some(bounds.size.width), composer.line_scale.as_ref(), window);
         let mut top = px(0.);
         let lines: Vec<LaidOutLine> = shaped
             .into_iter()
-            .map(|(start, wrapped)| {
-                let line = LaidOutLine { start, top, wrapped };
-                top += line.wrapped.size(LINE_HEIGHT).height.max(LINE_HEIGHT);
+            .map(|(start, wrapped, multiple)| {
+                let row_height = LINE_HEIGHT * multiple;
+                let line = LaidOutLine { start, top, row_height, wrapped };
+                top += line.wrapped.size(row_height).height.max(row_height);
                 line
             })
             .collect();
@@ -843,22 +861,25 @@ impl Element for TextAreaText {
             // One quad per row the selection crosses.
             let start = layout.position_for_offset(selected.start).unwrap_or_default();
             let end = layout.position_for_offset(selected.end).unwrap_or_default();
+            let row_at = |y: Pixels| layout.lines.iter().rev().find(|line| line.top <= y).map_or(LINE_HEIGHT, |line| line.row_height);
             let mut y = start.y;
             while y <= end.y {
+                let row = row_at(y);
                 let left = if y == start.y { start.x } else { px(0.) };
                 let right = if y == end.y { end.x } else { bounds.size.width };
                 if right > left || y != end.y {
                     selections.push(fill(
-                        Bounds::from_corners(origin + point(left, y), origin + point(right.max(left + px(4.)), y + LINE_HEIGHT)),
+                        Bounds::from_corners(origin + point(left, y), origin + point(right.max(left + px(4.)), y + row)),
                         colors.selection,
                     ));
                 }
-                y += LINE_HEIGHT;
+                y += row;
             }
         } else {
             let position = layout.position_for_offset(cursor_offset);
             if let Some(position) = position {
-                cursor = Some(fill(Bounds::new(origin + position + point(px(0.), px(2.)), size(px(1.5), LINE_HEIGHT - px(4.))), colors.cursor));
+                let row = layout.lines.iter().rev().find(|line| line.top <= position.y).map_or(LINE_HEIGHT, |line| line.row_height);
+                cursor = Some(fill(Bounds::new(origin + position + point(px(0.), px(2.)), size(px(1.5), row - px(4.))), colors.cursor));
             }
         }
         self.composer.update(cx, |composer, _| {
@@ -895,7 +916,7 @@ impl Element for TextAreaText {
                         continue;
                     }
                     let origin = bounds.origin + point(px(0.), line.top);
-                    line.wrapped.paint(origin, layout.line_height, gpui::TextAlign::Left, None, window, cx).ok();
+                    line.wrapped.paint(origin, line.row_height, gpui::TextAlign::Left, None, window, cx).ok();
                 }
             }
             self.composer.update(cx, |composer, _| composer.layout = layout);

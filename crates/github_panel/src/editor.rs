@@ -11,7 +11,6 @@ use theme::{ActiveTheme, ThemeColors};
 use ui::{AlertDialog, Button, ButtonSize, ButtonVariant, Icon, IconName, IconSize, InputAppearance, MenuEntry, OpenMenu, TextArea, TextAreaEvent, TextAreaVariant, TextInput, TextInputEvent, metrics, typography};
 
 use crate::{
-    markdown::{self, Block},
     menus::{self, MenuHost, below},
     mutation,
     rich::{self, BlockCommand},
@@ -47,12 +46,11 @@ pub(crate) fn block_insertion(text: &str, cursor: usize, snippet: &str) -> Strin
     if at_line_start { snippet.to_string() } else { format!("\n{snippet}") }
 }
 
-/// A Markdown field: the text, with the page's rendering of it live underneath.
+/// A Markdown field that shows the page's styling as it is typed: headings sized, bold, italic,
+/// code and links drawn in place, their markers dimmed.
 pub struct MarkdownEditor {
     id: SharedString,
     area: Entity<TextArea>,
-    /// The text last parsed and its blocks, so typing re-parses only when the text changed.
-    preview: Option<(String, Vec<Block>)>,
     repository_url: Option<String>,
     open_menu: Option<OpenMenu>,
     disabled: bool,
@@ -89,6 +87,7 @@ impl MarkdownEditor {
                 .variant(TextAreaVariant::Ghost)
                 .placeholder(placeholder.to_string())
                 .highlighter(|text, cx| rich::highlights(text, &cx.theme().colors))
+                .line_scale(rich::line_scale)
         });
         let subscriptions = vec![
             cx.subscribe(&area, |this, _, event: &TextAreaEvent, cx| {
@@ -109,7 +108,7 @@ impl MarkdownEditor {
             // The formatting bar follows the selection.
             cx.observe(&area, |_, _, cx| cx.notify()),
         ];
-        Self { id: id.into(), area, preview: None, repository_url, open_menu: None, disabled: false, slash: None, _subscriptions: subscriptions }
+        Self { id: id.into(), area, repository_url, open_menu: None, disabled: false, slash: None, _subscriptions: subscriptions }
     }
 
     pub fn text(&self, cx: &App) -> String {
@@ -348,23 +347,6 @@ impl Render for MarkdownEditor {
                         menus::show(this, "blocks", entries, below(event), Anchor::TopRight, window, cx);
                     })),
             );
-        let text = self.text(cx);
-        if text.trim().is_empty() {
-            self.preview = None;
-        } else if self.preview.as_ref().is_none_or(|(parsed, _)| *parsed != text) {
-            let blocks = markdown::parse(&text, self.repository_url.as_deref());
-            self.preview = Some((text, blocks));
-        }
-        let preview = self.preview.as_ref().map(|(_, blocks)| {
-            div()
-                .id(SharedString::from(format!("{}-preview", self.id)))
-                .max_h(px(420.))
-                .overflow_y_scroll()
-                .pt(px(10.))
-                .border_t_1()
-                .border_color(colors.divider)
-                .child(markdown::render(blocks, &self.id, cx))
-        });
         let body = div()
             .min_h(px(80.))
             .capture_key_down(cx.listener(Self::on_key))
@@ -383,7 +365,6 @@ impl Render for MarkdownEditor {
             .shadow(theme.shadows.raised.clone())
             .child(header)
             .child(body)
-            .children(preview)
             .children(self.open_menu.as_ref().map(|menu| menu.render()))
     }
 }
