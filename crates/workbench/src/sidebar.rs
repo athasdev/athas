@@ -238,142 +238,103 @@ impl Workbench {
             );
         }
 
-        match self.state.active_project().cloned() {
-            Some(project) => {
-                let project_id = project.id.clone();
-                let menu_key = format!("project-menu:{}", project.id.0);
-                let menu_open = self.menu_is_open(&menu_key);
-                let actions = div()
-                    .flex()
-                    .items_center()
-                    .gap(px(2.))
-                    .child(
-                        Button::icon("project-new-session", IconName::Plus)
-                            .size(ButtonSize::Small)
-                            .plane(ui::Plane::Page)
-                            .tooltip("New session")
-                            .on_click(cx.listener({
-                                let project_id = project_id.clone();
-                                move |this, _, _, cx| this.start_session(Some(project_id.clone()), cx)
-                            })),
-                    )
-                    .child(
-                        Button::icon("project-actions", IconName::Dots)
-                            .size(ButtonSize::Small)
-                            .plane(ui::Plane::Page)
-                            .active(menu_open)
-                            .tooltip("Project actions")
-                            .on_click(cx.listener({
-                                let project_id = project_id.clone();
-                                move |this, event: &gpui::ClickEvent, window, cx| {
-                                    let entries = this.project_menu_entries(&project_id, cx);
-                                    let position = event.position();
-                                    let position = point(position.x + px(8.), position.y + px(8.));
-                                    this.show_menu(&menu_key, entries, position, Anchor::TopRight, window, cx);
-                                }
-                            })),
-                    );
-                let sessions = lists.project.clone();
-                let outside = agent_ui::outside_sessions::sidebar_sessions(std::path::Path::new(&project.path), cx);
-                let mut section = div()
-                    .id("project-sessions")
-                    .flex()
-                    .flex_col()
-                    .gap(px(4.))
-                    .on_mouse_down(
-                        MouseButton::Right,
-                        cx.listener({
-                            let project_id = project_id.clone();
-                            move |this, event: &gpui::MouseDownEvent, window, cx| {
-                                let entries = this.project_menu_entries(&project_id, cx);
-                                this.show_menu("project-context", entries, event.position, Anchor::TopLeft, window, cx);
+        let project = self.state.active_project().cloned();
+        if project.is_none() {
+            content = content.child(
+                SidebarListItem::new("sidebar-open-project", "Open project…")
+                    .leading(Icon::new(IconName::FolderOpen).size(IconSize::XSmall).color(colors.subtle_foreground))
+                    .on_click(cx.listener(|this, _, _, cx| this.prompt_open_project(cx))),
+            );
+        }
+        // Chats (sessions of no open project) are sessions like any other and share the list.
+        let project_id = project.as_ref().map(|project| project.id.clone());
+        let mut actions = div().flex().items_center().gap(px(2.)).child(
+            Button::icon("project-new-session", IconName::Plus).size(ButtonSize::Small).plane(ui::Plane::Page).tooltip("New session").on_click(cx.listener({
+                let project_id = project_id.clone();
+                move |this, _, _, cx| this.start_session(project_id.clone(), cx)
+            })),
+        );
+        if let Some(project_id) = project_id.clone() {
+            let menu_key = format!("project-menu:{}", project_id.0);
+            let menu_open = self.menu_is_open(&menu_key);
+            actions = actions.child(
+                Button::icon("project-actions", IconName::Dots)
+                    .size(ButtonSize::Small)
+                    .plane(ui::Plane::Page)
+                    .active(menu_open)
+                    .tooltip("Project actions")
+                    .on_click(cx.listener(move |this, event: &gpui::ClickEvent, window, cx| {
+                        let entries = this.project_menu_entries(&project_id, cx);
+                        let position = event.position();
+                        let position = point(position.x + px(8.), position.y + px(8.));
+                        this.show_menu(&menu_key, entries, position, Anchor::TopRight, window, cx);
+                    })),
+            );
+        }
+        let sessions: Vec<&Session> = lists.project.iter().chain(lists.chats.iter()).copied().collect();
+        let outside = project
+            .as_ref()
+            .map(|project| agent_ui::outside_sessions::sidebar_sessions(std::path::Path::new(&project.path), cx))
+            .unwrap_or_default();
+        let mut section = div().id("project-sessions").flex().flex_col().gap(px(4.));
+        if let Some(project_id) = project_id.clone() {
+            section = section.on_mouse_down(
+                MouseButton::Right,
+                cx.listener(move |this, event: &gpui::MouseDownEvent, window, cx| {
+                    let entries = this.project_menu_entries(&project_id, cx);
+                    this.show_menu("project-context", entries, event.position, Anchor::TopLeft, window, cx);
+                }),
+            );
+        }
+        section = section.child(SectionLabel::new("Sessions").trailing(actions));
+        let mut list = div().flex().flex_col().gap(px(1.));
+        if sessions.is_empty() && outside.is_empty() {
+            list = list.child(
+                SidebarListItem::new("project-empty-new-session", "New session")
+                    .leading(Icon::new(IconName::Plus).size(IconSize::XSmall).color(colors.subtle_foreground))
+                    .on_click(cx.listener({
+                        let project_id = project_id.clone();
+                        move |this, _, _, cx| this.start_session(project_id.clone(), cx)
+                    })),
+            );
+        } else {
+            let list_key = project_id.as_ref().map_or_else(|| "chats".to_string(), |id| id.0.clone());
+            let show_all = self.expanded_session_lists.contains(&list_key);
+            let mut entries: Vec<(u64, Result<&Session, &agent_ui::outside_sessions::OutsideSession>)> = sessions
+                .iter()
+                .map(|session| (session.last_activity_at, Ok(*session)))
+                .chain(outside.iter().map(|session| (session.updated_ms(), Err(session))))
+                .collect();
+            entries.sort_by_key(|(at, _)| std::cmp::Reverse(*at));
+            let visible = if show_all { entries.len() } else { entries.len().min(PROJECT_SESSION_LIMIT) };
+            let hidden = entries.len() - visible;
+            list = list.children(entries.iter().take(visible).map(|(_, entry)| match entry {
+                Ok(session) => row(session, self, cx),
+                Err(session) => self.render_outside_session_row(session, now, cx),
+            }));
+            if hidden > 0 || show_all {
+                let label = if show_all { "Show less".to_string() } else { format!("Show {hidden} more") };
+                list = list.child(
+                    SidebarListItem::new("project-sessions-show-more", label)
+                        .leading(
+                            Icon::new(if show_all { IconName::ChevronDown } else { IconName::ChevronRight })
+                                .size(IconSize::XSmall)
+                                .color(colors.subtle_foreground),
+                        )
+                        .on_click(cx.listener(move |this, _, _, cx| {
+                            if !this.expanded_session_lists.remove(&list_key) {
+                                this.expanded_session_lists.insert(list_key.clone());
                             }
-                        }),
-                    )
-                    .child(SectionLabel::new("Sessions").trailing(actions));
-                let mut list = div().flex().flex_col().gap(px(1.));
-                if sessions.is_empty() && outside.is_empty() {
-                    list = list.child(
-                        SidebarListItem::new("project-empty-new-session", "New session")
-                            .leading(Icon::new(IconName::Plus).size(IconSize::XSmall).color(colors.subtle_foreground))
-                            .on_click(cx.listener(move |this, _, _, cx| this.start_session(Some(project_id.clone()), cx))),
-                    );
-                } else {
-                    let list_key = project_id.0.clone();
-                    let show_all = self.expanded_session_lists.contains(&list_key);
-                    let mut entries: Vec<(u64, Result<&Session, &agent_ui::outside_sessions::OutsideSession>)> = sessions
-                        .iter()
-                        .map(|session| (session.last_activity_at, Ok(*session)))
-                        .chain(outside.iter().map(|session| (session.updated_ms(), Err(session))))
-                        .collect();
-                    entries.sort_by_key(|(at, _)| std::cmp::Reverse(*at));
-                    let visible = if show_all { entries.len() } else { entries.len().min(PROJECT_SESSION_LIMIT) };
-                    let hidden = entries.len() - visible;
-                    list = list.children(entries.iter().take(visible).map(|(_, entry)| match entry {
-                        Ok(session) => row(session, self, cx),
-                        Err(session) => self.render_outside_session_row(session, now, cx),
-                    }));
-                    if hidden > 0 || show_all {
-                        let label = if show_all { "Show less".to_string() } else { format!("Show {hidden} more") };
-                        list = list.child(
-                            SidebarListItem::new("project-sessions-show-more", label)
-                                .leading(
-                                    Icon::new(if show_all { IconName::ChevronDown } else { IconName::ChevronRight })
-                                        .size(IconSize::XSmall)
-                                        .color(colors.subtle_foreground),
-                                )
-                                .on_click(cx.listener(move |this, _, _, cx| {
-                                    if !this.expanded_session_lists.remove(&list_key) {
-                                        this.expanded_session_lists.insert(list_key.clone());
-                                    }
-                                    cx.notify();
-                                })),
-                        );
-                    }
-                }
-                let project_runs = cloud.runs_by_project.remove(&project.id.0).unwrap_or_default();
-                list = list.children(project_runs.iter().map(|run| self.render_cloud_run_row(run, now, cx)));
-                section = section.child(list);
-                content = content.child(section);
-            }
-            None => {
-                content = content.child(
-                    SidebarListItem::new("sidebar-open-project", "Open project…")
-                        .leading(Icon::new(IconName::FolderOpen).size(IconSize::XSmall).color(colors.subtle_foreground))
-                        .on_click(cx.listener(|this, _, _, cx| this.prompt_open_project(cx))),
+                            cx.notify();
+                        })),
                 );
             }
         }
-
-        let chats_expanded = self.state.layout.chats_expanded;
-        content = content.child(
-            div()
-                .flex()
-                .flex_col()
-                .gap(px(4.))
-                .child(
-                    div().group("chats-header-row").child(
-                        SectionHeader::new("chats-header", "Chats", chats_expanded)
-                            .on_toggle(cx.listener(|this, _, _, cx| {
-                                this.update_state(cx, |state| state.layout.chats_expanded = !state.layout.chats_expanded)
-                            }))
-                            .trailing(
-                                div().invisible().group_hover("chats-header-row", |style| style.visible()).child(
-                                    Button::icon("new-chat", IconName::Plus)
-                                        .size(ButtonSize::Small)
-                                        .plane(ui::Plane::Page)
-                                        .tooltip("New chat")
-                                        .on_click(cx.listener(|this, _, _, cx| this.start_session(None, cx))),
-                                ),
-                            ),
-                    ),
-                )
-                .when(chats_expanded, |this| {
-                    this.child(
-                        div().flex().flex_col().gap(px(1.)).children(lists.chats.iter().map(|session| row(session, self, cx))),
-                    )
-                }),
-        );
+        if let Some(project) = &project {
+            let project_runs = cloud.runs_by_project.remove(&project.id.0).unwrap_or_default();
+            list = list.children(project_runs.iter().map(|run| self.render_cloud_run_row(run, now, cx)));
+        }
+        content = content.child(section.child(list));
 
         if !cloud.other_runs.is_empty() {
             content = content.child(
@@ -500,13 +461,16 @@ impl Workbench {
         let more_id = session.id.clone();
         let more_key = format!("session-more:{}", session.id.0);
         let more_open = self.menu_is_open(&more_key);
-        // Cloud, pinned and how long ago, in the caption colour (`tabular-nums`).
+        // Unread, cloud, pinned and how long ago, in the caption colour (`tabular-nums`).
         let trailing = div()
             .flex()
             .items_center()
             .gap(px(6.))
             .text_size(ui::typography::TEXT_CAPTION)
             .text_color(colors.subtle_foreground)
+            .when(session.unread && !active, |this| {
+                this.child(div().id(gpui::ElementId::Name(format!("session-unread-{}", session.id.0).into())).flex_none().size(px(6.)).rounded_full().bg(colors.primary))
+            })
             .when(cloud, |this| this.child(Icon::new(IconName::Cloud).size(IconSize::XSmall).color(colors.subtle_foreground)))
             .when(session.pinned, |this| {
                 this.child(Icon::new(IconName::Pin).size(IconSize::XSmall).color(colors.subtle_foreground))

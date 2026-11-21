@@ -666,7 +666,6 @@ pub struct Layout {
     pub bottom_pane_height: f32,
     /// What the bottom pane shows (`bottomPaneActiveTab`).
     pub bottom_tab: BottomTab,
-    pub chats_expanded: bool,
     pub archived_expanded: bool,
 }
 
@@ -720,7 +719,6 @@ impl Default for Layout {
             bottom_pane_visible: false,
             bottom_pane_height: 320.,
             bottom_tab: BottomTab::Terminal,
-            chats_expanded: true,
             archived_expanded: false,
         }
     }
