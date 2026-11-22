@@ -188,7 +188,7 @@ fn visible_with_access(def: &SettingDef, enterprise: bool, collaboration: bool) 
     match def.section {
         Some("Enterprise Controls" | "Integration Allowlist") => enterprise,
         None => collaboration,
-        _ => true,
+        _ => enterprise || collaboration,
     }
 }
 
@@ -1705,7 +1705,14 @@ impl Render for SettingsView {
         let content_width = if narrow { width - px(24.) } else { width - px(208.) - px(48.) };
         self.stacked = content_width <= px(640.);
 
-        let mut pages: Vec<&(&'static str, &'static str)> = SETTINGS_PAGES.iter().collect();
+        // The Team page is for accounts with a team or an enterprise plan.
+        let team_access = account::AccountStore::global(cx)
+            .and_then(|store| store.read(cx).subscription().cloned())
+            .is_some_and(|subscription| subscription.enterprise.has_access || subscription.collaboration.as_ref().is_some_and(|team| team.enabled));
+        if self.page == "team" && !team_access {
+            self.page = "general";
+        }
+        let mut pages: Vec<&(&'static str, &'static str)> = SETTINGS_PAGES.iter().filter(|(id, _)| *id != "team" || team_access).collect();
         pages.sort_by_key(|(id, _)| NAVIGATION_ORDER.iter().position(|page| page == id).unwrap_or(NAVIGATION_ORDER.len()));
         let nav: Vec<AnyElement> = if searching {
             let results = self.search_results(cx);
