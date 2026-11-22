@@ -413,12 +413,12 @@ impl GitPanel {
             RemoteOp::Push => IconName::ArrowUp,
         };
         let accent = colors.accent;
+        // The halves round their own outer corners: GPUI clips to a rectangle, so a rounded
+        // parent leaves a child's fill (here the hover tint) square in the corners.
         div()
             .flex()
             .flex_none()
             .h(metrics::CHROME_CONTROL)
-            .rounded(metrics::RADIUS_MD)
-            .overflow_hidden()
             .text_size(typography::TEXT_SM)
             .font_weight(typography::MEDIUM)
             .text_color(tone)
@@ -430,6 +430,7 @@ impl GitPanel {
                     .gap(px(2.))
                     .pl(px(6.))
                     .pr(px(4.))
+                    .rounded_l(metrics::RADIUS_MD)
                     .when(busy, |this| this.opacity(0.6))
                     .when(!busy, |this| this.hover(move |style| style.bg(accent)))
                     .child(if busy { spinning_icon("git-sync-spin", icon, tone) } else { Icon::new(icon).size(IconSize::XSmall).color(tone).into_any_element() })
@@ -443,6 +444,7 @@ impl GitPanel {
                     .flex()
                     .items_center()
                     .px(px(2.))
+                    .rounded_r(metrics::RADIUS_MD)
                     .hover(move |style| style.bg(accent))
                     .when(self.menu_is_open("git-remote"), |this| this.bg(accent))
                     .child(Icon::new(IconName::ChevronDown).size(IconSize::XSmall).color(tone))
@@ -530,6 +532,8 @@ impl GitPanel {
                         )
                         // One 24px primary block with square inner edges (`h-6 overflow-hidden
                         // rounded-md`): Commit, then the menu chevron behind a faint divider.
+                        // GPUI clips to a rectangle, so a rounded parent does not round a filled
+                        // child: each half rounds its own outer corners instead.
                         .child({
                             let (hover, divider) = (colors.primary_hover, colors.primary_foreground.opacity(0.2));
                             // Commit can be unavailable while the menu is not: with a message
@@ -541,8 +545,6 @@ impl GitPanel {
                                 .flex()
                                 .flex_none()
                                 .h(px(24.))
-                                .rounded(metrics::RADIUS_MD)
-                                .overflow_hidden()
                                 .text_color(colors.primary_foreground)
                                 .child(
                                     div()
@@ -550,6 +552,7 @@ impl GitPanel {
                                         .flex()
                                         .items_center()
                                         .px(px(10.))
+                                        .rounded_l(metrics::RADIUS_MD)
                                         .bg(colors.primary)
                                         .text_size(typography::TEXT_SM)
                                         .font_weight(typography::MEDIUM)
@@ -567,6 +570,7 @@ impl GitPanel {
                                         .flex()
                                         .items_center()
                                         .px(px(4.))
+                                        .rounded_r(metrics::RADIUS_MD)
                                         .border_l_1()
                                         .border_color(divider)
                                         .bg(colors.primary)
