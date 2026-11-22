@@ -24,6 +24,7 @@ mod dock;
 // The session browser's controls wait for the browser tab to take the session's servers.
 #[allow(dead_code)]
 mod session_browser;
+mod shortcuts_dialog;
 mod folder_picker;
 mod git_commands;
 mod project_icon;
@@ -1243,6 +1244,19 @@ impl Workbench {
             open("Documentation", ui::IconName::BookOpen, urls.docs()),
             open("Community", ui::IconName::ChatBubbleText, account::service_urls::COMMUNITY_URL.into()),
             MenuEntry::Separator,
+            MenuItem::new("Keyboard Shortcuts")
+                .icon(ui::IconName::Keyboard)
+                .on_select({
+                    let weak = cx.weak_entity();
+                    move |window, cx| {
+                        weak.update(cx, |this, cx| {
+                            let dialog = cx.new(shortcuts_dialog::ShortcutsDialog::new);
+                            this.open_modal(dialog, window, cx);
+                        })
+                        .ok();
+                    }
+                })
+                .into(),
             MenuItem::new("Send Feedback")
                 .icon(ui::IconName::Megaphone)
                 .on_select(|window, cx| window.dispatch_action(Box::new(account::SendFeedback), cx))
