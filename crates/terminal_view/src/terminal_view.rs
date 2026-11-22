@@ -422,6 +422,7 @@ pub struct TerminalPanel {
     /// closes and Shift+F10 opens the menu (`handleKeyDown` in `terminal-tab-bar.tsx`).
     tabs_focus: FocusHandle,
     tab_bounds: Rc<RefCell<HashMap<usize, Bounds<Pixels>>>>,
+    tab_scroll: gpui::ScrollHandle,
     tabs: Vec<TerminalTab>,
     active: Option<usize>,
     layouts: Layouts,
@@ -525,6 +526,7 @@ impl TerminalPanel {
             focus_handle,
             tabs_focus: cx.focus_handle(),
             tab_bounds: Rc::default(),
+            tab_scroll: gpui::ScrollHandle::new(),
             tabs: Vec::new(),
             active: None,
             layouts: Layouts::default(),
@@ -1556,7 +1558,7 @@ impl TerminalPanel {
                 .h(metrics::TAB)
                 .w(px(140.))
                 .px(px(8.))
-                .rounded_full()
+                .rounded(metrics::RADIUS_MD)
                 .bg(colors.selected)
                 .text_size(typography::TEXT_CHROME)
                 .text_color(colors.foreground)
@@ -1572,6 +1574,7 @@ impl TerminalPanel {
         let pinned = tab.pinned;
         let dragged = DraggedTerminalTab { id, title: title.clone(), panel: cx.weak_entity() };
         let bounds = self.tab_bounds.clone();
+        let drop_group = SharedString::from(format!("terminal-tab-drop-{id}"));
         let cwd = tab.view.read(cx).terminal.cwd.clone();
         let tooltip: SharedString = if cwd.as_os_str().is_empty() { title.clone() } else { format!("{title} — {}", cwd.display()).into() };
         div()
@@ -1597,8 +1600,20 @@ impl TerminalPanel {
                 }),
             )
             .on_drag(dragged, |dragged, _, _, cx| cx.new(|_| DraggedTabPreview(dragged.title.clone())))
-            .drag_over::<DraggedTerminalTab>(move |style, _, _, _| style.border_l_2().border_color(colors.primary))
+            
+            .group(drop_group.clone())
             .on_drop(cx.listener(move |this, dragged: &DraggedTerminalTab, _, cx| this.reorder(dragged.id, id, cx)))
+            .child(
+                div()
+                    .absolute()
+                    .top(px(4.))
+                    .bottom(px(4.))
+                    .left_0()
+                    .w(px(2.))
+                    .bg(colors.primary)
+                    .invisible()
+                    .group_drag_over::<DraggedTerminalTab>(drop_group, |style| style.visible()),
+            )
             .child(
                 Tab::new(("terminal-tab", id), title)
                     .when(leading.is_some() || split, |tab| {
@@ -1631,7 +1646,7 @@ impl TerminalPanel {
                         }
                     })),
             )
-            .when(tabs_focused && active, |slot| slot.child(div().absolute().inset_0().rounded_full().border_1().border_color(colors.focus_ring)))
+            .when(tabs_focused && active, |slot| slot.child(div().absolute().inset_0().rounded(metrics::RADIUS_MD).border_1().border_color(colors.focus_ring)))
             .into_any_element()
     }
 
@@ -1678,19 +1693,45 @@ impl TerminalPanel {
                 cx.listener(|this, event: &MouseDownEvent, window, cx| this.deploy_toolbar_menu(event.position, window, cx)),
             )
             .children(pinned)
-            .child(
+            .child({
+                let offset = self.tab_scroll.offset().x;
+                let max = self.tab_scroll.max_offset().x;
+                let background = cx.theme().colors.background;
+                let fade = |left: bool| {
+                    let (from, to) = if left { (background, background.opacity(0.)) } else { (background.opacity(0.), background) };
+                    div()
+                        .absolute()
+                        .top_0()
+                        .bottom_0()
+                        .w(px(24.))
+                        .when(left, |this| this.left_0())
+                        .when(!left, |this| this.right_0())
+                        .bg(gpui::linear_gradient(90., gpui::linear_color_stop(from, 0.), gpui::linear_color_stop(to, 1.)))
+                };
                 div()
-                    .id("terminal-tab-strip")
+                    .relative()
                     .flex()
                     .flex_1()
                     .min_w_0()
                     .h_full()
                     .items_center()
-                    .gap(metrics::CHROME_GAP)
-                    .overflow_x_scroll()
-                    .children(regular.into_iter().map(|id| self.render_tab(id, tabs_focused, cx).into_any_element()))
-                    .children(self.failed.as_ref().map(|failed| self.render_failed_tab(failed, cx))),
-            )
+                    .child(
+                        div()
+                            .id("terminal-tab-strip")
+                            .flex()
+                            .flex_1()
+                            .min_w_0()
+                            .h_full()
+                            .items_center()
+                            .gap(metrics::CHROME_GAP)
+                            .overflow_x_scroll()
+                            .track_scroll(&self.tab_scroll)
+                            .children(regular.into_iter().map(|id| self.render_tab(id, tabs_focused, cx).into_any_element()))
+                            .children(self.failed.as_ref().map(|failed| self.render_failed_tab(failed, cx))),
+                    )
+                    .when(offset < px(-1.), |this| this.child(fade(true)))
+                    .when(max > px(0.) && -offset < max - px(1.), |this| this.child(fade(false)))
+            })
     }
 
     fn render_actions(&self, cx: &mut Context<Self>) -> impl IntoElement {
@@ -1975,16 +2016,7 @@ impl Render for TerminalPanel {
             .size_full()
             .bg(cx.theme().colors.background);
         self.register_actions(root, cx)
-            .when(!self.buffer, |this| this.child(pane_header(cx).child(self.render_tabs(self.tabs_focus.is_focused(window), cx)).child({
-                // `ChromeGroup reveal`: the actions show while the pane is hovered or one of
-                // their menus is open.
-                let shown = self.menu.is_some() || self.new_menu.read(cx).is_open();
-                div()
-                    .flex()
-                    .flex_none()
-                    .when(!shown, |this| this.opacity(0.).group_hover("chrome-host", |style| style.opacity(1.)))
-                    .child(self.render_actions(cx))
-            })))
+            .when(!self.buffer, |this| this.child(pane_header(cx).child(self.render_tabs(self.tabs_focus.is_focused(window), cx)).child(self.render_actions(cx))))
             .child(body)
             .children(self.menu.as_ref().map(|menu| menu.render()))
             .children(self.confirmation.as_ref().map(|confirmation| {
