@@ -1146,7 +1146,9 @@ impl DockerView {
 
     fn show_menu(&mut self, key: &str, entries: Vec<MenuEntry>, position: Point<Pixels>, window: &mut Window, cx: &mut Context<Self>) {
         if self.menu_is_open(key) {
-            self.open_menu = None;
+            if let Some(menu) = self.open_menu.take() {
+                menu.close(window, cx);
+            }
             cx.notify();
             return;
         }

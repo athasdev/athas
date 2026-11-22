@@ -1351,8 +1351,7 @@ impl Workbench {
         entries.push(manage("New action…", ui::IconName::Plus, || run_actions::ManageRequest::New));
         entries.push(manage("Manage workspace…", ui::IconName::Gear, || run_actions::ManageRequest::Workspace));
         if self.open_menu.as_ref().is_some_and(|menu| menu.key.as_ref() == "run-actions") {
-            self.open_menu = None;
-            cx.notify();
+            self.close_menu(window, cx);
             return;
         }
         // A 224px dropdown with a search field, opening beside the rail from the
@@ -1709,6 +1708,15 @@ impl Workbench {
             Some(handle) => window.focus(&handle, cx),
             None => self.focus_front_tab(window, cx),
         }
+    }
+
+    /// Puts away the open menu, handing the keyboard back to whatever held it before. Dropping
+    /// the menu instead runs no dismiss handler and leaves the window with nothing focused.
+    pub(crate) fn close_menu(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        if let Some(menu) = self.open_menu.take() {
+            menu.close(window, cx);
+        }
+        cx.notify();
     }
 
     /// Whether an overlay over the workbench holds the keyboard: a modal, a menu, the account
@@ -2311,8 +2319,7 @@ impl Workbench {
         cx: &mut Context<Self>,
     ) {
         if self.open_menu.as_ref().is_some_and(|menu| menu.key.as_ref() == key) {
-            self.open_menu = None;
-            cx.notify();
+            self.close_menu(window, cx);
             return;
         }
         self.open_menu = Some(OpenMenu::new(

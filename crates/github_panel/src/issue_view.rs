@@ -463,8 +463,10 @@ impl IssueView {
             cx.subscribe(&picker, |this, _, PickerEvent::Changed(labels): &PickerEvent, cx| {
                 this.update_issue(IssueChange { labels: Some(labels.clone()), ..Default::default() }, cx)
             }),
-            cx.subscribe(&picker, |this, _, _: &DismissEvent, cx| {
+            cx.subscribe_in(&picker, window, |this, _, _: &DismissEvent, window, cx| {
                 this.popover = None;
+                // The picker took the keyboard for its search field; give it back.
+                window.focus(&this.focus_handle(cx), cx);
                 cx.notify();
             }),
         ];
@@ -484,8 +486,10 @@ impl IssueView {
             cx.subscribe(&picker, |this, _, PickerEvent::Changed(assignees): &PickerEvent, cx| {
                 this.update_issue(IssueChange { assignees: Some(assignees.clone()), ..Default::default() }, cx)
             }),
-            cx.subscribe(&picker, |this, _, _: &DismissEvent, cx| {
+            cx.subscribe_in(&picker, window, |this, _, _: &DismissEvent, window, cx| {
                 this.popover = None;
+                // The picker took the keyboard for its search field; give it back.
+                window.focus(&this.focus_handle(cx), cx);
                 cx.notify();
             }),
         ];

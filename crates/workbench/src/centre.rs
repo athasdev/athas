@@ -1184,8 +1184,7 @@ impl Workbench {
 
     fn show_session_more_actions(&mut self, group_id: u64, id: &workspace::SessionId, position: gpui::Point<gpui::Pixels>, window: &mut Window, cx: &mut Context<Self>) {
         if self.open_menu.as_ref().is_some_and(|menu| menu.key.as_ref() == SESSION_MORE_MENU) {
-            self.open_menu = None;
-            cx.notify();
+            self.close_menu(window, cx);
             return;
         }
         let weak = cx.weak_entity();

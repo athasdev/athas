@@ -539,8 +539,10 @@ impl PullRequestView {
         let picker = cx.new(|cx| LabelPicker::new(self.available_labels(), selected, loading, window, cx));
         let subscriptions = vec![
             cx.subscribe(&picker, |this, _, PickerEvent::Changed(labels): &PickerEvent, cx| this.update_pr(None, None, Some(labels.clone()), None, cx)),
-            cx.subscribe(&picker, |this, _, _: &DismissEvent, cx| {
+            cx.subscribe_in(&picker, window, |this, _, _: &DismissEvent, window, cx| {
                 this.popover = None;
+                // The picker took the keyboard for its search field; give it back.
+                window.focus(&this.focus_handle(cx), cx);
                 cx.notify();
             }),
         ];
@@ -558,8 +560,10 @@ impl PullRequestView {
         let picker = cx.new(|cx| AssigneePicker::new(value, window, cx));
         let subscriptions = vec![
             cx.subscribe(&picker, |this, _, PickerEvent::Changed(assignees): &PickerEvent, cx| this.update_pr(None, None, None, Some(assignees.clone()), cx)),
-            cx.subscribe(&picker, |this, _, _: &DismissEvent, cx| {
+            cx.subscribe_in(&picker, window, |this, _, _: &DismissEvent, window, cx| {
                 this.popover = None;
+                // The picker took the keyboard for its search field; give it back.
+                window.focus(&this.focus_handle(cx), cx);
                 cx.notify();
             }),
         ];
@@ -810,8 +814,8 @@ impl PullRequestView {
                     .active(menus::is_open(&self.open_menu, "pr-commits"))
                     .on_click(cx.listener(|this, event: &ClickEvent, window, cx| {
                         let entries = this.commits_menu();
-                        if menus::is_open(&this.open_menu, "pr-commits") {
-                            this.open_menu = None;
+                        if let Some(menu) = menus::is_open(&this.open_menu, "pr-commits").then(|| this.open_menu.take()).flatten() {
+                            menu.close(window, cx);
                             cx.notify();
                             return;
                         }

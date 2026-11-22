@@ -1248,11 +1248,16 @@ impl FileTree {
         }
     }
 
-    fn cancel(&mut self, _: &Cancel, _: &mut Window, cx: &mut Context<Self>) {
+    fn cancel(&mut self, _: &Cancel, window: &mut Window, cx: &mut Context<Self>) {
         self.pending_delete = None;
         self.clear_multi(self.selected.clone());
         self.error = None;
-        self.open_menu = None;
+        // Escape on an open menu puts it away; the tree takes the keyboard back, since a window
+        // with nothing focused answers no shortcut.
+        if let Some(menu) = self.open_menu.take() {
+            menu.close(window, cx);
+            window.focus(&self.focus_handle, cx);
+        }
         cx.notify();
     }
 

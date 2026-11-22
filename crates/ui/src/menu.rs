@@ -861,6 +861,8 @@ pub struct OpenMenu {
     pub menu: Entity<Menu>,
     pub position: Point<Pixels>,
     pub anchor: Anchor,
+    /// Where the keyboard was before the menu took it, for [`OpenMenu::close`].
+    previous_focus: Option<FocusHandle>,
     _subscription: Subscription,
 }
 
@@ -920,6 +922,7 @@ impl OpenMenu {
         // The menu took focus; once it closes, focus goes back where it was unless a picked row
         // moved it on purpose. Without this, keys go to the dead menu until the user clicks.
         let restore = previous_focus.clone();
+        let restore_on_close = previous_focus.clone();
         let dismissed_key = key.clone();
         let subscription = cx.subscribe_in(&menu, window, move |this, menu, _: &DismissEvent, window, cx| {
             if let Some((position, at)) = menu.update(cx, |menu, _| menu.dismissed_by_press.take()) {
@@ -940,7 +943,19 @@ impl OpenMenu {
         }
         #[cfg(not(target_os = "macos"))]
         let _ = previous_focus;
-        Self { native, key, menu, position, anchor, _subscription: subscription }
+        Self { native, key, menu, position, anchor, previous_focus: restore_on_close, _subscription: subscription }
+    }
+
+    /// Closes a menu the owner is putting away itself (the trigger clicked again, Escape, a row
+    /// that opens something else), handing the keyboard back the way a press outside it would.
+    /// Dropping the menu instead runs no dismiss handler, and a window with nothing focused
+    /// answers no shortcut until the next click.
+    pub fn close(self, window: &mut Window, cx: &mut App) {
+        let Some(previous) = self.previous_focus.as_ref() else { return };
+        let menu_focus = self.menu.read(cx).focus_handle(cx);
+        if window.focused(cx).is_none_or(|focused| focused == menu_focus || menu_focus.contains_focused(window, cx)) {
+            window.focus(previous, cx);
+        }
     }
 
     /// Shows the menu as an OS menu once the current event is handled: AppKit tracks it in a

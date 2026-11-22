@@ -2079,7 +2079,9 @@ impl GitPanel {
         cx: &mut Context<Self>,
     ) {
         if self.menu_is_open(key) {
-            self.open_menu = None;
+            if let Some(menu) = self.open_menu.take() {
+                menu.close(window, cx);
+            }
             cx.notify();
             return;
         }

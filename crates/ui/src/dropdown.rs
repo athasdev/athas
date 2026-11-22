@@ -1,7 +1,7 @@
 use std::rc::Rc;
 
 use gpui::{
-    Anchor, AnyElement, App, Bounds, Context, DismissEvent, Entity, MouseButton, Pixels, Subscription, Window, anchored,
+    Anchor, AnyElement, App, Bounds, Context, DismissEvent, Entity, FocusHandle, Focusable as _, MouseButton, Pixels, Subscription, Window, anchored,
     canvas, deferred, div, prelude::*, px,
 };
 
@@ -28,6 +28,8 @@ pub struct DropdownMenu {
     align: DropdownAlign,
     open_up: bool,
     menu: Option<(Entity<Menu>, Subscription)>,
+    /// Where the keyboard was before the menu took it, so closing gives it back.
+    focus_before_menu: Option<FocusHandle>,
     trigger_bounds: Option<Bounds<Pixels>>,
 }
 
@@ -43,6 +45,7 @@ impl DropdownMenu {
             align: DropdownAlign::End,
             open_up: false,
             menu: None,
+            focus_before_menu: None,
             trigger_bounds: None,
         }
     }
@@ -67,19 +70,34 @@ impl DropdownMenu {
     }
 
     pub fn toggle(&mut self, window: &mut Window, cx: &mut Context<Self>) {
-        if self.menu.take().is_some() {
+        if let Some((menu, _)) = self.menu.take() {
+            self.restore_focus(&menu, window, cx);
             cx.notify();
             return;
         }
+        // The menu takes the keyboard while it is open. Without handing it back, closing leaves
+        // the window with nothing focused, and no shortcut is answered until the next click.
+        self.focus_before_menu = window.focused(cx);
         let entries = (self.entries)(window, cx);
         let menu = Menu::build_sized(entries, self.size, window, cx);
         menu.update(cx, |menu, _| menu.set_trigger_bounds(self.trigger_bounds));
-        let subscription = cx.subscribe(&menu, |this, _, _: &DismissEvent, cx| {
+        let subscription = cx.subscribe_in(&menu, window, |this, menu, _: &DismissEvent, window, cx| {
             this.menu = None;
+            this.restore_focus(menu, window, cx);
             cx.notify();
         });
         self.menu = Some((menu, subscription));
         cx.notify();
+    }
+
+    /// Hands the keyboard back to whatever held it before the menu opened, unless a picked row
+    /// moved it somewhere on purpose.
+    fn restore_focus(&mut self, menu: &Entity<Menu>, window: &mut Window, cx: &mut Context<Self>) {
+        let Some(previous) = self.focus_before_menu.take() else { return };
+        let menu_focus = menu.read(cx).focus_handle(cx);
+        if window.focused(cx).is_none_or(|focused| focused == menu_focus || menu_focus.contains_focused(window, cx)) {
+            window.focus(&previous, cx);
+        }
     }
 }
 

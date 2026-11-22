@@ -394,8 +394,10 @@ impl CreateView {
                 this.labels = labels.clone();
                 cx.notify();
             }),
-            cx.subscribe(&picker, |this, _, _: &DismissEvent, cx| {
+            cx.subscribe_in(&picker, window, |this, _, _: &DismissEvent, window, cx| {
                 this.popover = None;
+                // The picker took the keyboard for its search field; give it back.
+                window.focus(&this.focus_handle(cx), cx);
                 cx.notify();
             }),
         ];
@@ -414,8 +416,10 @@ impl CreateView {
                 this.assignees = assignees.clone();
                 cx.notify();
             }),
-            cx.subscribe(&picker, |this, _, _: &DismissEvent, cx| {
+            cx.subscribe_in(&picker, window, |this, _, _: &DismissEvent, window, cx| {
                 this.popover = None;
+                // The picker took the keyboard for its search field; give it back.
+                window.focus(&this.focus_handle(cx), cx);
                 cx.notify();
             }),
         ];

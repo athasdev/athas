@@ -87,8 +87,7 @@ impl Workbench {
     /// The web app's account menu, from the avatar at the foot of the activity bar.
     pub(crate) fn toggle_web_account_menu(&mut self, chrome: &WebChrome, window: &mut Window, cx: &mut Context<Self>) {
         if self.open_menu.as_ref().is_some_and(|menu| menu.key.as_ref() == ACCOUNT_MENU_KEY) {
-            self.open_menu = None;
-            cx.notify();
+            self.close_menu(window, cx);
             return;
         }
         let entries = (chrome.account_menu)(cx);

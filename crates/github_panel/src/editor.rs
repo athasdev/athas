@@ -688,7 +688,7 @@ pub struct Confirmation {
     _subscription: Subscription,
 }
 
-pub trait ConfirmHost: Sized + 'static {
+pub trait ConfirmHost: Focusable + Sized + 'static {
     fn confirmation_slot(&mut self) -> &mut Option<Confirmation>;
 }
 
@@ -717,10 +717,12 @@ pub fn confirm<V: ConfirmHost>(
     host(this, dialog, window, cx);
 }
 
-/// Floats `dialog` over the view until it is answered.
+/// Floats `dialog` over the view until it is answered. Answering it hands the keyboard back to
+/// the view underneath: the dialog is gone, and a window with nothing focused answers no key.
 pub fn host<V: ConfirmHost>(this: &mut V, dialog: Entity<AlertDialog>, window: &mut Window, cx: &mut Context<V>) {
-    let subscription = cx.subscribe(&dialog, |this: &mut V, _, _: &DismissEvent, cx| {
+    let subscription = cx.subscribe_in(&dialog, window, |this: &mut V, _, _: &DismissEvent, window, cx| {
         *this.confirmation_slot() = None;
+        window.focus(&this.focus_handle(cx), cx);
         cx.notify();
     });
     window.focus(&dialog.focus_handle(cx), cx);

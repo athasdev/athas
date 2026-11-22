@@ -2338,8 +2338,10 @@ impl AiSettingsView {
             },
             cx,
         );
-        let subscription = cx.subscribe_in(&dialog, window, |this, _, _: &gpui::DismissEvent, _, cx| {
+        let subscription = cx.subscribe_in(&dialog, window, |this, _, _: &gpui::DismissEvent, window, cx| {
             this.confirm = None;
+            // The dialog held the keyboard; the page takes it back, or nothing answers a key.
+            window.focus(&this.focus, cx);
             cx.notify();
         });
         window.focus(&dialog.focus_handle(cx), cx);
