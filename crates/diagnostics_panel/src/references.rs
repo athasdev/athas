@@ -238,7 +238,7 @@ impl Render for ReferencesView {
                             .items_center()
                             .gap(metrics::CHROME_GAP)
                             .min_w_0()
-                            .child(Icon::new(IconName::FileCode).size(IconSize::Small).color(colors.muted_foreground))
+                            .child(multibuffer::file_icon(&name, multibuffer::Tone::Subtle, cx))
                             .child(div().min_w_0().truncate().child(name)),
                     )
                     .child(Icon::new(if expanded { IconName::ChevronDown } else { IconName::ChevronRight }).size(IconSize::Custom(px(12.))).color(colors.subtle_foreground))

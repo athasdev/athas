@@ -42,7 +42,7 @@ struct PaneLayout<'a> {
 fn file_icon(item: &TabItem, cx: &App) -> Option<AnyElement> {
     let TabItem::File { path } = item else { return None };
     let name = path.rsplit(['/', '\\']).next().unwrap_or(path);
-    extensions::icon_for(name, false, false, cx).map(|source| gpui::img(source).flex_none().size(px(12.)).into_any_element())
+    extensions::file_icon(name, px(12.), cx)
 }
 
 fn top_left(node: &PaneNode) -> u64 {

@@ -239,7 +239,13 @@ impl Editor {
                     cx.stop_propagation();
                     editor.confirm_completion(position, cx);
                 }))
-                .child(Icon::new(completion_icon(item.kind)).size(IconSize::XSmall).color(colors.muted_foreground))
+                // A path completion takes the icon theme's icon for the file it names.
+                .child(match item.kind {
+                    Some(lsp::CompletionItemKind::FILE) => extensions::file_icon(&item.label, px(12.), cx),
+                    Some(lsp::CompletionItemKind::FOLDER) => extensions::entry_icon(&item.label, true, false, px(12.), cx),
+                    _ => None,
+                }
+                .unwrap_or_else(|| Icon::new(completion_icon(item.kind)).size(IconSize::XSmall).color(colors.muted_foreground).into_any_element()))
                 .child(
                     div()
                         .flex_none()

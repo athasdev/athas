@@ -181,7 +181,7 @@ impl CommitView {
                     .text_color(status_color(file.status, colors))
                     .child(file.status.letter()),
             )
-            .child(Icon::new(IconName::File).size(IconSize::XSmall).color(colors.subtle_foreground))
+            .child(multibuffer::file_icon(&name, multibuffer::Tone::Subtle, cx))
             .child(div().flex_none().text_color(colors.foreground).child(name))
             .child(div().min_w_0().truncate().text_size(typography::TEXT_CAPTION).text_color(colors.subtle_foreground).child(match &file.old_path {
                 Some(old) => format!("{dir} ← {old}"),

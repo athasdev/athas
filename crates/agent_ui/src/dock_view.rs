@@ -372,10 +372,8 @@ fn row_with(icon: Option<IconName>, label: impl Into<SharedString>, detail: Opti
 
 /// A changed file's row: the icon theme's icon for it, its name and folder on one line.
 fn file_row(name: String, folder: Option<String>, trailing: Option<AnyElement>, cx: &App) -> gpui::Div {
-    let icon = match extensions::icon_for(&name, false, false, cx) {
-        Some(source) => gpui::img(source).flex_none().size(px(14.)).into_any_element(),
-        None => Icon::new(IconName::File).size(IconSize::XSmall).color(cx.theme().colors.subtle_foreground).into_any_element(),
-    };
+    let icon = extensions::file_icon(&name, px(14.), cx)
+        .unwrap_or_else(|| Icon::new(IconName::File).size(IconSize::XSmall).color(cx.theme().colors.subtle_foreground).into_any_element());
     row_parts(Some(icon), name, folder, true, trailing, cx)
 }
 

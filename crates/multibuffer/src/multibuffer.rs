@@ -61,10 +61,8 @@ impl Tone {
 
 /// The icon theme's icon for a file, or the built-in one.
 pub fn file_icon(name: &str, tone: Tone, cx: &App) -> AnyElement {
-    match extensions::icon_for(name, false, false, cx) {
-        Some(source) => img(source).flex_none().size(ICON).into_any_element(),
-        None => Icon::new(IconName::File).size(IconSize::XSmall).color(tone.color(&cx.theme().colors)).into_any_element(),
-    }
+    extensions::file_icon(name, ICON, cx)
+        .unwrap_or_else(|| Icon::new(IconName::File).size(IconSize::XSmall).color(tone.color(&cx.theme().colors)).into_any_element())
 }
 
 fn folder_icon(name: &str, expanded: bool, cx: &App) -> AnyElement {

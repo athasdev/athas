@@ -315,7 +315,7 @@ impl ReviewView {
                                 cx.notify();
                             }))
                             .child(Icon::new(if collapsed { IconName::ChevronRight } else { IconName::ChevronDown }).size(IconSize::XSmall).color(colors.subtle_foreground))
-                            .child(Icon::new(IconName::FileCode).size(IconSize::XSmall).color(colors.subtle_foreground))
+                            .child(file_icon(&path, &colors, cx))
                             .child(div().min_w_0().truncate().font_weight(typography::MEDIUM).child(path))
                             .when(file.created, |this| {
                                 this.child(
@@ -362,6 +362,13 @@ impl ReviewView {
 }
 
 /// The deepest folder every path is in, for shorter rows.
+/// The icon theme's icon for a reviewed file, or the built-in one.
+fn file_icon(path: &str, colors: &theme::ThemeColors, cx: &App) -> AnyElement {
+    let name = path.rsplit(['/', '\\']).next().unwrap_or(path);
+    extensions::file_icon(name, px(14.), cx)
+        .unwrap_or_else(|| Icon::new(IconName::FileCode).size(IconSize::XSmall).color(colors.subtle_foreground).into_any_element())
+}
+
 fn common_root<'a>(paths: impl Iterator<Item = &'a Path>) -> Option<PathBuf> {
     let mut root: Option<PathBuf> = None;
     for path in paths {

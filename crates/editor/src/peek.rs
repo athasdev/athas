@@ -321,7 +321,10 @@ impl Editor {
                     .px(px(8.))
                     .py(px(2.))
                     .text_color(colors.muted_foreground)
-                    .child(Icon::new(IconName::FileCode).size(IconSize::Small).color(colors.muted_foreground))
+                    .child(
+                        extensions::file_icon(&name, px(14.), cx)
+                            .unwrap_or_else(|| Icon::new(IconName::FileCode).size(IconSize::Small).color(colors.muted_foreground).into_any_element()),
+                    )
                     .child(div().min_w_0().truncate().child(name))
                     .child(div().ml_auto().flex_none().child(group.entries.len().to_string())),
             );

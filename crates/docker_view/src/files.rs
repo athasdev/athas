@@ -154,11 +154,9 @@ impl DockerView {
             .rounded(metrics::RADIUS_MD)
             .text_size(typography::TEXT_SM)
             .hover(|style| style.bg(colors.accent))
-            .child(
-                Icon::new(if directory { IconName::Folder } else { IconName::File })
-                    .size(IconSize::XSmall)
-                    .color(colors.subtle_foreground),
-            )
+            .child(extensions::entry_icon(&entry.name, directory, false, px(14.), cx).unwrap_or_else(|| {
+                Icon::new(if directory { IconName::Folder } else { IconName::File }).size(IconSize::XSmall).color(colors.subtle_foreground).into_any_element()
+            }))
             .child(div().flex_1().min_w_0().truncate().text_color(colors.foreground).child(entry.name.clone()))
             .child(div().flex_none().text_size(typography::TEXT_CAPTION).text_color(colors.subtle_foreground).child(detail))
             .on_click(cx.listener(move |this, _: &ClickEvent, window, cx| {

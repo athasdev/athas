@@ -165,7 +165,8 @@ impl Render for ToolDiffView {
                 .when(removed > 0, |this| this.child(div().text_color(colors.git_deleted).child(format!("\u{2212}{removed}"))))
         };
         let number = |value: Option<usize>| div().flex_none().w(NUMBER_WIDTH).pr(px(8.)).text_right().text_color(colors.subtle_foreground).children(value.map(|value| value.to_string()));
-        let files = self.changes.iter().enumerate().map(|(file_index, change)| {
+        // Collected before the scrollbar asks for `cx` again: the rows read the icon theme.
+        let files: Vec<_> = self.changes.iter().enumerate().map(|(file_index, change)| {
             let rows = diff::diff_rows(change.old.as_deref().unwrap_or(""), &change.new);
             let (added, removed) = diff::stats(&rows);
             let numbered = diff::numbered_rows(&rows);
@@ -190,7 +191,10 @@ impl Render for ToolDiffView {
                 .text_size(typography::TEXT_SM)
                 .on_click(move |_, _, cx| workbench_api::open_file(cx, open.clone(), None))
                 .child(div().flex_none().w(px(12.)).font_family(typography::MONO_FONT).text_size(typography::TEXT_CAPTION).text_color(status.1).child(status.0))
-                .child(Icon::new(IconName::FileCode).size(IconSize::XSmall).color(colors.subtle_foreground))
+                .child(
+                    extensions::file_icon(&name, px(14.), cx)
+                        .unwrap_or_else(|| Icon::new(IconName::FileCode).size(IconSize::XSmall).color(colors.subtle_foreground).into_any_element()),
+                )
                 .child(div().flex_none().font_weight(typography::MEDIUM).text_color(colors.foreground).child(name))
                 .child(div().flex_1().min_w_0().truncate().text_color(colors.subtle_foreground).child(dir))
                 .child(counts(added, removed));
@@ -244,7 +248,7 @@ impl Render for ToolDiffView {
                     this.child(div().flex().items_center().justify_center().h(px(56.)).text_size(typography::TEXT_SM).text_color(colors.subtle_foreground).child("No changes"))
                 })
                 .children(lines)
-        });
+        }).collect();
         div()
             .id("agent-tool-diff")
             .track_focus(&self.focus_handle)

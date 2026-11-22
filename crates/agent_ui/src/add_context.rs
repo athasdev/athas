@@ -284,9 +284,17 @@ impl SessionView {
             .map(|reference| {
                 let ContextRef::Tab { title, path, kind, .. } = &reference else { unreachable!() };
                 let icon = if path.is_some() { IconName::File } else { IconName::Columns };
+                // A tab of a file takes the icon theme's icon, as the lists of files do.
+                let picture = path
+                    .as_ref()
+                    .and_then(|path| path.file_name())
+                    .and_then(|name| extensions::icon_for(&name.to_string_lossy(), false, false, cx));
                 let keywords = [path.as_ref().map(|path| path.to_string_lossy().into_owned()), kind.clone(), Some(reference.describe(root.as_deref()).1)].into_iter().flatten().collect::<Vec<_>>().join(" ");
                 match self.reference_item(title.clone(), icon, reference.clone(), Some(OPEN_TABS), &view) {
-                    MenuEntry::Item(item) => MenuEntry::Item(item.keywords(keywords)),
+                    MenuEntry::Item(item) => MenuEntry::Item(match picture {
+                        Some(source) => item.keywords(keywords).icon_image(source),
+                        None => item.keywords(keywords),
+                    }),
                     other => other,
                 }
             })

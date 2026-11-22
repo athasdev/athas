@@ -781,10 +781,8 @@ impl GitPanel {
                 .into_any_element(),
         );
 
-        let icon = match extensions::icon_for(&file.name, false, false, cx) {
-            Some(source) => gpui::img(source).flex_none().size(px(14.)).into_any_element(),
-            None => Icon::new(IconName::File).size(IconSize::XSmall).color(colors.subtle_foreground).into_any_element(),
-        };
+        let icon = extensions::file_icon(&file.name, px(14.), cx)
+            .unwrap_or_else(|| Icon::new(IconName::File).size(IconSize::XSmall).color(colors.subtle_foreground).into_any_element());
         let mut row = Row::new(format!("file-{key}"), icon, file.name.clone());
         row.secondary = (show_dir && !file.dir.is_empty()).then(|| file.dir.clone().into());
         row.meta = meta;

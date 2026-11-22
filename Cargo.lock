@@ -2338,6 +2338,7 @@ name = "docker_view"
 version = "0.1.0"
 dependencies = [
  "athas-docker",
+ "extensions",
  "futures",
  "gpui",
  "notifications",
@@ -11339,6 +11340,7 @@ dependencies = [
  "git_panel",
  "github_panel",
  "gpui",
+ "gpui_platform",
  "keymap",
  "local_history",
  "lsp_client",

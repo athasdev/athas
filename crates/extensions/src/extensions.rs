@@ -887,6 +887,18 @@ pub fn icon_for(name: &str, is_dir: bool, expanded: bool, cx: &App) -> Option<Im
     theme.icon(name, is_dir, expanded, dark)
 }
 
+/// The icon theme's picture for a file or folder, sized for a row. `None` when the theme has
+/// none and the caller draws the built-in icon instead.
+pub fn entry_icon(name: &str, is_dir: bool, expanded: bool, size: gpui::Pixels, cx: &App) -> Option<gpui::AnyElement> {
+    use gpui::{IntoElement as _, Styled as _};
+    icon_for(name, is_dir, expanded, cx).map(|source| gpui::img(source).flex_none().size(size).into_any_element())
+}
+
+/// [`entry_icon`] for a file.
+pub fn file_icon(name: &str, size: gpui::Pixels, cx: &App) -> Option<gpui::AnyElement> {
+    entry_icon(name, false, false, size, cx)
+}
+
 /// The language a file is in, from the languages extensions define.
 pub fn language_for_path(path: &Path, cx: &App) -> Option<LanguageDefinition> {
     let languages = cx.try_global::<Extensions>()?.languages();
