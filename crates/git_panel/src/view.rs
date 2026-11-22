@@ -8,7 +8,7 @@ use gpui::{
     SharedString, Window, div, point, prelude::*, px,
 };
 use theme::{ActiveTheme, ThemeColors};
-use ui::{Button, ButtonSize, ButtonVariant, EmptyState, Icon, IconName, IconSize, MenuItem, Plane, metrics, typography};
+use ui::{Button, ButtonSize, ButtonVariant, EmptyState, Icon, IconName, IconSize, Plane, metrics, typography};
 
 use crate::{
     DraftKind, GitPanel, RepoState, Section, Tab,
@@ -242,28 +242,14 @@ impl GitPanel {
         if repositories > 1 {
             tabs.push(("Repositories", IconName::FolderOpen, repositories, Tab::Repositories));
         }
-        let label = tabs.iter().find(|tab| tab.3 == self.tab).map_or("Changes", |tab| tab.0);
-        let open = self.menu_is_open("git-sections");
-        let this = cx.weak_entity();
-        let switcher = ui::section_switcher("git-sections", label, open, cx, cx.listener(move |panel, event: &ClickEvent, window, cx| {
-                let entries = tabs
-                    .iter()
-                    .map(|&(label, icon, count, which)| {
-                        let this = this.clone();
-                        let mut item = MenuItem::new(label).icon(icon).checked(panel.tab == which).on_select(move |_, cx| {
-                            this.update(cx, |panel, cx| panel.show_tab(which, cx)).ok();
-                        });
-                        if count > 0 {
-                            item = item.trailing_text(count.to_string());
-                        }
-                        item.into()
-                    })
-                    .collect();
-                let position = event.position();
-                panel.show_menu("git-sections", entries, point(position.x - px(8.), position.y + px(10.)), Anchor::TopLeft, window, cx);
-            }));
-        let actions = self.render_header_buttons(cx);
-        div().flex_none().px(px(8.)).pb(px(2.)).child(ui::SectionLabel::title(switcher).trailing(actions))
+        let current = self.tab;
+        let tabs = tabs.into_iter().fold(ui::SectionTabs::new(), |row, (label, icon, count, which)| {
+            row.tab(
+                ui::SectionTab::new(gpui::ElementId::Name(format!("git-section-{label}").into()), label, icon, cx.listener(move |panel, _: &ClickEvent, _, cx| panel.show_tab(which, cx))).count(count),
+                which == current,
+            )
+        });
+        div().flex().flex_col().flex_none().child(self.render_title_only(cx)).child(tabs)
     }
 
     /// The header before there are sections (no repository yet, still loading): the tool's

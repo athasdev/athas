@@ -153,28 +153,15 @@ impl GitHubPanel {
     /// listing every section by name and count (an icon-only track was hard to read), and the
     /// panel's buttons at the end.
     fn render_tabs(&mut self, _colors: &ThemeColors, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
-        let sections: Vec<(Section, usize)> =
-            self.sections.iter().map(|section| (*section, if *section == Section::PullRequests { self.pulls.len() } else { 0 })).collect();
         let current = self.section;
-        let open = crate::menus::is_open(&self.open_menu, "github-sections");
-        let switcher = ui::section_switcher("github-sections", current.title(), open, cx, cx.listener(move |panel, event: &ClickEvent, window, cx| {
-                let entries = sections
-                    .iter()
-                    .map(|&(section, count)| {
-                        let mut item = crate::menus::item(section.title(), cx, move |panel, _, cx| panel.show_section(section, cx))
-                            .icon(section.icon())
-                            .checked(section == current);
-                        if count > 0 {
-                            item = item.trailing_text(count.to_string());
-                        }
-                        MenuEntry::Item(item)
-                    })
-                    .collect();
-                let position = event.position();
-                crate::menus::show(panel, "github-sections", entries, gpui::point(position.x - px(8.), position.y + px(10.)), Anchor::TopLeft, window, cx);
-            }));
-        let actions = self.render_header_buttons(cx);
-        div().flex_none().px(px(8.)).pb(px(2.)).child(ui::SectionLabel::title(switcher).trailing(actions))
+        let tabs = self.sections.iter().fold(ui::SectionTabs::new(), |tabs, &section| {
+            let count = if section == Section::PullRequests { self.pulls.len() } else { 0 };
+            tabs.tab(
+                ui::SectionTab::new(gpui::ElementId::Name(format!("github-section-{}", section.id()).into()), section.title(), section.icon(), cx.listener(move |panel, _: &ClickEvent, _, cx| panel.show_section(section, cx))).count(count),
+                section == current,
+            )
+        });
+        div().flex().flex_col().flex_none().child(self.render_title_only(cx)).child(tabs)
     }
 
     /// The header before there are sections to switch between (signed out, still checking):
