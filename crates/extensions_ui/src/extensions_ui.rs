@@ -102,6 +102,8 @@ pub struct ExtensionsView {
     detail_scroll: ScrollHandle,
     /// Set when the view is a page of Settings: it flows in that page, which scrolls it.
     page_scroll: Option<ScrollHandle>,
+    /// The catalog size the search placeholder was written for.
+    placeholder_total: Option<usize>,
     _subscriptions: Vec<Subscription>,
 }
 
@@ -131,7 +133,10 @@ impl ExtensionsView {
                 TextInputEvent::Cancelled => input.update(cx, |input, cx| input.set_text("", cx)),
                 _ => {}
             }),
-            cx.observe_global::<Extensions>(|_, cx| cx.notify()),
+            cx.observe_global::<Extensions>(|this, cx| {
+                this.sync_search_placeholder(cx);
+                cx.notify();
+            }),
             cx.observe_global::<settings::SettingsStore>(|_, cx| cx.notify()),
         ];
         if *extensions::get(cx).catalog_source() == CatalogSource::Bundled {
@@ -144,14 +149,16 @@ impl ExtensionsView {
             list_scroll: ScrollHandle::new(),
             detail_scroll: ScrollHandle::new(),
             page_scroll: None,
+            placeholder_total: None,
             _subscriptions: subscriptions,
         }
     }
 
     /// Makes the view a page of Settings: no scroller or title of its own, the page's
     /// `scroll` scrolls it.
-    pub fn embed_in_page(&mut self, scroll: ScrollHandle) {
+    pub fn embed_in_page(&mut self, scroll: ScrollHandle, cx: &mut Context<Self>) {
         self.page_scroll = Some(scroll);
+        self.sync_search_placeholder(cx);
     }
 
     pub(crate) fn embedded(&self) -> bool {
@@ -303,9 +310,64 @@ impl ExtensionsView {
         detail
     }
 
+    /// The bar Settings pins above the page: the categories, the updates button and the search
+    /// on one line, so the catalog scrolls under a toolbar that stays put. `None` while an
+    /// extension's own page is open, which has a breadcrumb of its own instead.
+    pub fn page_toolbar(&mut self, cx: &mut Context<Self>) -> Option<AnyElement> {
+        if !self.embedded() || self.selected.is_some() {
+            return None;
+        }
+        let extensions = extensions::get(cx);
+        let settings = settings::get(cx);
+        let updates = extensions
+            .entries()
+            .iter()
+            .filter(|entry| extensions.status(&entry.manifest.id, settings).update_available)
+            .count();
+        Some(
+            div()
+                .flex()
+                .items_center()
+                .gap(px(8.))
+                .w_full()
+                .min_w_0()
+                // Settings floats its close button over the top right corner of the page.
+                .pr(px(32.))
+                .child(div().flex().flex_1().min_w_0().child(self.render_filters(cx)))
+                .when(updates > 0, |this| {
+                    this.child(
+                        Button::new("extensions-update-all", format!("Update {updates}"))
+                            .leading_icon(IconName::Download)
+                            .size(ButtonSize::Small)
+                            .variant(ButtonVariant::Accent)
+                            .on_click(cx.listener(|_, _, _, cx| extensions::update_all(cx).detach())),
+                    )
+                })
+                .child(div().flex_none().w(px(196.)).child(self.search.clone()))
+                .into_any_element(),
+        )
+    }
+
+    /// How many integrations the search looks through, in its placeholder: the count used to
+    /// have a line of its own over the catalog, which is the line the toolbar took.
+    fn sync_search_placeholder(&mut self, cx: &mut Context<Self>) {
+        if !self.embedded() {
+            return;
+        }
+        let total = extensions::get(cx).entries().len();
+        if self.placeholder_total == Some(total) {
+            return;
+        }
+        self.placeholder_total = Some(total);
+        let placeholder = match total {
+            0 => "Search integrations...".to_string(),
+            total => format!("Search {total} integrations..."),
+        };
+        self.search.update(cx, |input, cx| input.set_placeholder(placeholder, cx));
+    }
+
     /// The page's header (`WorkbenchContent`): "Integrations" over the count, the search at the
-    /// end. As a page of Settings the title is the page's own, so only the count and the search
-    /// are left, on one line.
+    /// end. On its own; as a page of Settings the toolbar carries the search instead.
     fn render_header(&self, visible: usize, colors: &ThemeColors, cx: &mut Context<Self>) -> impl IntoElement {
         let extensions = extensions::get(cx);
         let settings = settings::get(cx);
@@ -389,7 +451,7 @@ impl ExtensionsView {
             }
         }
         let view = cx.entity().downgrade();
-        div().id("extensions-filters").flex().flex_none().mb(px(16.)).min_w_0().child(
+        div().id("extensions-filters").flex().when(!self.embedded(), |this| this.flex_none().mb(px(16.))).min_w_0().child(
             ui::Tabs::new("extensions-filter-tabs", triggers, active.setting()).wrap().on_change(move |value, _, cx| {
                 let filter = Filter::from_setting(value);
                 view.update(cx, |this, cx| this.set_filter(filter, cx)).ok();
@@ -575,14 +637,18 @@ impl Render for ExtensionsView {
             Some(entry) => detail::render(self, &entry, &colors, cx),
             None => {
                 let entries = self.visible_entries(cx);
+                let embedded = self.embedded();
                 let catalog = div()
                     .flex()
                     .flex_col()
                     .w_full()
-                    .when(!self.embedded(), |this| this.max_w(px(768.)).mx_auto().px(px(24.)).py(px(20.)))
+                    .when(!embedded, |this| this.max_w(px(768.)).mx_auto().px(px(24.)).py(px(20.)))
                     .children(self.render_catalog_notice(&colors, cx))
-                    .child(self.render_header(entries.len(), &colors, cx))
-                    .child(self.render_filters(cx))
+                    // Embedded, the header's count sits in the search placeholder and its
+                    // categories in the toolbar Settings pins above the page.
+                    .when(!embedded, |this| {
+                        this.child(self.render_header(entries.len(), &colors, cx)).child(self.render_filters(cx))
+                    })
                     .child(self.render_catalog(&entries, &colors, cx));
                 // As a page of Settings the page scrolls the catalog; on its own the view does.
                 if self.embedded() {

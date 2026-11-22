@@ -1351,7 +1351,7 @@ impl SettingsView {
             .min_h(px(44.))
             .py(px(10.))
             .px(px(12.))
-            .when(flashing, |this| this.rounded(px(6.)).bg(colors.primary_soft))
+            .when(flashing, |this| this.rounded(metrics::RADIUS_MD).bg(colors.primary_soft))
             .when(!first, |this| {
                 this.child(div().absolute().top_0().left(px(12.)).right_0().h(px(1.)).bg(colors.divider))
             })
@@ -1631,10 +1631,23 @@ impl SettingsView {
         self.integrations
             .get_or_insert_with(|| {
                 let view = cx.new(|cx| extensions_ui::ExtensionsView::new(window, cx));
-                view.update(cx, |view, _| view.embed_in_page(scroll));
+                view.update(cx, |view, cx| view.embed_in_page(scroll, cx));
+                // The page draws the view's toolbar itself, so a filter or a search the view
+                // takes has to redraw the page around it.
+                cx.observe(&view, |_, _, cx| cx.notify()).detach();
                 view
             })
             .clone()
+    }
+
+    /// The bar a page pins over its content, above the scroller so it stays in sight:
+    /// Integrations' categories, updates and search.
+    fn page_toolbar(&mut self, window: &mut Window, cx: &mut Context<Self>) -> Option<AnyElement> {
+        if self.page != "integrations" || self.importer.is_some() {
+            return None;
+        }
+        let view = self.integrations_view(window, cx);
+        view.update(cx, |view, cx| view.page_toolbar(cx))
     }
 
     /// Opens an integration's page on Integrations; for previews.
@@ -1763,6 +1776,7 @@ impl Render for SettingsView {
                     open_select_menu(this, menu_key.clone(), &options, on_select.clone(), point(position.x, position.y + px(10.)), window, cx);
                 }))
         });
+        let page_toolbar = self.page_toolbar(window, cx);
         let importing = self.importer.as_ref().map(|(importer, _)| importer.clone());
         let table_page = importing.is_none() && self.page == "keyboard" && self.keybindings.as_ref().is_some_and(|editor| editor.read(cx).is_editing());
         let mut content: Vec<AnyElement> = Vec::new();
@@ -1813,7 +1827,7 @@ impl Render for SettingsView {
             .when(!self.standalone, |this| {
                 this.w((window.viewport_size().width - px(64.)).min(px(1152.)))
                     .h((window.viewport_size().height - px(64.)).min(px(768.)))
-                    .rounded(px(16.))
+                    .rounded(metrics::OVERLAY_RADIUS)
                     .shadow(theme.shadows.dialog.clone())
             })
             .overflow_hidden()
@@ -1890,6 +1904,9 @@ impl Render for SettingsView {
                     .when(importing.is_none() || self.standalone, |this| {
                         this.pt(if self.standalone { STANDALONE_TOP } else if narrow { px(16.) } else { px(24.) })
                     })
+                    .children(page_toolbar.map(|toolbar| {
+                        div().flex().flex_none().px(if narrow { px(12.) } else { px(24.) }).pb(px(16.)).child(toolbar)
+                    }))
                     .child(
                         // The page scrolls with the overlay scrollbar (`ScrollArea`).
                         div()
