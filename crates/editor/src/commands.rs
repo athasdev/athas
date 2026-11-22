@@ -57,6 +57,16 @@ fn set_zoom(cx: &mut App, level: f32) {
     cx.refresh_windows();
 }
 
+/// Zooms the editors a step in or out. The window routes Zoom In and Zoom Out to the view that
+/// has the keyboard ("the zoom level of the focused view"), so this runs only for an editor.
+pub fn zoom_editors(cx: &mut App, in_: bool) {
+    set_zoom(cx, zoom_step(zoom_level(cx), in_));
+}
+
+pub fn reset_editor_zoom(cx: &mut App) {
+    set_zoom(cx, 1.0);
+}
+
 /// The terminal command that opens `path` in the external editor the settings name
 /// (`externalEditor`, `customEditorCommand`), with the path relative to the project root; `None`
 /// when files open in the built-in editor.
@@ -162,9 +172,6 @@ pub(crate) fn register(cx: &mut App) {
             settings.render_whitespace = if settings.render_whitespace == "none" { "all".into() } else { "none".into() };
         })
     });
-    cx.on_action(|_: &ZoomIn, cx| set_zoom(cx, zoom_step(zoom_level(cx), true)));
-    cx.on_action(|_: &ZoomOut, cx| set_zoom(cx, zoom_step(zoom_level(cx), false)));
-    cx.on_action(|_: &ResetZoom, cx| set_zoom(cx, 1.0));
     cx.on_action(|_: &RestartLanguageServers, cx| LspStore::global(cx).update(cx, |store, cx| store.restart_all(cx)));
     cx.on_action(|_: &StopLanguageServers, cx| LspStore::global(cx).update(cx, |store, cx| store.stop_all(cx)));
     cx.on_action(|_: &OrganizeJavaImports, cx| {

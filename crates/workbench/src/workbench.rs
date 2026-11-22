@@ -1683,6 +1683,25 @@ impl Workbench {
             .find(|terminal| terminal.focus_handle(cx).contains_focused(window, cx))
     }
 
+    /// Zoom In, Zoom Out and Reset Zoom work on "the focused view", as the command catalog puts
+    /// it: the terminal holding the keyboard, else the editors. Without this they always zoomed
+    /// the editors, so the keys looked dead anywhere else.
+    pub(crate) fn zoom_focused_view(&mut self, step: Option<bool>, window: &mut Window, cx: &mut Context<Self>) {
+        if self.focused_terminal(window, cx).is_some() {
+            let action: Box<dyn gpui::Action> = match step {
+                Some(true) => Box::new(terminal_view::IncreaseFontSize),
+                Some(false) => Box::new(terminal_view::DecreaseFontSize),
+                None => Box::new(terminal_view::ResetFontSize),
+            };
+            window.dispatch_action(action, cx);
+            return;
+        }
+        match step {
+            Some(in_) => editor::zoom_editors(cx, in_),
+            None => editor::reset_editor_zoom(cx),
+        }
+    }
+
     /// Switch to Tab 1–9: the tab at that place in the group in front.
     /// Cmd-1…9: the terminal's own tabs while a terminal has focus (`terminal:activate-tab`),
     /// else the focused group's tabs.
@@ -2810,6 +2829,9 @@ impl Render for Workbench {
             .on_action(cx.listener(|this, _: &NextTab, window, cx| this.cycle_tab(1, window, cx)))
             .on_action(cx.listener(|this, _: &PreviousTab, window, cx| this.cycle_tab(-1, window, cx)))
             .on_action(cx.listener(|_, _: &ToggleDock, _, cx| agent_ui::toggle_session_side_panel(cx)))
+            .on_action(cx.listener(|this, _: &editor::ZoomIn, window, cx| this.zoom_focused_view(Some(true), window, cx)))
+            .on_action(cx.listener(|this, _: &editor::ZoomOut, window, cx| this.zoom_focused_view(Some(false), window, cx)))
+            .on_action(cx.listener(|this, _: &editor::ResetZoom, window, cx| this.zoom_focused_view(None, window, cx)))
             .on_action(|_: &MinimizeWindow, window, _| window.minimize_window())
             .on_action(|_: &ZoomWindow, window, _| window.zoom_window())
             .on_action(|_: &ToggleFullscreen, window, _| window.toggle_fullscreen())

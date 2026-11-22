@@ -67,6 +67,7 @@ fn main() -> Result<()> {
         ("the workbench", Surface::Workbench),
         ("a settings window", Surface::Detached(workbench::DetachedContent::Settings)),
         ("an extensions window", Surface::Detached(workbench::DetachedContent::Extensions)),
+        ("a terminal window", Surface::Detached(workbench::DetachedContent::Terminal { cwd: None })),
     ];
 
     for (name, surface) in surfaces {
@@ -133,6 +134,40 @@ fn main() -> Result<()> {
             let closed = cx.update_window(window, |_, _, _| ()).is_err();
             let built = dispatched.unwrap_or(false);
             println!("menu {key:<16} {action_name:<26} {name} -> {}", if closed { "closed the window" } else if built { "stayed open" } else { "no such action" });
+        }
+    }
+
+    // Zoom says it works on "the focused view": check which view actually moved, since a key
+    // can resolve and dispatch and still change nothing a person can see.
+    for (name, surface) in [
+        ("the workbench", Surface::Workbench),
+        ("a settings window", Surface::Detached(workbench::DetachedContent::Settings)),
+        ("a terminal window", Surface::Detached(workbench::DetachedContent::Terminal { cwd: None })),
+    ] {
+        let seen: Rc<RefCell<Option<String>>> = Rc::default();
+        let window = surface.open(&mut cx, seen)?;
+        for _ in 0..4 {
+            cx.update_window(window, |_, window, _| window.refresh())?;
+            cx.run_until_parked();
+        }
+        for (key, label) in [("cmd+=", "zoom in"), ("cmd+-", "zoom out")] {
+            let before = cx.update(|cx| (editor::zoom_level(cx), settings::get(cx).terminal_font_size));
+            let keys = keymap::to_gpui_keystrokes(key).unwrap();
+            cx.update_window(window, |_, window, cx| {
+                for chord in keys.split_whitespace() {
+                    if let Ok(keystroke) = Keystroke::parse_with_os(chord, cx.platform_info().os) {
+                        window.dispatch_keystroke(keystroke, cx);
+                    }
+                }
+            })?;
+            cx.run_until_parked();
+            let after = cx.update(|cx| (editor::zoom_level(cx), settings::get(cx).terminal_font_size));
+            let moved = match (after.0 != before.0, after.1 != before.1) {
+                (true, _) => "the editors",
+                (_, true) => "the terminal font",
+                _ => "NOTHING",
+            };
+            println!("zoom {key:<8} {label:<9} {name} -> {moved}");
         }
     }
 

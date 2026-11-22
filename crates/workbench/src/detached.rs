@@ -355,6 +355,23 @@ impl DetachedWindow {
         &self.content
     }
 
+    /// Zooms what this window shows: a terminal window its terminal, anything else the editors.
+    fn zoom_view(&mut self, step: Option<bool>, window: &mut Window, cx: &mut Context<Self>) {
+        if matches!(self.content, DetachedContent::Terminal { .. }) {
+            let action: Box<dyn gpui::Action> = match step {
+                Some(true) => Box::new(terminal_view::IncreaseFontSize),
+                Some(false) => Box::new(terminal_view::DecreaseFontSize),
+                None => Box::new(terminal_view::ResetFontSize),
+            };
+            window.dispatch_action(action, cx);
+            return;
+        }
+        match step {
+            Some(in_) => editor::zoom_editors(cx, in_),
+            None => editor::reset_editor_zoom(cx),
+        }
+    }
+
     /// Draws the window chrome of another platform, for previews.
     pub fn set_platform(&mut self, platform: Platform) {
         self.platform = platform;
@@ -499,6 +516,10 @@ impl Render for DetachedWindow {
             .on_action(|_: &ZoomWindow, window, _| window.zoom_window())
             .on_action(|_: &ToggleFullscreen, window, _| window.toggle_fullscreen())
             .on_action(|_: &Quit, _, cx| quit_through_workbench(cx))
+            // Zoom In, Zoom Out and Reset Zoom act on the view this window shows.
+            .on_action(cx.listener(|this, _: &editor::ZoomIn, window, cx| this.zoom_view(Some(true), window, cx)))
+            .on_action(cx.listener(|this, _: &editor::ZoomOut, window, cx| this.zoom_view(Some(false), window, cx)))
+            .on_action(cx.listener(|this, _: &editor::ResetZoom, window, cx| this.zoom_view(None, window, cx)))
             .map(|this| {
                 workbench_commands(cx).into_iter().fold(this, |this, action| {
                     this.on_boxed_action(&*action, |action, _, cx| run_in_workbench(action, cx))
@@ -627,6 +648,10 @@ const OWN_ACTIONS: &[&str] = &[
     "workbench::ZoomWindow",
     "workbench::ToggleFullscreen",
     "workbench::Quit",
+    // Zoom belongs to the view in this window, not to the workbench behind it.
+    "editor::ZoomIn",
+    "editor::ZoomOut",
+    "editor::ResetZoom",
 ];
 
 /// Sends `action` to the workbench window, which has the tabs, the sidebar and the project it
