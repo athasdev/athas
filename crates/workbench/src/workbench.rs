@@ -1224,6 +1224,33 @@ impl Workbench {
         self.open_modal(picker, window, cx);
     }
 
+    /// The rail's Help menu: what's new, the docs, the community and feedback.
+    pub fn show_help_menu(&mut self, position: Point<Pixels>, window: &mut Window, cx: &mut Context<Self>) {
+        let urls = account::urls(cx);
+        let open = |label: &'static str, icon: ui::IconName, url: String| -> MenuEntry {
+            MenuItem::new(label).icon(icon).on_select(move |_, cx| cx.open_url(&url)).into()
+        };
+        let entries = vec![
+            MenuItem::new("What's New")
+                .icon(ui::IconName::Megaphone)
+                .on_select(|window, cx| {
+                    if let Some(action) = cx.try_global::<keymap::CommandRegistry>().and_then(|registry| registry.action("help.showWhatsNew")) {
+                        window.dispatch_action(action, cx);
+                    }
+                })
+                .into(),
+            open("Changelog", ui::IconName::History, account::service_urls::GITHUB_RELEASES_URL.into()),
+            open("Documentation", ui::IconName::BookOpen, urls.docs()),
+            open("Community", ui::IconName::ChatBubbleText, account::service_urls::COMMUNITY_URL.into()),
+            MenuEntry::Separator,
+            MenuItem::new("Send Feedback")
+                .icon(ui::IconName::Megaphone)
+                .on_select(|window, cx| window.dispatch_action(Box::new(account::SendFeedback), cx))
+                .into(),
+        ];
+        self.show_menu("help", entries, position, Anchor::BottomLeft, window, cx);
+    }
+
     /// The rail's Run dropdown: the same actions as the run menu, grouped by source.
     pub fn show_run_dropdown(&mut self, position: Point<Pixels>, window: &mut Window, cx: &mut Context<Self>) {
         let Some(root) = self.state.active_project().map(|project| PathBuf::from(&project.path)) else {

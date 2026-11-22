@@ -613,7 +613,7 @@ pub struct SettingDef {
 /// The pages of the Settings view, in order, with their icon names (`config/settings-tabs.ts`).
 pub const SETTINGS_PAGES: &[(&str, &str)] = &[
     ("general", "General"),
-    ("account", "Account & Sync"),
+    ("account", "Account"),
     ("appearance", "Appearance"),
     ("notifications", "Notifications"),
     ("editor", "Editor"),

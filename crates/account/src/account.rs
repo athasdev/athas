@@ -1,6 +1,6 @@
 //! The Athas account (`features/auth`): desktop sign-in through the browser, the token in the
 //! OS keychain, the user, plan, credits and team snapshot, Pro gates, the account menu, the
-//! Settings "Account & Sync" page and the product feedback dialog.
+//! Settings "Account" page and the product feedback dialog.
 //!
 //! `init` creates the app's `AccountStore` and checks the saved session; views read it with
 //! `AccountStore::global(cx)` and re-render through `cx.observe`.

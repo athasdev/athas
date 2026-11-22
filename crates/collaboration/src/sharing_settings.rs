@@ -1,4 +1,4 @@
-//! Sharing on the Settings "Account & Sync" page (`components/sharing-settings.tsx`): cloud
+//! Sharing on the Settings "Account" page (`components/sharing-settings.tsx`): cloud
 //! session sync, and every shared link with live updates, copy, access, open and revoke. The
 //! access editor (`share-access-dialog.tsx`) opens inline under its row.
 

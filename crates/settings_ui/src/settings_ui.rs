@@ -3,7 +3,7 @@
 //!
 //! Besides the rows `settings::SETTING_DEFS` describes, pages carry the views of their features:
 //! theme cards on Appearance, font pickers with a preview, the keybinding editor on Keybindings,
-//! the account and sharing views on Account & Sync, and the settings import and export actions.
+//! the account and sharing views on Account, and the settings import and export actions.
 //! The view only emits `DismissEvent`; the workbench reloads keys when `keymap.json` changes by
 //! observing `keymap::UserKeymapRevision`.
 

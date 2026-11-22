@@ -1,4 +1,4 @@
-//! The Settings "Account & Sync" page content (`tabs/account-settings.tsx`): who is signed in,
+//! The Settings "Account" page content (`tabs/account-settings.tsx`): who is signed in,
 //! the plan, this period's AI credit and the settings sync gate. `settings_ui` hosts it as a
 //! child view on the `account` page; the sharing list (`collaboration::SharingSettings`) goes
 //! under it.

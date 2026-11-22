@@ -1,5 +1,5 @@
 use gpui::{Context, IntoElement, ParentElement, Styled, Window, div, prelude::*, px};
-use ui::{Avatar, Button, ButtonSize, IconName, TooltipExt, metrics};
+use ui::{Avatar, Button, ButtonSize, Icon, IconName, TooltipExt, metrics};
 use workspace::SidebarView;
 
 use crate::{ShowNotifications, ToggleAccountMenu, ToggleTerminal, Workbench};
@@ -124,6 +124,15 @@ impl Workbench {
         let terminal_open = self.state.layout.bottom_pane_visible && self.state.layout.bottom_tab == workspace::BottomTab::Terminal;
         let platform = self.platform;
         let unread = cx.try_global::<notifications::Notifications>().map_or(0, |store| store.unread());
+        // Signed out shows a plain user icon; the avatar needs a name to take its initial from.
+        let signed_in_name = match crate::web_chrome::web_chrome(cx) {
+            Some(chrome) => (chrome.account_name)(cx),
+            None => account::AccountStore::global(cx).filter(|store| store.read(cx).is_signed_in()).map(|_| account::avatar_name(cx)),
+        };
+        let account_avatar = match signed_in_name {
+            Some(name) => Avatar::new(&name).size(px(16.)).image(ui::avatar::account(cx).and_then(|me| me.picture())).into_any_element(),
+            None => Icon::new(IconName::User).size(ui::IconSize::Medium).color(theme::ActiveTheme::theme(&**cx).colors.subtle_foreground).into_any_element(),
+        };
         let primary = theme::ActiveTheme::theme(&**cx).colors.primary;
         let surface = theme::ActiveTheme::theme(&**cx).colors.surface;
 
@@ -229,15 +238,24 @@ impl Workbench {
                             }),
                     )
                     .child(
+                        Button::icon("help", IconName::Question)
+                            .size(ButtonSize::Medium)
+                            .variant(ui::ButtonVariant::Chrome)
+                            .filled_when_active()
+                            .active(self.menu_is_open("help"))
+                            .tooltip("Help")
+                            .tooltip_side(ui::TooltipSide::Right)
+                            .on_click(cx.listener(|this, _: &gpui::ClickEvent, window, cx| {
+                                let position = gpui::point(metrics::WORKBENCH_GAP + metrics::RAIL_CONTROL + px(4.), window.viewport_size().height - px(12.));
+                                this.show_help_menu(position, window, cx);
+                            })),
+                    )
+                    .child(
                         Button::new("account", "")
                             .icon_only()
                             .size(ButtonSize::Medium)
                             .variant(ui::ButtonVariant::Chrome)
-                            .leading(
-                                Avatar::new(&crate::web_chrome::web_chrome(cx).and_then(|chrome| (chrome.account_name)(cx)).unwrap_or_else(|| account::avatar_name(cx)))
-                                    .size(px(16.))
-                                    .image(ui::avatar::account(cx).and_then(|me| me.picture())),
-                            )
+                            .leading(account_avatar)
                             .active(self.account_menu.is_some() || self.web_account_menu_open())
                             .tooltip("Account")
                             .tooltip_side(ui::TooltipSide::Right)

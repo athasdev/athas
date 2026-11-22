@@ -11,9 +11,9 @@ use theme::ActiveTheme;
 use ui::{Avatar, Icon, IconName, IconSize, metrics, typography};
 
 use crate::{
-    AccountStore, SendFeedback,
+    AccountStore,
     gates::CreditUsage,
-    service_urls::{COMMUNITY_URL, GITHUB_RELEASES_URL, ServiceUrls},
+    service_urls::ServiceUrls,
     state::SignInFlow,
     widgets,
 };
@@ -188,18 +188,6 @@ impl AccountMenu {
             vec![settings]
         };
 
-        let resources = vec![
-            Item::new("whats-new", IconName::Megaphone, "What's New", |_, window, cx| {
-                if let Some(action) = cx.try_global::<keymap::CommandRegistry>().and_then(|registry| registry.action("help.showWhatsNew")) {
-                    window.dispatch_action(action, cx);
-                }
-            }),
-            Item::open("changelog", IconName::History, "Changelog", GITHUB_RELEASES_URL.into()),
-            Item::open("docs", IconName::BookOpen, "Documentation", urls.docs()),
-            Item::open("community", IconName::ChatBubbleText, "Community", COMMUNITY_URL.into()),
-            Item::new("feedback", IconName::Megaphone, "Send Feedback", |_, window, cx| window.dispatch_action(Box::new(SendFeedback), cx)),
-        ];
-
         let sign_in = store.map(|store| store.state().sign_in.clone()).unwrap_or_default();
         let session = if signed_in {
             vec![Item::new("sign-out", IconName::SignOut, "Sign Out", |this, _, cx| this.update_store(cx, |store, cx| store.sign_out(cx)))]
@@ -218,7 +206,7 @@ impl AccountMenu {
             ]
         };
 
-        vec![(if signed_in { None } else { Some("Account") }, account), (Some("Resources"), resources), (None, session)]
+        vec![(if signed_in { None } else { Some("Account") }, account), (None, session)]
     }
 
     fn render_item(&self, index: usize, item: Item, cx: &mut Context<Self>) -> AnyElement {
