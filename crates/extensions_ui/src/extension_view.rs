@@ -12,9 +12,10 @@ use extension_host::view::{
     TreeItem, ViewValue,
 };
 use extension_host::{Action, view::Tone as ViewTone};
+use ui::scale::px;
 use gpui::{
     AnyElement, App, ClickEvent, Context, Entity, Hsla, PathBuilder, ScrollHandle, SharedString, Subscription, WeakEntity, Window, canvas, div, point,
-    prelude::*, px, relative,
+    prelude::*, relative,
 };
 use serde_json::{Map, Value, json};
 use theme::{ActiveTheme, ThemeColors};
@@ -441,7 +442,7 @@ impl ExtensionView {
     fn field_label(label: Option<&String>, required: bool, colors: &ThemeColors) -> Option<AnyElement> {
         label.map(|label| {
             div()
-                .text_size(typography::TEXT_SM)
+                .text_size(typography::text_sm())
                 .text_color(colors.subtle_foreground)
                 .child(if required { format!("{label} *") } else { label.clone() })
                 .into_any_element()
@@ -457,7 +458,7 @@ impl ExtensionView {
         let node = self.node.clone()?;
         let Node::Form { children, .. } = find(&node, "0", form)? else { return None };
         let missing = view::missing_form_fields(&view::collect_form_fields(children), &state.values);
-        missing.contains(name).then(|| div().text_size(typography::TEXT_SM).text_color(colors.destructive).child("This field is required.").into_any_element())
+        missing.contains(name).then(|| div().text_size(typography::text_sm()).text_color(colors.destructive).child("This field is required.").into_any_element())
     }
 
     fn render_node(&mut self, node: &Node, path: &str, form: Option<&str>, colors: &ThemeColors, cx: &mut Context<Self>) -> AnyElement {
@@ -494,12 +495,12 @@ impl ExtensionView {
                         .justify_between()
                         .gap(px(8.))
                         .min_w_0()
-                        .when(surface == Surface::Sidebar, |this| this.h(metrics::PANE_HEADER).px(px(12.)).border_b_1().border_color(colors.divider))
+                        .when(surface == Surface::Sidebar, |this| this.h(metrics::pane_header()).px(px(12.)).border_b_1().border_color(colors.divider))
                         .child(
                             div()
                                 .min_w_0()
                                 .truncate()
-                                .text_size(if surface == Surface::Sidebar { typography::TEXT_BASE } else { typography::TEXT_SM })
+                                .text_size(if surface == Surface::Sidebar { typography::text_base() } else { typography::text_sm() })
                                 .font_weight(typography::MEDIUM)
                                 .text_color(colors.foreground)
                                 .child(title.clone().unwrap_or_default()),
@@ -532,7 +533,7 @@ impl ExtensionView {
             Node::Section { title, children } => {
                 let label: AnyElement = match surface {
                     Surface::Sidebar => SectionLabel::new(title.clone()).into_any_element(),
-                    Surface::Embedded => div().mb(px(4.)).text_size(typography::TEXT_SM).font_weight(typography::MEDIUM).text_color(colors.foreground).child(title.clone()).into_any_element(),
+                    Surface::Embedded => div().mb(px(4.)).text_size(typography::text_sm()).font_weight(typography::MEDIUM).text_color(colors.foreground).child(title.clone()).into_any_element(),
                 };
                 div().min_w_0().child(label).child(div().flex().flex_col().gap(px(2.)).children(self.render_children(children, path, form, colors, cx))).into_any_element()
             }
@@ -548,7 +549,7 @@ impl ExtensionView {
                     }
                     card = card.child(header);
                 } else if let Some(description) = description {
-                    card = card.child(div().text_size(typography::TEXT_SM).text_color(colors.muted_foreground).child(description.clone()));
+                    card = card.child(div().text_size(typography::text_sm()).text_color(colors.muted_foreground).child(description.clone()));
                 }
                 if !children.is_empty() {
                     card = card.child(card_content().flex().flex_col().gap(px(8.)).min_w_0().children(self.render_children(children, path, form, colors, cx)));
@@ -571,11 +572,11 @@ impl ExtensionView {
                     .gap(px(12.))
                     .min_w_0()
                     .child(div().flex().flex_col().gap(px(8.)).min_w_0().children(fields))
-                    .when(missing, |this| this.child(div().text_size(typography::TEXT_SM).text_color(colors.destructive).child("Complete the required fields before continuing.")))
+                    .when(missing, |this| this.child(div().text_size(typography::text_sm()).text_color(colors.destructive).child("Complete the required fields before continuing.")))
                     .when(too_large, |this| {
                         this.child(
                             div()
-                                .text_size(typography::TEXT_SM)
+                                .text_size(typography::text_sm())
                                 .text_color(colors.destructive)
                                 .child(format!("Form values must be smaller than {}KB.", view::limits::MAX_FORM_PAYLOAD_CHARACTERS / 1000)),
                         )
@@ -592,7 +593,7 @@ impl ExtensionView {
                     )
                     .into_any_element()
             }
-            Node::Text { value, tone } => div().text_size(typography::TEXT_SM).text_color(text_color(*tone, colors)).child(value.clone()).into_any_element(),
+            Node::Text { value, tone } => div().text_size(typography::text_sm()).text_color(text_color(*tone, colors)).child(value.clone()).into_any_element(),
             Node::Badge { label, tone } => div().flex().child(Badge::new(label.clone()).tone(badge_tone(*tone))).into_any_element(),
             Node::Metric { label, value, detail, tone } => div().flex_1().flex_basis(px(96.)).min_w_0().child(Card::new()
                 .child(
@@ -607,10 +608,10 @@ impl ExtensionView {
                             div()
                                 .flex_1()
                                 .min_w_0()
-                                .child(div().truncate().text_size(typography::TEXT_SM).text_color(colors.subtle_foreground).child(label.clone()))
-                                .child(div().truncate().text_size(typography::TEXT_LG).font_weight(typography::MEDIUM).text_color(metric_color(*tone, colors)).child(value.to_string())),
+                                .child(div().truncate().text_size(typography::text_sm()).text_color(colors.subtle_foreground).child(label.clone()))
+                                .child(div().truncate().text_size(typography::text_lg()).font_weight(typography::MEDIUM).text_color(metric_color(*tone, colors)).child(value.to_string())),
                         )
-                        .children(detail.clone().map(|detail| div().flex_none().text_size(typography::TEXT_SM).text_color(colors.subtle_foreground).child(detail))),
+                        .children(detail.clone().map(|detail| div().flex_none().text_size(typography::text_sm()).text_color(colors.subtle_foreground).child(detail))),
                 ))
                 .into_any_element(),
             Node::Progress { value, label, detail } => {
@@ -648,16 +649,16 @@ impl ExtensionView {
                 if let Some(caption) = caption {
                     table = table.caption(caption.clone());
                 }
-                div().w_full().overflow_hidden().rounded(metrics::RADIUS_LG).border_1().border_color(colors.border).child(table).into_any_element()
+                div().w_full().overflow_hidden().rounded(metrics::radius_lg()).border_1().border_color(colors.border).child(table).into_any_element()
             }
             Node::Code { value, wrap, .. } => div()
                 .id(element_id(path, "code"))
                 .max_w_full()
                 .p(px(8.))
-                .rounded(metrics::RADIUS_LG)
+                .rounded(metrics::radius_lg())
                 .bg(colors.surface)
                 .font_family(typography::MONO_FONT)
-                .text_size(typography::TEXT_SM)
+                .text_size(typography::text_sm())
                 .text_color(colors.foreground)
                 .when(!wrap.unwrap_or(false), |this| this.overflow_x_scroll().whitespace_nowrap())
                 .children(value.lines().map(|line| div().child(if line.is_empty() { " ".to_string() } else { line.to_string() })))
@@ -685,7 +686,7 @@ impl ExtensionView {
                             .gap(px(8.))
                             .px(px(6.))
                             .py(px(4.))
-                            .rounded(metrics::RADIUS_MD)
+                            .rounded(metrics::radius_md())
                             .when(action.is_some(), |this| this.hover(move |style| style.bg(hover)))
                             .child(div().pt(px(1.)).child(Icon::new(icon).size(IconSize::Small).color(dot)))
                             .child(
@@ -699,10 +700,10 @@ impl ExtensionView {
                                             .flex()
                                             .items_center()
                                             .gap(px(6.))
-                                            .child(div().flex_1().min_w_0().truncate().text_size(typography::TEXT_SM).text_color(colors.foreground).child(item.title.clone()))
-                                            .children(item.meta.clone().map(|meta| div().flex_none().text_size(typography::TEXT_CAPTION).text_color(colors.subtle_foreground).child(meta))),
+                                            .child(div().flex_1().min_w_0().truncate().text_size(typography::text_sm()).text_color(colors.foreground).child(item.title.clone()))
+                                            .children(item.meta.clone().map(|meta| div().flex_none().text_size(typography::text_caption()).text_color(colors.subtle_foreground).child(meta))),
                                     )
-                                    .children(item.description.clone().map(|text| div().text_size(typography::TEXT_SM).text_color(colors.muted_foreground).child(text))),
+                                    .children(item.description.clone().map(|text| div().text_size(typography::text_sm()).text_color(colors.muted_foreground).child(text))),
                             )
                             .when_some(action, |this, action| {
                                 this.on_click(cx.listener(move |this, _: &ClickEvent, _, cx| this.execute(action.clone(), Vec::new(), None, cx)))
@@ -743,7 +744,7 @@ impl ExtensionView {
                         .items_center()
                         .h(px(28.))
                         .px(px(8.))
-                        .rounded(metrics::RADIUS_MD)
+                        .rounded(metrics::radius_md())
                         .bg(colors.field)
                         .border_1()
                         .border_color(colors.border)
@@ -789,8 +790,8 @@ impl ExtensionView {
                     .flex_col()
                     .flex_1()
                     .min_w_0()
-                    .child(div().text_size(typography::TEXT_SM).text_color(colors.foreground).child(if field.required == Some(true) { format!("{label} *") } else { label.clone() }))
-                    .children(description.clone().map(|text| div().text_size(typography::TEXT_SM).text_color(colors.muted_foreground).child(text)));
+                    .child(div().text_size(typography::text_sm()).text_color(colors.foreground).child(if field.required == Some(true) { format!("{label} *") } else { label.clone() }))
+                    .children(description.clone().map(|text| div().text_size(typography::text_sm()).text_color(colors.muted_foreground).child(text)));
                 let row = div().flex().items_start().gap(px(8.));
                 let row = if is_toggle {
                     row.child(text).child(div().flex_none().child(control))
@@ -844,7 +845,7 @@ impl ExtensionView {
                     .flex_col()
                     .gap(px(4.))
                     .children(Self::field_label(label.as_ref(), field.required == Some(true), colors))
-                    .children(description.clone().map(|text| div().text_size(typography::TEXT_SM).text_color(colors.muted_foreground).child(text)))
+                    .children(description.clone().map(|text| div().text_size(typography::text_sm()).text_color(colors.muted_foreground).child(text)))
                     .child(div().flex().child(group.disabled(disabled.unwrap_or(false))))
                     .children(self.required_error(form, field.name.as_ref(), colors))
                     .into_any_element()
@@ -892,8 +893,8 @@ impl ExtensionView {
                     .flex()
                     .flex_col()
                     .min_w_0()
-                    .child(div().text_size(typography::TEXT_SM).font_weight(typography::MEDIUM).text_color(colors.foreground).child(title.clone()))
-                    .children(description.clone().map(|text| div().text_size(typography::TEXT_SM).text_color(colors.muted_foreground).child(text)));
+                    .child(div().text_size(typography::text_sm()).font_weight(typography::MEDIUM).text_color(colors.foreground).child(title.clone()))
+                    .children(description.clone().map(|text| div().text_size(typography::text_sm()).text_color(colors.muted_foreground).child(text)));
                 AccordionItem::new(element_id(path, "disclosure"), label)
                     .open(is_open)
                     .on_toggle(move |open, _, cx| {
@@ -916,7 +917,7 @@ impl ExtensionView {
                 .flex_col()
                 .gap(px(4.))
                 .min_w_0()
-                .text_size(typography::TEXT_SM)
+                .text_size(typography::text_sm())
                 .children(items.iter().map(|item| {
                     div()
                         .flex()
@@ -944,7 +945,7 @@ impl ExtensionView {
                         .flex()
                         .items_center()
                         .gap(px(4.))
-                        .text_size(typography::TEXT_CAPTION)
+                        .text_size(typography::text_caption())
                         .text_color(colors.subtle_foreground)
                         .children(badges.iter().flatten().map(|badge| Badge::new(badge.label.clone()).tone(badge_tone(badge.tone))))
                         .children(meta.clone())
@@ -1005,18 +1006,18 @@ impl ExtensionView {
                     .flex()
                     .items_center()
                     .gap(px(4.))
-                    .h(metrics::LIST_ROW)
+                    .h(metrics::list_row())
                     .pl(px(4. + depth as f32 * 14.))
                     .pr(px(6.))
-                    .rounded(metrics::RADIUS_MD)
+                    .rounded(metrics::radius_md())
                     .hover(move |style| style.bg(hover))
                     .child(div().w(px(14.)).flex_none().when(has_children, |this| {
                         this.child(Icon::new(if expanded { IconName::ChevronDown } else { IconName::ChevronRight }).size(IconSize::XSmall).color(colors.subtle_foreground))
                     }))
                     .children(item.icon.as_deref().map(|icon| Icon::new(icon_for(icon)).size(IconSize::Small).color(colors.muted_foreground)))
-                    .child(div().flex_1().min_w_0().truncate().text_size(typography::TEXT_SM).text_color(colors.foreground).child(item.title.clone()))
+                    .child(div().flex_1().min_w_0().truncate().text_size(typography::text_sm()).text_color(colors.foreground).child(item.title.clone()))
                     .children(item.badges.iter().flatten().map(|badge| Badge::new(badge.label.clone()).tone(badge_tone(badge.tone))))
-                    .children(item.meta.clone().map(|meta| div().flex_none().text_size(typography::TEXT_CAPTION).text_color(colors.subtle_foreground).child(meta)))
+                    .children(item.meta.clone().map(|meta| div().flex_none().text_size(typography::text_caption()).text_color(colors.subtle_foreground).child(meta)))
                     .on_click(cx.listener(move |this, _: &ClickEvent, _, cx| {
                         if has_children && let Some(entry) = this.local.get_mut(&toggle_key) {
                             entry.1 = json!(!expanded);
@@ -1064,7 +1065,7 @@ fn sparkline(label: &str, values: &[f64], detail: Option<&String>, tone: Option<
                 .flex()
                 .items_center()
                 .justify_between()
-                .text_size(typography::TEXT_SM)
+                .text_size(typography::text_sm())
                 .child(div().text_color(colors.subtle_foreground).child(label.to_string()))
                 .children(detail.map(|detail| div().text_color(colors.foreground).child(detail.clone()))),
         )
@@ -1103,7 +1104,7 @@ fn bar_chart(label: Option<&String>, items: &[BarItem], colors: &ThemeColors) ->
         .flex()
         .flex_col()
         .gap(px(6.))
-        .text_size(typography::TEXT_SM)
+        .text_size(typography::text_sm())
         .children(label.map(|label| div().text_color(colors.subtle_foreground).child(label.clone())))
         .children(items.iter().map(|item| {
             let fraction = if max > 0. { (item.value / max) as f32 } else { 0. };
@@ -1141,7 +1142,7 @@ fn diff_preview(file_path: &str, old_path: Option<&String>, lines: &[DiffLine], 
         .flex_col()
         .min_w_0()
         .overflow_hidden()
-        .rounded(metrics::RADIUS_LG)
+        .rounded(metrics::radius_lg())
         .border_1()
         .border_color(colors.border)
         .child(
@@ -1152,7 +1153,7 @@ fn diff_preview(file_path: &str, old_path: Option<&String>, lines: &[DiffLine], 
                 .px(px(8.))
                 .py(px(6.))
                 .bg(colors.surface)
-                .text_size(typography::TEXT_SM)
+                .text_size(typography::text_sm())
                 .child(div().flex_1().min_w_0().truncate().text_color(colors.foreground).child(title))
                 .child(div().text_color(colors.git_added).child(format!("+{added}")))
                 .child(div().text_color(colors.git_deleted).child(format!("-{removed}"))),
@@ -1168,13 +1169,13 @@ fn diff_preview(file_path: &str, old_path: Option<&String>, lines: &[DiffLine], 
                 .flex()
                 .bg(bg)
                 .font_family(typography::MONO_FONT)
-                .text_size(typography::TEXT_CAPTION)
+                .text_size(typography::text_caption())
                 .child(number(line.old_line))
                 .child(number(line.new_line))
                 .child(div().w(px(12.)).flex_none().text_color(fg).child(sign))
                 .child(div().flex_1().min_w_0().whitespace_nowrap().overflow_hidden().text_color(fg).child(line.content.clone()))
         }))
-        .when(truncated, |this| this.child(div().px(px(8.)).py(px(4.)).text_size(typography::TEXT_CAPTION).text_color(colors.subtle_foreground).child("Diff truncated")))
+        .when(truncated, |this| this.child(div().px(px(8.)).py(px(4.)).text_size(typography::text_caption()).text_color(colors.subtle_foreground).child("Diff truncated")))
         .into_any_element()
 }
 
@@ -1306,12 +1307,12 @@ fn pro_gate(colors: &theme::ThemeColors) -> gpui::Div {
                 .flex()
                 .items_center()
                 .gap(px(8.))
-                .text_size(typography::TEXT_BASE)
+                .text_size(typography::text_base())
                 .font_weight(typography::MEDIUM)
                 .child("Pro Feature")
                 .child(ui::Badge::new("Pro").tone(Tone::Accent)),
         )
-        .child(div().text_size(typography::TEXT_SM).text_color(colors.muted_foreground).child("Upgrade to Pro to unlock this feature."))
+        .child(div().text_size(typography::text_sm()).text_color(colors.muted_foreground).child("Upgrade to Pro to unlock this feature."))
 }
 
 impl Render for ExtensionView {

@@ -1,4 +1,5 @@
-use gpui::{AnyElement, App, Context, DragMoveEvent, IntoElement, MouseButton, ParentElement, SharedString, Styled, StyledImage, Window, canvas, div, prelude::*, px, relative};
+use ui::scale::px;
+use gpui::{AnyElement, App, Context, DragMoveEvent, IntoElement, MouseButton, ParentElement, SharedString, Styled, StyledImage, Window, canvas, div, prelude::*, relative};
 use theme::ActiveTheme;
 use ui::{
     Button, ButtonSize, ButtonVariant, EmptyState, Icon, IconName, IconSize, Tab, framed_pane, metrics,
@@ -71,7 +72,7 @@ impl Workbench {
             .flex()
             .flex_col()
             .flex_1()
-            .min_w(metrics::MIN_CENTRE_WIDTH)
+            .min_w(metrics::min_centre_width())
             .min_h_0()
             .when(bottom_full_screen, |this| this.child(self.render_bottom_content(window, cx)))
             .when(!bottom_full_screen, |this| {
@@ -175,8 +176,8 @@ impl Workbench {
                     .items_center()
                     .justify_center()
                     .group("split-handle")
-                    .when(horizontal, |this| this.w(metrics::WORKBENCH_GAP).h_full().cursor_col_resize())
-                    .when(!horizontal, |this| this.h(metrics::WORKBENCH_GAP).w_full().cursor_row_resize())
+                    .when(horizontal, |this| this.w(metrics::workbench_gap()).h_full().cursor_col_resize())
+                    .when(!horizontal, |this| this.h(metrics::workbench_gap()).w_full().cursor_row_resize())
                     .child(
                         div()
                             .when(horizontal, |this| this.w(px(1.)).h_full())
@@ -506,7 +507,7 @@ impl Workbench {
                             .flex_1()
                             .min_w_0()
                             .items_center()
-                            .gap(metrics::CHROME_GAP)
+                            .gap(metrics::chrome_gap())
                             .overflow_x_scroll()
                             .when(!settings::get(cx).horizontal_tab_scroll, |this| this.restrict_scroll_to_axis())
                             .track_scroll(&scroll)
@@ -582,7 +583,7 @@ impl Workbench {
         let drop_ring = cx.theme().colors.primary;
         let zone = self.tab_drop_zone.filter(|(group, _)| *group == group_id && cx.has_active_drag()).map(|(_, zone)| zone);
         let overlay = zone.map(|zone| {
-            let fill = div().absolute().rounded(metrics::RADIUS_LG).bg(drop_fill);
+            let fill = div().absolute().rounded(metrics::radius_lg()).bg(drop_fill);
             let fill = match zone {
                 DropZone::Left => fill.top(px(4.)).bottom(px(4.)).left(px(4.)).right(relative(0.5)),
                 DropZone::Right => fill.top(px(4.)).bottom(px(4.)).right(px(4.)).left(relative(0.5)),
@@ -1045,7 +1046,7 @@ impl Workbench {
             .flex_col()
             .flex_none()
             .h(height)
-            .pt(metrics::WORKBENCH_GAP)
+            .pt(metrics::workbench_gap())
             // Inside the shell the bottom pane has no edge of its own; a hairline marks where the
             // centre ends, as the sidebar's divider does.
             .border_t_1()
@@ -1057,7 +1058,7 @@ impl Workbench {
                     .top_0()
                     .left_0()
                     .right_0()
-                    .h(metrics::WORKBENCH_GAP)
+                    .h(metrics::workbench_gap())
                     .flex()
                     .items_center()
                     .cursor_row_resize()
@@ -1088,7 +1089,7 @@ impl Workbench {
                     .flex_col()
                     .flex_1()
                     .min_h_0()
-                    .rounded(metrics::RADIUS_LG)
+                    .rounded(metrics::radius_lg())
                     // An editor tab dropped here moves into the bottom pane's own groups.
                     .when(takes_tabs, |this| {
                         this.drag_over::<DraggedTab>(move |style, _, _, _| style.border_2().border_color(drop_ring)).on_drop(cx.listener(

@@ -82,8 +82,8 @@ impl Element for FrameEnd {
 
     fn request_layout(&mut self, _: Option<&GlobalElementId>, _: Option<&InspectorElementId>, window: &mut Window, cx: &mut App) -> (LayoutId, ()) {
         let mut style = Style::default();
-        style.size.width = gpui::px(0.).into();
-        style.size.height = gpui::px(0.).into();
+        style.size.width = ui::scale::px(0.).into();
+        style.size.height = ui::scale::px(0.).into();
         (window.request_layout(style, [], cx), ())
     }
 

@@ -11,10 +11,11 @@ use std::{
     sync::Arc,
 };
 
+use ui::scale::px;
 use gpui::{
     AnyElement, App, AppContext as _, Context, FocusHandle, Font, Hsla, InteractiveElement as _, IntoElement, KeyBinding, MouseButton, MouseDownEvent,
     ParentElement as _, Pixels, ScrollHandle, SharedString, StatefulInteractiveElement as _, Styled as _, StyledText, Task, TextRun, Window, div,
-    prelude::FluentBuilder as _, px,
+    prelude::FluentBuilder as _,
 };
 use lsp_client::{FileLocation, lsp, offset_to_position, position_to_offset};
 use theme::{ActiveTheme as _, Theme};
@@ -30,8 +31,8 @@ use crate::{
 
 /// The peek's height in editor lines.
 pub(crate) const PEEK_ROWS: usize = 14;
-const HEADER_HEIGHT: Pixels = px(28.);
-const LIST_WIDTH: Pixels = px(288.);
+fn header_height() -> Pixels { px(28.) }
+fn list_width() -> Pixels { px(288.) }
 /// Files past this size show in the preview without highlighting.
 const MAX_HIGHLIGHTED_FILE: usize = 1024 * 1024;
 
@@ -280,7 +281,7 @@ impl Editor {
             .flex_none()
             .items_center()
             .gap(px(8.))
-            .h(HEADER_HEIGHT)
+            .h(header_height())
             .px(px(8.))
             .child(div().flex_none().font_weight(typography::MEDIUM).child(file_name))
             .child(div().min_w_0().truncate().text_color(colors.subtle_foreground).child(directory))
@@ -294,7 +295,7 @@ impl Editor {
                     })),
             );
 
-        let preview_rows = ((PEEK_ROWS as f32 * line_height - HEADER_HEIGHT) / line_height).floor().max(1.) as usize;
+        let preview_rows = ((PEEK_ROWS as f32 * line_height - header_height()) / line_height).floor().max(1.) as usize;
         let preview = match peek.files.get(&selected.path) {
             Some(PeekFile::Ready(text)) => self.peek_preview(text, &selected, preview_rows, line_height, &mono, &theme, cx),
             Some(PeekFile::Error) => div().px(px(12.)).py(px(8.)).text_color(colors.subtle_foreground).child(format!("Could not read {}", selected.path.display())).into_any_element(),
@@ -303,7 +304,7 @@ impl Editor {
 
         let mut list = div()
             .id("references-peek-list")
-            .w(LIST_WIDTH)
+            .w(list_width())
             .flex_none()
             .h_full()
             .overflow_y_scroll()
@@ -346,7 +347,7 @@ impl Editor {
                         .h(px(22.))
                         .mx(px(4.))
                         .px(px(6.))
-                        .rounded(ui::metrics::RADIUS)
+                        .rounded(ui::metrics::radius())
                         .when(active, |row| row.bg(colors.selected))
                         .when(!active, |row| row.hover(|row| row.bg(colors.accent)))
                         .child(div().flex_none().text_color(colors.subtle_foreground).child((line + 1).to_string()))
@@ -383,7 +384,7 @@ impl Editor {
                 .border_color(colors.divider)
                 .bg(colors.surface)
                 .font_family(typography::UI_FONT)
-                .text_size(typography::TEXT_SM)
+                .text_size(typography::text_sm())
                 .text_color(colors.foreground)
                 .on_action(cx.listener(|editor, _: &MenuUp, _, cx| {
                     let index = editor.peek.as_ref().map_or(0, |peek| peek.selected.saturating_sub(1));

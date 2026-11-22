@@ -6,7 +6,8 @@
 
 use std::path::{Path, PathBuf};
 
-use gpui::{AnyElement, Context, Focusable as _, IntoElement, ParentElement, SharedString, Styled, Task, div, prelude::*, px};
+use ui::scale::px;
+use gpui::{AnyElement, Context, Focusable as _, IntoElement, ParentElement, SharedString, Styled, Task, div, prelude::*,};
 use theme::ActiveTheme;
 use ui::{Icon, IconName, IconSize, typography};
 
@@ -179,10 +180,10 @@ impl SessionView {
                 .flex()
                 .items_center()
                 .gap(px(8.))
-                .h(ui::metrics::LIST_ROW)
+                .h(ui::metrics::list_row())
                 .px(px(8.))
-                .rounded(ui::metrics::RADIUS_MD)
-                .text_size(typography::TEXT_SM)
+                .rounded(ui::metrics::radius_md())
+                .text_size(typography::text_sm())
                 .text_color(colors.muted_foreground)
                 .hover(|style| style.bg(colors.accent).text_color(colors.foreground))
                 .child(Icon::new(icon).size(IconSize::Small).color(tone))
@@ -218,7 +219,7 @@ impl SessionView {
                         .flex()
                         .flex_col()
                         .gap(px(2.))
-                        .child(div().px(px(8.)).pb(px(2.)).text_size(typography::TEXT_SM).text_color(colors.subtle_foreground).child("Recent"))
+                        .child(div().px(px(8.)).pb(px(2.)).text_size(typography::text_sm()).text_color(colors.subtle_foreground).child("Recent"))
                         .children(recent.into_iter().map(|session| {
                             let title = if session.title.is_empty() { "Untitled chat".to_string() } else { session.title.clone() };
                             let id = session.id.clone();

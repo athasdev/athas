@@ -1,8 +1,9 @@
 use std::rc::Rc;
 
+use crate::scale::px;
 use gpui::{
     AnyElement, App, ClickEvent, ElementId, Hsla, IntoElement, ParentElement, RenderOnce,
-    SharedString, StatefulInteractiveElement, Styled, Window, div, prelude::FluentBuilder, px,
+    SharedString, StatefulInteractiveElement, Styled, Window, div, prelude::FluentBuilder,
 };
 use gpui::prelude::*;
 use theme::ActiveTheme;
@@ -288,7 +289,7 @@ impl ButtonSize {
                 height: 20.,
                 padding: 6.,
                 gap: 4.,
-                text: typography::TEXT_CAPTION,
+                text: typography::text_caption(),
                 icon: IconSize::XSmall,
                 radius: None,
             },
@@ -296,7 +297,7 @@ impl ButtonSize {
                 height: 24.,
                 padding: 8.,
                 gap: 4.,
-                text: typography::TEXT_CHROME,
+                text: typography::text_chrome(),
                 icon: IconSize::XSmall,
                 radius: None,
             },
@@ -304,7 +305,7 @@ impl ButtonSize {
                 height: 28.,
                 padding: 10.,
                 gap: 6.,
-                text: typography::TEXT_SM,
+                text: typography::text_sm(),
                 icon: IconSize::Small,
                 radius: None,
             },
@@ -312,7 +313,7 @@ impl ButtonSize {
                 height: 32.,
                 padding: 12.,
                 gap: 8.,
-                text: typography::TEXT_BASE,
+                text: typography::text_base(),
                 icon: IconSize::Medium,
                 radius: None,
             },
@@ -334,12 +335,12 @@ impl RenderOnce for Button {
         // take the list row's corner rather than a pill's, so an icon trigger and the row beside it
         // read as one family. Filled buttons (`Accent`, `Default`, `Outline`) stay pills.
         if matches!(self.variant, ButtonVariant::Ghost | ButtonVariant::Chrome) {
-            spec.radius = Some(metrics::RADIUS_MD);
+            spec.radius = Some(metrics::radius_md());
         }
         if chrome {
             // Chrome is measured like the row too: its inline padding and gap.
-            spec.padding = f32::from(metrics::CHROME_PADDING_INLINE);
-            spec.gap = f32::from(metrics::CHROME_PADDING_INLINE);
+            spec.padding = f32::from(metrics::chrome_padding_inline());
+            spec.gap = f32::from(metrics::chrome_padding_inline());
         }
         let transparent = gpui::transparent_black();
 

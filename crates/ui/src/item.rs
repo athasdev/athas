@@ -1,7 +1,8 @@
 use std::rc::Rc;
 
+use crate::scale::px;
 use gpui::{
-    AnyElement, App, ClickEvent, ElementId, IntoElement, RenderOnce, SharedString, Window, div, prelude::*, px, relative,
+    AnyElement, App, ClickEvent, ElementId, IntoElement, RenderOnce, SharedString, Window, div, prelude::*, relative,
 };
 use theme::ActiveTheme;
 
@@ -154,10 +155,10 @@ impl RenderOnce for Item {
                 .items_center()
                 .justify_center()
                 .size(px(40.))
-                .rounded(metrics::RADIUS_MD)
+                .rounded(metrics::radius_md())
                 .bg(colors.raised)
                 .shadow(theme.shadows.raised.clone())
-                .text_size(typography::TEXT_BASE)
+                .text_size(typography::text_base())
                 .font_weight(typography::MEDIUM)
                 .text_color(colors.muted_foreground)
                 .child(content)
@@ -204,19 +205,19 @@ impl RenderOnce for Item {
             .items_center()
             .gap(px(8.))
             .w_full()
-            .rounded(metrics::RADIUS)
+            .rounded(metrics::radius())
             .border_1()
             .border_color(if self.variant == ItemVariant::Outline { colors.divider } else { gpui::transparent_black() })
             .px(px(8.))
             .py(px(6.))
             .font_family(typography::UI_FONT)
-            .text_size(typography::TEXT_SM)
+            .text_size(typography::text_sm())
             .text_color(colors.foreground)
             .when(self.variant == ItemVariant::Muted, |this| this.bg(colors.surface))
             .when(self.variant == ItemVariant::List, |this| this.min_h(px(40.)).rounded(px(0.)).px(px(12.)).py(px(8.)))
             .map(|this| match self.size {
                 ItemSize::Default => this,
-                ItemSize::Compact => this.min_h(metrics::CHROME_CONTROL).px(px(4.)).py(px(2.)),
+                ItemSize::Compact => this.min_h(metrics::chrome_control()).px(px(4.)).py(px(2.)),
                 ItemSize::Comfortable => this.gap(px(12.)).px(px(8.)).py(px(8.)),
             })
             .when_some(self.on_click, |this, handler| {
@@ -371,13 +372,13 @@ impl RenderOnce for GroupedSection {
                                     .min_w_0()
                                     .gap(px(6.))
                                     .font_weight(typography::MEDIUM)
-                                    .text_size(if heading { typography::TEXT_BASE } else { typography::TEXT_SM })
+                                    .text_size(if heading { typography::text_base() } else { typography::text_sm() })
                                     .text_color(title_color)
                                     .children(self.icon)
                                     .child(div().truncate().child(self.title)),
                             )
                             .children(self.description.map(|description| {
-                                div().text_size(typography::TEXT_SM).text_color(colors.subtle_foreground).child(description)
+                                div().text_size(typography::text_sm()).text_color(colors.subtle_foreground).child(description)
                             })),
                     )
                     .when(!self.actions.is_empty(), |this| this.child(div().flex().flex_none().items_center().gap(px(4.)).children(self.actions))),

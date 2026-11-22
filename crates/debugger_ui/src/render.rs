@@ -4,9 +4,10 @@
 use std::path::Path;
 
 use dap::{Breakpoint, BreakpointField, DebugSession, OutputCategory, SessionStatus};
+use ui::scale::px;
 use gpui::{
     Anchor, AnyElement, ClickEvent, Context, ElementId, Hsla, IntoElement, MouseButton, MouseDownEvent, Pixels, Render, SharedString, Window, div,
-    prelude::*, px,
+    prelude::*,
 };
 use theme::{ActiveTheme, ThemeColors};
 use ui::TooltipExt as _;
@@ -18,10 +19,10 @@ use crate::{
 };
 
 /// `grid-cols-[minmax(260px,320px)_minmax(0,1fr)]`.
-const ASIDE_WIDTH: Pixels = px(320.);
-const ASIDE_MIN_WIDTH: Pixels = px(260.);
+fn aside_width() -> Pixels { px(320.) }
+fn aside_min_width() -> Pixels { px(260.) }
 /// Room at the bar's end for the host's full screen and close buttons.
-const HOST_ACTIONS_WIDTH: Pixels = px(62.);
+fn host_actions_width() -> Pixels { px(62.) }
 
 /// `EMPTY_DEBUG_SECTION_MESSAGES`.
 const EMPTY_STACK: &str = "Start a session to see frames.";
@@ -30,7 +31,7 @@ const EMPTY_CONSOLE: &str = "Adapter output appears here.";
 const EMPTY_BREAKPOINTS: &str = "Click a gutter line or toggle the current line.";
 const EMPTY_WATCH: &str = "Add expressions to inspect while paused.";
 
-const ROW: Pixels = px(24.);
+fn row_height() -> Pixels { px(24.) }
 const INDENT: f32 = 12.;
 
 fn syntax(colors: &ThemeColors, key: &str, fallback: Hsla) -> Hsla {
@@ -63,13 +64,13 @@ fn row(id: impl Into<ElementId>, depth: usize, colors: &ThemeColors) -> gpui::St
         .flex_none()
         .items_center()
         .gap(px(4.))
-        .h(ROW)
+        .h(row_height())
         .min_w_0()
         .mx(px(4.))
         .pl(px(4. + depth as f32 * INDENT))
         .pr(px(6.))
-        .rounded(metrics::RADIUS_MD)
-        .text_size(typography::TEXT_SM)
+        .rounded(metrics::radius_md())
+        .text_size(typography::text_sm())
         .hover(move |style| style.bg(hover))
 }
 
@@ -85,14 +86,14 @@ fn chevron(expanded: bool, visible: bool, colors: &ThemeColors) -> impl IntoElem
 
 /// `EmptyState layout="sidebar"`: a quiet line at the top of the panel (`px-3 py-6`).
 fn empty(text: &'static str, colors: &ThemeColors) -> AnyElement {
-    div().px(px(12.)).pt(px(38.)).pb(px(24.)).text_size(typography::TEXT_SM).text_color(colors.muted_foreground).child(text).into_any_element()
+    div().px(px(12.)).pt(px(38.)).pb(px(24.)).text_size(typography::text_sm()).text_color(colors.muted_foreground).child(text).into_any_element()
 }
 
 fn quiet(text: impl Into<SharedString>, colors: &ThemeColors) -> AnyElement {
     div()
         .px(px(8.))
         .py(px(4.))
-        .text_size(typography::TEXT_SM)
+        .text_size(typography::text_sm())
         .text_color(colors.subtle_foreground)
         .child(text.into())
         .into_any_element()
@@ -132,7 +133,7 @@ impl DebuggerView {
         let can_start = !self.configs.is_empty() && (!custom || !self.command_input.read(cx).text().trim().is_empty());
         let config_label: SharedString =
             self.selected_config().map(|config| config.name.clone()).unwrap_or_else(|| "No configurations".into()).into();
-        let label = |text: &'static str| div().text_size(typography::TEXT_SM).text_color(colors.subtle_foreground).child(text);
+        let label = |text: &'static str| div().text_size(typography::text_sm()).text_color(colors.subtle_foreground).child(text);
         let control = |id: &'static str, icon: IconName, tooltip: &'static str, shortcut: &'static str, enabled: bool| {
             Button::icon(id, icon).tooltip(tooltip).shortcut(shortcut).disabled(!enabled)
         };
@@ -150,11 +151,11 @@ impl DebuggerView {
                 .min_h(px(32.))
                 .px(px(8.))
                 .py(px(6.))
-                .rounded(metrics::RADIUS_LG)
+                .rounded(metrics::radius_lg())
                 .bg(colors.surface)
                 .truncate()
                 .font_family(typography::MONO_FONT)
-                .text_size(typography::TEXT_SM)
+                .text_size(typography::text_sm())
                 .text_color(colors.subtle_foreground)
                 .child(self.command_preview().unwrap_or_else(|| "No command available".into()))
                 .into_any_element()
@@ -172,7 +173,7 @@ impl DebuggerView {
                 .border_color(colors.divider)
                 .px(px(12.))
                 .py(px(8.))
-                .text_size(typography::TEXT_SM)
+                .text_size(typography::text_sm())
                 .child(
                     div()
                         .flex()
@@ -195,7 +196,7 @@ impl DebuggerView {
                 .border_color(colors.divider)
                 .px(px(12.))
                 .py(px(8.))
-                .text_size(typography::TEXT_SM)
+                .text_size(typography::text_sm())
                 .child(
                     div()
                         .flex()
@@ -210,9 +211,9 @@ impl DebuggerView {
             div()
                 .px(px(10.))
                 .py(px(8.))
-                .rounded(metrics::RADIUS_LG)
+                .rounded(metrics::radius_lg())
                 .bg(colors.destructive_soft)
-                .text_size(typography::TEXT_SM)
+                .text_size(typography::text_sm())
                 .text_color(colors.foreground)
                 .child(notice)
         });
@@ -221,8 +222,8 @@ impl DebuggerView {
             .flex()
             .flex_col()
             .flex_none()
-            .w(ASIDE_WIDTH)
-            .min_w(ASIDE_MIN_WIDTH)
+            .w(aside_width())
+            .min_w(aside_min_width())
             .flex_shrink_1()
             .min_h_0()
             .border_r_1()
@@ -287,7 +288,7 @@ impl DebuggerView {
                             }),
                     )
                     .when(self.is_starting_java(), |this| {
-                        this.child(div().text_size(typography::TEXT_SM).text_color(colors.muted_foreground).child("Starting the Java debugger through jdtls…"))
+                        this.child(div().text_size(typography::text_sm()).text_color(colors.muted_foreground).child("Starting the Java debugger through jdtls…"))
                     })
                     .children(alert),
             )
@@ -307,7 +308,7 @@ impl DebuggerView {
                     .border_color(colors.divider)
                     .px(px(12.))
                     .py(px(8.))
-                    .text_size(typography::TEXT_SM)
+                    .text_size(typography::text_sm())
                     .text_color(colors.subtle_foreground)
                     .child(Icon::new(IconName::FolderOpen).size(IconSize::Custom(px(12.))).color(colors.subtle_foreground))
                     .child(div().min_w_0().truncate().child(self.project_root().display().to_string())),
@@ -341,7 +342,7 @@ impl DebuggerView {
                 .flex_none()
                 .items_center()
                 .gap(px(6.))
-                .h(metrics::CHROME_CONTROL)
+                .h(metrics::chrome_control())
                 .px(px(12.))
                 .rounded_full()
                 .whitespace_nowrap()
@@ -362,8 +363,8 @@ impl DebuggerView {
         let icon = |id: &'static str, icon: IconName, tooltip: &'static str| Button::icon(id, icon).variant(ButtonVariant::Ghost).size(ButtonSize::Small).tooltip(tooltip);
         pane_header(cx)
             .id("debug-bar")
-            .pl(metrics::PANE_INSET)
-            .pr(HOST_ACTIONS_WIDTH)
+            .pl(metrics::pane_inset())
+            .pr(host_actions_width())
             .on_mouse_down(MouseButton::Right, cx.listener(|this, event: &MouseDownEvent, window, cx| this.show_bar_menu(event, window, cx)))
             .child(Icon::new(IconName::Bug).size(IconSize::Custom(px(14.))).color(colors.subtle_foreground))
             .child(
@@ -377,7 +378,7 @@ impl DebuggerView {
                         .rounded_full()
                         .bg(colors.segment_track)
                         .font_weight(typography::MEDIUM)
-                        .text_size(typography::TEXT_CHROME)
+                        .text_size(typography::text_chrome())
                         .children(tabs),
                 ),
             )
@@ -444,7 +445,7 @@ impl DebuggerView {
                         .child(Icon::new(IconName::Nodes).size(IconSize::XSmall).color(colors.subtle_foreground))
                         .child(div().flex_1().min_w_0().truncate().text_color(colors.foreground).child(thread.name.clone()))
                         .when(stopped_here, |this| {
-                            this.child(div().flex_none().text_size(typography::TEXT_CAPTION).text_color(colors.warning).child("Paused"))
+                            this.child(div().flex_none().text_size(typography::text_caption()).text_color(colors.warning).child("Paused"))
                         })
                         .on_click(cx.listener(move |this, _: &ClickEvent, _, cx| this.select_thread(id, cx)))
                         .into_any_element(),
@@ -521,7 +522,7 @@ impl DebuggerView {
                     .child(div().flex_none().text_color(colors.subtle_foreground).child("="))
                     .map(|this| match editing {
                         Some(edit) => this.child(
-                            div().flex_1().min_w_0().px(px(4.)).rounded(metrics::RADIUS).bg(colors.field).border_1().border_color(colors.focus_ring).child(edit.input.clone()),
+                            div().flex_1().min_w_0().px(px(4.)).rounded(metrics::radius()).bg(colors.field).border_1().border_color(colors.focus_ring).child(edit.input.clone()),
                         ),
                         None => this.child(div().flex_1().min_w_0().truncate().text_color(value_color).child(value)),
                     })
@@ -638,14 +639,14 @@ impl DebuggerView {
             .flex()
             .flex_none()
             .w(px(14.))
-            .h(ROW)
+            .h(row_height())
             .items_center()
             .justify_center()
             .child(
                 div()
                     .size(px(9.))
                     .rounded_full()
-                    .when(breakpoint.log_message.is_some(), |this| this.rounded(metrics::RADIUS_SM))
+                    .when(breakpoint.log_message.is_some(), |this| this.rounded(metrics::radius_sm()))
                     .when(breakpoint.enabled && !unverified, |this| this.bg(dot_color))
                     .when(!breakpoint.enabled || unverified, |this| this.border_1().border_color(dot_color)),
             )
@@ -700,8 +701,8 @@ impl DebuggerView {
             .mx(px(4.))
             .pl(px(2.))
             .pr(px(4.))
-            .rounded(metrics::RADIUS_MD)
-            .text_size(typography::TEXT_SM)
+            .rounded(metrics::radius_md())
+            .text_size(typography::text_sm())
             .hover(|style| style.bg(colors.accent))
             .on_click(cx.listener(move |this, _: &ClickEvent, _, cx| this.open_location(open_path.clone(), line, cx)))
             .child(
@@ -709,7 +710,7 @@ impl DebuggerView {
                     .flex()
                     .items_center()
                     .gap(px(4.))
-                    .h(ROW)
+                    .h(row_height())
                     .min_w_0()
                     .child(dot)
                     .child(
@@ -736,8 +737,8 @@ impl DebuggerView {
                         .mb(px(4.))
                         .ml(px(16.))
                         .px(px(6.))
-                        .h(ROW)
-                        .rounded(metrics::RADIUS_MD)
+                        .h(row_height())
+                        .rounded(metrics::radius_md())
                         .bg(colors.field)
                         .border_1()
                         .border_color(colors.focus_ring)
@@ -776,7 +777,7 @@ impl DebuggerView {
                                 .size(px(14.))
                                 .items_center()
                                 .justify_center()
-                                .rounded(metrics::RADIUS)
+                                .rounded(metrics::radius())
                                 .border_1()
                                 .border_color(if enabled { colors.primary } else { colors.border_strong })
                                 .when(enabled, |this| {
@@ -847,7 +848,7 @@ impl DebuggerView {
                     .track_scroll(&self.console_scroll)
                     .py(px(4.))
                     .font_family(typography::MONO_FONT)
-                    .text_size(typography::TEXT_SM)
+                    .text_size(typography::text_sm())
                     .when(lines.is_empty(), |this| this.font_family(typography::UI_FONT).child(empty(EMPTY_CONSOLE, &colors)))
                     .children(lines),
             )
@@ -861,7 +862,7 @@ impl DebuggerView {
                         .px(px(8.))
                         .border_t_1()
                         .border_color(colors.divider)
-                        .text_size(typography::TEXT_SM)
+                        .text_size(typography::text_sm())
                         .font_family(typography::MONO_FONT)
                         .child(div().flex_1().min_w_0().child(self.console_input.clone())),
                 )

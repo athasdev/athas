@@ -1,8 +1,9 @@
 use std::rc::Rc;
 
+use crate::scale::px;
 use gpui::{
     Anchor, AnyElement, App, Bounds, Context, DismissEvent, Entity, FocusHandle, Focusable as _, MouseButton, Pixels, Subscription, Window, anchored,
-    canvas, deferred, div, prelude::*, px,
+    canvas, deferred, div, prelude::*,
 };
 
 use crate::{Menu, MenuEntry, MenuSize};

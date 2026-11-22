@@ -13,9 +13,10 @@ mod model;
 
 use std::{collections::HashSet, ops::Range, rc::Rc};
 
+use ui::scale::px;
 use gpui::{
     AnyElement, App, ClickEvent, Context, Entity, FocusHandle, Focusable, Hsla, KeyDownEvent, ListAlignment, ListOffset, ListState, MouseButton,
-    MouseMoveEvent, Pixels, SharedString, Subscription, UniformListScrollHandle, Window, div, img, prelude::*, px,
+    MouseMoveEvent, Pixels, SharedString, Subscription, UniformListScrollHandle, Window, div, img, prelude::*,
     uniform_list,
 };
 use theme::{ActiveTheme, ThemeColors};
@@ -27,10 +28,10 @@ pub use model::{
     navigate, navigator_width, section_at, tree_rows,
 };
 
-pub const HEADER_HEIGHT: Pixels = px(36.);
-const NAVIGATOR_ROW: Pixels = px(28.);
+pub fn header_height() -> Pixels { px(36.) }
+fn navigator_row() -> Pixels { px(28.) }
 const TREE_INDENT: f32 = 12.;
-const ICON: Pixels = px(14.);
+fn icon() -> Pixels { px(14.) }
 
 /// What opening a section does (its header's name button).
 pub type OpenHandler<V> = Rc<dyn Fn(&mut V, &mut Window, &mut Context<V>)>;
@@ -61,13 +62,13 @@ impl Tone {
 
 /// The icon theme's icon for a file, or the built-in one.
 pub fn file_icon(name: &str, tone: Tone, cx: &App) -> AnyElement {
-    extensions::file_icon(name, ICON, cx)
+    extensions::file_icon(name, icon(), cx)
         .unwrap_or_else(|| Icon::new(IconName::File).size(IconSize::XSmall).color(tone.color(&cx.theme().colors)).into_any_element())
 }
 
 fn folder_icon(name: &str, expanded: bool, cx: &App) -> AnyElement {
     match extensions::icon_for(name, true, expanded, cx) {
-        Some(source) => img(source).flex_none().size(ICON).into_any_element(),
+        Some(source) => img(source).flex_none().size(icon()).into_any_element(),
         None => Icon::new(if expanded { IconName::FolderOpen } else { IconName::Folder })
             .size(IconSize::XSmall)
             .color(cx.theme().colors.subtle_foreground)
@@ -386,13 +387,13 @@ impl<V: 'static> Multibuffer<V> {
             .gap(px(4.))
             .w_full()
             .min_w_0()
-            .h(HEADER_HEIGHT)
+            .h(header_height())
             .px(px(6.))
             .border_b_1()
             .border_color(colors.divider)
             .bg(colors.background)
             .font_family(typography::UI_FONT)
-            .text_size(typography::TEXT_SM)
+            .text_size(typography::text_sm())
             .child(
                 Button::icon(SharedString::from(format!("{id}-toggle")), if collapsed { IconName::ChevronRight } else { IconName::ChevronDown })
                     .size(ButtonSize::XSmall)
@@ -413,7 +414,7 @@ impl<V: 'static> Multibuffer<V> {
                     .gap(px(6.))
                     .h(px(28.))
                     .px(px(6.))
-                    .rounded(metrics::RADIUS_MD)
+                    .rounded(metrics::radius_md())
                     .hover(move |style| style.bg(hover))
                     .child(file_icon(item.icon_name(), item.tone, cx))
                     .child(div().flex_none().max_w(relative_half()).truncate().font_weight(typography::MEDIUM).text_color(colors.foreground).child(name))
@@ -539,7 +540,7 @@ impl<V: 'static> Multibuffer<V> {
                 .items_center()
                 .justify_center()
                 .p(px(12.))
-                .text_size(typography::TEXT_SM)
+                .text_size(typography::text_sm())
                 .text_color(colors.subtle_foreground)
                 .child("No files match")
                 .into_any_element()
@@ -633,7 +634,7 @@ impl<V: 'static> Multibuffer<V> {
                     if let Some(metadata) = readings(&item.metadata, &colors) {
                         row = row.trailing(metadata);
                     }
-                    div().h(NAVIGATOR_ROW).rounded(metrics::RADIUS_MD).when(cursor == Some(index), |this| this.border_1().border_color(ring)).child(row).into_any_element()
+                    div().h(navigator_row()).rounded(metrics::radius_md()).when(cursor == Some(index), |this| this.border_1().border_color(ring)).child(row).into_any_element()
                 })
                 .collect(),
             NavigatorMode::Tree => {
@@ -652,11 +653,11 @@ impl<V: 'static> Multibuffer<V> {
                                 .flex()
                                 .items_center()
                                 .gap(px(4.))
-                                .h(NAVIGATOR_ROW)
+                                .h(navigator_row())
                                 .pl(px(6. + *depth as f32 * TREE_INDENT))
                                 .pr(px(6.))
-                                .rounded(metrics::RADIUS_MD)
-                                .text_size(typography::TEXT_SM)
+                                .rounded(metrics::radius_md())
+                                .text_size(typography::text_sm())
                                 .text_color(colors.muted_foreground)
                                 .hover(move |style| style.bg(accent).text_color(foreground))
                                 .when(cursor == Some(index), |this| this.border_1().border_color(ring))
@@ -686,11 +687,11 @@ impl<V: 'static> Multibuffer<V> {
                                 .flex()
                                 .items_center()
                                 .gap(px(4.))
-                                .h(NAVIGATOR_ROW)
+                                .h(navigator_row())
                                 .pl(px(6. + *depth as f32 * TREE_INDENT + 16.))
                                 .pr(px(6.))
-                                .rounded(metrics::RADIUS_MD)
-                                .text_size(typography::TEXT_SM)
+                                .rounded(metrics::radius_md())
+                                .text_size(typography::text_sm())
                                 .text_color(if is_active { colors.foreground } else { colors.muted_foreground })
                                 .when(is_active, |this| this.bg(colors.selected))
                                 .when(!is_active, |this| this.hover(move |style| style.bg(accent).text_color(foreground)))

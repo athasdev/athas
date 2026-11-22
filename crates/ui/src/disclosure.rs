@@ -3,7 +3,8 @@
 
 use std::rc::Rc;
 
-use gpui::{AnyElement, App, ClickEvent, ElementId, IntoElement, RenderOnce, Window, div, prelude::*, px};
+use crate::scale::px;
+use gpui::{AnyElement, App, ClickEvent, ElementId, IntoElement, RenderOnce, Window, div, prelude::*,};
 use theme::ActiveTheme;
 
 use crate::{Icon, IconName, IconSize, metrics, typography};
@@ -61,21 +62,21 @@ impl RenderOnce for AccordionTrigger {
             .min_w_0()
             .items_center()
             .justify_between()
-            .gap(metrics::CHROME_GAP_TIGHT)
+            .gap(metrics::chrome_gap_tight())
             .bg(colors.background)
             .child(
                 div()
                     .id(self.id)
                     .flex()
                     .max_w_full()
-                    .h(metrics::TAB)
+                    .h(metrics::tab())
                     .items_center()
-                    .gap(metrics::CHROME_GAP_TIGHT)
+                    .gap(metrics::chrome_gap_tight())
                     .px(px(8.))
-                    .rounded(metrics::RADIUS_MD)
+                    .rounded(metrics::radius_md())
                     .font_family(typography::UI_FONT)
                     .font_weight(typography::MEDIUM)
-                    .text_size(typography::TEXT_CHROME)
+                    .text_size(typography::text_chrome())
                     .text_color(colors.muted_foreground)
                     .when(self.disabled, |this| this.opacity(0.5))
                     .when(!self.disabled, |this| this.hover(move |style| style.bg(hover_bg).text_color(hover_text)))
@@ -135,7 +136,7 @@ impl RenderOnce for AccordionItem {
             .flex_col()
             .min_w_0()
             .child(self.trigger)
-            .when(self.open, |this| this.child(div().flex().flex_col().gap(px(4.)).text_size(typography::TEXT_SM).children(self.children)))
+            .when(self.open, |this| this.child(div().flex().flex_col().gap(px(4.)).text_size(typography::text_sm()).children(self.children)))
     }
 }
 

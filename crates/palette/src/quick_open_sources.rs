@@ -3,7 +3,8 @@
 
 use std::path::PathBuf;
 
-use gpui::{AnyElement, App, IntoElement, ParentElement, SharedString, Styled, div, px};
+use ui::scale::px;
+use gpui::{AnyElement, App, IntoElement, ParentElement, SharedString, Styled, div,};
 use theme::ActiveTheme;
 use ui::typography;
 use util::search_match::matches_search_query;
@@ -170,7 +171,7 @@ pub(crate) fn badges(labels: Vec<SharedString>, selected: bool, cx: &App) -> Any
                 .px(px(6.))
                 .rounded_full()
                 .bg(if selected { colors.primary_foreground.opacity(0.2) } else { colors.accent })
-                .text_size(typography::TEXT_CAPTION)
+                .text_size(typography::text_caption())
                 .text_color(if selected { colors.primary_foreground } else { colors.muted_foreground })
                 .child(label)
         }))

@@ -10,9 +10,10 @@ use std::{
     path::{Path, PathBuf},
 };
 
+use ui::scale::px;
 use gpui::{
     AnyElement, App, ClickEvent, Context, FocusHandle, Focusable, IntoElement, KeyBinding, ParentElement, Render, Styled, Subscription,
-    Task, Window, div, prelude::*, px,
+    Task, Window, div, prelude::*,
 };
 use theme::ActiveTheme;
 use ui::{Button, ButtonSize, ButtonVariant, EmptyState, Icon, IconName, IconSize, metrics, pane_header, typography};
@@ -212,7 +213,7 @@ impl ReviewView {
         div()
             .id(("review-hunk", id))
             .w_full()
-            .rounded(metrics::RADIUS_LG)
+            .rounded(metrics::radius_lg())
             .border_1()
             .border_color(if selected { colors.primary } else { colors.border })
             .overflow_hidden()
@@ -226,7 +227,7 @@ impl ReviewView {
                     .flex()
                     .items_center()
                     .gap(px(4.))
-                    .h(ui::metrics::LIST_ROW)
+                    .h(ui::metrics::list_row())
                     .px(px(8.))
                     .bg(colors.raised)
                     .border_b_1()
@@ -237,7 +238,7 @@ impl ReviewView {
                             .flex_1()
                             .min_w_0()
                             .truncate()
-                            .text_size(typography::TEXT_CAPTION)
+                            .text_size(typography::text_caption())
                             .text_color(colors.muted_foreground)
                             .hover(|style| style.text_color(colors.foreground))
                             .on_click(move |_, _, cx| Self::open(open_path.clone(), Some(line), cx))
@@ -270,7 +271,7 @@ impl ReviewView {
                     .overflow_x_scroll()
                     .py(px(4.))
                     .font_family(typography::MONO_FONT)
-                    .text_size(typography::TEXT_CAPTION)
+                    .text_size(typography::text_caption())
                     .line_height(px(17.))
                     .child(div().flex().flex_col().min_w_full().children(lines.iter().map(|line| Self::render_line(line, cx)))),
             )
@@ -321,9 +322,9 @@ impl ReviewView {
                                 this.child(
                                     div()
                                         .px(px(4.))
-                                        .rounded(metrics::RADIUS)
+                                        .rounded(metrics::radius())
                                         .bg(colors.success_soft)
-                                        .text_size(typography::TEXT_CAPTION)
+                                        .text_size(typography::text_caption())
                                         .text_color(colors.success)
                                         .child("New"),
                                 )
@@ -332,7 +333,7 @@ impl ReviewView {
                                 div()
                                     .flex()
                                     .gap(px(4.))
-                                    .text_size(typography::TEXT_CAPTION)
+                                    .text_size(typography::text_caption())
                                     .child(div().text_color(colors.git_added).child(format!("+{}", file.added)))
                                     .child(div().text_color(colors.git_deleted).child(format!("−{}", file.removed))),
                             ),
@@ -425,14 +426,14 @@ impl Render for ReviewView {
             .flex_col()
             .bg(colors.background)
             .font_family(typography::UI_FONT)
-            .text_size(typography::TEXT_BASE)
+            .text_size(typography::text_base())
             .text_color(colors.foreground)
             .child(
                 pane_header(cx)
                     .gap(px(8.))
                     .child(Icon::new(IconName::GitDiff).size(IconSize::Small).color(colors.muted_foreground))
                     .child(div().font_weight(typography::MEDIUM).flex_none().child("Review changes"))
-                    .child(div().min_w_0().whitespace_nowrap().truncate().text_size(typography::TEXT_SM).text_color(colors.subtle_foreground).child(self.title.clone()))
+                    .child(div().min_w_0().whitespace_nowrap().truncate().text_size(typography::text_sm()).text_color(colors.subtle_foreground).child(self.title.clone()))
                     .child(div().flex_1())
                     .when(!empty, |this| {
                         this.child(
@@ -440,7 +441,7 @@ impl Render for ReviewView {
                                 .flex()
                                 .flex_none()
                                 .gap(px(6.))
-                                .text_size(typography::TEXT_SM)
+                                .text_size(typography::text_sm())
                                 .text_color(colors.subtle_foreground)
                                 .child(format!("{count} {}", if count == 1 { "file" } else { "files" }))
                                 .child(div().text_color(colors.git_added).child(format!("+{added}")))
@@ -468,10 +469,10 @@ impl Render for ReviewView {
                         .flex()
                         .items_center()
                         .gap(px(6.))
-                        .px(metrics::PANE_INSET)
+                        .px(metrics::pane_inset())
                         .py(px(6.))
                         .bg(colors.warning_soft)
-                        .text_size(typography::TEXT_SM)
+                        .text_size(typography::text_sm())
                         .text_color(colors.foreground)
                         .child(Icon::new(IconName::Warning).size(IconSize::XSmall).color(colors.warning))
                         .child(div().flex_1().min_w_0().child(notice)),

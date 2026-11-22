@@ -34,7 +34,8 @@
 use std::{rc::Rc, sync::Arc};
 
 use anyhow::{Context as _, Result};
-use gpui::{AppContext, HeadlessAppContext, px, size};
+use ui::scale::px;
+use gpui::{AppContext, HeadlessAppContext, size};
 use theme::Appearance;
 use workbench::Workbench;
 use workspace::{MemoryStore, SessionId, StateStore, WorkspaceState};

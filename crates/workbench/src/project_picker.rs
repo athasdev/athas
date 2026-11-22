@@ -5,9 +5,10 @@
 use ui::WithScrollbar;
 use std::{collections::HashSet, path::PathBuf};
 
+use ui::scale::px;
 use gpui::{
     AnyElement, App, Context, DismissEvent, Entity, EventEmitter, FocusHandle, Focusable, KeyDownEvent, ScrollHandle,
-    SharedString, Subscription, WeakEntity, Window, div, prelude::*, px,
+    SharedString, Subscription, WeakEntity, Window, div, prelude::*,
 };
 use theme::ActiveTheme;
 use ui::{
@@ -690,7 +691,7 @@ impl ProjectPicker {
             .when(!destination.is_empty(), |this| {
                 this.child(Card::new().child(CardHeader::new("Project location").description(destination.clone())))
             })
-            .children(self.error.clone().map(|error| div().text_size(typography::TEXT_SM).text_color(cx.theme().colors.destructive).child(error)))
+            .children(self.error.clone().map(|error| div().text_size(typography::text_sm()).text_color(cx.theme().colors.destructive).child(error)))
             .into_any_element()
     }
 }
@@ -740,7 +741,7 @@ impl Render for ProjectPicker {
                 .gap(px(8.))
                 .min_h(px(224.))
                 .px(px(24.))
-                .text_size(typography::TEXT_SM)
+                .text_size(typography::text_sm())
                 .text_color(colors.muted_foreground)
                 .child(if self.source == NewProjectSource::Clone { "Cloning repository…" } else { "Preparing project…" })
                 .child(div().max_w_full().truncate().font_family(typography::MONO_FONT).child(self.destination(cx)))

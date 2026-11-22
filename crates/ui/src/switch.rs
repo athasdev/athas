@@ -1,6 +1,7 @@
 use std::rc::Rc;
 
-use gpui::{App, ElementId, IntoElement, ParentElement, RenderOnce, Styled, Window, div, prelude::*, px};
+use crate::scale::px;
+use gpui::{App, ElementId, IntoElement, ParentElement, RenderOnce, Styled, Window, div, prelude::*,};
 use theme::ActiveTheme;
 
 type ChangeHandler = Rc<dyn Fn(bool, &mut Window, &mut App)>;

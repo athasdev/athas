@@ -11,7 +11,8 @@ use ui::WithScrollbar as _;
 use std::{collections::HashSet, path::PathBuf, time::Duration};
 
 use editor::{Editor, LspEvent};
-use gpui::{Anchor, App, AppContext as _, Context, Entity, EventEmitter, FocusHandle, Focusable, IntoElement, KeyDownEvent, Render, ScrollHandle, SharedString, Subscription, Task, Window, div, point, prelude::*, px};
+use ui::scale::px;
+use gpui::{Anchor, App, AppContext as _, Context, Entity, EventEmitter, FocusHandle, Focusable, IntoElement, KeyDownEvent, Render, ScrollHandle, SharedString, Subscription, Task, Window, div, point, prelude::*,};
 use lsp_client::lsp::{self, DocumentSymbolResponse, SymbolKind};
 use theme::ActiveTheme;
 use ui::{Button, ButtonSize, ButtonVariant, EmptyState, Icon, IconName, IconSize, InputAppearance, MenuEntry, MenuItem, OpenMenu, PaneTitle, TextInput, TextInputEvent, pane_header, typography};
@@ -524,8 +525,8 @@ impl Render for OutlinePanel {
                     .h(px(24.))
                     .pl(px(6. + row.depth as f32 * 14.))
                     .pr(px(8.))
-                    .rounded(ui::metrics::RADIUS_MD)
-                    .text_size(typography::TEXT_SM)
+                    .rounded(ui::metrics::radius_md())
+                    .text_size(typography::text_sm())
                     .map(|this| ui::sidebar_row(this, is_active, false, cx))
                     .when(is_selected, |this| this.border_1().border_color(colors.focus_ring))
                     .on_click(cx.listener(move |panel, _, window, cx| {
@@ -551,7 +552,7 @@ impl Render for OutlinePanel {
                     .child(Icon::new(kind_icon(row.symbol.kind)).size(IconSize::XSmall).color(colors.subtle_foreground))
                     .child(div().flex_none().max_w(px(220.)).truncate().child(row.symbol.name.clone()))
                     .children(row.symbol.detail.clone().map(|detail| {
-                        div().flex_1().min_w_0().truncate().text_size(typography::TEXT_CAPTION).text_color(colors.subtle_foreground).child(SharedString::from(detail))
+                        div().flex_1().min_w_0().truncate().text_size(typography::text_caption()).text_color(colors.subtle_foreground).child(SharedString::from(detail))
                     }))
             });
             div().id("outline-list").flex().flex_col().flex_1().min_h_0().overflow_y_scroll().px(px(6.)).pb(px(6.)).children(list).scrollbar_with(&self.scroll).into_any_element()
@@ -564,7 +565,7 @@ impl Render for OutlinePanel {
             .gap(px(4.))
             .mx(px(8.))
             .mb(px(4.))
-            .child(div().flex_1().min_w_0().h(px(30.)).px(px(8.)).flex().items_center().rounded(ui::metrics::RADIUS_MD).bg(colors.field).child(self.filter.clone()))
+            .child(div().flex_1().min_w_0().h(px(30.)).px(px(8.)).flex().items_center().rounded(ui::metrics::radius_md()).bg(colors.field).child(self.filter.clone()))
             .when(!filter.is_empty(), |this| {
                 this.child(
                     Button::icon("outline-clear-filter", IconName::X)

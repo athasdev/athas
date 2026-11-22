@@ -1,4 +1,5 @@
-use gpui::{App, Context, Entity, EventEmitter, FocusHandle, Focusable, KeyDownEvent, Subscription, Window, div, prelude::*, px};
+use crate::scale::px;
+use gpui::{App, Context, Entity, EventEmitter, FocusHandle, Focusable, KeyDownEvent, Subscription, Window, div, prelude::*,};
 
 use crate::{Button, IconName, TextInput, TextInputEvent};
 

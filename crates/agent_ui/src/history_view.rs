@@ -5,9 +5,10 @@
 
 use std::{path::PathBuf, sync::Arc, time::Duration};
 
+use ui::scale::px;
 use gpui::{
     AppContext as _, ClickEvent, Context, DismissEvent, Entity, EventEmitter, FocusHandle, Focusable, IntoElement, ParentElement, Render, Styled,
-    Subscription, Task, Window, div, prelude::*, px,
+    Subscription, Task, Window, div, prelude::*,
 };
 use theme::ActiveTheme;
 use ui::{AlertDialog, WithScrollbar, ConfirmOptions, EmptyState, IconName, SidebarListItem, TextInput, TextInputEvent, metrics, pane_header, typography};
@@ -218,9 +219,9 @@ impl HistoryView {
             .flex()
             .items_center()
             .gap(px(8.))
-            .px(metrics::PANE_INSET)
+            .px(metrics::pane_inset())
             .py(px(4.))
-            .text_size(typography::TEXT_SM)
+            .text_size(typography::text_sm())
             .text_color(colors.muted_foreground)
             .child(div().flex_1().child("Agent sessions"))
             .child(
@@ -261,15 +262,15 @@ impl HistoryView {
             for agent in &agents {
                 chips.push(chip("outside-agent", crate::acp::agents::display_name(agent), Some(agent.clone()), cx));
             }
-            rows.push(div().flex().flex_wrap().gap(px(4.)).px(metrics::PANE_INSET).pb(px(4.)).children(chips).into_any_element());
+            rows.push(div().flex().flex_wrap().gap(px(4.)).px(metrics::pane_inset()).pb(px(4.)).children(chips).into_any_element());
         }
         rows.extend(self.errors.iter().map(|error| {
-            div().px(metrics::PANE_INSET).pb(px(4.)).text_size(typography::TEXT_SM).text_color(colors.destructive).child(error.clone()).into_any_element()
+            div().px(metrics::pane_inset()).pb(px(4.)).text_size(typography::text_sm()).text_color(colors.destructive).child(error.clone()).into_any_element()
         }));
         rows.extend(match &shown {
             Some(sessions) if sessions.is_empty() && !self.errors.is_empty() => Vec::new(),
             Some(sessions) if sessions.is_empty() => {
-                vec![div().px(metrics::PANE_INSET).pb(px(6.)).text_size(typography::TEXT_SM).text_color(colors.subtle_foreground).child("No agent sessions for this project.").into_any_element()]
+                vec![div().px(metrics::pane_inset()).pb(px(6.)).text_size(typography::text_sm()).text_color(colors.subtle_foreground).child("No agent sessions for this project.").into_any_element()]
             }
             Some(sessions) => sessions
                 .iter()
@@ -335,7 +336,7 @@ impl HistoryView {
             rows.push(
                 div()
                     .flex()
-                    .px(metrics::PANE_INSET)
+                    .px(metrics::pane_inset())
                     .py(px(4.))
                     .child(
                         ui::Button::new("load-more-outside", "Load more")
@@ -348,7 +349,7 @@ impl HistoryView {
             );
         }
         if self.finding.is_some() && self.outside.is_some() {
-            rows.push(div().px(metrics::PANE_INSET).pb(px(6.)).child(ui::Spinner::new("loading-outside").label("Loading sessions").show_label()).into_any_element());
+            rows.push(div().px(metrics::pane_inset()).pb(px(6.)).child(ui::Spinner::new("loading-outside").label("Loading sessions").show_label()).into_any_element());
         }
         Some(div().flex().flex_col().px(px(8.)).pb(px(4.)).child(header).children(rows).into_any_element())
     }
@@ -387,7 +388,7 @@ impl Render for HistoryView {
                     SidebarListItem::new(("history", index), hit.session.title.clone())
                         .leading_icon(IconName::ChatBubbleText)
                         .description(detail)
-                        .trailing(div().text_size(typography::TEXT_CAPTION).text_color(colors.subtle_foreground).child(age(hit.session.modified)))
+                        .trailing(div().text_size(typography::text_caption()).text_color(colors.subtle_foreground).child(age(hit.session.modified)))
                         .in_content()
                         .on_click(cx.listener(move |this, _: &ClickEvent, _, cx| this.open(id.clone(), cx)))
                 });
@@ -403,7 +404,7 @@ impl Render for HistoryView {
             .flex_col()
             .bg(colors.background)
             .font_family(typography::UI_FONT)
-            .text_size(typography::TEXT_BASE)
+            .text_size(typography::text_base())
             .text_color(colors.foreground)
             .child(
                 pane_header(cx)
@@ -411,10 +412,10 @@ impl Render for HistoryView {
                     .child(div().font_weight(typography::MEDIUM).child("Session history"))
                     .child(div().flex_1())
                     .children(count.map(|count| {
-                        div().text_size(typography::TEXT_SM).text_color(colors.subtle_foreground).child(format!("{count} {}", if count == 1 { "session" } else { "sessions" }))
+                        div().text_size(typography::text_sm()).text_color(colors.subtle_foreground).child(format!("{count} {}", if count == 1 { "session" } else { "sessions" }))
                     })),
             )
-            .child(div().px(metrics::PANE_INSET).py(px(8.)).child(self.input.clone()))
+            .child(div().px(metrics::pane_inset()).py(px(8.)).child(self.input.clone()))
             .children(self.render_outside(cx))
             .child(body)
             .children(self.confirm.as_ref().map(|(dialog, _)| {

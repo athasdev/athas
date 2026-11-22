@@ -4,7 +4,8 @@
 
 use std::{collections::HashSet, ops::Range, path::PathBuf};
 
-use gpui::{AnyElement, ClickEvent, Context, IntoElement, ParentElement, Styled, div, prelude::*, px};
+use ui::scale::px;
+use gpui::{AnyElement, ClickEvent, Context, IntoElement, ParentElement, Styled, div, prelude::*,};
 use theme::ActiveTheme;
 use ui::{Icon, IconName, IconSize, typography};
 
@@ -293,7 +294,7 @@ impl SessionView {
                 .items_center()
                 .gap(px(6.))
                 .py(px(2.))
-                .text_size(typography::TEXT_SM)
+                .text_size(typography::text_sm())
                 .text_color(colors.muted_foreground)
                 .hover(|style| style.text_color(colors.foreground))
                 .on_click(cx.listener(move |this, _: &ClickEvent, _, cx| this.toggle_group(run.clone(), cx)))

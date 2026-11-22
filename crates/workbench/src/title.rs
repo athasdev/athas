@@ -1,7 +1,8 @@
 use ui::TooltipExt as _;
+use ui::scale::px;
 use gpui::{
     Anchor, Context, IntoElement, ParentElement, ResizeEdge, SharedString, Styled, Window, WindowControlArea, canvas, div,
-    point, prelude::*, px,
+    point, prelude::*,
 };
 use theme::ActiveTheme;
 use ui::{Button, ButtonSize, Icon, IconName, IconSize, metrics};
@@ -24,10 +25,10 @@ impl Workbench {
         let narrow = Self::is_narrow(window);
         let sidebar_visible = if narrow { self.sidebar_overlay_open } else { sidebar_shown };
         let inset = if traffic_lights {
-            metrics::TRAFFIC_LIGHTS_INSET
+            metrics::traffic_lights_inset()
         } else {
             // Lines the first button up with the activity rail below it.
-            metrics::WORKBENCH_GAP
+            metrics::workbench_gap()
         };
         let active = self.state.active_project().cloned();
         let leading_end = self.title_leading_end.clone();
@@ -36,7 +37,7 @@ impl Workbench {
         let muted = cx.theme().colors.subtle_foreground;
         // Over the sidebar, the row ends where the sidebar does; a long project name truncates.
         let max_width = if sidebar_shown && !narrow {
-            metrics::WORKBENCH_GAP + metrics::RAIL_CONTROL + px(self.state.layout.sidebar_width)
+            metrics::workbench_gap() + metrics::rail_control() + px(self.state.layout.sidebar_width)
         } else {
             window.viewport_size().width * 0.5
         };
@@ -75,7 +76,7 @@ impl Workbench {
             }
             entries.extend(this.add_project_entries(cx));
             let position = event.position();
-            let position = point(position.x - px(12.), metrics::WORKBENCH_GAP + metrics::PANE_HEADER - px(4.));
+            let position = point(position.x - px(12.), metrics::workbench_gap() + metrics::pane_header() - px(4.));
             this.show_menu(PROJECT_SWITCHER_MENU, entries, position, Anchor::TopLeft, window, cx);
         }));
 
@@ -85,13 +86,13 @@ impl Workbench {
             // Fills the title strip, so its controls centre on the traffic lights.
             .top_0()
             .left_0()
-            .h(metrics::PANE_HEADER)
+            .h(metrics::pane_header())
             .pl(inset)
             .pr(px(4.))
             .max_w(max_width)
             .flex()
             .items_center()
-            .gap(if platform == Platform::Mac { metrics::CHROME_GAP_TIGHT } else { metrics::CHROME_GAP })
+            .gap(if platform == Platform::Mac { metrics::chrome_gap_tight() } else { metrics::chrome_gap() })
             .children(self.render_window_menu_button(cx))
             .child(
                 Button::icon("toggle-sidebar", IconName::Sidebar)
@@ -141,8 +142,8 @@ impl Workbench {
                 .items_center()
                 .justify_center()
                 .w(px(36.))
-                .h(metrics::RAIL_CONTROL)
-                .rounded(metrics::RADIUS_MD)
+                .h(metrics::rail_control())
+                .rounded(metrics::radius_md())
                 .window_control_area(area)
                 .hover(move |style| style.bg(hover))
                 .anchored_tooltip(move || ui::Tooltip::new(label).shortcut(shortcut.clone()))
@@ -158,8 +159,8 @@ impl Workbench {
         Some(
             div()
                 .absolute()
-                .top(metrics::WORKBENCH_GAP + px(4.))
-                .right(metrics::WORKBENCH_GAP + px(4.))
+                .top(metrics::workbench_gap() + px(4.))
+                .right(metrics::workbench_gap() + px(4.))
                 .flex()
                 .gap(px(2.))
                 .child(control("window-minimize", IconName::Minus, WindowControlArea::Min, "Minimize", shortcut(&["window.minimize.alt", "window.minimize"])))
@@ -182,14 +183,14 @@ impl Workbench {
             .group_drag_over::<gpui::ExternalPaths>("workbench", |style| style.opacity(1.))
             .child(
                 div()
-                    .rounded(metrics::RADIUS_XL)
+                    .rounded(metrics::radius_xl())
                     .border_2()
                     .border_dashed()
                     .border_color(colors.primary)
                     .bg(colors.surface)
                     .px(px(32.))
                     .py(px(24.))
-                    .text_size(ui::typography::TEXT_BASE)
+                    .text_size(ui::typography::text_base())
                     .font_weight(ui::typography::SEMIBOLD)
                     .text_color(colors.foreground)
                     .child("Drop folder to open project, or file to open buffer"),

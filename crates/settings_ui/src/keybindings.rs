@@ -7,9 +7,10 @@
 use ui::TooltipExt as _;
 use std::collections::{HashMap, HashSet};
 
+use ui::scale::px;
 use gpui::{
     AnyElement, App, Context, Entity, KeystrokeEvent, PathPromptOptions, SharedString, Subscription,
-    UniformListScrollHandle, Window, div, prelude::*, px, uniform_list,
+    UniformListScrollHandle, Window, div, prelude::*, uniform_list,
 };
 use keymap::{ImportFormat, Keybinding};
 use notifications::{NotificationCategory, NotificationKind};
@@ -351,7 +352,7 @@ impl KeybindingsEditor {
             .child(
                 div()
                     .px(px(12.))
-                    .text_size(typography::TEXT_SM)
+                    .text_size(typography::text_sm())
                     .font_weight(typography::MEDIUM)
                     .text_color(colors.muted_foreground)
                     .child("Shortcuts"),
@@ -365,7 +366,7 @@ impl KeybindingsEditor {
                     .min_h(px(44.))
                     .py(px(10.))
                     .px(px(12.))
-                    .rounded(metrics::ISLAND_RADIUS)
+                    .rounded(metrics::island_radius())
                     .bg(colors.raised)
                     .shadow(cx.theme().shadows.raised.clone())
                     .child(
@@ -373,11 +374,11 @@ impl KeybindingsEditor {
                             .flex()
                             .flex_col()
                             .gap(px(2.))
-                            .child(div().text_size(typography::TEXT_SM).text_color(colors.foreground).child("Edit Keybindings"))
+                            .child(div().text_size(typography::text_sm()).text_color(colors.foreground).child("Edit Keybindings"))
                             .when(count > 0, |this| {
                                 this.child(
                                     div()
-                                        .text_size(typography::TEXT_CAPTION)
+                                        .text_size(typography::text_caption())
                                         .text_color(colors.subtle_foreground)
                                         .child(format!("{count} custom shortcut{}", if count == 1 { "" } else { "s" })),
                                 )
@@ -401,7 +402,7 @@ impl KeybindingsEditor {
             .gap(px(4.))
             .children(chords.into_iter().enumerate().flat_map(|(index, chord)| {
                 let then = (index > 0).then(|| {
-                    div().text_size(typography::TEXT_CAPTION).text_color(cx.theme().colors.subtle_foreground).child("then").into_any_element()
+                    div().text_size(typography::text_caption()).text_color(cx.theme().colors.subtle_foreground).child("then").into_any_element()
                 });
                 then.into_iter().chain(std::iter::once(Kbd::new(chord).into_any_element()))
             }))
@@ -421,11 +422,11 @@ impl KeybindingsEditor {
                 .h(px(28.))
                 .pl(px(8.))
                 .pr(px(2.))
-                .rounded(metrics::RADIUS_MD)
+                .rounded(metrics::radius_md())
                 .bg(colors.primary_soft)
                 .border_2()
                 .border_color(colors.focus_ring)
-                .child(div().flex_1().min_w_0().truncate().text_size(typography::TEXT_SM).map(|this| match &recording.key {
+                .child(div().flex_1().min_w_0().truncate().text_size(typography::text_sm()).map(|this| match &recording.key {
                     Some(key) => this.child(Self::render_keys(key, cx)),
                     None => this.text_color(colors.subtle_foreground).child("Press keys..."),
                 }))
@@ -449,11 +450,11 @@ impl KeybindingsEditor {
             .w_full()
             .h(px(28.))
             .px(px(8.))
-            .rounded(metrics::RADIUS_MD)
+            .rounded(metrics::radius_md())
             .bg(colors.raised)
             .shadow(cx.theme().shadows.raised.clone())
             .hover(|style| style.bg(colors.accent))
-            .text_size(typography::TEXT_SM)
+            .text_size(typography::text_sm())
             .anchored_tooltip({ let text: gpui::SharedString = (format!("Edit keybinding for {title}")).into(); move || ui::Tooltip::new(text.clone()) })
             .map(|this| match shown {
                 Some(binding) => this.child(Self::render_keys(&binding.key, cx)),
@@ -620,7 +621,7 @@ impl Render for KeybindingsEditor {
             .px(px(12.))
             .border_b_1()
             .border_color(colors.divider)
-            .text_size(typography::TEXT_CAPTION)
+            .text_size(typography::text_caption())
             .font_weight(typography::MEDIUM)
             .text_color(colors.subtle_foreground)
             .children(["Command", "Keybinding", "When", "Source", ""].into_iter().enumerate().map(|(index, label)| column(index).child(label)));
@@ -630,7 +631,7 @@ impl Render for KeybindingsEditor {
                 .flex_1()
                 .items_center()
                 .justify_center()
-                .text_size(typography::TEXT_SM)
+                .text_size(typography::text_sm())
                 .text_color(colors.muted_foreground)
                 .child("No keybindings found")
                 .into_any_element()
@@ -655,7 +656,7 @@ impl Render for KeybindingsEditor {
                     .justify_between()
                     .gap(px(12.))
                     .child(filters)
-                    .child(div().flex_none().text_size(typography::TEXT_SM).text_color(colors.subtle_foreground).child(format!("{count} commands"))),
+                    .child(div().flex_none().text_size(typography::text_sm()).text_color(colors.subtle_foreground).child(format!("{count} commands"))),
             )
             .child(
                 div()
@@ -663,7 +664,7 @@ impl Render for KeybindingsEditor {
                     .flex_col()
                     .flex_1()
                     .min_h_0()
-                    .rounded(metrics::ISLAND_RADIUS)
+                    .rounded(metrics::island_radius())
                     .bg(colors.raised)
                     .shadow(theme.shadows.raised.clone())
                     .overflow_hidden()
@@ -712,13 +713,13 @@ impl KeybindingsEditor {
                                         .child(
                                             div()
                                                 .truncate()
-                                                .text_size(typography::TEXT_SM)
+                                                .text_size(typography::text_sm())
                                                 .text_color(if row.ported { colors.foreground } else { colors.muted_foreground })
                                                 .child(row.title.clone()),
                                         )
                                         .when(!row.ported, |this| this.child(Badge::new("Not ported yet"))),
                                 )
-                                .child(div().truncate().text_size(typography::TEXT_CAPTION).text_color(colors.subtle_foreground).child(row.subtitle.clone())),
+                                .child(div().truncate().text_size(typography::text_caption()).text_color(colors.subtle_foreground).child(row.subtitle.clone())),
                         )
                         .child(
                             column(1).flex().items_center().gap(px(6.)).child(self.render_key_cell(index, &row.id, &row.title, row.binding.as_ref(), cx)).children(
@@ -734,7 +735,7 @@ impl KeybindingsEditor {
                         .child(
                             column(2)
                                 .truncate()
-                                .text_size(typography::TEXT_SM)
+                                .text_size(typography::text_sm())
                                 .text_color(colors.subtle_foreground)
                                 .child(row.binding.as_ref().and_then(|binding| binding.when.clone()).unwrap_or_else(|| "-".into())),
                         )

@@ -2,7 +2,8 @@
 //! (`window-menu-bar.tsx`): one button in the title row whose menu lists File, Edit, View and the
 //! rest, each opening its items beside it. Items whose command this build does not register are left out.
 
-use gpui::{Action, AnyElement, Anchor, App, Context, FocusHandle, Window, div, img, prelude::*, px};
+use ui::scale::px;
+use gpui::{Action, AnyElement, Anchor, App, Context, FocusHandle, Window, div, img, prelude::*,};
 use ui::{Button, ButtonSize, MenuEntry, MenuItem, Plane, metrics};
 
 use crate::*;
@@ -259,7 +260,7 @@ impl Workbench {
     /// Opens the app menu from the title row's button, with `open` (File, Edit, …) showing.
     pub fn show_window_menu(&mut self, open: Option<usize>, window: &mut Window, cx: &mut Context<Self>) {
         let entries = window_menu_entries(window.focused(cx).filter(|focus| *focus != self.focus_handle), cx);
-        let position = gpui::point(metrics::TRAFFIC_LIGHTS_INSET.min(px(16.)), metrics::WORKBENCH_GAP + metrics::PANE_HEADER - px(4.));
+        let position = gpui::point(metrics::traffic_lights_inset().min(px(16.)), metrics::workbench_gap() + metrics::pane_header() - px(4.));
         self.show_menu(WINDOW_MENU, entries, position, Anchor::TopLeft, window, cx);
         if let Some(menu) = self.open_menu.as_ref().map(|menu| menu.menu.clone()) {
             menu.update(cx, |menu, cx| menu.highlight(open, open.is_some(), window, cx));
@@ -291,7 +292,7 @@ impl Workbench {
                             .on_click(cx.listener(move |this, event: &gpui::ClickEvent, window, cx| {
                                 let focus = window.focused(cx).filter(|focus| *focus != this.focus_handle);
                                 let Some((_, _, entries)) = menu_entries(focus, cx).into_iter().nth(index) else { return };
-                                let position = gpui::point(event.position().x - px(12.), metrics::WORKBENCH_GAP + metrics::PANE_HEADER - px(4.));
+                                let position = gpui::point(event.position().x - px(12.), metrics::workbench_gap() + metrics::pane_header() - px(4.));
                                 this.show_menu(key, entries, position, Anchor::TopLeft, window, cx);
                             }))
                     }))
@@ -312,7 +313,7 @@ impl Workbench {
                     .on_click(cx.listener(|this, event: &gpui::ClickEvent, window, cx| {
                         let entries = window_menu_entries(window.focused(cx).filter(|focus| *focus != this.focus_handle), cx);
                         let position = event.position();
-                        let position = gpui::point(position.x - px(12.), metrics::WORKBENCH_GAP + metrics::PANE_HEADER - px(4.));
+                        let position = gpui::point(position.x - px(12.), metrics::workbench_gap() + metrics::pane_header() - px(4.));
                         this.show_menu(WINDOW_MENU, entries, position, Anchor::TopLeft, window, cx);
                     })),
             )

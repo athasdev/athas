@@ -4,7 +4,8 @@ use crate::TooltipExt;
 
 use std::rc::Rc;
 
-use gpui::{AnyElement, App, Bounds, ClickEvent, ElementId, IntoElement, Pixels, RenderOnce, SharedString, Window, div, prelude::*, px};
+use crate::scale::px;
+use gpui::{AnyElement, App, Bounds, ClickEvent, ElementId, IntoElement, Pixels, RenderOnce, SharedString, Window, div, prelude::*,};
 use theme::ActiveTheme;
 
 use crate::{Icon, IconName, IconSize, Tooltip, metrics, typography};
@@ -128,9 +129,9 @@ impl RenderOnce for Toggle {
         let theme = cx.theme().clone();
         let colors = &theme.colors;
         let (side, icon_size) = match self.size {
-            ToggleSize::Sm => (metrics::CHROME_CONTROL, px(12.)),
+            ToggleSize::Sm => (metrics::chrome_control(), px(12.)),
             ToggleSize::Md => (px(28.), px(14.)),
-            ToggleSize::Lg => (metrics::RAIL_CONTROL, px(16.)),
+            ToggleSize::Lg => (metrics::rail_control(), px(16.)),
         };
         let pressed = self.pressed;
         let accent = self.tone == ToggleTone::Accent;
@@ -156,10 +157,10 @@ impl RenderOnce for Toggle {
             .gap(px(4.))
             .h(side)
             .map(|this| if pressed_with_label { this.px(px(10.)) } else { this.w(side) })
-            .map(|this| if self.size == ToggleSize::Lg { this.rounded(metrics::RADIUS_MD) } else { this.rounded_full() })
+            .map(|this| if self.size == ToggleSize::Lg { this.rounded(metrics::radius_md()) } else { this.rounded_full() })
             .font_family(typography::UI_FONT)
             .font_weight(typography::MEDIUM)
-            .text_size(typography::TEXT_SM)
+            .text_size(typography::text_sm())
             .text_color(text)
             .when(self.variant == ToggleVariant::Outline, |this| this.bg(colors.raised).shadow(theme.shadows.raised.clone()))
             .when(hoverable, |this| this.hover(move |style| style.bg(hover_bg).text_color(hover_text)))
@@ -359,7 +360,7 @@ impl RenderOnce for Tabs {
                 .flex()
                 .items_center()
                 .gap(px(6.))
-                .h(metrics::CHROME_CONTROL)
+                .h(metrics::chrome_control())
                 .whitespace_nowrap()
                 .text_color(text)
                 .map(|this| match (vertical, wrap) {
@@ -395,12 +396,12 @@ impl RenderOnce for Tabs {
             .when(wrap, |this| this.flex_wrap())
             .font_family(typography::UI_FONT)
             .font_weight(typography::MEDIUM)
-            .text_size(typography::TEXT_CHROME)
+            .text_size(typography::text_chrome())
             .map(|this| match variant {
                 // Over more than one row the stadium shape no longer fits what it holds.
-                TabsVariant::Default => this.gap(px(2.)).p(px(2.)).bg(colors.segment_track).map(|this| if wrap { this.rounded(metrics::RADIUS_LG) } else { this.rounded_full() }),
-                TabsVariant::Line => this.gap(metrics::CHROME_GAP),
-                TabsVariant::Text => this.gap(metrics::CHROME_GAP_TIGHT),
+                TabsVariant::Default => this.gap(px(2.)).p(px(2.)).bg(colors.segment_track).map(|this| if wrap { this.rounded(metrics::radius_lg()) } else { this.rounded_full() }),
+                TabsVariant::Line => this.gap(metrics::chrome_gap()),
+                TabsVariant::Text => this.gap(metrics::chrome_gap_tight()),
             })
             .children(items)
     }
@@ -494,7 +495,7 @@ impl RenderOnce for ChoiceCards {
                 .items_center()
                 .gap(px(6.))
                 .p(px(4.))
-                .rounded(metrics::RADIUS_LG)
+                .rounded(metrics::radius_lg())
                 .when(card.disabled, |this| this.opacity(0.5))
                 .child(
                     div()
@@ -504,7 +505,7 @@ impl RenderOnce for ChoiceCards {
                         .w(width)
                         .h(height)
                         .overflow_hidden()
-                        .rounded(metrics::RADIUS_LG)
+                        .rounded(metrics::radius_lg())
                         .bg(colors.surface)
                         .shadow(theme.shadows.raised.clone())
                         .border_2()
@@ -515,7 +516,7 @@ impl RenderOnce for ChoiceCards {
                 .child(
                     div()
                         .font_family(typography::UI_FONT)
-                        .text_size(typography::TEXT_SM)
+                        .text_size(typography::text_sm())
                         .text_color(if checked { colors.foreground } else { colors.muted_foreground })
                         .when(checked, |this| this.font_weight(typography::MEDIUM))
                         .child(card.label),
@@ -601,13 +602,13 @@ impl RenderOnce for Menubar {
         div()
             .id(self.id)
             .flex()
-            .h(metrics::CHROME_CONTROL)
+            .h(metrics::chrome_control())
             .items_center()
             .gap(px(2.))
             .p(px(2.))
-            .rounded(metrics::RADIUS_MD)
+            .rounded(metrics::radius_md())
             .font_family(typography::UI_FONT)
-            .text_size(typography::TEXT_CHROME)
+            .text_size(typography::text_chrome())
             .children(triggers)
     }
 }

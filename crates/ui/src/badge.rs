@@ -1,4 +1,5 @@
-use gpui::{App, Hsla, IntoElement, RenderOnce, Rgba, SharedString, Window, div, prelude::*, px};
+use crate::scale::px;
+use gpui::{App, Hsla, IntoElement, RenderOnce, Rgba, SharedString, Window, div, prelude::*,};
 use theme::{ActiveTheme, ThemeColors};
 
 use crate::{Icon, IconName, IconSize, typography};
@@ -93,7 +94,7 @@ impl RenderOnce for Badge {
             .rounded_full()
             .bg(fill)
             .text_color(text)
-            .text_size(typography::TEXT_CAPTION)
+            .text_size(typography::text_caption())
             .font_weight(typography::MEDIUM)
             .line_height(px(11.))
             .whitespace_nowrap()
@@ -165,7 +166,7 @@ impl RenderOnce for Marker {
             .gap(px(8.))
             .w_full()
             .min_h(px(16.))
-            .text_size(typography::TEXT_SM)
+            .text_size(typography::text_sm())
             .text_color(text)
             .when(self.variant == MarkerVariant::Border, |this| this.pb(px(8.)).border_b_1().border_color(colors.divider))
             .when(separator, |this| this.child(line().mr(px(4.))))

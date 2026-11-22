@@ -3,9 +3,10 @@
 
 use web_time::{SystemTime, UNIX_EPOCH};
 
+use ui::scale::px;
 use gpui::{
     AnyElement, App, ClickEvent, Context, ElementId, HighlightStyle, Hsla, IntoElement, MouseButton, MouseDownEvent, Render,
-    ScrollEvent, SharedString, StyledText, Window, div, point, prelude::*, px, relative, uniform_list,
+    ScrollEvent, SharedString, StyledText, Window, div, point, prelude::*, relative, uniform_list,
 };
 #[cfg(target_family = "wasm")]
 use crate::athas_docker;
@@ -22,11 +23,11 @@ use crate::{
 };
 
 /// One row of a resource table.
-const ROW_HEIGHT: gpui::Pixels = px(32.);
+fn row_height() -> gpui::Pixels { px(32.) }
 /// One line of a log or of `docker inspect`.
-const LINE_HEIGHT: gpui::Pixels = px(18.);
+fn line_height() -> gpui::Pixels { px(18.) }
 /// The column of row actions at the end of each table row.
-const ACTIONS_WIDTH: gpui::Pixels = px(120.);
+fn actions_width() -> gpui::Pixels { px(120.) }
 
 fn now_seconds() -> i64 {
     SystemTime::now().duration_since(UNIX_EPOCH).map_or(0, |elapsed| elapsed.as_secs() as i64)
@@ -107,10 +108,10 @@ impl TableRow {
             .flex_none()
             .items_center()
             .gap(px(10.))
-            .h(ROW_HEIGHT)
+            .h(row_height())
             .px(px(10.))
-            .rounded(metrics::RADIUS_MD)
-            .text_size(typography::TEXT_SM)
+            .rounded(metrics::radius_md())
+            .text_size(typography::text_sm())
             .text_color(colors.muted_foreground)
             .hover(|style| style.bg(colors.accent))
             .when(self.busy, |this| this.opacity(0.55))
@@ -120,7 +121,7 @@ impl TableRow {
                 div()
                     .flex()
                     .flex_none()
-                    .w(ACTIONS_WIDTH)
+                    .w(actions_width())
                     .justify_end()
                     .items_center()
                     .gap(px(2.))
@@ -153,12 +154,12 @@ fn table_header(columns: &[(&'static str, f32)], colors: &ThemeColors) -> impl I
         .gap(px(10.))
         .h(px(28.))
         .px(px(10.))
-        .text_size(typography::TEXT_CAPTION)
+        .text_size(typography::text_caption())
         .font_weight(typography::MEDIUM)
         .text_color(colors.subtle_foreground)
         .child(div().flex_none().w(px(16.)))
         .child(div().flex().flex_1().min_w_0().children(columns.iter().map(|(title, share)| cell(*share).child(*title))))
-        .child(div().flex_none().w(ACTIONS_WIDTH))
+        .child(div().flex_none().w(actions_width()))
 }
 
 fn primary(text: impl Into<SharedString>, colors: &ThemeColors) -> gpui::Div {
@@ -166,7 +167,7 @@ fn primary(text: impl Into<SharedString>, colors: &ThemeColors) -> gpui::Div {
 }
 
 fn mono(text: impl Into<SharedString>) -> gpui::Div {
-    div().truncate().font_family(typography::MONO_FONT).text_size(typography::TEXT_CAPTION).child(text.into())
+    div().truncate().font_family(typography::MONO_FONT).text_size(typography::text_caption()).child(text.into())
 }
 
 impl DockerView {
@@ -194,10 +195,10 @@ impl DockerView {
                 .flex()
                 .items_center()
                 .gap(px(6.))
-                .h(metrics::CHROME_CONTROL)
+                .h(metrics::chrome_control())
                 .px(px(8.))
                 .rounded_full()
-                .text_size(typography::TEXT_SM)
+                .text_size(typography::text_sm())
                 .font_weight(typography::MEDIUM)
                 .text_color(fg)
                 .when(active, |this| this.bg(colors.raised).shadow(raised_inset.clone()))
@@ -207,7 +208,7 @@ impl DockerView {
                 .when(count > 0, |this| {
                     this.child(
                         div()
-                            .text_size(typography::TEXT_CAPTION)
+                            .text_size(typography::text_caption())
                             .text_color(colors.subtle_foreground)
                             .child(if count > 999 { "999+".to_string() } else { count.to_string() }),
                     )
@@ -236,11 +237,11 @@ impl DockerView {
                         this.child(
                             div()
                                 .w(px(180.))
-                                .h(metrics::CHROME_CONTROL)
+                                .h(metrics::chrome_control())
                                 .flex()
                                 .items_center()
                                 .px(px(6.))
-                                .rounded(metrics::RADIUS_MD)
+                                .rounded(metrics::radius_md())
                                 .bg(colors.field)
                                 .child(self.filter_input.clone()),
                         )
@@ -338,7 +339,7 @@ impl DockerView {
                     .px(px(16.))
                     .text_center()
                     .font_family(typography::MONO_FONT)
-                    .text_size(typography::TEXT_CAPTION)
+                    .text_size(typography::text_caption())
                     .text_color(colors.subtle_foreground)
                     .child(error),
             )
@@ -703,7 +704,7 @@ impl DockerView {
             .mb(px(6.))
             .px(px(12.))
             .py(px(10.))
-            .rounded(metrics::RADIUS_LG)
+            .rounded(metrics::radius_lg())
             .bg(colors.surface)
             .child(Icon::new(IconName::Nodes).size(IconSize::Small).color(colors.subtle_foreground))
             .child(
@@ -712,10 +713,10 @@ impl DockerView {
                     .flex_col()
                     .flex_1()
                     .min_w_0()
-                    .child(primary(files, colors).text_size(typography::TEXT_SM))
+                    .child(primary(files, colors).text_size(typography::text_sm()))
                     .child(
                         div()
-                            .text_size(typography::TEXT_CAPTION)
+                            .text_size(typography::text_caption())
                             .text_color(colors.subtle_foreground)
                             .child(format!("{} · {running} running", plural(project.services.len(), "service"))),
                     ),
@@ -898,8 +899,8 @@ impl DockerView {
                     .tooltip("Back")
                     .on_click(cx.listener(|this, _, _, cx| this.close_detail(cx))),
             )
-            .child(div().min_w_0().truncate().text_size(typography::TEXT_SM).font_weight(typography::MEDIUM).text_color(colors.foreground).child(title))
-            .child(div().flex_none().text_size(typography::TEXT_SM).text_color(colors.subtle_foreground).child(kind.to_string()))
+            .child(div().min_w_0().truncate().text_size(typography::text_sm()).font_weight(typography::MEDIUM).text_color(colors.foreground).child(title))
+            .child(div().flex_none().text_size(typography::text_sm()).text_color(colors.subtle_foreground).child(kind.to_string()))
             .child(div().flex_1())
     }
 
@@ -910,7 +911,7 @@ impl DockerView {
         let bar = self
             .render_detail_bar(logs.title.clone(), "Logs", colors, cx)
             .children(logs.ended.clone().map(|ended| {
-                div().text_size(typography::TEXT_CAPTION).text_color(colors.subtle_foreground).mr(px(6.)).child(ended)
+                div().text_size(typography::text_caption()).text_color(colors.subtle_foreground).mr(px(6.)).child(ended)
             }))
             .child(
                 Button::new("docker-logs-follow", "Follow")
@@ -947,7 +948,7 @@ impl DockerView {
                 .flex_1()
                 .items_center()
                 .justify_center()
-                .text_size(typography::TEXT_SM)
+                .text_size(typography::text_sm())
                 .text_color(colors.subtle_foreground)
                 .child(if logs.ended.is_some() { "No log output" } else { "Waiting for log output…" })
                 .into_any_element()
@@ -961,7 +962,7 @@ impl DockerView {
                 .flex_1()
                 .min_h_0()
                 .on_scroll(cx.listener(|this, event: &ScrollEvent, _, cx| {
-                    if event.delta.pixel_delta(LINE_HEIGHT).y > px(0.)
+                    if event.delta.pixel_delta(line_height()).y > px(0.)
                         && let Some(Detail::Logs(logs)) = &this.detail
                         && logs.follow
                     {
@@ -988,11 +989,11 @@ impl DockerView {
             .map(|line| {
                 div()
                     .flex()
-                    .h(LINE_HEIGHT)
+                    .h(line_height())
                     .px(px(12.))
                     .gap(px(12.))
                     .font_family(typography::MONO_FONT)
-                    .text_size(typography::TEXT_SM)
+                    .text_size(typography::text_sm())
                     .whitespace_nowrap()
                     .children(line.stamp.clone().map(|stamp| div().flex_none().w(px(92.)).text_color(colors.subtle_foreground).child(stamp)))
                     .child(
@@ -1063,10 +1064,10 @@ impl DockerView {
                     .into_iter()
                     .map(|(range, token)| (range, HighlightStyle { color: Some(color(token)), ..Default::default() }));
                 div()
-                    .h(LINE_HEIGHT)
+                    .h(line_height())
                     .px(px(12.))
                     .font_family(typography::MONO_FONT)
-                    .text_size(typography::TEXT_SM)
+                    .text_size(typography::text_sm())
                     .text_color(colors.muted_foreground)
                     .whitespace_nowrap()
                     .truncate()
@@ -1093,10 +1094,10 @@ impl DockerView {
                         .flex_col()
                         .gap(px(8.))
                         .p(px(12.))
-                        .rounded(metrics::RADIUS_LG)
+                        .rounded(metrics::radius_lg())
                         .bg(colors.raised)
                         .shadow(theme.shadows.raised.clone())
-                        .child(div().text_size(typography::TEXT_SM).font_weight(typography::MEDIUM).text_color(colors.foreground).child(form.title.clone()))
+                        .child(div().text_size(typography::text_sm()).font_weight(typography::MEDIUM).text_color(colors.foreground).child(form.title.clone()))
                         .child(div().flex().flex_wrap().gap(px(8.)).children(form.fields.iter().map(|(label, input)| {
                             div()
                                 .flex()
@@ -1104,7 +1105,7 @@ impl DockerView {
                                 .flex_1()
                                 .min_w(px(180.))
                                 .gap(px(4.))
-                                .child(div().text_size(typography::TEXT_CAPTION).text_color(colors.subtle_foreground).child(label.clone()))
+                                .child(div().text_size(typography::text_caption()).text_color(colors.subtle_foreground).child(label.clone()))
                                 .child(input.clone())
                         })))
                         .children(results)
@@ -1156,8 +1157,8 @@ impl DockerView {
                 .gap(px(8.))
                 .h(px(26.))
                 .px(px(8.))
-                .rounded(metrics::RADIUS_MD)
-                .text_size(typography::TEXT_SM)
+                .rounded(metrics::radius_md())
+                .text_size(typography::text_sm())
                 .hover(|style| style.bg(colors.accent))
                 .child(Icon::new(IconName::CloudArrowDown).size(IconSize::XSmall).color(colors.subtle_foreground))
                 .child(div().flex_none().font_weight(typography::MEDIUM).text_color(colors.foreground).child(result.name.clone()))
@@ -1167,7 +1168,7 @@ impl DockerView {
         div()
             .flex()
             .flex_col()
-            .children(status.map(|status| div().px(px(8.)).text_size(typography::TEXT_CAPTION).text_color(colors.subtle_foreground).child(status)))
+            .children(status.map(|status| div().px(px(8.)).text_size(typography::text_caption()).text_color(colors.subtle_foreground).child(status)))
             .children(rows)
             .into_any_element()
     }
@@ -1190,10 +1191,10 @@ impl DockerView {
                         .items_start()
                         .gap(px(8.))
                         .p(px(8.))
-                        .rounded(metrics::RADIUS_LG)
+                        .rounded(metrics::radius_lg())
                         .bg(colors.raised)
                         .shadow(theme.shadows.raised.clone())
-                        .text_size(typography::TEXT_SM)
+                        .text_size(typography::text_sm())
                         .child(div().pt(px(2.)).child(Icon::new(icon).size(IconSize::XSmall).color(tone)))
                         .child(div().flex_1().min_w_0().text_color(colors.foreground).child(notice.message.clone()))
                         .child(
@@ -1224,7 +1225,7 @@ impl Render for DockerView {
                 .flex_1()
                 .items_center()
                 .justify_center()
-                .text_size(typography::TEXT_SM)
+                .text_size(typography::text_sm())
                 .text_color(colors.subtle_foreground)
                 .child("Connecting to Docker…")
                 .into_any_element(),

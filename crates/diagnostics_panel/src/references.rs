@@ -6,7 +6,8 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use gpui::{App, Context, EventEmitter, FocusHandle, Focusable, IntoElement, Render, SharedString, Task, Window, div, prelude::*, px};
+use ui::scale::px;
+use gpui::{App, Context, EventEmitter, FocusHandle, Focusable, IntoElement, Render, SharedString, Task, Window, div, prelude::*,};
 use lsp_client::FileLocation;
 use theme::ActiveTheme;
 use ui::{Button, ButtonSize, EmptyState, Icon, IconName, IconSize, PaneTitle, SidebarListItem, WithScrollbar as _, metrics, pane_header, typography};
@@ -174,8 +175,8 @@ impl Render for ReferencesView {
             _ => (self.title.clone(), count),
         };
         let header = pane_header(cx)
-            .h(metrics::CONTENT_HEADER)
-            .px(metrics::CHROME_PADDING_INLINE)
+            .h(metrics::content_header())
+            .px(metrics::chrome_padding_inline())
             .border_b_1()
             .border_color(colors.divider)
             .justify_between()
@@ -222,13 +223,13 @@ impl Render for ReferencesView {
                     .id(SharedString::from(format!("references-file-{group_index}")))
                     .flex()
                     .items_center()
-                    .gap(metrics::CHROME_GAP_TIGHT)
-                    .h(metrics::TAB)
+                    .gap(metrics::chrome_gap_tight())
+                    .h(metrics::tab())
                     .max_w_full()
                     .min_w_0()
                     .px(px(8.))
-                    .rounded(metrics::RADIUS_MD)
-                    .text_size(typography::TEXT_CHROME)
+                    .rounded(metrics::radius_md())
+                    .text_size(typography::text_chrome())
                     .font_weight(typography::MEDIUM)
                     .text_color(colors.muted_foreground)
                     .hover(move |style| style.bg(hover_bg).text_color(hover_text))
@@ -236,7 +237,7 @@ impl Render for ReferencesView {
                         div()
                             .flex()
                             .items_center()
-                            .gap(metrics::CHROME_GAP)
+                            .gap(metrics::chrome_gap())
                             .min_w_0()
                             .child(multibuffer::file_icon(&name, multibuffer::Tone::Subtle, cx))
                             .child(div().min_w_0().truncate().child(name)),
@@ -253,11 +254,11 @@ impl Render for ReferencesView {
                         .flex()
                         .items_center()
                         .justify_between()
-                        .gap(metrics::CHROME_GAP_TIGHT)
+                        .gap(metrics::chrome_gap_tight())
                         .min_w_0()
                         .bg(colors.background)
                         .child(trigger)
-                        .child(div().flex_none().pr(px(8.)).text_size(typography::TEXT_SM).text_color(colors.foreground).child(group.items.len().to_string())),
+                        .child(div().flex_none().pr(px(8.)).text_size(typography::text_sm()).text_color(colors.foreground).child(group.items.len().to_string())),
                 );
                 if !expanded {
                     continue;

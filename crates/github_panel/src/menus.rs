@@ -1,6 +1,7 @@
 //! Dropdown and context menus for the panel and the resource views.
 
-use gpui::{Anchor, ClickEvent, Context, Pixels, Point, SharedString, Window, point, px};
+use ui::scale::px;
+use gpui::{Anchor, ClickEvent, Context, Pixels, Point, SharedString, Window, point,};
 use ui::{MenuEntry, MenuItem, OpenMenu};
 
 pub trait MenuHost: Sized + 'static {

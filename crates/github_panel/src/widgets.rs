@@ -1,9 +1,10 @@
 //! Small pieces the GitHub views share: badges, label chips, status icons, list rows, hover
 //! previews and the resource page layout (`src/ui/resource.tsx`, `github-chips.tsx`).
 
+use ui::scale::px;
 use gpui::{
     AnyElement, AnyView, App, Context, Div, ElementId, Hsla, IntoElement, ParentElement, Render, SharedString,
-    Stateful, Styled, Window, div, prelude::*, px, relative,
+    Stateful, Styled, Window, div, prelude::*, relative,
 };
 use theme::{ActiveTheme, ThemeColors};
 use ui::{Avatar, Icon, IconName, IconSize, metrics, typography};
@@ -43,7 +44,7 @@ pub fn badge(label: impl Into<SharedString>, tone: Tone, colors: &ThemeColors) -
         .px(px(6.))
         .rounded_full()
         .bg(tone_soft(tone, colors))
-        .text_size(typography::TEXT_CAPTION)
+        .text_size(typography::text_caption())
         .font_weight(typography::MEDIUM)
         .text_color(fg)
         .whitespace_nowrap()
@@ -64,7 +65,7 @@ pub fn label_chip(name: &str, color: &str, colors: &ThemeColors) -> Div {
         .px(px(6.))
         .rounded_full()
         .bg(tint.opacity(0.16))
-        .text_size(typography::TEXT_CAPTION)
+        .text_size(typography::text_caption())
         .font_weight(typography::MEDIUM)
         .text_color(colors.foreground)
         .whitespace_nowrap()
@@ -92,7 +93,7 @@ pub fn avatar(login: &str, size: f32) -> Avatar {
 }
 
 pub fn caption(text: impl Into<SharedString>, colors: &ThemeColors) -> Div {
-    div().text_size(typography::TEXT_CAPTION).text_color(colors.subtle_foreground).child(text.into())
+    div().text_size(typography::text_caption()).text_color(colors.subtle_foreground).child(text.into())
 }
 
 /// One sidebar row: leading avatar or icon, title, a dimmed secondary text, then meta that gives
@@ -123,10 +124,10 @@ impl Row {
             .flex()
             .items_center()
             .gap(px(8.))
-            .h(metrics::LIST_ROW)
+            .h(metrics::list_row())
             .px(px(8.))
-            .rounded(metrics::RADIUS_MD)
-            .text_size(typography::TEXT_SM)
+            .rounded(metrics::radius_md())
+            .text_size(typography::text_sm())
             .line_height(relative(typography::LEADING_ROW))
             .text_color(if self.selected { colors.foreground } else { colors.muted_foreground })
             .when(self.selected, |this| this.bg(colors.selected))
@@ -145,7 +146,7 @@ impl Row {
                     .flex_1()
                     .min_w(px(24.))
                     .truncate()
-                    .text_size(typography::TEXT_CAPTION)
+                    .text_size(typography::text_caption())
                     .text_color(colors.subtle_foreground)
                     .children(self.secondary),
             )
@@ -154,7 +155,7 @@ impl Row {
                     .flex()
                     .flex_none()
                     .items_center()
-                    .text_size(typography::TEXT_CAPTION)
+                    .text_size(typography::text_caption())
                     .text_color(colors.subtle_foreground)
                     .when(has_action, |this| this.group_hover("github-row", |style| style.invisible()))
                     .child(meta)
@@ -184,7 +185,7 @@ pub fn list_message(title: impl Into<SharedString>, hint: Option<SharedString>, 
         .px(px(16.))
         .py(px(24.))
         .text_center()
-        .text_size(typography::TEXT_SM)
+        .text_size(typography::text_sm())
         .child(div().text_color(colors.muted_foreground).child(title.into()))
         .children(hint.map(|hint| div().text_color(colors.subtle_foreground).child(hint)))
         .children(action.map(|action| div().mt(px(6.)).child(action)))
@@ -229,11 +230,11 @@ impl Render for Preview {
                 .flex()
                 .flex_col()
                 .w(px(320.))
-                .rounded(metrics::RADIUS_LG)
+                .rounded(metrics::radius_lg())
                 .bg(colors.overlay)
                 .shadow(theme.shadows.popover.clone())
                 .font_family(typography::UI_FONT)
-                .text_size(typography::TEXT_SM)
+                .text_size(typography::text_sm())
                 .child(
                     div()
                         .flex()
@@ -249,7 +250,7 @@ impl Render for Preview {
                                 .flex_1()
                                 .min_w_0()
                                 .gap(px(2.))
-                                .child(div().text_size(typography::TEXT_BASE).font_weight(typography::MEDIUM).text_color(colors.foreground).line_clamp(2).child(self.title.clone()))
+                                .child(div().text_size(typography::text_base()).font_weight(typography::MEDIUM).text_color(colors.foreground).line_clamp(2).child(self.title.clone()))
                                 .child(div().truncate().text_color(colors.subtle_foreground).child(self.subtitle.clone())),
                         ),
                 )
@@ -274,7 +275,7 @@ impl Render for Preview {
                             .flex()
                             .gap(px(12.))
                             .when_some(action, |this, action| {
-                                this.mx(px(-4.)).px(px(4.)).rounded(metrics::RADIUS).hover(move |style| style.bg(hover)).on_click(move |_, window, cx| action(window, cx))
+                                this.mx(px(-4.)).px(px(4.)).rounded(metrics::radius()).hover(move |style| style.bg(hover)).on_click(move |_, window, cx| action(window, cx))
                             })
                             .child(div().w(px(76.)).flex_none().text_color(colors.subtle_foreground).child(label.clone()))
                             .child(
@@ -335,7 +336,7 @@ impl Summary {
                                 div()
                                     .flex()
                                     .min_w_0()
-                                    .text_size(typography::TEXT_LG)
+                                    .text_size(typography::text_lg())
                                     .font_weight(typography::SEMIBOLD)
                                     .text_color(colors.foreground)
                                     .child(self.title),
@@ -343,7 +344,7 @@ impl Summary {
                             .child(div().flex().flex_none().items_center().gap(px(6.)).children(self.badges)),
                     )
                     .children(self.description.map(|description| {
-                        div().mt(px(4.)).truncate().text_size(typography::TEXT_SM).text_color(colors.muted_foreground).child(description)
+                        div().mt(px(4.)).truncate().text_size(typography::text_sm()).text_color(colors.muted_foreground).child(description)
                     }))
                     .when(!self.meta.is_empty(), |this| {
                         this.child(
@@ -354,7 +355,7 @@ impl Summary {
                                 .items_center()
                                 .gap_x(px(12.))
                                 .gap_y(px(4.))
-                                .text_size(typography::TEXT_SM)
+                                .text_size(typography::text_sm())
                                 .text_color(colors.subtle_foreground)
                                 .children(self.meta),
                         )
@@ -391,7 +392,7 @@ pub fn meta_chip(id: impl Into<ElementId>, icon: Option<IconName>, text: impl In
         .gap(px(4.))
         .max_w(px(280.))
         .whitespace_nowrap()
-        .when(mono, |this| this.font_family(typography::MONO_FONT).text_size(typography::TEXT_CAPTION))
+        .when(mono, |this| this.font_family(typography::MONO_FONT).text_size(typography::text_caption()))
         .children(icon.map(|icon| Icon::new(icon).size(IconSize::XSmall).color(colors.subtle_foreground)))
         .child(div().min_w_0().truncate().child(text.into()))
         .when_some(url, |this, url| this.hover(move |style| style.text_color(hover)).on_click(move |_, _, cx| crate::links::open(cx, &url)))
@@ -427,10 +428,10 @@ pub fn section(title: impl Into<SharedString>, action: Option<AnyElement>, body:
                 .items_center()
                 .justify_between()
                 .gap(px(8.))
-                .child(div().text_size(typography::TEXT_SM).font_weight(typography::MEDIUM).text_color(colors.muted_foreground).child(title.into()))
+                .child(div().text_size(typography::text_sm()).font_weight(typography::MEDIUM).text_color(colors.muted_foreground).child(title.into()))
                 .children(action),
         )
-        .child(div().min_w_0().text_size(typography::TEXT_SM).child(body))
+        .child(div().min_w_0().text_size(typography::text_sm()).child(body))
 }
 
 /// The ring on the timeline's line: an event icon or an avatar (`GitHubTimelineMarker`).
@@ -460,7 +461,7 @@ pub fn event_row(marker: impl IntoElement, words: Vec<AnyElement>, colors: &Them
             .min_h(px(24.))
             .items_center()
             .gap_x(px(6.))
-            .text_size(typography::TEXT_SM)
+            .text_size(typography::text_sm())
             .text_color(colors.subtle_foreground)
             .children(words),
     )
@@ -484,7 +485,7 @@ pub fn mono_numbers(additions: i64, deletions: i64, colors: &ThemeColors) -> Div
         .flex_none()
         .gap(px(4.))
         .font_family(typography::MONO_FONT)
-        .text_size(typography::TEXT_CAPTION)
+        .text_size(typography::text_caption())
         .child(div().text_color(colors.git_added).child(format!("+{additions}")))
         .child(div().text_color(colors.git_deleted).child(format!("−{deletions}")))
 }

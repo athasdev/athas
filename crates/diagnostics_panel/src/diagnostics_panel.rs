@@ -14,9 +14,10 @@ use std::{
     rc::Rc,
 };
 
+use ui::scale::px;
 use gpui::{
     Anchor, AnyElement, App, ClickEvent, ClipboardItem, Context, Entity, EventEmitter, FocusHandle, Focusable, IntoElement, ListAlignment, ListState, MouseButton,
-    MouseDownEvent, Pixels, Point, Render, SharedString, Task, Window, div, list, point, prelude::*, px,
+    MouseDownEvent, Pixels, Point, Render, SharedString, Task, Window, div, list, point, prelude::*,
 };
 use lsp_client::{Diagnostic, DiagnosticsStore, LspStore, Severity, lsp};
 use multibuffer::{Entry, Multibuffer, OpenHandler, Section, Tone};
@@ -768,8 +769,8 @@ impl DiagnosticsPanel {
                     // 1px less than the 8/6 padding for the keyboard ring's border.
                     .px(px(6.))
                     .py(px(4.))
-                    .rounded(metrics::RADIUS_MD)
-                    .text_size(typography::TEXT_SM)
+                    .rounded(metrics::radius_md())
+                    .text_size(typography::text_sm())
                     .border_1()
                     .border_color(if cursor { ring } else { gpui::transparent_black() })
                     .map(|this| ui::sidebar_row(this, selected, false, cx))
@@ -862,7 +863,7 @@ impl DiagnosticsPanel {
         if !self.multibuffer.sections().is_empty() {
             actions = actions.child(self.multibuffer.render_toggle(false, cx));
         }
-        pane_header(cx).h(metrics::CONTENT_HEADER).px(metrics::CHROME_PADDING_INLINE).border_b_1().border_color(cx.theme().colors.divider).child(search).child(actions)
+        pane_header(cx).h(metrics::content_header()).px(metrics::chrome_padding_inline()).border_b_1().border_color(cx.theme().colors.divider).child(search).child(actions)
     }
 }
 

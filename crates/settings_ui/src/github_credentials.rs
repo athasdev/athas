@@ -3,7 +3,8 @@
 //! CLI's token.
 
 use athas_github::{GitHubTokenStatus, TokenSourcePreference};
-use gpui::{AnyElement, Context, Entity, Subscription, Window, div, prelude::*, px};
+use ui::scale::px;
+use gpui::{AnyElement, Context, Entity, Subscription, Window, div, prelude::*,};
 use notifications::NotificationKind;
 use ui::{Badge, Button, ButtonTone, ButtonVariant, IconName, TextInput, TextInputEvent};
 

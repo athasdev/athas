@@ -1,7 +1,8 @@
-use gpui::{AnyElement, Anchor, App, IntoElement, Pixels, Point, RenderOnce, SharedString, Window, anchored, deferred, div, prelude::*, px};
+use crate::scale::px;
+use gpui::{AnyElement, Anchor, App, IntoElement, Pixels, Point, RenderOnce, SharedString, Window, anchored, deferred, div, prelude::*,};
 use theme::ActiveTheme;
 
-use crate::{MenuSize, OVERLAY_MAX_WIDTH, metrics, typography};
+use crate::{MenuSize, overlay_max_width, metrics, typography};
 
 /// A floating panel of content (`ui/popover.tsx`): the overlay plane with the popover ring.
 #[derive(IntoElement)]
@@ -49,15 +50,15 @@ impl RenderOnce for Popover {
             .occlude()
             .flex()
             .flex_col()
-            .max_w(OVERLAY_MAX_WIDTH)
+            .max_w(overlay_max_width())
             .when_some(self.size.width(), |this, width| this.w(width))
             .when(!self.list, |this| this.gap(px(8.)).p(px(8.)))
             .when(self.list, |this| this.overflow_hidden())
-            .rounded(metrics::RADIUS_LG)
+            .rounded(metrics::radius_lg())
             .bg(theme.colors.overlay)
             .shadow(theme.shadows.popover.clone())
             .font_family(typography::UI_FONT)
-            .text_size(typography::TEXT_CHROME)
+            .text_size(typography::text_chrome())
             .text_color(theme.colors.foreground)
             .children(self.children)
     }
@@ -88,7 +89,7 @@ impl RenderOnce for PopoverHeader {
             .flex()
             .flex_col()
             .gap(px(2.))
-            .text_size(typography::TEXT_CHROME)
+            .text_size(typography::text_chrome())
             .child(div().font_weight(typography::MEDIUM).text_color(colors.foreground).child(self.title))
             .children(self.description.map(|description| div().text_color(colors.muted_foreground).child(description)))
     }

@@ -4,7 +4,8 @@
 use std::path::PathBuf;
 
 use editor::{Editor, LspEvent};
-use gpui::{AnyElement, Context, Entity, Focusable as _, IntoElement, Render, SharedString, Subscription, Task, Window, div, prelude::*, px};
+use ui::scale::px;
+use gpui::{AnyElement, Context, Entity, Focusable as _, IntoElement, Render, SharedString, Subscription, Task, Window, div, prelude::*,};
 use theme::ActiveTheme;
 use ui::{Icon, IconName, IconSize, PathBreadcrumb, typography};
 
@@ -141,7 +142,7 @@ impl Render for Breadcrumbs {
             .px(px(8.))
             .min_w_0()
             .overflow_hidden()
-            .text_size(typography::TEXT_SM)
+            .text_size(typography::text_sm())
             .child(PathBreadcrumb::from_path("editor-breadcrumb-path", &path))
             .children(symbols)
     }

@@ -4,10 +4,11 @@
 
 use std::{ops::Range, path::PathBuf, rc::Rc, sync::Arc};
 
+use ui::scale::px;
 use gpui::{
     Anchor, AnyElement, App, ClickEvent, Context, ElementId, Entity, EventEmitter, FocusHandle, Focusable, HighlightStyle,
     Hsla, KeyBinding, ListOffset, MouseButton, Pixels, Point, Render, SharedString, StyledText, Subscription, Window,
-    actions, div, img, list, point, prelude::*, px, relative,
+    actions, div, img, list, point, prelude::*, relative,
 };
 use multibuffer::{Entry, Header, Multibuffer, Section, Tone};
 use regex::{Regex, RegexBuilder};
@@ -28,8 +29,8 @@ use crate::{
 actions!(git_diff, [NextHunk, PreviousHunk, ToggleLayout, Reload, Find, FindNext, FindPrevious, CopySelection, SelectAllLines]);
 
 const KEY_CONTEXT: &str = "GitDiffView";
-const LINE_HEIGHT: Pixels = px(20.);
-const NUMBER_WIDTH: Pixels = px(44.);
+fn line_height() -> Pixels { px(20.) }
+fn number_width() -> Pixels { px(44.) }
 
 pub(crate) fn init(cx: &mut App) {
     ui::bind_keys_once(cx, "git_diff", bind_keys);
@@ -776,7 +777,7 @@ impl DiffView {
             actions.push(
                 div()
                     .px(px(4.))
-                    .text_size(typography::TEXT_CAPTION)
+                    .text_size(typography::text_caption())
                     .text_color(colors.subtle_foreground)
                     .child(match position {
                         Some(index) => format!("{} of {}", index + 1, model_plural(hunk_count, "hunk")),
@@ -1056,14 +1057,14 @@ impl DiffView {
             .gap(px(8.))
             .bg(if current { colors.selected } else { colors.surface })
             .font_family(typography::MONO_FONT)
-            .text_size(typography::TEXT_SM)
+            .text_size(typography::text_sm())
             .text_color(colors.subtle_foreground)
             .hover(move |style| style.bg(accent))
             .child(
                 div()
                     .flex()
                     .flex_none()
-                    .w(NUMBER_WIDTH)
+                    .w(number_width())
                     .justify_center()
                     .child(Icon::new(if collapsed { IconName::ChevronRight } else { IconName::ChevronDown }).size(IconSize::XSmall).color(colors.subtle_foreground)),
             )
@@ -1072,7 +1073,7 @@ impl DiffView {
                     div()
                         .flex_none()
                         .px(px(6.))
-                        .rounded(ui::metrics::RADIUS_MD)
+                        .rounded(ui::metrics::radius_md())
                         .bg(colors.accent)
                         .text_color(colors.muted_foreground)
                         .child(format!("{} hidden", hunk.lines.len())),
@@ -1097,10 +1098,10 @@ impl DiffView {
             .w_full()
             .h(px(24.))
             .bg(colors.surface)
-            .text_size(typography::TEXT_CAPTION)
+            .text_size(typography::text_caption())
             .text_color(colors.subtle_foreground)
             .hover(move |style| style.bg(accent).text_color(hover))
-            .child(div().flex().flex_none().w(NUMBER_WIDTH).justify_center().child(Icon::new(IconName::ChevronExpandY).size(IconSize::XSmall).color(colors.subtle_foreground)))
+            .child(div().flex().flex_none().w(number_width()).justify_center().child(Icon::new(IconName::ChevronExpandY).size(IconSize::XSmall).color(colors.subtle_foreground)))
             .child(format!("{} unchanged {}", lines, if lines == 1 { "line" } else { "lines" }))
             .on_click(cx.listener(move |this, _, _, cx| {
                 this.toggle(|folds| {
@@ -1117,7 +1118,7 @@ impl DiffView {
         div()
             .id(id)
             .flex_none()
-            .w(NUMBER_WIDTH)
+            .w(number_width())
             .pr(px(8.))
             .text_right()
             .text_color(colors.subtle_foreground)
@@ -1205,10 +1206,10 @@ impl DiffView {
         div()
             .flex()
             .items_center()
-            .h(LINE_HEIGHT)
+            .h(line_height())
             .w_full()
             .font_family(typography::MONO_FONT)
-            .text_size(typography::TEXT_SM)
+            .text_size(typography::text_sm())
             .line_height(relative(1.5))
             .whitespace_nowrap()
             .text_color(colors.foreground)
@@ -1257,7 +1258,7 @@ impl DiffView {
                 .items_center()
                 .justify_center()
                 .h(px(56.))
-                .text_size(typography::TEXT_SM)
+                .text_size(typography::text_sm())
                 .text_color(colors.subtle_foreground)
                 .child(text.to_string())
                 .into_any_element()
@@ -1341,7 +1342,7 @@ impl DiffView {
                 div()
                     .min_w(px(40.))
                     .text_center()
-                    .text_size(typography::TEXT_CAPTION)
+                    .text_size(typography::text_caption())
                     .text_color(colors.subtle_foreground)
                     .child(format!("{}%", (zoom * 100.).round())),
             )
@@ -1400,7 +1401,7 @@ fn render_image_diff(path: &str, old: Option<&ImageSide>, new: Option<&ImageSide
                 .min_h(px(120.))
                 .items_center()
                 .justify_center()
-                .text_size(typography::TEXT_SM)
+                .text_size(typography::text_sm())
                 .text_color(colors.subtle_foreground)
                 .child(if side.is_none() { "None" } else { "Preview not available" })
                 .into_any_element(),
@@ -1414,7 +1415,7 @@ fn render_image_diff(path: &str, old: Option<&ImageSide>, new: Option<&ImageSide
             .flex_col()
             .flex_1()
             .min_w_0()
-            .rounded(ui::metrics::RADIUS_LG)
+            .rounded(ui::metrics::radius_lg())
             .border_1()
             .border_color(colors.divider)
             .overflow_hidden()
@@ -1427,7 +1428,7 @@ fn render_image_diff(path: &str, old: Option<&ImageSide>, new: Option<&ImageSide
                     .px(px(10.))
                     .border_b_1()
                     .border_color(colors.divider)
-                    .text_size(typography::TEXT_CAPTION)
+                    .text_size(typography::text_caption())
                     .child(div().font_weight(typography::MEDIUM).text_color(tone).child(label))
                     .children(detail.map(|detail| div().text_color(colors.subtle_foreground).child(detail))),
             )
@@ -1480,7 +1481,7 @@ impl Render for DiffView {
                 .px(px(12.))
                 .py(px(6.))
                 .bg(colors.destructive_soft)
-                .text_size(typography::TEXT_SM)
+                .text_size(typography::text_sm())
                 .text_color(colors.destructive)
                 .child(div().flex_1().min_w_0().child(error))
                 .child(Button::icon("diff-error-close", IconName::X).size(ButtonSize::XSmall).on_click(cx.listener(|this, _, _, cx| {
@@ -1565,12 +1566,12 @@ impl DiffView {
                 .h(px(32.))
                 .pl(px(8.))
                 .pr(px(4.))
-                .rounded(ui::metrics::RADIUS_LG)
+                .rounded(ui::metrics::radius_lg())
                 .bg(colors.overlay)
                 .border_1()
                 .border_color(colors.border)
                 .shadow(theme.shadows.popover.clone())
-                .text_size(typography::TEXT_SM)
+                .text_size(typography::text_sm())
                 .child(
                     div()
                         .flex_1()
@@ -1585,7 +1586,7 @@ impl DiffView {
                         }))
                         .child(find.input.clone()),
                 )
-                .children(label.map(|label| div().flex_none().px(px(4.)).text_size(typography::TEXT_CAPTION).text_color(if warn { colors.warning } else { colors.subtle_foreground }).child(label)))
+                .children(label.map(|label| div().flex_none().px(px(4.)).text_size(typography::text_caption()).text_color(if warn { colors.warning } else { colors.subtle_foreground }).child(label)))
                 .child(option("diff-find-case", IconName::CaseSensitive, "Match case", find.options.case_sensitive, |options| options.case_sensitive = !options.case_sensitive, cx))
                 .child(option("diff-find-word", IconName::Text, "Match whole word", find.options.whole_word, |options| options.whole_word = !options.whole_word, cx))
                 .child(option("diff-find-regex", IconName::BracketsCurly, "Use regular expression", find.options.regex, |options| options.regex = !options.regex, cx))

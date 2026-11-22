@@ -7,11 +7,12 @@
 
 use std::ops::Range;
 
+use ui::scale::px;
 use gpui::{
     App, Bounds, ClipboardItem, Context, CursorStyle, ElementId, ElementInputHandler, Entity, EntityInputHandler,
     EventEmitter, FocusHandle, Focusable, GlobalElementId, KeyDownEvent, LayoutId, MouseButton, MouseDownEvent,
     MouseMoveEvent, MouseUpEvent, PaintQuad, Pixels, Point, SharedString, Style, TextRun, UTF16Selection,
-    UnderlineStyle, Window, WrappedLine, div, fill, point, prelude::*, px, relative, size,
+    UnderlineStyle, Window, WrappedLine, div, fill, point, prelude::*, relative, size,
 };
 use theme::ActiveTheme;
 use ui::typography;
@@ -60,7 +61,7 @@ pub enum ChipTone {
     Neutral,
 }
 
-pub const LINE_HEIGHT: Pixels = px(20.);
+pub fn line_height() -> Pixels { px(20.) }
 const MAX_VISIBLE_LINES: usize = 12;
 
 pub struct Composer {
@@ -329,7 +330,7 @@ impl Composer {
     fn vertical_move(&mut self, rows: f32, select: bool, cx: &mut Context<Self>) {
         let cursor = self.cursor_offset();
         let Some(position) = self.position_for_offset(cursor) else { return };
-        let line_height = self.layout.as_ref().map_or(LINE_HEIGHT, |layout| layout.line_height);
+        let line_height = self.layout.as_ref().map_or(line_height(), |layout| layout.line_height);
         let goal_x = self.goal_x.unwrap_or(position.x);
         let target_y = position.y + line_height * rows + line_height / 2.;
         let bottom = self.layout.as_ref().map_or(px(0.), TextLayout::bottom);
@@ -539,13 +540,13 @@ impl Composer {
         if max == 0 {
             return;
         }
-        self.scroll_remainder -= event.delta.pixel_delta(LINE_HEIGHT).y;
-        let lines = (self.scroll_remainder / LINE_HEIGHT).trunc();
+        self.scroll_remainder -= event.delta.pixel_delta(line_height()).y;
+        let lines = (self.scroll_remainder / line_height()).trunc();
         if lines == 0. {
             cx.stop_propagation();
             return;
         }
-        self.scroll_remainder -= LINE_HEIGHT * lines;
+        self.scroll_remainder -= line_height() * lines;
         let scroll = (self.scroll_lines as isize + lines as isize).clamp(0, max as isize) as usize;
         if scroll == self.scroll_lines && self.manual_scroll.is_some() {
             return;
@@ -823,7 +824,7 @@ impl Element for ComposerText {
             });
             let lines = shape(&text, &runs, width, window);
             let visible = rows(&lines).clamp(1, MAX_VISIBLE_LINES);
-            size(width.unwrap_or(px(0.)), LINE_HEIGHT * visible as f32)
+            size(width.unwrap_or(px(0.)), line_height() * visible as f32)
         });
         (layout_id, ())
     }
@@ -852,18 +853,18 @@ impl Element for ComposerText {
             .into_iter()
             .map(|(start, wrapped)| {
                 let line = LaidOutLine { start, top, wrapped };
-                top += line.wrapped.size(LINE_HEIGHT).height.max(LINE_HEIGHT);
+                top += line.wrapped.size(line_height()).height.max(line_height());
                 line
             })
             .collect();
         let selected = composer.selected_range.clone();
         let cursor_offset = if empty { 0 } else { composer.cursor_offset() };
-        let mut layout = TextLayout { lines, bounds, line_height: LINE_HEIGHT };
+        let mut layout = TextLayout { lines, bounds, line_height: line_height() };
 
         // Keep the cursor's row in view when the text is taller than the box.
-        let visible_rows = (bounds.size.height / LINE_HEIGHT).floor().max(1.) as usize;
-        let cursor_row = layout.position_for_offset(cursor_offset).map_or(0, |position| (position.y / LINE_HEIGHT) as usize);
-        let total_rows = (top / LINE_HEIGHT).round().max(1.) as usize;
+        let visible_rows = (bounds.size.height / line_height()).floor().max(1.) as usize;
+        let cursor_row = layout.position_for_offset(cursor_offset).map_or(0, |position| (position.y / line_height()) as usize);
+        let total_rows = (top / line_height()).round().max(1.) as usize;
         let manual = composer.manual_scroll.as_ref().is_some_and(|(range, len)| *range == composer.selected_range && *len == composer.content.len());
         let scroll = if manual {
             composer.scroll_lines.min(total_rows.saturating_sub(visible_rows))
@@ -875,7 +876,7 @@ impl Element for ComposerText {
             composer.scroll_lines
         };
         for line in &mut layout.lines {
-            line.top -= LINE_HEIGHT * scroll as f32;
+            line.top -= line_height() * scroll as f32;
         }
 
         let origin = bounds.origin;
@@ -899,11 +900,11 @@ impl Element for ComposerText {
                         let right = if y == end.y { end.x } else { bounds.size.width };
                         if right > left {
                             quads.push(
-                                fill(Bounds::from_corners(origin + point(left - px(3.), y + px(1.)), origin + point(right + px(3.), y + LINE_HEIGHT - px(1.))), background)
+                                fill(Bounds::from_corners(origin + point(left - px(3.), y + px(1.)), origin + point(right + px(3.), y + line_height() - px(1.))), background)
                                     .corner_radii(px(4.)),
                             );
                         }
-                        y += LINE_HEIGHT;
+                        y += line_height();
                     }
                     quads
                 })
@@ -921,16 +922,16 @@ impl Element for ComposerText {
                 let right = if y == end.y { end.x } else { bounds.size.width };
                 if right > left || y != end.y {
                     selections.push(fill(
-                        Bounds::from_corners(origin + point(left, y), origin + point(right.max(left + px(4.)), y + LINE_HEIGHT)),
+                        Bounds::from_corners(origin + point(left, y), origin + point(right.max(left + px(4.)), y + line_height())),
                         colors.selection,
                     ));
                 }
-                y += LINE_HEIGHT;
+                y += line_height();
             }
         } else {
             let position = layout.position_for_offset(cursor_offset);
             if let Some(position) = position {
-                cursor = Some(fill(Bounds::new(origin + position + point(px(0.), px(2.)), size(px(1.5), LINE_HEIGHT - px(4.))), colors.cursor));
+                cursor = Some(fill(Bounds::new(origin + position + point(px(0.), px(2.)), size(px(1.5), line_height() - px(4.))), colors.cursor));
             }
         }
         self.composer.update(cx, |composer, _| {
@@ -966,7 +967,7 @@ impl Element for ComposerText {
             let layout = self.composer.update(cx, |composer, _| composer.layout.take());
             if let Some(layout) = &layout {
                 for line in &layout.lines {
-                    if line.top + LINE_HEIGHT < px(0.) || line.top > bounds.size.height {
+                    if line.top + line_height() < px(0.) || line.top > bounds.size.height {
                         continue;
                     }
                     let origin = bounds.origin + point(px(0.), line.top);
@@ -1000,8 +1001,8 @@ impl Render for Composer {
             .on_scroll(cx.listener(Self::on_scroll_wheel))
             // A `!command` is typed in the terminal's face (`font="mono"`).
             .font_family(if self.content.trim_start().starts_with('!') { typography::MONO_FONT } else { typography::UI_FONT })
-            .text_size(typography::TEXT_BASE)
-            .line_height(LINE_HEIGHT)
+            .text_size(typography::text_base())
+            .line_height(line_height())
             .text_color(colors.foreground)
             .child(ComposerText { composer: cx.entity() })
     }

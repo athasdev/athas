@@ -3,9 +3,10 @@
 
 use std::ops::Range;
 
+use ui::scale::px;
 use gpui::{
     AnyElement, App, FontStyle, FontWeight, HighlightStyle, InteractiveText, IntoElement, ParentElement, SharedString,
-    StrikethroughStyle, Styled, StyledText, UnderlineStyle, div, prelude::*, px, relative,
+    StrikethroughStyle, Styled, StyledText, UnderlineStyle, div, prelude::*, relative,
 };
 use pulldown_cmark::{BlockQuoteKind, CodeBlockKind, Event, HeadingLevel, Options, Parser, Tag, TagEnd};
 use theme::ActiveTheme;
@@ -472,7 +473,7 @@ pub fn render(blocks: &[Block], id: &str, cx: &App) -> AnyElement {
         .flex_col()
         .gap(px(10.))
         .min_w_0()
-        .text_size(typography::TEXT_BASE)
+        .text_size(typography::text_base())
         .line_height(relative(1.6))
         .text_color(cx.theme().colors.foreground)
         .children(blocks.iter().map(|block| render_block(block, id, &mut counter, cx)))
@@ -486,8 +487,8 @@ fn render_block(block: &Block, id: &str, counter: &mut usize, cx: &App) -> AnyEl
             let size = match level {
                 1 => px(20.),
                 2 => px(17.),
-                3 => typography::TEXT_LG,
-                _ => typography::TEXT_BASE,
+                3 => typography::text_lg(),
+                _ => typography::text_base(),
             };
             div()
                 .mt(px(if *level <= 2 { 6. } else { 2. }))
@@ -508,10 +509,10 @@ fn render_block(block: &Block, id: &str, counter: &mut usize, cx: &App) -> AnyEl
                 .overflow_x_scroll()
                 .px(px(12.))
                 .py(px(10.))
-                .rounded(metrics::RADIUS_LG)
+                .rounded(metrics::radius_lg())
                 .bg(colors.surface)
                 .font_family(typography::MONO_FONT)
-                .text_size(typography::TEXT_SM)
+                .text_size(typography::text_sm())
                 .line_height(relative(1.5))
                 .whitespace_nowrap()
                 .child(code.clone())
@@ -602,10 +603,10 @@ fn render_block(block: &Block, id: &str, counter: &mut usize, cx: &App) -> AnyEl
                 .flex_col()
                 .min_w_0()
                 .overflow_hidden()
-                .rounded(metrics::RADIUS_MD)
+                .rounded(metrics::radius_md())
                 .border_1()
                 .border_color(colors.divider)
-                .text_size(typography::TEXT_SM);
+                .text_size(typography::text_sm());
             if !header.is_empty() {
                 table = table.child(row(header, true, counter));
             }
@@ -622,11 +623,11 @@ fn render_block(block: &Block, id: &str, counter: &mut usize, cx: &App) -> AnyEl
                 gpui::img(src.clone())
                     .max_w_full()
                     .max_h(px(420.))
-                    .rounded(metrics::RADIUS_MD)
+                    .rounded(metrics::radius_md())
                     .with_fallback({
                         let alt = SharedString::from(if alt.is_empty() { "Image".to_string() } else { alt.clone() });
                         let muted = colors.subtle_foreground;
-                        move || div().text_size(typography::TEXT_SM).text_color(muted).child(alt.clone()).into_any_element()
+                        move || div().text_size(typography::text_sm()).text_color(muted).child(alt.clone()).into_any_element()
                     }),
             )
             .into_any_element(),

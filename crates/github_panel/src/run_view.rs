@@ -5,9 +5,10 @@ use std::{collections::HashMap, ops::Range, path::PathBuf, sync::Arc, time::Dura
 
 use crate::gh::{WorkflowRunDetails, WorkflowRunJob};
 use chrono::Utc;
+use ui::scale::px;
 use gpui::{
     Anchor, AnyElement, App, ClickEvent, ClipboardItem, Context, Entity, FocusHandle, Focusable, FontWeight, HighlightStyle, Hsla, IntoElement,
-    ListAlignment, ListHorizontalSizingBehavior, ListOffset, ListState, Render, ScrollStrategy, SharedString, StyledText, Subscription, Task, UniformListScrollHandle, Window, div, prelude::*, px,
+    ListAlignment, ListHorizontalSizingBehavior, ListOffset, ListState, Render, ScrollStrategy, SharedString, StyledText, Subscription, Task, UniformListScrollHandle, Window, div, prelude::*,
     list, relative, uniform_list,
 };
 use theme::{ActiveTheme, ThemeColors};
@@ -30,10 +31,10 @@ const ACTIVE_POLL_TICKS: usize = 15;
 
 /// The header's side padding: the job card's margin, padding and row padding add up to the same
 /// left edge, so the run's icon sits above its jobs' icons.
-const HEADER_X: gpui::Pixels = px(20.);
+fn header_x() -> gpui::Pixels { px(20.) }
 
 /// The log's line-number column.
-const LOG_GUTTER: gpui::Pixels = px(52.);
+fn log_gutter() -> gpui::Pixels { px(52.) }
 
 pub struct RunView {
     root: PathBuf,
@@ -617,7 +618,7 @@ impl RunView {
                     .flex()
                     .flex_col()
                     .gap(px(4.))
-                    .px(HEADER_X)
+                    .px(header_x())
                     .pt(px(12.))
                     .pb(px(10.))
                     .child(
@@ -632,7 +633,7 @@ impl RunView {
                                     .flex_shrink(1.)
                                     .min_w_0()
                                     .truncate()
-                                    .text_size(typography::TEXT_BASE)
+                                    .text_size(typography::text_base())
                                     .font_weight(typography::SEMIBOLD)
                                     .text_color(colors.foreground)
                                     .child(title),
@@ -650,7 +651,7 @@ impl RunView {
                             .pl(px(20.))
                             .gap_x(px(10.))
                             .gap_y(px(2.))
-                            .text_size(typography::TEXT_SM)
+                            .text_size(typography::text_sm())
                             .text_color(colors.subtle_foreground)
                             .children(meta),
                     ),
@@ -672,7 +673,7 @@ impl RunView {
             .overflow_y_scroll()
             .m(px(8.))
             .p(px(4.))
-            .rounded(metrics::RADIUS_LG)
+            .rounded(metrics::radius_lg())
             .bg(colors.surface);
         if details.jobs.is_empty() {
             return list.child(crate::widgets::list_message("No jobs reported for this run yet", None, None, colors)).scrollbar(window, cx).into_any_element();
@@ -691,8 +692,8 @@ impl RunView {
                     .gap(px(8.))
                     .h(px(30.))
                     .px(px(8.))
-                    .rounded(metrics::RADIUS_MD)
-                    .text_size(typography::TEXT_SM)
+                    .rounded(metrics::radius_md())
+                    .text_size(typography::text_sm())
                     .text_color(if selected { colors.foreground } else { colors.muted_foreground })
                     // The open job is only the heading: the step under it carries the selection.
                     .when(selected, |this| this.bg(if self.step.is_some() { colors.selected } else { colors.selected_emphasized }).font_weight(typography::MEDIUM))
@@ -702,7 +703,7 @@ impl RunView {
                     .child(
                         div()
                             .flex_none()
-                            .text_size(typography::TEXT_CAPTION)
+                            .text_size(typography::text_caption())
                             .text_color(if state.is_active { colors.primary } else { colors.subtle_foreground })
                             .child(duration.unwrap_or_else(|| state.label.clone())),
                     )
@@ -720,7 +721,7 @@ impl RunView {
             // The steps sit under their job, indented by the status icon's column.
             let mut steps = div().flex().flex_col().gap(px(1.)).py(px(2.)).pl(px(20.));
             if job.steps.is_empty() {
-                steps = steps.child(div().px(px(8.)).py(px(4.)).text_size(typography::TEXT_SM).text_color(colors.subtle_foreground).child("No steps reported yet"));
+                steps = steps.child(div().px(px(8.)).py(px(4.)).text_size(typography::text_sm()).text_color(colors.subtle_foreground).child("No steps reported yet"));
             }
             for (step_index, step) in job.steps.iter().enumerate() {
                 let state = model::run_state(step.status.as_deref(), step.conclusion.as_deref());
@@ -734,14 +735,14 @@ impl RunView {
                         .gap(px(8.))
                         .h(px(28.))
                         .px(px(8.))
-                        .rounded(metrics::RADIUS_MD)
-                        .text_size(typography::TEXT_SM)
+                        .rounded(metrics::radius_md())
+                        .text_size(typography::text_sm())
                         .text_color(if active { colors.foreground } else { colors.muted_foreground })
                         .when(active, |this| this.bg(colors.selected_emphasized))
                         .when(!active, |this| this.hover(move |style| style.bg(hover_bg).text_color(hover)))
                         .child(run_status_icon(&state, IconSize::XSmall, colors))
                         .child(div().flex_1().min_w_0().truncate().child(step.name.clone()))
-                        .children(duration.map(|duration| div().flex_none().text_size(typography::TEXT_CAPTION).text_color(colors.subtle_foreground).child(duration)))
+                        .children(duration.map(|duration| div().flex_none().text_size(typography::text_caption()).text_color(colors.subtle_foreground).child(duration)))
                         .when_some(job_id, |this, id| this.on_click(cx.listener(move |this, _, _, cx| this.select(id, Some(step_index), cx))))
                         .on_mouse_down(gpui::MouseButton::Right, {
                             let entries = job_menu_entries(job, Some(step.name.clone()));
@@ -770,7 +771,7 @@ impl RunView {
             .items_center()
             .gap(px(4.))
             .min_w_0()
-            .text_size(typography::TEXT_SM)
+            .text_size(typography::text_sm())
             .child(match job {
                 Some(job) => div()
                     .min_w_0()
@@ -814,9 +815,9 @@ impl RunView {
                                 .id("run-log-problems")
                                 .px(px(4.))
                                 .py(px(1.))
-                                .rounded(metrics::RADIUS)
+                                .rounded(metrics::radius())
                                 .whitespace_nowrap()
-                                .text_size(typography::TEXT_CAPTION)
+                                .text_size(typography::text_caption())
                                 .text_color(tone)
                                 .hover(|this| this.bg(colors.accent))
                                 .child(logs::problem_label(errors, warnings))
@@ -994,13 +995,13 @@ impl RunView {
                     .border_l_2()
                     .border_color(accent.unwrap_or_else(gpui::transparent_black))
                     .font_family(typography::MONO_FONT)
-                    .text_size(typography::TEXT_SM)
+                    .text_size(typography::text_sm())
                     .line_height(px(19.))
                     .when_some(bg, |this, bg| this.bg(bg))
                     .when(highlighted, |this| this.bg(colors.destructive.opacity(0.2)))
                     .child(
                         div()
-                            .w(LOG_GUTTER)
+                            .w(log_gutter())
                             .flex_none()
                             .pr(px(10.))
                             .text_right()
@@ -1060,10 +1061,10 @@ impl RunView {
                 .items_start()
                 .gap(px(8.))
                 .p(px(10.))
-                .rounded(metrics::RADIUS_LG)
+                .rounded(metrics::radius_lg())
                 .bg(colors.overlay)
                 .shadow(theme.shadows.popover.clone())
-                .text_size(typography::TEXT_SM)
+                .text_size(typography::text_sm())
                 .child(Icon::new(if tone == Tone::Error { IconName::WarningCircle } else { IconName::CheckCircle }).size(IconSize::Small).color(tone_color(tone, colors)))
                 .child(div().flex_1().min_w_0().text_color(colors.foreground).child(message))
                 .child(Button::icon("run-notice-close", IconName::X).size(ButtonSize::XSmall).on_click(cx.listener(|this, _, _, cx| {
@@ -1163,7 +1164,7 @@ impl Render for RunView {
         container
             .child(self.render_header(&details, &colors, cx))
             .when_some(self.error.clone(), |this, error| {
-                this.child(div().flex_none().px(HEADER_X).py(px(6.)).text_size(typography::TEXT_SM).text_color(colors.destructive).child(error))
+                this.child(div().flex_none().px(header_x()).py(px(6.)).text_size(typography::text_sm()).text_color(colors.destructive).child(error))
             })
             .child(div().flex().flex_1().min_h_0().child(self.render_jobs(&details, &colors, window, cx)).child(self.render_log(&colors, cx)))
             .children(self.render_notice(&colors, cx))

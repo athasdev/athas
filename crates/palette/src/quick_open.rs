@@ -11,7 +11,8 @@ use athas_fff_search::{FffGrepMatch, FffGrepOptions, FffSearch, FffSearchHit, Gr
 pub use web_index::set_file_lister;
 #[cfg(target_family = "wasm")]
 use web_index::{FffSearch, FffSearchHit};
-use gpui::{AnyElement, App, Context, Global, SharedString, Task, Window, div, prelude::*, px};
+use ui::scale::px;
+use gpui::{AnyElement, App, Context, Global, SharedString, Task, Window, div, prelude::*,};
 use lsp_client::{LspStore, WorkspaceSymbol, lsp::SymbolKind};
 use theme::ActiveTheme;
 use ui::{IconName, Kbd, typography};
@@ -804,7 +805,7 @@ impl PickerDelegate for QuickOpenDelegate {
                 .items_center()
                 .gap(px(12.))
                 .px(px(4.))
-                .text_size(typography::TEXT_CAPTION)
+                .text_size(typography::text_caption())
                 .text_color(subtle)
                 .child(hint(&["↑", "↓"], "Navigate"))
                 .child(hint(&["↵"], "Open"))

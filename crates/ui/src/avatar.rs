@@ -1,6 +1,7 @@
 use std::rc::Rc;
 
-use gpui::{App, Global, IntoElement, ParentElement, RenderOnce, SharedString, Styled, Window, div, img, prelude::FluentBuilder, px};
+use crate::scale::px;
+use gpui::{App, Global, IntoElement, ParentElement, RenderOnce, SharedString, Styled, Window, div, img, prelude::FluentBuilder,};
 use theme::ActiveTheme;
 
 use crate::typography;
@@ -8,6 +9,12 @@ use crate::typography;
 /// A person's GitHub picture, at the size avatars are drawn. One spelling for the whole app, so
 /// the same person is never fetched from two different URLs.
 pub fn github_avatar_url(login: &str) -> String {
+    // An app has no user page: `dependabot[bot]` is `github.com/apps/dependabot.png`, and asking
+    // for the user answers 404 (a failed asset load for every row it appears on).
+    if let Some(app) = login.strip_suffix("[bot]").filter(|app| !app.is_empty()) {
+        let app: String = app.chars().filter(|c| c.is_ascii_alphanumeric() || *c == '-' || *c == '_').collect();
+        return format!("https://github.com/apps/{app}.png?size=64");
+    }
     let login: String = login
         .bytes()
         .map(|byte| match byte {
@@ -179,7 +186,7 @@ impl RenderOnce for Avatar {
             .size(self.size)
             .rounded_full()
             .bg(colors.selected)
-            .text_size(typography::TEXT_CAPTION)
+            .text_size(typography::text_caption())
             .font_weight(typography::SEMIBOLD)
             .text_color(colors.foreground)
             .relative()
@@ -191,6 +198,13 @@ impl RenderOnce for Avatar {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn an_app_takes_the_apps_avatar() {
+        assert_eq!(super::github_avatar_url("dependabot[bot]"), "https://github.com/apps/dependabot.png?size=64");
+        assert_eq!(super::github_avatar_url("github-actions[bot]"), "https://github.com/apps/github-actions.png?size=64");
+        assert_eq!(super::github_avatar_url("mehmet"), "https://github.com/mehmet.png?size=64");
+    }
+
     use super::*;
 
     fn me() -> AccountIdentity {

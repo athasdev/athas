@@ -25,11 +25,12 @@ mod typed_confirm;
 use ui::WithScrollbar;
 use std::{cell::Cell, collections::HashMap, ops::Range, rc::Rc};
 
+use ui::scale::px;
 use gpui::{
     Anchor, AnyElement, App, Bounds, ClipboardItem, Context, DismissEvent, ElementId, Entity,
     EventEmitter, FocusHandle, Focusable, HighlightStyle, MouseButton, PathPromptOptions, Pixels,
     Point, ScrollHandle, SharedString, StyledText, Subscription, Window, anchored, canvas, deferred,
-    div, point, prelude::*, px, relative,
+    div, point, prelude::*, relative,
 };
 use notifications::{NotificationCategory, NotificationKind};
 use palette::Picker;
@@ -88,7 +89,7 @@ fn installed_icon_themes(cx: &App) -> Vec<(String, String)> {
 }
 
 /// The width of a searchable select's input trigger (an `<input>`'s default size at 12px).
-const SEARCHABLE_SELECT_WIDTH: Pixels = px(170.);
+fn searchable_select_width() -> Pixels { px(170.) }
 
 pub(crate) fn select_button<V: MenuOwner>(
     id: impl Into<ElementId>,
@@ -465,7 +466,7 @@ fn home_dir() -> std::path::PathBuf {
 const FONT_PREVIEW: &str = "The quick brown fox jumps over the lazy dog 0123456789 {}[]=>";
 
 /// The space a standalone Settings window leaves at its top for the traffic lights and dragging.
-const STANDALONE_TOP: gpui::Pixels = px(40.);
+fn standalone_top() -> gpui::Pixels { px(40.) }
 
 impl SettingsView {
     /// Opens on `page`, or on the page Settings was last left on.
@@ -903,10 +904,10 @@ impl SettingsView {
                             .flex()
                             .flex_col()
                             .gap(px(2.))
-                            .child(div().text_size(typography::TEXT_SM).text_color(colors.foreground).child(theme.name.clone()))
+                            .child(div().text_size(typography::text_sm()).text_color(colors.foreground).child(theme.name.clone()))
                             .child(
                                 div()
-                                    .text_size(typography::TEXT_CAPTION)
+                                    .text_size(typography::text_caption())
                                     .text_color(colors.muted_foreground)
                                     .child(if theme.appearance.is_dark() { "Dark" } else { "Light" }),
                             ),
@@ -1114,7 +1115,7 @@ impl SettingsView {
                 .px(px(8.))
                 .rounded_full()
                 .bg(cx.theme().colors.accent)
-                .text_size(typography::TEXT_CAPTION)
+                .text_size(typography::text_caption())
                 .text_color(cx.theme().colors.subtle_foreground)
                 .child("Coming with its feature")
                 .into_any_element(),
@@ -1140,7 +1141,7 @@ impl SettingsView {
                 let (options, on_select) = self.select_options(def, cx);
                 let label = options.iter().find(|(checked, ..)| *checked).map(|(_, label, _)| label.clone()).unwrap_or_else(|| value_text(&value));
                 let button = select_button(("setting-select", index), label, format!("setting-select:{key}"), options, on_select, !enabled, true, cx);
-                div().when(!self.stacked, |this| this.w(SEARCHABLE_SELECT_WIDTH)).when(self.stacked, |this| this.w_full()).child(button).into_any_element()
+                div().when(!self.stacked, |this| this.w(searchable_select_width())).when(self.stacked, |this| this.w_full()).child(button).into_any_element()
             }
             SettingKind::Select(options) => {
                 let current = value_text(&value);
@@ -1168,7 +1169,7 @@ impl SettingsView {
                 // A searchable select with an input trigger (`searchableTrigger="input"`): an
                 // input-sized field, the choice at its start and the chevron at its end.
                 let button = select_button(("setting-select", index), label, format!("setting-select:{key}"), options, on_select, !enabled, true, cx);
-                div().when(!self.stacked, |this| this.w(SEARCHABLE_SELECT_WIDTH)).when(self.stacked, |this| this.w_full()).child(button).into_any_element()
+                div().when(!self.stacked, |this| this.w(searchable_select_width())).when(self.stacked, |this| this.w_full()).child(button).into_any_element()
             }
             SettingKind::Font { monospace } => {
                 let current = value_text(&value);
@@ -1184,7 +1185,7 @@ impl SettingsView {
                         let position = event.position();
                         this.open_font_picker(key, monospace, point(position.x, position.y + px(10.)), window, cx);
                     }));
-                div().when(!self.stacked, |this| this.w(SEARCHABLE_SELECT_WIDTH)).when(self.stacked, |this| this.w_full()).child(button)
+                div().when(!self.stacked, |this| this.w(searchable_select_width())).when(self.stacked, |this| this.w_full()).child(button)
                     .into_any_element()
             }
             SettingKind::Number { min, max, step } => {
@@ -1217,7 +1218,7 @@ impl SettingsView {
                     .items_center()
                     .gap(px(4.))
                     .w(px(128.))
-                    .text_size(typography::TEXT_SM)
+                    .text_size(typography::text_sm())
                     .child(stepper("setting-decrement", IconName::Minus, current - step, enabled && current > min))
                     .child({
                         // The number itself is a field: click it and type.
@@ -1351,7 +1352,7 @@ impl SettingsView {
             .min_h(px(44.))
             .py(px(10.))
             .px(px(12.))
-            .when(flashing, |this| this.rounded(metrics::RADIUS_MD).bg(colors.primary_soft))
+            .when(flashing, |this| this.rounded(metrics::radius_md()).bg(colors.primary_soft))
             .when(!first, |this| {
                 this.child(div().absolute().top_0().left(px(12.)).right_0().h(px(1.)).bg(colors.divider))
             })
@@ -1375,7 +1376,7 @@ impl SettingsView {
                             .flex()
                             .items_center()
                             .gap(px(6.))
-                            .child(div().text_size(typography::TEXT_SM).text_color(colors.foreground).child(text(def.label.into())))
+                            .child(div().text_size(typography::text_sm()).text_color(colors.foreground).child(text(def.label.into())))
                             .when(def.key.is_some(), |this| {
                                 this.child(div().flex().items_center().justify_center().size(px(20.)).when(resettable, |this| {
                                     let key = def.key.unwrap_or_default();
@@ -1403,13 +1404,13 @@ impl SettingsView {
                         };
                         if def.tab == "appearance" && def.label == "Custom Themes" {
                             let url = format!("{}/themes", account::ServiceUrls::from_env().docs());
-                            return div().flex().text_size(typography::TEXT_SM).line_height(relative(1.375)).child(link("theme-format-link", "Theme format", url)).into_any_element();
+                            return div().flex().text_size(typography::text_sm()).line_height(relative(1.375)).child(link("theme-format-link", "Theme format", url)).into_any_element();
                         }
                         let learn_more = (def.tab == "advanced" && def.label == "Anonymous Usage Telemetry")
                             .then(|| link("telemetry-learn-more", "Learn more", account::ServiceUrls::from_env().telemetry_docs()));
                         div()
                             .when(learn_more.is_some(), |this| this.flex().flex_wrap().gap_x(px(4.)))
-                            .text_size(typography::TEXT_SM)
+                            .text_size(typography::text_sm())
                             .line_height(relative(1.375))
                             .text_color(colors.subtle_foreground)
                             .child(text(description))
@@ -1448,7 +1449,7 @@ impl SettingsView {
                 .relative()
                 .py(px(20.))
                 .text_center()
-                .text_size(typography::TEXT_SM)
+                .text_size(typography::text_sm())
                 .text_color(colors.muted_foreground)
                 .child(div().absolute().top_0().left(px(12.)).right_0().h(px(1.)).bg(colors.divider))
                 .child("No entries yet")
@@ -1486,17 +1487,17 @@ impl SettingsView {
                             .flex_col()
                             .flex_1()
                             .min_w_0()
-                            .child(div().truncate().text_size(typography::TEXT_SM).text_color(colors.foreground).child(entry.event_type.clone()))
+                            .child(div().truncate().text_size(typography::text_sm()).text_color(colors.foreground).child(entry.event_type.clone()))
                             .child(
                                 div()
                                     .truncate()
-                                    .text_size(typography::TEXT_SM)
+                                    .text_size(typography::text_sm())
                                     .text_color(colors.subtle_foreground)
                                     .child(entry.error.clone().unwrap_or_else(|| entry.summary.clone())),
                             ),
                     )
                     .child(Badge::new(status).tone(tone))
-                    .child(div().flex_none().text_size(typography::TEXT_SM).text_color(colors.subtle_foreground).child(time))
+                    .child(div().flex_none().text_size(typography::text_sm()).text_color(colors.subtle_foreground).child(time))
             }))
             .scrollbar_with(&self.telemetry_scroll)
             .into_any_element()
@@ -1526,9 +1527,9 @@ impl SettingsView {
                         .gap(px(8.))
                         .px(px(10.))
                         .py(px(8.))
-                        .rounded(metrics::RADIUS_MD)
+                        .rounded(metrics::radius_md())
                         .bg(colors.warning_soft)
-                        .text_size(typography::TEXT_SM)
+                        .text_size(typography::text_sm())
                         .text_color(colors.warning)
                         .child(Icon::new(IconName::WarningCircle).size(IconSize::Small).color(colors.warning))
                         .child(format!("{missing} command{} not covered by this preset.", if missing == 1 { "" } else { "s" })),
@@ -1598,7 +1599,7 @@ impl SettingsView {
                             .items_center()
                             .min_h(px(24.))
                             .px(px(12.))
-                            .text_size(typography::TEXT_SM)
+                            .text_size(typography::text_sm())
                             .font_weight(typography::MEDIUM)
                             // A destructive zone's title reads in the destructive colour (`tone="danger"`).
                             .text_color(if danger { colors.destructive } else { colors.muted_foreground })
@@ -1608,7 +1609,7 @@ impl SettingsView {
                         div()
                             .flex()
                             .flex_col()
-                            .rounded(metrics::RADIUS_LG)
+                            .rounded(metrics::radius_lg())
                             .bg(colors.background)
                             .shadow(shadow.clone())
                             .overflow_hidden()
@@ -1721,7 +1722,7 @@ impl Render for SettingsView {
                     div()
                         .px(px(8.))
                         .py(px(6.))
-                        .text_size(typography::TEXT_SM)
+                        .text_size(typography::text_sm())
                         .text_color(colors.muted_foreground)
                         .child("No matching settings")
                         .into_any_element(),
@@ -1749,7 +1750,7 @@ impl Render for SettingsView {
                             .px(px(6.))
                             .pt(px(if position == 0 { 2. } else { 10. }))
                             .pb(px(2.))
-                            .text_size(typography::TEXT_CAPTION)
+                            .text_size(typography::text_caption())
                             .text_color(colors.subtle_foreground)
                             .child(place)
                             .into_any_element(),
@@ -1855,7 +1856,7 @@ impl Render for SettingsView {
             .when(!self.standalone, |this| {
                 this.w((window.viewport_size().width - px(64.)).min(px(1152.)))
                     .h((window.viewport_size().height - px(64.)).min(px(768.)))
-                    .rounded(metrics::OVERLAY_RADIUS)
+                    .rounded(metrics::overlay_radius())
                     .shadow(theme.shadows.dialog.clone())
             })
             .overflow_hidden()
@@ -1872,7 +1873,7 @@ impl Render for SettingsView {
                     .p(px(8.))
                     // In its own window the sidebar runs to the top, under the traffic lights,
                     // on the window plane like the workbench's sidebar.
-                    .when(self.standalone, |this| this.pt(STANDALONE_TOP))
+                    .when(self.standalone, |this| this.pt(standalone_top()))
                     .when(self.standalone && !narrow, |this| this.bg(colors.window))
                     .gap(px(12.))
                     .child(
@@ -1886,7 +1887,7 @@ impl Render for SettingsView {
                                     .items_center()
                                     .h(px(28.))
                                     .px(px(6.))
-                                    .text_size(typography::TEXT_BASE)
+                                    .text_size(typography::text_base())
                                     .font_weight(typography::MEDIUM)
                                     .child("Settings"),
                             ))
@@ -1922,15 +1923,15 @@ impl Render for SettingsView {
                                 .flex()
                                 .flex_none()
                                 .items_center()
-                                .h(metrics::PANE_HEADER)
+                                .h(metrics::pane_header())
                                 .px(px(24.))
-                                .text_size(typography::TEXT_BASE)
+                                .text_size(typography::text_base())
                                 .font_weight(typography::MEDIUM)
                                 .child(title),
                         )
                     })
                     .when(importing.is_none() || self.standalone, |this| {
-                        this.pt(if self.standalone { STANDALONE_TOP } else if narrow { px(16.) } else { px(24.) })
+                        this.pt(if self.standalone { standalone_top() } else if narrow { px(16.) } else { px(24.) })
                     })
                     .children(page_toolbar.map(|toolbar| {
                         div().flex().flex_none().px(if narrow { px(12.) } else { px(24.) }).pb(px(16.)).child(toolbar)

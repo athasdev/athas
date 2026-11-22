@@ -4,9 +4,10 @@
 
 mod engine;
 
+use ui::scale::px;
 use gpui::{
     App, AppContext as _, ClipboardItem, Context, Entity, Focusable as _, IntoElement, KeyBinding, ParentElement as _, RenderOnce, Styled as _, Subscription, Window,
-    actions, div, prelude::FluentBuilder as _, px,
+    actions, div, prelude::FluentBuilder as _,
 };
 use theme::ActiveTheme;
 use ui::{InputAppearance, TextInput, TextInputEvent, typography};
@@ -215,7 +216,7 @@ impl Editor {
                 .border_color(colors.border)
                 .bg(colors.background)
                 .font_family(settings::get(cx).font_family.clone())
-                .text_size(typography::TEXT_SM)
+                .text_size(typography::text_sm())
                 .child(content),
         )
     }
@@ -341,7 +342,7 @@ impl RenderOnce for VimModeIndicator {
             .h(px(24.))
             .px(px(6.))
             .font_family(typography::UI_FONT)
-            .text_size(typography::TEXT_CAPTION)
+            .text_size(typography::text_caption())
             .text_color(colors.subtle_foreground)
             .child(mode.label())
             .when_some(recording, |this, name| this.child(div().text_color(colors.muted_foreground).child(format!("recording @{name}"))))

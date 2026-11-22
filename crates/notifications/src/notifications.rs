@@ -7,9 +7,10 @@ use std::rc::Rc;
 mod native;
 mod inbox;
 
-pub use inbox::{INBOX_WIDTH, InboxPanel};
+pub use inbox::{InboxPanel, inbox_width};
 
-use gpui::{AnyElement, App, ClipboardItem, Context, Global, SharedString, Window, div, prelude::*, px};
+use ui::scale::px;
+use gpui::{AnyElement, App, ClipboardItem, Context, Global, SharedString, Window, div, prelude::*,};
 use palette::{Picker, PickerDelegate, PaletteRow};
 use theme::ActiveTheme;
 use ui::{Button, ButtonSize, ButtonVariant, Icon, IconName, IconSize, WithScrollbar, typography};
@@ -454,7 +455,7 @@ pub fn render_toast(notification: &Notification, on_close: impl Fn(&mut Window, 
         .gap(px(6.))
         .w(px(356.))
         .p(px(16.))
-        .rounded(ui::metrics::RADIUS_XL)
+        .rounded(ui::metrics::radius_xl())
         .bg(colors.overlay)
         .shadow(theme.shadows.popover.clone())
         .font_family(typography::UI_FONT)
@@ -466,7 +467,7 @@ pub fn render_toast(notification: &Notification, on_close: impl Fn(&mut Window, 
                 .flex_1()
                 .min_w_0()
                 .pr(px(32.))
-                .text_size(typography::TEXT_SM)
+                .text_size(typography::text_sm())
                 .line_height(px(20.))
                 .child(div().text_color(colors.foreground).child(notification.message.clone()))
                 .children(notification.description.clone().map(|description| div().text_color(colors.muted_foreground).child(description)))
@@ -497,7 +498,7 @@ pub fn render_toast(notification: &Notification, on_close: impl Fn(&mut Window, 
                 .items_center()
                 .justify_center()
                 .size(px(18.))
-                .rounded(ui::metrics::RADIUS)
+                .rounded(ui::metrics::radius())
                 .invisible()
                 .group_hover(group, |style| style.visible())
                 .hover(|style| style.bg(colors.accent))
@@ -631,7 +632,7 @@ impl NotificationsDelegate {
             .gap(px(8.))
             .h(px(28.))
             .px(px(8.))
-            .text_size(typography::TEXT_SM)
+            .text_size(typography::text_sm())
             .text_color(colors.subtle_foreground)
             .child(div().flex_1().min_w_0().child(category_label(category)))
             .child(
@@ -639,7 +640,7 @@ impl NotificationsDelegate {
                     .px(px(6.))
                     .rounded_full()
                     .bg(colors.accent)
-                    .text_size(typography::TEXT_CAPTION)
+                    .text_size(typography::text_caption())
                     .text_color(colors.muted_foreground)
                     .child(count.to_string()),
             )
@@ -672,11 +673,11 @@ impl NotificationsDelegate {
                             .flex_col()
                             .flex_1()
                             .min_w_0()
-                            .child(div().truncate().text_size(typography::TEXT_SM).font_weight(typography::MEDIUM).child(item.message.clone()))
+                            .child(div().truncate().text_size(typography::text_sm()).font_weight(typography::MEDIUM).child(item.message.clone()))
                             .child(
                                 div()
                                     .mt(px(2.))
-                                    .text_size(typography::TEXT_SM)
+                                    .text_size(typography::text_sm())
                                     .text_color(colors.subtle_foreground)
                                     .child(format!("{} · {}", category_label(item.category), relative_time(item.created_at, now_ms()))),
                             ),
@@ -688,9 +689,9 @@ impl NotificationsDelegate {
                     .max_h(px(160.))
                     .overflow_y_scroll()
                     .p(px(8.))
-                    .rounded(ui::metrics::RADIUS_LG)
+                    .rounded(ui::metrics::radius_lg())
                     .bg(colors.surface)
-                    .text_size(typography::TEXT_SM)
+                    .text_size(typography::text_sm())
                     .text_color(colors.muted_foreground)
                     .child(description)
                     .scrollbar(window, cx)

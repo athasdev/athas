@@ -21,9 +21,10 @@ use std::{
 
 use ai_mcp::{McpNameValue, McpServerSecrets, McpServerSetting, McpTransportKind};
 use ai_providers::{Keychain, RemoteModel, SecretStore, catalog, secrets};
+use ui::scale::px;
 use gpui::{
     AnyElement, App, AppContext as _, ClickEvent, Context, Entity, FocusHandle, Focusable, IntoElement, ParentElement, Render, SharedString,
-    Styled, Subscription, Task, Window, div, prelude::*, px,
+    Styled, Subscription, Task, Window, div, prelude::*,
 };
 use theme::ActiveTheme;
 use ui::{
@@ -906,8 +907,8 @@ fn row(label: impl Into<SharedString>, description: Option<SharedString>, contro
                 .flex_1()
                 .min_w_0()
                 .gap(px(2.))
-                .child(div().text_size(typography::TEXT_SM).text_color(colors.foreground).child(label.into()))
-                .children(description.map(|description| div().text_size(typography::TEXT_CAPTION).text_color(colors.subtle_foreground).child(description))),
+                .child(div().text_size(typography::text_sm()).text_color(colors.foreground).child(label.into()))
+                .children(description.map(|description| div().text_size(typography::text_caption()).text_color(colors.subtle_foreground).child(description))),
         )
         .child(div().flex().flex_none().items_center().gap(px(6.)).child(control))
         .into_any_element()
@@ -919,13 +920,13 @@ fn section(title: &'static str, rows: Vec<AnyElement>, cx: &App) -> AnyElement {
         .flex()
         .flex_col()
         .gap(px(8.))
-        .child(div().px(px(12.)).text_size(typography::TEXT_SM).font_weight(typography::MEDIUM).text_color(colors.muted_foreground).child(title))
-        .child(div().flex().flex_col().rounded(metrics::ISLAND_RADIUS).bg(colors.raised).shadow(cx.theme().shadows.raised.clone()).overflow_hidden().children(rows))
+        .child(div().px(px(12.)).text_size(typography::text_sm()).font_weight(typography::MEDIUM).text_color(colors.muted_foreground).child(title))
+        .child(div().flex().flex_col().rounded(metrics::island_radius()).bg(colors.raised).shadow(cx.theme().shadows.raised.clone()).overflow_hidden().children(rows))
         .into_any_element()
 }
 
 fn caption(text: impl Into<SharedString>, cx: &App) -> gpui::Div {
-    div().text_size(typography::TEXT_CAPTION).text_color(cx.theme().colors.subtle_foreground).child(text.into())
+    div().text_size(typography::text_caption()).text_color(cx.theme().colors.subtle_foreground).child(text.into())
 }
 
 impl AiSettingsView {
@@ -1052,7 +1053,7 @@ impl AiSettingsView {
             .flex()
             .items_center()
             .gap(px(8.))
-            .children(balance.map(|balance| div().text_size(typography::TEXT_SM).text_color(cx.theme().colors.foreground).child(balance)))
+            .children(balance.map(|balance| div().text_size(typography::text_sm()).text_color(cx.theme().colors.foreground).child(balance)))
             .child(Button::new("athas-add-credit", "Add Credit").variant(ButtonVariant::Outline).size(ButtonSize::Small).on_click(move |_, _, cx| cx.open_url(&billing)));
         let rate = crate::hosted_usage::usage_rate(credits.as_ref().and_then(|credits| credits.usage_markup));
         rows.push(row("Balance", Some(format!("Used after included credit, at {rate}").into()), balance_control, false, cx));
@@ -1354,14 +1355,14 @@ impl AiSettingsView {
                                 .flex()
                                 .flex_col()
                                 .gap(px(2.))
-                                .child(div().text_size(typography::TEXT_SM).child("User rules"))
+                                .child(div().text_size(typography::text_sm()).child("User rules"))
                                 .child(caption("Instructions for Athas's built-in agent across projects. External agents use their own configuration.", cx)),
                         )
                         .child(Button::new("rules-save", "Save").variant(if rules_dirty { ButtonVariant::Accent } else { ButtonVariant::Default }).size(ButtonSize::Small).disabled(!rules_dirty).on_click(
                             cx.listener(|this, _: &ClickEvent, _, cx| this.save_rules(cx)),
                         )),
                 )
-                .child(div().min_h(px(72.)).p(px(8.)).rounded(metrics::RADIUS_LG).border_1().border_color(colors.border).bg(colors.field).child(self.rules.clone()))
+                .child(div().min_h(px(72.)).p(px(8.)).rounded(metrics::radius_lg()).border_1().border_color(colors.border).bg(colors.field).child(self.rules.clone()))
                 .into_any_element(),
         ]
     }
@@ -1590,7 +1591,7 @@ impl AiSettingsView {
             .flex()
             .flex_col()
             .gap(px(8.))
-            .child(div().text_size(typography::TEXT_SM).font_weight(typography::MEDIUM).text_color(colors.foreground).child(label))
+            .child(div().text_size(typography::text_sm()).font_weight(typography::MEDIUM).text_color(colors.foreground).child(label))
             .when(!rows.is_empty(), |this| this.child(list))
             .child(div().flex().child(Button::new("mcp-value-add", add_label).variant(ButtonVariant::Ghost).leading_icon(IconName::Plus).on_click(cx.listener(move |this, _: &ClickEvent, window, cx| {
                 let placeholder = if header { "Authorization" } else { "API_KEY" };
@@ -1601,8 +1602,8 @@ impl AiSettingsView {
                     cx.notify();
                 }
             }))))
-            .child(div().text_size(typography::TEXT_SM).text_color(colors.muted_foreground).child("Values are stored securely, not in settings."))
-            .children(editor.errors.values.clone().map(|error| div().text_size(typography::TEXT_SM).text_color(colors.destructive).child(error)))
+            .child(div().text_size(typography::text_sm()).text_color(colors.muted_foreground).child("Values are stored securely, not in settings."))
+            .children(editor.errors.values.clone().map(|error| div().text_size(typography::text_sm()).text_color(colors.destructive).child(error)))
             .into_any_element()
     }
 
@@ -2557,8 +2558,8 @@ fn row_with_label(label: impl IntoElement, description: Option<SharedString>, co
                 .flex_1()
                 .min_w_0()
                 .gap(px(2.))
-                .child(div().text_size(typography::TEXT_SM).text_color(colors.foreground).child(label))
-                .children(description.map(|description| div().truncate().text_size(typography::TEXT_CAPTION).text_color(colors.subtle_foreground).child(description))),
+                .child(div().text_size(typography::text_sm()).text_color(colors.foreground).child(label))
+                .children(description.map(|description| div().truncate().text_size(typography::text_caption()).text_color(colors.subtle_foreground).child(description))),
         )
         .child(div().flex().flex_none().items_center().gap(px(6.)).child(control))
         .into_any_element()
@@ -2602,9 +2603,9 @@ impl Render for AiSettingsView {
                         .gap(px(6.))
                         .px(px(12.))
                         .py(px(8.))
-                        .rounded(metrics::RADIUS_LG)
+                        .rounded(metrics::radius_lg())
                         .bg(colors.destructive_soft)
-                        .text_size(typography::TEXT_SM)
+                        .text_size(typography::text_sm())
                         .child(Icon::new(IconName::WarningCircle).size(IconSize::XSmall).color(colors.destructive))
                         .child(notice),
                 )

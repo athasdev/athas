@@ -24,9 +24,10 @@ use std::sync::Arc;
 
 use ai_providers::{InlineEditor, SecretStore};
 use futures::StreamExt as _;
+use ui::scale::px;
 use gpui::{
     App, AppContext as _, ClickEvent, Context, Entity, EventEmitter, FocusHandle, Focusable, IntoElement, ParentElement, Render, Styled,
-    Subscription, Task, Window, div, prelude::*, px,
+    Subscription, Task, Window, div, prelude::*,
 };
 use theme::ActiveTheme;
 use ui::{Button, ButtonSize, ButtonVariant, Icon, IconName, IconSize, TextInput, TextInputEvent, metrics, typography};
@@ -366,12 +367,12 @@ impl InlineEditPrompt {
             .id("inline-edit-preview")
             .max_h(px(260.))
             .overflow_y_scroll()
-            .rounded(metrics::RADIUS_MD)
+            .rounded(metrics::radius_md())
             .border_1()
             .border_color(cx.theme().colors.border)
             .py(px(4.))
             .font_family(typography::MONO_FONT)
-            .text_size(typography::TEXT_CAPTION)
+            .text_size(typography::text_caption())
             .line_height(px(17.))
             .child(div().flex().flex_col().min_w_full().children(lines))
             .when(hidden > 0, |this| this.child(div().px(px(8.)).text_color(cx.theme().colors.subtle_foreground).child(format!("{hidden} more lines"))))
@@ -555,13 +556,13 @@ impl Render for InlineEditPrompt {
             .flex_col()
             .gap(px(8.))
             .p(px(8.))
-            .rounded(metrics::RADIUS_LG)
+            .rounded(metrics::radius_lg())
             .border_1()
             .border_color(colors.border)
             .bg(colors.overlay)
             .shadow(cx.theme().shadows.popover.clone())
             .font_family(typography::UI_FONT)
-            .text_size(typography::TEXT_SM)
+            .text_size(typography::text_sm())
             .text_color(colors.foreground)
             .child(self.input.clone())
             .children(preview)

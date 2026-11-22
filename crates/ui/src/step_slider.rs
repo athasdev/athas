@@ -1,7 +1,8 @@
 use crate::TooltipExt;
 use std::rc::Rc;
 
-use gpui::{App, ElementId, FocusHandle, IntoElement, KeyDownEvent, RenderOnce, SharedString, Window, div, prelude::*, px};
+use crate::scale::px;
+use gpui::{App, ElementId, FocusHandle, IntoElement, KeyDownEvent, RenderOnce, SharedString, Window, div, prelude::*,};
 use theme::ActiveTheme;
 
 use crate::{Tooltip, typography};
@@ -125,8 +126,8 @@ impl RenderOnce for StepSlider {
                 .items_center()
                 .h(px(20.))
                 .px(px(6.))
-                .rounded(crate::metrics::RADIUS)
-                .text_size(typography::TEXT_CAPTION)
+                .rounded(crate::metrics::radius())
+                .text_size(typography::text_caption())
                 .map(|this| {
                     if is_auto {
                         this.bg(colors.primary_soft).text_color(colors.primary)
@@ -206,7 +207,7 @@ impl RenderOnce for StepSlider {
                     .items_center()
                     .justify_between()
                     .gap(px(8.))
-                    .text_size(typography::TEXT_SM)
+                    .text_size(typography::text_sm())
                     .child(div().text_color(colors.foreground).child(self.label))
                     .children(shown_label.map(|label| div().truncate().text_color(colors.muted_foreground).child(label))),
             )

@@ -1,5 +1,6 @@
+use crate::scale::px;
 use gpui::{
-    App, Div, IntoElement, ParentElement, RenderOnce, SharedString, Styled, Window, div, px,
+    App, Div, IntoElement, ParentElement, RenderOnce, SharedString, Styled, Window, div,
 };
 use theme::ActiveTheme;
 
@@ -16,7 +17,7 @@ pub fn island(cx: &App) -> Div {
         .min_h_0()
         .min_w_0()
         .overflow_hidden()
-        .rounded(metrics::ISLAND_RADIUS)
+        .rounded(metrics::island_radius())
         .bg(theme.colors.background)
         .shadow(shadow)
 }
@@ -34,7 +35,7 @@ pub fn shell(cx: &App) -> Div {
         .min_h_0()
         .min_w_0()
         .overflow_hidden()
-        .rounded(metrics::ISLAND_RADIUS)
+        .rounded(metrics::island_radius())
         .border_1()
         .border_color(theme.colors.border)
         .bg(theme.colors.background)
@@ -54,16 +55,16 @@ pub fn pane_header(cx: &App) -> Div {
         .items_center()
         .w_full()
         .min_w_0()
-        .h(metrics::PANE_HEADER)
-        .gap(metrics::CHROME_GAP)
+        .h(metrics::pane_header())
+        .gap(metrics::chrome_gap())
         .px(px(8.))
-        .text_size(typography::TEXT_CHROME)
+        .text_size(typography::text_chrome())
         .text_color(cx.theme().colors.subtle_foreground)
 }
 
 /// The actions at the end of a pane header. Put maximize and close last.
 pub fn pane_actions() -> Div {
-    div().ml_auto().flex().flex_none().items_center().gap(metrics::CHROME_GAP_TIGHT)
+    div().ml_auto().flex().flex_none().items_center().gap(metrics::chrome_gap_tight())
 }
 
 /// A pane's icon and name, with an optional quiet reading such as a count after it.
@@ -98,7 +99,7 @@ impl RenderOnce for PaneTitle {
             .flex_1()
             .min_w_0()
             .items_center()
-            .gap(metrics::CHROME_GAP)
+            .gap(metrics::chrome_gap())
             .px(px(4.))
             .children(
                 self.icon

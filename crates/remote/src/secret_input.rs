@@ -1,6 +1,7 @@
 //! A password field: typed text shows as dots and never reaches the clipboard.
 
-use gpui::{App, ClipboardItem, Context, EventEmitter, FocusHandle, Focusable, KeyDownEvent, SharedString, Window, div, prelude::*, px};
+use ui::scale::px;
+use gpui::{App, ClipboardItem, Context, EventEmitter, FocusHandle, Focusable, KeyDownEvent, SharedString, Window, div, prelude::*,};
 use theme::ActiveTheme;
 use ui::typography;
 
@@ -76,13 +77,13 @@ impl Render for SecretInput {
             .on_click(cx.listener(|this, _, window, cx| window.focus(&this.focus_handle, cx)))
             .flex()
             .items_center()
-            .h(ui::metrics::LIST_ROW)
+            .h(ui::metrics::list_row())
             .px(px(12.))
             .rounded_full()
             .bg(theme.colors.raised)
             .shadow(theme.shadows.raised.clone())
             .when(focused, |this| this.border_1().border_color(theme.colors.focus_ring).px(px(10.)))
-            .text_size(typography::TEXT_SM)
+            .text_size(typography::text_sm())
             .child(if self.text.is_empty() {
                 div().text_color(theme.colors.subtle_foreground).child(self.placeholder.clone())
             } else {

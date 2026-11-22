@@ -3,9 +3,10 @@
 //! (`github-metadata-pickers.tsx`), and the confirmation a view floats over itself.
 
 use crate::gh::Label;
+use ui::scale::px;
 use gpui::{
     Anchor, AnyView, App, ClickEvent, Context, DismissEvent, Entity, EventEmitter, FocusHandle, Focusable, IntoElement, KeyDownEvent, Pixels, Point,
-    Render, SharedString, Subscription, Window, anchored, deferred, div, prelude::*, px,
+    Render, SharedString, Subscription, Window, anchored, deferred, div, prelude::*,
 };
 use theme::{ActiveTheme, ThemeColors};
 use ui::{AlertDialog, Button, ButtonSize, ButtonVariant, Icon, IconName, IconSize, InputAppearance, MenuEntry, OpenMenu, TextArea, TextAreaEvent, TextAreaVariant, TextInput, TextInputEvent, metrics, typography};
@@ -273,7 +274,7 @@ impl MarkdownEditor {
         for (index, definition) in slash.commands.iter().enumerate() {
             if definition.group != group {
                 group = definition.group;
-                rows.push(div().px(px(8.)).pt(px(6.)).pb(px(2.)).text_size(typography::TEXT_CAPTION).text_color(colors.subtle_foreground).child(group).into_any_element());
+                rows.push(div().px(px(8.)).pt(px(6.)).pb(px(2.)).text_size(typography::text_caption()).text_color(colors.subtle_foreground).child(group).into_any_element());
             }
             let selected = index == slash.selected;
             let command = definition.command;
@@ -285,7 +286,7 @@ impl MarkdownEditor {
                     .gap(px(8.))
                     .h(px(26.))
                     .px(px(8.))
-                    .rounded(metrics::RADIUS)
+                    .rounded(metrics::radius())
                     .when(selected, |this| this.bg(colors.selected))
                     .on_mouse_move(cx.listener(move |this, _, _, cx| {
                         if let Some(slash) = this.slash.as_mut().filter(|slash| slash.selected != index) {
@@ -310,10 +311,10 @@ impl MarkdownEditor {
                     .max_h(px(320.))
                     .overflow_y_scroll()
                     .p(px(4.))
-                    .rounded(metrics::RADIUS_LG)
+                    .rounded(metrics::radius_lg())
                     .bg(colors.overlay)
                     .shadow(theme.shadows.popover.clone())
-                    .text_size(typography::TEXT_SM)
+                    .text_size(typography::text_sm())
                     .text_color(colors.foreground)
                     .children(rows),
             ),
@@ -360,7 +361,7 @@ impl Render for MarkdownEditor {
             .px(px(12.))
             .pt(px(4.))
             .pb(px(10.))
-            .rounded(metrics::RADIUS_LG)
+            .rounded(metrics::radius_lg())
             .bg(colors.raised)
             .shadow(theme.shadows.raised.clone())
             .child(header)
@@ -375,7 +376,7 @@ pub fn composer_hint(action: &str, colors: &ThemeColors) -> impl IntoElement {
         .flex()
         .items_center()
         .gap(px(6.))
-        .text_size(typography::TEXT_SM)
+        .text_size(typography::text_sm())
         .text_color(colors.subtle_foreground)
         .child("Markdown supported")
         .child(ui::Kbd::new("⌘↩"))
@@ -422,7 +423,7 @@ pub fn composer(
                             .on_click(on_submit),
                     ),
                 )
-                .children(error.map(|error| div().text_size(typography::TEXT_SM).text_color(colors.destructive).child(error))),
+                .children(error.map(|error| div().text_size(typography::text_sm()).text_color(colors.destructive).child(error))),
         )
 }
 
@@ -528,7 +529,7 @@ impl Render for LabelPicker {
                     .max_h(px(280.))
                     .overflow_y_scroll()
                     .p(px(4.))
-                    .when(matching.is_empty(), |this| this.child(div().px(px(8.)).py(px(6.)).text_size(typography::TEXT_SM).text_color(colors.subtle_foreground).child(empty)))
+                    .when(matching.is_empty(), |this| this.child(div().px(px(8.)).py(px(6.)).text_size(typography::text_sm()).text_color(colors.subtle_foreground).child(empty)))
                     .children(matching.into_iter().enumerate().map(|(index, label)| {
                         let checked = self.selected.contains(&label.name);
                         let name = label.name.clone();
@@ -540,8 +541,8 @@ impl Render for LabelPicker {
                             .gap(px(8.))
                             .h(px(28.))
                             .px(px(8.))
-                            .rounded(metrics::RADIUS_MD)
-                            .text_size(typography::TEXT_SM)
+                            .rounded(metrics::radius_md())
+                            .text_size(typography::text_sm())
                             .text_color(colors.foreground)
                             .when(index == self.highlighted, |this| this.bg(colors.accent))
                             .hover(|style| style.bg(colors.accent))
@@ -617,7 +618,7 @@ impl Render for AssigneePicker {
                 ),
             )
             .child(if self.value.is_empty() {
-                div().px(px(4.)).text_size(typography::TEXT_SM).text_color(colors.subtle_foreground).child("Type one or more GitHub usernames, then press Enter.").into_any_element()
+                div().px(px(4.)).text_size(typography::text_sm()).text_color(colors.subtle_foreground).child("Type one or more GitHub usernames, then press Enter.").into_any_element()
             } else {
                 div()
                     .flex()
@@ -646,7 +647,7 @@ fn popover_frame<V: EventEmitter<DismissEvent>>(id: &'static str, focus_handle: 
         .flex()
         .flex_col()
         .w(px(280.))
-        .rounded(metrics::RADIUS_LG)
+        .rounded(metrics::radius_lg())
         .bg(theme.colors.overlay)
         .shadow(theme.shadows.popover.clone())
         .font_family(typography::UI_FONT)

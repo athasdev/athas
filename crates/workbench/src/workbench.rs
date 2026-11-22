@@ -55,10 +55,11 @@ use std::{cell::Cell, collections::HashMap, path::PathBuf, rc::Rc};
 
 use file_tree::{FileTree, FileTreeEvent};
 use git_panel::{GitPanel, GitPanelEvent};
+use ui::scale::px;
 use gpui::{
     Anchor, AnyView, App, Bounds, ClipboardItem, Context, DismissEvent, Entity, EventEmitter,
     FocusHandle, Focusable, MouseButton, MouseMoveEvent, PathPromptOptions, Pixels,
-    Point, SharedString, Subscription, Window, WindowAppearance, actions, div, point, prelude::*, px,
+    Point, SharedString, Subscription, Window, WindowAppearance, actions, div, point, prelude::*,
 };
 use terminal_view::{TerminalPanel, TerminalPanelEvent};
 use theme::{ActiveTheme, Appearance};
@@ -722,7 +723,7 @@ impl Workbench {
             centre_views: Default::default(),
             dirty_tabs: Default::default(),
             timed_toasts: Default::default(),
-            zoom_seen: (editor::zoom_level(cx), terminal_view::terminal_zoom(cx)),
+            zoom_seen: (ui::scale::zoom(), settings::get(cx).terminal_font_size as f32),
             zoom_badge: None,
             whats_new_unread: None,
             onboarding: None,
@@ -906,7 +907,7 @@ impl Workbench {
     }
 
     fn is_narrow(window: &Window) -> bool {
-        window.viewport_size().width < metrics::NARROW_WINDOW
+        window.viewport_size().width < metrics::narrow_window()
     }
 
     /// Creates the tool views the layout shows, for the project in front, and drops the ones of
@@ -1356,7 +1357,7 @@ impl Workbench {
         }
         // A 224px dropdown with a search field, opening beside the rail from the
         // button rather than wherever the pointer was.
-        let x = metrics::WORKBENCH_GAP + metrics::RAIL_CONTROL + px(6.);
+        let x = metrics::workbench_gap() + metrics::rail_control() + px(6.);
         let y = if position.y > px(0.) { position.y + px(12.) } else { window.viewport_size().height - px(48.) };
         self.open_menu = Some(
             OpenMenu::sized("run-actions", entries, ui::MenuSize::Default, point(x, y), Anchor::BottomLeft, window, cx, |this: &mut Self, _| this.open_menu = None)
@@ -1697,8 +1698,8 @@ impl Workbench {
             return;
         }
         match step {
-            Some(in_) => editor::zoom_editors(cx, in_),
-            None => editor::reset_editor_zoom(cx),
+            Some(in_) => ui::scale::zoom_by(in_, cx),
+            None => ui::scale::reset_zoom(cx),
         }
     }
 
@@ -1851,7 +1852,7 @@ impl Workbench {
                 .flex_none()
                 .h_full()
                 .w(px(self.state.layout.inbox_width.clamp(INBOX_MIN_WIDTH, INBOX_MAX_WIDTH)))
-                .pr(metrics::WORKBENCH_GAP)
+                .pr(metrics::workbench_gap())
                 .child(panel.clone())
                 .child(
                     div()
@@ -1860,7 +1861,7 @@ impl Workbench {
                         .top_0()
                         .bottom_0()
                         .right_0()
-                        .w(metrics::WORKBENCH_GAP)
+                        .w(metrics::workbench_gap())
                         .flex()
                         .justify_center()
                         .cursor_col_resize()
@@ -1876,7 +1877,7 @@ impl Workbench {
                         )
                         .on_click(cx.listener(|this, event: &gpui::ClickEvent, _, cx| {
                             if event.click_count() == 2 {
-                                this.update_state(cx, |state| state.layout.inbox_width = f32::from(notifications::INBOX_WIDTH));
+                                this.update_state(cx, |state| state.layout.inbox_width = f32::from(notifications::inbox_width()));
                             }
                         })),
                 ),
@@ -1897,13 +1898,13 @@ impl Workbench {
                 .child(
                     div()
                         .absolute()
-                        .top(metrics::WORKBENCH_GAP + metrics::PANE_HEADER)
-                        .bottom(metrics::WORKBENCH_GAP)
-                        .left(metrics::WORKBENCH_GAP + metrics::RAIL_CONTROL)
-                        .w(notifications::INBOX_WIDTH)
+                        .top(metrics::workbench_gap() + metrics::pane_header())
+                        .bottom(metrics::workbench_gap())
+                        .left(metrics::workbench_gap() + metrics::rail_control())
+                        .w(notifications::inbox_width())
                         .flex()
                         .flex_col()
-                        .rounded(metrics::ISLAND_RADIUS)
+                        .rounded(metrics::island_radius())
                         .shadow(cx.theme().shadows.popover.clone())
                         .occlude()
                         .child(panel.clone()),
@@ -1913,9 +1914,14 @@ impl Workbench {
 
     /// "Editor: 110%" at the top right for a moment after a zoom level changes.
     fn render_zoom_badge(&mut self, cx: &mut Context<Self>) -> Option<impl IntoElement> {
-        let levels = (editor::zoom_level(cx), terminal_view::terminal_zoom(cx));
+        let levels = (ui::scale::zoom(), settings::get(cx).terminal_font_size as f32);
         if levels != self.zoom_seen {
-            let (label, level) = if levels.0 != self.zoom_seen.0 { ("Editor", levels.0) } else { ("Terminal", levels.1) };
+            let (label, level) = if levels.0 != self.zoom_seen.0 {
+                ("Zoom", levels.0)
+            } else {
+                // The terminal's keys change its font size, not a zoom level: show the size.
+                ("Terminal", levels.1 / 100.)
+            };
             self.zoom_seen = levels;
             let hide = cx.spawn(async move |this, cx| {
                 cx.background_executor().timer(std::time::Duration::from_millis(1500)).await;
@@ -1937,10 +1943,10 @@ impl Workbench {
                     .right(px(16.))
                     .px(px(8.))
                     .py(px(4.))
-                    .rounded(metrics::RADIUS_MD)
+                    .rounded(metrics::radius_md())
                     .bg(theme.colors.overlay)
                     .shadow(theme.shadows.popover.clone())
-                    .text_size(typography::TEXT_SM)
+                    .text_size(typography::text_sm())
                     .text_color(theme.colors.foreground)
                     .child(text.clone()),
             )
@@ -2685,14 +2691,14 @@ impl Workbench {
         let viewport = window.viewport_size();
         match drag {
             Drag::Sidebar { start_x, start_width } => {
-                let max = f32::from(viewport.width - metrics::MIN_CENTRE_WIDTH - metrics::RAIL_CONTROL).max(200.);
+                let max = f32::from(viewport.width - metrics::min_centre_width() - metrics::rail_control()).max(200.);
                 let width = (start_width + f32::from(event.position.x - start_x))
-                    .clamp(f32::from(metrics::SIDEBAR_MIN_WIDTH), max);
+                    .clamp(f32::from(metrics::sidebar_min_width()), max);
                 self.state.layout.sidebar_width = width;
             }
             Drag::Inbox { start_x, start_width } => {
                 let sidebar = if self.state.layout.sidebar_visible { self.state.layout.sidebar_width } else { 0. };
-                let max = f32::from(viewport.width - metrics::MIN_CENTRE_WIDTH - metrics::RAIL_CONTROL - px(sidebar)).max(INBOX_MIN_WIDTH);
+                let max = f32::from(viewport.width - metrics::min_centre_width() - metrics::rail_control() - px(sidebar)).max(INBOX_MIN_WIDTH);
                 let width = (start_width + f32::from(event.position.x - start_x)).clamp(INBOX_MIN_WIDTH, max.min(INBOX_MAX_WIDTH));
                 self.state.layout.inbox_width = width;
             }
@@ -2738,7 +2744,7 @@ impl Render for Workbench {
         // The window chrome frames the workbench: a title strip the whole way across, then the
         // activity bar beside the shell. The window controls live in the strip, so no pane has to
         // keep a row clear for them.
-        let title_row = self.drag_region(div().id("title-row").h(metrics::PANE_HEADER).w_full().flex_none(), cx);
+        let title_row = self.drag_region(div().id("title-row").h(metrics::pane_header()).w_full().flex_none(), cx);
         // The sidebar and the centre are one panel inside that frame, split by a hairline.
         let shell = ui::shell(cx)
             .when(sidebar_column, |this| this.child(self.render_sidebar_column(window, cx)))
@@ -2751,9 +2757,9 @@ impl Render for Workbench {
             .flex_1()
             .min_h_0()
             .overflow_hidden()
-            .px(metrics::WORKBENCH_GAP)
-            .pb(metrics::WORKBENCH_GAP)
-            .gap(metrics::WORKBENCH_GAP)
+            .px(metrics::workbench_gap())
+            .pb(metrics::workbench_gap())
+            .gap(metrics::workbench_gap())
             .when(!pane_fullscreen, |this| this.child(self.render_activity_bar(window, cx)))
             .child(shell);
 
@@ -2956,7 +2962,7 @@ impl Render for Workbench {
             .children(self.account_menu.as_ref().map(|(menu, _)| {
                 gpui::deferred(
                     gpui::anchored()
-                        .position(gpui::point(metrics::WORKBENCH_GAP + metrics::RAIL_CONTROL + px(4.), window.viewport_size().height - px(12.)))
+                        .position(gpui::point(metrics::workbench_gap() + metrics::rail_control() + px(4.), window.viewport_size().height - px(12.)))
                         .anchor(Anchor::BottomLeft)
                         .snap_to_window_with_margin(px(8.))
                         .child(menu.clone()),
@@ -3134,7 +3140,7 @@ pub(crate) fn toast_stack(window: &Window, workbench: bool, cx: &mut App) -> Opt
                     .right(inset)
                     .top(px(-10. * depth as f32))
                     .h(px(40.))
-                    .rounded(metrics::RADIUS_XL)
+                    .rounded(metrics::radius_xl())
                     .bg(theme.colors.overlay)
                     .shadow(theme.shadows.popover.clone())
                     .opacity(1. - 0.3 * depth as f32)

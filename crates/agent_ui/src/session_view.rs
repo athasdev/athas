@@ -15,9 +15,10 @@ use std::{
 };
 
 use futures::{FutureExt as _, StreamExt, channel::oneshot};
+use ui::scale::px;
 use gpui::{
     App, AsyncApp, Context, Entity, EventEmitter, FocusHandle, Focusable, FollowMode, ListAlignment, ListOffset, ListState, Pixels, Subscription,
-    Task, WeakEntity, Window, prelude::*, px,
+    Task, WeakEntity, Window, prelude::*,
 };
 use ui::OpenMenu;
 use workspace::SessionStatus;

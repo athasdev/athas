@@ -1,6 +1,7 @@
 use std::{path::PathBuf, rc::Rc, sync::Arc};
 
-use gpui::{AnyElement, App, Context, PathPromptOptions, SharedString, Window, div, prelude::*, px};
+use ui::scale::px;
+use gpui::{AnyElement, App, Context, PathPromptOptions, SharedString, Window, div, prelude::*,};
 use theme::{ActiveTheme, GlobalTheme, Theme};
 use ui::{Button, ButtonSize, ButtonVariant, IconName, metrics};
 
@@ -33,7 +34,7 @@ pub fn theme_preview(theme: &Theme) -> impl IntoElement + use<> {
         .flex()
         .flex_none()
         .size(px(24.))
-        .rounded(metrics::RADIUS_MD)
+        .rounded(metrics::radius_md())
         .overflow_hidden()
         .border_1()
         .border_color(colors.border)

@@ -4,7 +4,8 @@
 use ui::TooltipExt as _;
 use std::path::{Path, PathBuf};
 
-use gpui::{AnyElement, App, Context, EventEmitter, FocusHandle, Focusable, ListAlignment, ListState, Render, SharedString, Window, div, list, prelude::*, px, relative};
+use ui::scale::px;
+use gpui::{AnyElement, App, Context, EventEmitter, FocusHandle, Focusable, ListAlignment, ListState, Render, SharedString, Window, div, list, prelude::*, relative};
 use theme::{ActiveTheme, ThemeColors};
 use ui::{Avatar, Button, ButtonSize, IconName, typography};
 
@@ -19,7 +20,7 @@ fn plural(count: usize, word: &str) -> String {
     format!("{count} {word}{}", if count == 1 { "" } else { "s" })
 }
 
-const GUTTER_WIDTH: gpui::Pixels = px(300.);
+fn gutter_width() -> gpui::Pixels { px(300.) }
 
 enum State {
     Loading,
@@ -139,7 +140,7 @@ impl BlameView {
                     .w_full()
                     .min_w_0()
                     .px(px(8.))
-                    .rounded(ui::metrics::RADIUS)
+                    .rounded(ui::metrics::radius())
                     .hover(move |style| style.bg(hover))
                     .child(Avatar::new(&commit.author).size(px(14.)).image(crate::avatar::author_avatar(&commit.email, cx)))
                     .child(div().flex_none().max_w(px(90.)).truncate().text_color(colors.muted_foreground).child(commit.author.clone()))
@@ -172,12 +173,12 @@ impl BlameView {
             .items_center()
             .h(px(20.))
             .w_full()
-            .text_size(typography::TEXT_SM)
+            .text_size(typography::text_sm())
             .line_height(relative(1.5))
             .whitespace_nowrap()
             .when(shaded, |this| this.bg(colors.surface))
             .when(line.starts_hunk && index > 0, |this| this.border_t_1().border_color(colors.divider))
-            .child(div().flex().flex_none().w(GUTTER_WIDTH).items_center().text_size(typography::TEXT_CAPTION).child(annotation))
+            .child(div().flex().flex_none().w(gutter_width()).items_center().text_size(typography::text_caption()).child(annotation))
             .child(div().flex_none().w(px(1.)).h_full().bg(colors.divider))
             .child(
                 div()
@@ -236,7 +237,7 @@ impl Render for BlameView {
                     .px(px(12.))
                     .border_b_1()
                     .border_color(colors.divider)
-                    .text_size(typography::TEXT_SM)
+                    .text_size(typography::text_sm())
                     .child(div().flex_none().font_weight(typography::MEDIUM).text_color(colors.foreground).child(name))
                     .when(!dir.is_empty(), |this| this.child(div().min_w_0().truncate().child(dir)))
                     .child(div().flex_none().child(format!("{} · {}", plural(self.lines.len(), "line"), plural(commits.len(), "commit"))))

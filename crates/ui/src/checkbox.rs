@@ -1,6 +1,7 @@
 use std::rc::Rc;
 
-use gpui::{App, ElementId, IntoElement, RenderOnce, SharedString, Window, div, prelude::*, px};
+use crate::scale::px;
+use gpui::{App, ElementId, IntoElement, RenderOnce, SharedString, Window, div, prelude::*,};
 use theme::ActiveTheme;
 
 use crate::{Icon, IconName, IconSize, typography};
@@ -89,7 +90,7 @@ impl RenderOnce for Checkbox {
             .items_center()
             .justify_center()
             .size(size)
-            .rounded(crate::metrics::RADIUS)
+            .rounded(crate::metrics::radius())
             .border_1()
             .border_color(if self.forced_hover && !self.disabled { hover_border } else { border })
             .bg(if checked { colors.primary } else { colors.surface })
@@ -106,7 +107,7 @@ impl RenderOnce for Checkbox {
             .child(box_)
             .children(self.label.map(|label| {
                 div()
-                    .text_size(typography::TEXT_SM)
+                    .text_size(typography::text_sm())
                     .font_weight(typography::MEDIUM)
                     .text_color(colors.foreground)
                     .child(label)

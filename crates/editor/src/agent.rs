@@ -11,9 +11,10 @@ use std::{
     rc::Rc,
 };
 
+use ui::scale::px;
 use gpui::{
     AnyElement, AnyView, Anchor, App, Context, FocusHandle, Global, KeyContext, Subscription, WeakEntity, Window, anchored, deferred, div,
-    point, prelude::*, px,
+    point, prelude::*,
 };
 use theme::ActiveTheme;
 use ui::{Button, ButtonSize, ButtonVariant, IconName};
@@ -343,7 +344,7 @@ impl Editor {
             .items_center()
             .gap(px(2.))
             .p(px(2.))
-            .rounded(ui::metrics::RADIUS_MD)
+            .rounded(ui::metrics::radius_md())
             .bg(colors.overlay)
             .border_1()
             .border_color(colors.border)

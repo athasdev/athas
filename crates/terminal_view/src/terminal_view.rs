@@ -29,10 +29,11 @@ use std::{
 use anyhow::Result;
 use futures::channel::mpsc::UnboundedReceiver;
 
+use ui::scale::px;
 use gpui::{
     Anchor, App, Bounds, Context, DismissEvent, DragMoveEvent, Entity, EventEmitter, FocusHandle, Focusable, Global,
     IntoElement, KeyBinding, KeyDownEvent, MouseButton, MouseDownEvent, MouseMoveEvent, Pixels, Point, Render,
-    SharedString, Subscription, Window, actions, canvas, deferred, div, prelude::*, px,
+    SharedString, Subscription, Window, actions, canvas, deferred, div, prelude::*,
 };
 use theme::ActiveTheme;
 use ui::{
@@ -1555,12 +1556,12 @@ impl TerminalPanel {
                 .flex()
                 .flex_none()
                 .items_center()
-                .h(metrics::TAB)
+                .h(metrics::tab())
                 .w(px(140.))
                 .px(px(8.))
-                .rounded(metrics::RADIUS_MD)
+                .rounded(metrics::radius_md())
                 .bg(colors.selected)
-                .text_size(typography::TEXT_CHROME)
+                .text_size(typography::text_chrome())
                 .text_color(colors.foreground)
                 .child(renaming.input.clone())
                 .into_any_element();
@@ -1622,7 +1623,7 @@ impl TerminalPanel {
                                 .flex()
                                 .flex_none()
                                 .items_center()
-                                .gap(metrics::CHROME_GAP)
+                                .gap(metrics::chrome_gap())
                                 .children(leading)
                                 .when(split, |this| this.child(ui::Icon::new(IconName::Columns).size(ui::IconSize::XSmall).color(colors.subtle_foreground))),
                         )
@@ -1646,7 +1647,7 @@ impl TerminalPanel {
                         }
                     })),
             )
-            .when(tabs_focused && active, |slot| slot.child(div().absolute().inset_0().rounded(metrics::RADIUS_MD).border_1().border_color(colors.focus_ring)))
+            .when(tabs_focused && active, |slot| slot.child(div().absolute().inset_0().rounded(metrics::radius_md()).border_1().border_color(colors.focus_ring)))
             .into_any_element()
     }
 
@@ -1673,7 +1674,7 @@ impl TerminalPanel {
                 .flex_none()
                 .h_full()
                 .items_center()
-                .gap(metrics::CHROME_GAP)
+                .gap(metrics::chrome_gap())
                 .pr(px(2.))
                 .children(pinned.into_iter().map(|id| self.render_tab(id, tabs_focused, cx)))
         });
@@ -1687,7 +1688,7 @@ impl TerminalPanel {
             .min_w_0()
             .h_full()
             .items_center()
-            .gap(metrics::CHROME_GAP)
+            .gap(metrics::chrome_gap())
             .on_mouse_down(
                 MouseButton::Right,
                 cx.listener(|this, event: &MouseDownEvent, window, cx| this.deploy_toolbar_menu(event.position, window, cx)),
@@ -1723,7 +1724,7 @@ impl TerminalPanel {
                             .min_w_0()
                             .h_full()
                             .items_center()
-                            .gap(metrics::CHROME_GAP)
+                            .gap(metrics::chrome_gap())
                             .overflow_x_scroll()
                             .track_scroll(&self.tab_scroll)
                             .children(regular.into_iter().map(|id| self.render_tab(id, tabs_focused, cx).into_any_element()))
@@ -1826,8 +1827,8 @@ impl TerminalPanel {
             .items_center()
             .justify_center()
             .group(group.clone())
-            .when(horizontal, |this| this.w(metrics::WORKBENCH_GAP).h_full().cursor_col_resize())
-            .when(!horizontal, |this| this.h(metrics::WORKBENCH_GAP).w_full().cursor_row_resize())
+            .when(horizontal, |this| this.w(metrics::workbench_gap()).h_full().cursor_col_resize())
+            .when(!horizontal, |this| this.h(metrics::workbench_gap()).w_full().cursor_row_resize())
             .child(
                 div()
                     .when(horizontal, |this| this.w(px(1.)).h_full())
@@ -1873,7 +1874,7 @@ impl TerminalPanel {
         let zone = self.drop_target.filter(|(target, _)| *target == id).map(|(_, zone)| zone);
         let colors = cx.theme().colors.clone();
         let overlay = zone.map(|zone| {
-            let base = div().absolute().border_2().border_color(colors.primary).bg(colors.primary_soft).rounded(metrics::RADIUS);
+            let base = div().absolute().border_2().border_color(colors.primary).bg(colors.primary_soft).rounded(metrics::radius());
             match zone {
                 DropZone::Left => base.top_0().bottom_0().left_0().w_1_2(),
                 DropZone::Right => base.top_0().bottom_0().right_0().w_1_2(),

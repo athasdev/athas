@@ -2,9 +2,10 @@
 //! expected, optionally with a sanitized environment, drafted as a GitHub issue the user reviews
 //! in the browser before sending. Athas has no feedback endpoint; this is the same flow.
 
+use ui::scale::px;
 use gpui::{
     App, Context, DismissEvent, Entity, EventEmitter, FocusHandle, Focusable, IntoElement, ParentElement, Render, Styled, Subscription,
-    Window, div, prelude::*, px,
+    Window, div, prelude::*,
 };
 use telemetry::{FrictionArea, FrictionKind, FrictionSignal};
 use theme::ActiveTheme;
@@ -167,8 +168,8 @@ impl Render for FeedbackDialog {
                             .flex_1()
                             .min_w_0()
                             .gap(px(2.))
-                            .child(div().text_size(typography::TEXT_SM).font_weight(typography::MEDIUM).child("Include sanitized environment"))
-                            .child(div().text_size(typography::TEXT_SM).line_height(px(18.)).text_color(colors.muted_foreground).child(
+                            .child(div().text_size(typography::text_sm()).font_weight(typography::MEDIUM).child("Include sanitized environment"))
+                            .child(div().text_size(typography::text_sm()).line_height(px(18.)).text_color(colors.muted_foreground).child(
                                 "Adds the Athas version, OS, and counts of content-free friction signals. It never includes prompts, paths, filenames, errors, or editor text.",
                             )),
                     )

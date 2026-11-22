@@ -4,7 +4,8 @@
 use std::sync::Arc;
 
 use extensions::IconTheme;
-use gpui::{AnyElement, App, Context, SharedString, Window, div, img, prelude::*, px};
+use ui::scale::px;
+use gpui::{AnyElement, App, Context, SharedString, Window, div, img, prelude::*,};
 use palette::{FuzzyMatch, Picker, PickerDelegate, fuzzy_match};
 use theme::ActiveTheme;
 use ui::{IconName, metrics, typography};
@@ -97,8 +98,8 @@ impl PickerDelegate for IconThemePickerDelegate {
             .mb(px(2.))
             .px(px(10.))
             .py(px(6.))
-            .rounded(metrics::RADIUS_MD)
-            .text_size(typography::TEXT_SM)
+            .rounded(metrics::radius_md())
+            .text_size(typography::text_sm())
             .when(selected, |this| this.bg(colors.primary))
             .child(
                 div()
@@ -107,7 +108,7 @@ impl PickerDelegate for IconThemePickerDelegate {
                     .items_center()
                     .gap(px(4.))
                     .p(px(4.))
-                    .rounded(metrics::RADIUS)
+                    .rounded(metrics::radius())
                     .bg(colors.background)
                     .children(PREVIEW.iter().filter_map(|(name, is_dir)| {
                         Some(img(theme.icon(name, *is_dir, false, dark)?).size(px(16.)))
@@ -121,7 +122,7 @@ impl PickerDelegate for IconThemePickerDelegate {
                     .min_w_0()
                     .child(div().truncate().text_color(text).child(theme.name.clone()))
                     .children(theme.description.clone().map(|description| {
-                        div().truncate().text_size(typography::TEXT_CAPTION).text_color(subtle).child(description)
+                        div().truncate().text_size(typography::text_caption()).text_color(subtle).child(description)
                     })),
             )
             .when(theme.id == self.original, |this| {
@@ -131,7 +132,7 @@ impl PickerDelegate for IconThemePickerDelegate {
                         .px(px(6.))
                         .rounded_full()
                         .bg(if selected { colors.primary_foreground.opacity(0.2) } else { colors.accent })
-                        .text_size(typography::TEXT_CAPTION)
+                        .text_size(typography::text_caption())
                         .text_color(subtle)
                         .child("Current"),
                 )

@@ -4,7 +4,8 @@
 use std::{collections::HashSet, rc::Rc};
 
 use editor::Editor;
-use gpui::{AnyElement, App, Context, Entity, Focusable, SharedString, Task, Window, div, prelude::*, px};
+use ui::scale::px;
+use gpui::{AnyElement, App, Context, Entity, Focusable, SharedString, Task, Window, div, prelude::*,};
 use palette::{Picker, PickerDelegate};
 use theme::ActiveTheme;
 use ui::{Icon, IconName, IconSize, typography};
@@ -120,8 +121,8 @@ impl PickerDelegate for OutlinePickerDelegate {
             .h(px(28.))
             .pl(px(8. + row.depth as f32 * 14.))
             .pr(px(10.))
-            .rounded(ui::metrics::RADIUS_MD)
-            .text_size(typography::TEXT_SM)
+            .rounded(ui::metrics::radius_md())
+            .text_size(typography::text_sm())
             .text_color(text)
             .when(selected, |this| this.bg(colors.primary))
             .child(
@@ -143,7 +144,7 @@ impl PickerDelegate for OutlinePickerDelegate {
             )
             .child(Icon::new(kind_icon(row.symbol.kind)).size(IconSize::XSmall).color(muted))
             .child(div().flex_none().max_w(px(320.)).truncate().child(row.symbol.name.clone()))
-            .children(row.symbol.detail.clone().map(|detail| div().flex_1().min_w_0().truncate().text_size(typography::TEXT_CAPTION).text_color(muted).child(SharedString::from(detail))))
+            .children(row.symbol.detail.clone().map(|detail| div().flex_1().min_w_0().truncate().text_size(typography::text_caption()).text_color(muted).child(SharedString::from(detail))))
             .into_any_element()
     }
 
@@ -197,7 +198,7 @@ impl PickerDelegate for OutlinePickerDelegate {
                 .px(px(6.))
                 .rounded_full()
                 .bg(colors.accent)
-                .text_size(typography::TEXT_CAPTION)
+                .text_size(typography::text_caption())
                 .text_color(colors.muted_foreground)
                 .child(if self.loading { "...".to_string() } else { self.rows.len().to_string() })
                 .into_any_element(),

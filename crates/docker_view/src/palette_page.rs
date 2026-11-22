@@ -6,7 +6,8 @@
 
 use std::path::PathBuf;
 
-use gpui::{AnyElement, App, AppContext as _, Context, Entity, Global, SharedString, Subscription, Window, div, prelude::*, px};
+use ui::scale::px;
+use gpui::{AnyElement, App, AppContext as _, Context, Entity, Global, SharedString, Subscription, Window, div, prelude::*,};
 use palette::{PaletteRow, Picker, PickerDelegate};
 use theme::ActiveTheme;
 use ui::{Badge, Button, ButtonSize, ButtonVariant, IconName, typography};
@@ -615,7 +616,7 @@ impl PickerDelegate for DockerPaletteDelegate {
                             picker.delegate.reset_query(window, cx);
                         })),
                 )
-                .child(div().min_w_0().truncate().text_size(typography::TEXT_SM).text_color(colors.subtle_foreground).child(title))
+                .child(div().min_w_0().truncate().text_size(typography::text_sm()).text_color(colors.subtle_foreground).child(title))
                 .into_any_element(),
         )
     }
@@ -628,6 +629,6 @@ impl PickerDelegate for DockerPaletteDelegate {
             (None, true) => ("Loading Docker resources…".into(), colors.subtle_foreground),
             (None, false) => return None,
         };
-        Some(div().px(px(12.)).py(px(6.)).text_size(typography::TEXT_SM).text_color(color).child(message).into_any_element())
+        Some(div().px(px(12.)).py(px(6.)).text_size(typography::text_sm()).text_color(color).child(message).into_any_element())
     }
 }

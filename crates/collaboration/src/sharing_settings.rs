@@ -3,9 +3,10 @@
 //! access editor (`share-access-dialog.tsx`) opens inline under its row.
 
 use account::{AccountStore, widgets};
+use ui::scale::px;
 use gpui::{
     AnyElement, App, ClipboardItem, Context, Entity, IntoElement, ParentElement, Render, SharedString, Styled, Subscription, Window, div,
-    prelude::*, px,
+    prelude::*,
 };
 use theme::ActiveTheme;
 use ui::{Button, ButtonSize, ButtonTone, ButtonVariant, Switch, TextInput, typography};
@@ -133,7 +134,7 @@ impl SharingSettings {
             _ => {}
         }
         if editing.visibility.is_restricted() && !pro {
-            fields.push(div().text_size(typography::TEXT_CAPTION).text_color(colors.subtle_foreground).child("Email and organization access require Athas Pro.").into_any_element());
+            fields.push(div().text_size(typography::text_caption()).text_color(colors.subtle_foreground).child("Email and organization access require Athas Pro.").into_any_element());
         }
         div()
             .flex()
@@ -275,7 +276,7 @@ impl Render for SharingSettings {
                     .flex()
                     .items_center()
                     .justify_between()
-                    .text_size(typography::TEXT_SM)
+                    .text_size(typography::text_sm())
                     .text_color(if self.error.is_some() { colors.destructive } else { colors.subtle_foreground })
                     .child(self.error.clone().unwrap_or_else(|| "Loading shared items…".into()))
                     .when(self.error.is_some(), |this| {
@@ -287,7 +288,7 @@ impl Render for SharingSettings {
                     .into_any_element(),
             ],
             Some(_) if items.is_empty() => {
-                vec![div().px(px(12.)).py(px(12.)).text_size(typography::TEXT_SM).text_color(colors.subtle_foreground).child("No shared links").into_any_element()]
+                vec![div().px(px(12.)).py(px(12.)).text_size(typography::text_sm()).text_color(colors.subtle_foreground).child("No shared links").into_any_element()]
             }
             Some(_) => items.iter().enumerate().map(|(index, item)| self.render_item(index, item, cx)).collect(),
         };

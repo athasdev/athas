@@ -3,9 +3,10 @@
 
 use std::ops::Range;
 
+use ui::scale::px;
 use gpui::{
     AnyElement, Anchor, Bounds, Context, Div, Font, FontStyle, FontWeight, Hsla, MouseButton, Pixels, SharedString, StyledText, TextRun,
-    anchored, deferred, div, font, point, prelude::*, px, size,
+    anchored, deferred, div, font, point, prelude::*, size,
 };
 use lsp_client::{Severity, lsp};
 use theme::{ActiveTheme, Theme};
@@ -18,7 +19,7 @@ use crate::{
 };
 
 const MENU_ROWS: usize = 10;
-const MENU_ROW_HEIGHT: Pixels = px(24.);
+fn menu_row_height() -> Pixels { px(24.) }
 
 pub(crate) fn severity_color(severity: Severity, theme: &Theme) -> Hsla {
     match severity {
@@ -135,7 +136,7 @@ impl TextStyle {
                 Block::Code { language, code } => div()
                     .px(px(8.))
                     .py(px(6.))
-                    .rounded(ui::metrics::RADIUS_MD)
+                    .rounded(ui::metrics::radius_md())
                     .bg(self.code_background)
                     .child(self.code(language.as_deref(), code, theme))
                     .into_any_element(),
@@ -152,9 +153,9 @@ fn card(theme: &Theme) -> Div {
         .bg(theme.colors.overlay)
         .border_1()
         .border_color(theme.colors.border)
-        .rounded(ui::metrics::RADIUS_LG)
+        .rounded(ui::metrics::radius_lg())
         .shadow(theme.shadows.popover.clone())
-        .text_size(typography::TEXT_SM)
+        .text_size(typography::text_sm())
         .text_color(theme.colors.foreground)
         .line_height(px(18.))
 }
@@ -231,9 +232,9 @@ impl Editor {
                 .flex()
                 .items_center()
                 .gap(px(8.))
-                .h(MENU_ROW_HEIGHT)
+                .h(menu_row_height())
                 .px(px(8.))
-                .rounded(ui::metrics::RADIUS_MD)
+                .rounded(ui::metrics::radius_md())
                 .when(selected, |row| row.bg(colors.selected))
                 .on_mouse_down(MouseButton::Left, cx.listener(move |editor, _, _, cx| {
                     cx.stop_propagation();
@@ -298,9 +299,9 @@ impl Editor {
                 .flex()
                 .items_center()
                 .gap(px(8.))
-                .h(MENU_ROW_HEIGHT)
+                .h(menu_row_height())
                 .px(px(8.))
-                .rounded(ui::metrics::RADIUS_MD)
+                .rounded(ui::metrics::radius_md())
                 .when(index == menu.selected, |row| row.bg(colors.selected))
                 .on_mouse_down(MouseButton::Left, cx.listener(move |editor, _, window, cx| {
                     cx.stop_propagation();
@@ -308,7 +309,7 @@ impl Editor {
                 }))
                 .child(Icon::new(if kind.as_deref().is_some_and(|kind| kind.starts_with("quickfix")) { IconName::Lightbulb } else { IconName::Wrench }).size(IconSize::XSmall).color(colors.muted_foreground))
                 .child(div().flex_1().min_w_0().truncate().child(title))
-                .children(kind.map(|kind| div().flex_none().text_color(colors.subtle_foreground).text_size(typography::TEXT_CAPTION).child(kind)))
+                .children(kind.map(|kind| div().flex_none().text_color(colors.subtle_foreground).text_size(typography::text_caption()).child(kind)))
         });
         let list = card(theme).id("editor-code-actions").occlude().min_w(px(240.)).max_w(px(480.)).max_h(px(320.)).overflow_y_scroll().p(px(4.)).children(rows);
         Some(deferred(anchored().anchor(Anchor::TopLeft).attach(bounds, Anchor::BottomLeft).offset(point(px(0.), px(2.))).child(list)).with_priority(2).into_any_element())
@@ -396,6 +397,6 @@ fn diagnostic_row(diagnostic: &DiagnosticSpan, theme: &Theme) -> impl IntoElemen
                 .min_w_0()
                 .gap(px(2.))
                 .child(div().whitespace_normal().child(diagnostic.message.clone()))
-                .children(diagnostic.origin.clone().map(|origin| div().text_size(typography::TEXT_CAPTION).text_color(theme.colors.subtle_foreground).child(origin))),
+                .children(diagnostic.origin.clone().map(|origin| div().text_size(typography::text_caption()).text_color(theme.colors.subtle_foreground).child(origin))),
         )
 }

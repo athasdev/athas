@@ -3,7 +3,8 @@
 //! shown when the plan includes it.
 
 use account::AccountStore;
-use gpui::{AnyElement, App, Context, Entity, SharedString, Subscription, Window, div, prelude::*, px};
+use ui::scale::px;
+use gpui::{AnyElement, App, Context, Entity, SharedString, Subscription, Window, div, prelude::*,};
 use serde_json::{Value, json};
 use theme::ActiveTheme;
 use ui::{Badge, Button, ButtonVariant, IconName, Switch, TextArea, TextAreaEvent, metrics, typography};
@@ -88,8 +89,8 @@ impl TeamSettings {
                             .flex()
                             .items_baseline()
                             .gap(px(8.))
-                            .child(div().text_size(typography::TEXT_SM).font_weight(typography::MEDIUM).text_color(colors.muted_foreground).child(title.into()))
-                            .children(description.map(|description| div().text_size(typography::TEXT_SM).text_color(colors.subtle_foreground).child(description))),
+                            .child(div().text_size(typography::text_sm()).font_weight(typography::MEDIUM).text_color(colors.muted_foreground).child(title.into()))
+                            .children(description.map(|description| div().text_size(typography::text_sm()).text_color(colors.subtle_foreground).child(description))),
                     )
                     .children(actions),
             )
@@ -97,7 +98,7 @@ impl TeamSettings {
                 div()
                     .flex()
                     .flex_col()
-                    .rounded(metrics::ISLAND_RADIUS)
+                    .rounded(metrics::island_radius())
                     .bg(colors.raised)
                     .shadow(cx.theme().shadows.raised.clone())
                     .children(rows.into_iter().enumerate().map(|(index, row)| {
@@ -127,8 +128,8 @@ impl TeamSettings {
                     .flex_1()
                     .min_w_0()
                     .gap(px(2.))
-                    .child(div().text_size(typography::TEXT_SM).text_color(colors.foreground).child(label))
-                    .children(description.map(|description| div().text_size(typography::TEXT_SM).text_color(colors.subtle_foreground).child(description))),
+                    .child(div().text_size(typography::text_sm()).text_color(colors.foreground).child(label))
+                    .children(description.map(|description| div().text_size(typography::text_sm()).text_color(colors.subtle_foreground).child(description))),
             )
             .child(div().flex_none().child(control))
             .into_any_element()
@@ -138,7 +139,7 @@ impl TeamSettings {
         div()
             .py(px(20.))
             .text_center()
-            .text_size(typography::TEXT_SM)
+            .text_size(typography::text_sm())
             .text_color(cx.theme().colors.muted_foreground)
             .child(message)
             .into_any_element()
@@ -243,9 +244,9 @@ impl TeamSettings {
                     .flex()
                     .flex_col()
                     .gap(px(6.))
-                    .child(div().text_size(typography::TEXT_SM).font_weight(typography::MEDIUM).text_color(colors.foreground).child("Approved integration IDs"))
+                    .child(div().text_size(typography::text_sm()).font_weight(typography::MEDIUM).text_color(colors.foreground).child("Approved integration IDs"))
                     .child(self.allowlist.clone())
-                    .child(div().text_size(typography::TEXT_SM).text_color(colors.subtle_foreground).child("One per line, or comma-separated.")),
+                    .child(div().text_size(typography::text_sm()).text_color(colors.subtle_foreground).child("One per line, or comma-separated.")),
             )
             .child(
                 div()
@@ -257,7 +258,7 @@ impl TeamSettings {
                         div()
                             .flex()
                             .gap(px(4.))
-                            .text_size(typography::TEXT_SM)
+                            .text_size(typography::text_sm())
                             .text_color(colors.subtle_foreground)
                             .child("Parsed entries:")
                             .child(div().text_color(colors.foreground).child(parsed.len().to_string())),
@@ -300,7 +301,7 @@ impl Render for TeamSettings {
                 .flex()
                 .flex_col()
                 .gap(px(8.))
-                .child(div().px(px(12.)).text_size(typography::TEXT_SM).font_weight(typography::MEDIUM).text_color(cx.theme().colors.muted_foreground).child("Workspaces"))
+                .child(div().px(px(12.)).text_size(typography::text_sm()).font_weight(typography::MEDIUM).text_color(cx.theme().colors.muted_foreground).child("Workspaces"))
                 .child(self.workspaces.clone())
                 .into_any_element(),
         );

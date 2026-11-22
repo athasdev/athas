@@ -4,7 +4,8 @@
 use ui::WithScrollbar;
 use std::{path::PathBuf, rc::Rc};
 
-use gpui::{App, Context, DismissEvent, Entity, EventEmitter, FocusHandle, Focusable, SharedString, Subscription, Window, div, prelude::*, px};
+use ui::scale::px;
+use gpui::{App, Context, DismissEvent, Entity, EventEmitter, FocusHandle, Focusable, SharedString, Subscription, Window, div, prelude::*,};
 use theme::ActiveTheme;
 use ui::{
     Button, ButtonVariant, Dialog, DialogLayout, DialogSize, EmptyState, IconName, InputAppearance, SidebarListItem, TextInput,
@@ -191,7 +192,7 @@ impl Render for FolderPicker {
             .px(px(12.))
             .border_b_1()
             .border_color(colors.divider)
-            .text_size(typography::TEXT_SM)
+            .text_size(typography::text_sm())
             .child(div().truncate().font_weight(typography::MEDIUM).text_color(colors.foreground).child(self.title()))
             .child(div().ml_auto().truncate().font_family(typography::MONO_FONT).text_color(colors.subtle_foreground).child(self.current.clone()));
         let body = match &self.listing {
@@ -208,7 +209,7 @@ impl Render for FolderPicker {
                 .flex_1()
                 .items_center()
                 .justify_center()
-                .text_size(typography::TEXT_SM)
+                .text_size(typography::text_sm())
                 .text_color(colors.muted_foreground)
                 .child("Loading folders…")
                 .into_any_element(),
@@ -217,7 +218,7 @@ impl Render for FolderPicker {
                 .flex_1()
                 .items_center()
                 .justify_center()
-                .text_size(typography::TEXT_SM)
+                .text_size(typography::text_sm())
                 .text_color(colors.muted_foreground)
                 .child("No folders")
                 .into_any_element(),

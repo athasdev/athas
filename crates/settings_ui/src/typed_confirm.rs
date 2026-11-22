@@ -1,7 +1,8 @@
 //! A button that asks for a word before it acts (`typed-confirm-action.tsx`): "Reset" turns into
 //! a field that wants "yes", then the button runs.
 
-use gpui::{Context, Entity, EventEmitter, SharedString, Subscription, Window, div, prelude::*, px};
+use ui::scale::px;
+use gpui::{Context, Entity, EventEmitter, SharedString, Subscription, Window, div, prelude::*,};
 use ui::{Button, ButtonTone, ButtonVariant, TextInput, TextInputEvent};
 
 pub struct Confirmed;

@@ -5,7 +5,7 @@
 
 use std::{path::PathBuf, time::Duration};
 
-use gpui::{App, Bounds, DisplayId, Global, Pixels, Task, Window, WindowBounds, point, px, size};
+use gpui::{px, App, Bounds, DisplayId, Global, Pixels, Task, Window, WindowBounds, point, size};
 use serde::{Deserialize, Serialize};
 
 const FILE_NAME: &str = "window-state.json";

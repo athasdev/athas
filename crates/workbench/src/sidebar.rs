@@ -1,9 +1,11 @@
+use ui::scale::px;
 use gpui::{
-    Anchor, Context, Focusable as _, IntoElement, MouseButton, ParentElement, Styled, Window, div, point, prelude::*, px,
+    Anchor, Context, Focusable as _, IntoElement, MouseButton, ParentElement, Pixels, Point, Styled, Window, div, point,
+    prelude::*,
 };
 use theme::ActiveTheme;
 use ui::{
-    Button, ButtonSize, EmptyState, Icon, IconName, IconSize, SectionHeader, SectionLabel,
+    Button, ButtonSize, EmptyState, Icon, IconName, IconSize, MenuEntry, MenuItem, SectionHeader, SectionLabel,
     SidebarListItem, island, metrics,
 };
 use workspace::{Owner, Session, SessionStatus, SidebarView, now_ms, relative_time};
@@ -37,7 +39,7 @@ impl Workbench {
                     .id("sidebar-resize")
                     .flex_none()
                     .h_full()
-                    .w(metrics::WORKBENCH_GAP)
+                    .w(metrics::workbench_gap())
                     .flex()
                     .justify_center()
                     .cursor_col_resize()
@@ -64,7 +66,7 @@ impl Workbench {
                     .on_click(cx.listener(|this, event: &gpui::ClickEvent, _, cx| {
                         if event.click_count() == 2 {
                             this.update_state(cx, |state| {
-                                state.layout.sidebar_width = f32::from(metrics::SIDEBAR_DEFAULT_WIDTH)
+                                state.layout.sidebar_width = f32::from(metrics::sidebar_default_width())
                             });
                         }
                     })),
@@ -81,7 +83,7 @@ impl Workbench {
         if !narrow || !self.sidebar_overlay_open {
             return None;
         }
-        let top = metrics::WORKBENCH_GAP + metrics::PANE_HEADER;
+        let top = metrics::workbench_gap() + metrics::pane_header();
         Some(
             div()
                 .absolute()
@@ -100,8 +102,8 @@ impl Workbench {
                     island(cx)
                         .absolute()
                         .top(top)
-                        .bottom(metrics::WORKBENCH_GAP)
-                        .left(metrics::WORKBENCH_GAP + metrics::RAIL_CONTROL)
+                        .bottom(metrics::workbench_gap())
+                        .left(metrics::workbench_gap() + metrics::rail_control())
                         .w(px(288.))
                         // Solid even with glass on: it floats over the centre, not the desktop,
                         // and a see-through surface showed the editor's text under the tool.
@@ -132,7 +134,7 @@ impl Workbench {
         // own under it, so neither covers the other at any sidebar width. Like the original's
         // pane actions, they stay hidden until the pointer is over the sidebar.
         let header = title_row.then(|| {
-            let row = div().id("sidebar-title-row").h(metrics::PANE_HEADER).w_full().flex_none();
+            let row = div().id("sidebar-title-row").h(metrics::pane_header()).w_full().flex_none();
             self.drag_region(row, cx)
         });
         // Files gets a titled header, as the Sessions list has: its two buttons (New, More) stay
@@ -147,7 +149,7 @@ impl Workbench {
                 .flex_none()
                 .items_center()
                 .justify_end()
-                .h(metrics::CHROME_CONTROL + px(4.))
+                .h(metrics::chrome_control() + px(4.))
                 .px(px(4.))
                 .invisible()
                 .group_hover("sidebar-pane", |style| style.visible())
@@ -179,7 +181,7 @@ impl Workbench {
             .min_w_0()
             // The window chrome has a strip of its own now, so the sidebar opens at the shell's
             // edge; it keeps the gap off the border itself.
-            .when(!title_row, |this| this.pt(metrics::WORKBENCH_GAP))
+            .when(!title_row, |this| this.pt(metrics::workbench_gap()))
             .children(header)
             .children(toolbar)
             .child(body)
@@ -421,72 +423,151 @@ impl Workbench {
             .flex_1()
             .min_h_0()
             .child(ui::with_scrollbar(list, ui::Scrollbar::new("sessions-scrollbar", &scroll)))
-            .children(self.render_account_usage(cx))
+            .child(self.render_sessions_footer(cx))
     }
 
-    /// What is left on the accounts the agents run on, under the session list. Nothing at all
-    /// when no account reports an allowance, so a sidebar with nothing connected is unchanged.
-    fn render_account_usage(&self, cx: &mut Context<Self>) -> Option<gpui::AnyElement> {
-        let rows = crate::agent_usage::rows(cx);
-        if rows.is_empty() {
-            return None;
-        }
+    /// The rows under the session list: Usage and Accounts each open their menu where they were
+    /// clicked, as Source Control's Stashes row does.
+    fn render_sessions_footer(&self, cx: &mut Context<Self>) -> impl IntoElement {
         let colors = cx.theme().colors.clone();
-        Some(
-            div()
-                .flex()
-                .flex_col()
-                .flex_none()
-                .gap(px(6.))
-                .px(px(8.))
-                .py(px(8.))
-                .border_t_1()
-                .border_color(colors.border)
-                .children(rows.into_iter().map(|row| {
-                    let colors = colors.clone();
-                    let url = row.url.clone();
-                    div()
-                        .id(row.id)
-                        .flex()
-                        .flex_col()
-                        .gap(px(4.))
-                        .px(px(4.))
-                        .py(px(2.))
-                        .rounded(metrics::RADIUS)
-                        .when(!url.is_empty(), |this| {
-                            this.cursor_pointer()
-                                .hover(|style| style.bg(colors.accent))
-                                .on_click(move |_, _, cx| cx.open_url(&url))
+        let usage = crate::agent_usage::rows(cx).len();
+        let accounts = self.connected_accounts(cx);
+        let mut rows: Vec<gpui::AnyElement> = Vec::new();
+        let mut add = |id: &'static str, label: &'static str, icon: IconName, count: usize, open: fn(&mut Workbench, Point<Pixels>, &mut Window, &mut Context<Workbench>)| {
+            let item = SidebarListItem::new(id, label)
+                .leading(Icon::new(icon).size(IconSize::XSmall).color(colors.subtle_foreground))
+                .trailing(count.to_string())
+                .active(self.menu_is_open(id))
+                .on_click(cx.listener(move |this, event: &gpui::ClickEvent, window, cx| open(this, event.position(), window, cx)));
+            rows.push(div().flex_none().px(px(8.)).child(item).into_any_element());
+        };
+        add("sessions-usage", "Usage", IconName::Activity, usage, Workbench::show_usage_menu);
+        add("sessions-accounts", "Accounts", IconName::UserCircle, accounts, Workbench::show_accounts_menu);
+        div().flex().flex_col().flex_none().gap(px(2.)).py(px(4.)).children(rows)
+    }
+
+    /// How many accounts the agents can run on are connected, as the Accounts row counts them.
+    fn connected_accounts(&self, cx: &gpui::App) -> usize {
+        let athas = account::AccountStore::global(cx).is_some_and(|store| store.read(cx).is_signed_in());
+        let github = account::linked_accounts::github(cx).is_some_and(|linked| linked.connected);
+        usize::from(athas) + usize::from(github)
+    }
+
+    /// What is left on the accounts the agents run on (`agent_usage`), one row each: what the
+    /// footer used to draw as bars, with the whole story under the label. A row opens the page
+    /// the allowance is managed on. Nothing reports an allowance until an account is connected,
+    /// so the menu says so rather than opening empty.
+    fn show_usage_menu(&mut self, position: Point<Pixels>, window: &mut Window, cx: &mut Context<Self>) {
+        let rows = crate::agent_usage::rows(cx);
+        let mut entries: Vec<MenuEntry> = Vec::new();
+        if rows.is_empty() {
+            entries.push(MenuEntry::Text("No account reports an allowance yet.".into()));
+        }
+        for row in rows {
+            let url = row.url.clone();
+            let mut item = MenuItem::new(row.label).icon(row.icon).trailing_text(row.value).description(row.detail);
+            item = if url.is_empty() {
+                item.disabled(true)
+            } else {
+                item.external().on_select(move |_, cx| cx.open_url(&url))
+            };
+            entries.push(item.into());
+        }
+        let billing = account::urls(cx).billing();
+        entries.push(MenuEntry::Separator);
+        entries.push(
+            MenuItem::new("Plan & Billing")
+                .icon(IconName::CreditCard)
+                .external()
+                .on_select(move |_, cx| cx.open_url(&billing))
+                .into(),
+        );
+        self.show_menu("sessions-usage", entries, position, Anchor::BottomLeft, window, cx);
+    }
+
+    /// The accounts the agents sign in with. Each connected one keeps its actions in a submenu,
+    /// as a stash does; a missing one is the row that connects it.
+    fn show_accounts_menu(&mut self, position: Point<Pixels>, window: &mut Window, cx: &mut Context<Self>) {
+        // Opening the menu checks the linked GitHub account again, as the account menu does.
+        account::linked_accounts::refresh_github(cx);
+        let entries = self.account_entries(cx);
+        self.show_menu("sessions-accounts", entries, position, Anchor::BottomLeft, window, cx);
+    }
+
+    fn account_entries(&self, cx: &mut Context<Self>) -> Vec<MenuEntry> {
+        let urls = account::urls(cx);
+        let weak = cx.weak_entity();
+        let store = account::AccountStore::global(cx);
+        let signed_in = store.as_ref().is_some_and(|store| store.read(cx).is_signed_in());
+        let mut entries: Vec<MenuEntry> = Vec::new();
+        match store {
+            Some(store) if signed_in => {
+                let (name, detail) = store.read(cx).identity();
+                let plan = store.read(cx).plan_label();
+                let (dashboard, billing) = (urls.dashboard(), urls.billing());
+                let submenu: Vec<MenuEntry> = vec![
+                    MenuItem::new("Profile").icon(IconName::User).external().on_select(move |_, cx| cx.open_url(&dashboard)).into(),
+                    MenuItem::new("Plan & Billing").icon(IconName::CreditCard).trailing_text(plan).external().on_select(move |_, cx| cx.open_url(&billing)).into(),
+                    MenuItem::new("Account settings")
+                        .icon(IconName::Settings)
+                        .on_select(move |window, cx| {
+                            weak.update(cx, |this, cx| this.open_settings_page(Some("account"), window, cx)).ok();
                         })
-                        .tooltip(ui::Tooltip::text(row.detail.clone()))
-                        .child(
-                            div()
-                                .flex()
-                                .items_center()
-                                .gap(px(6.))
-                                .text_size(ui::typography::TEXT_CAPTION)
-                                .child(Icon::new(row.icon).size(IconSize::XSmall).color(colors.muted_foreground))
-                                .child(div().flex_1().min_w_0().truncate().text_color(colors.muted_foreground).child(row.label))
-                                .child(div().flex_none().text_color(colors.foreground).child(row.value)),
-                        )
-                        .child(
-                            div()
-                                .h(px(2.))
-                                .w_full()
-                                .overflow_hidden()
-                                .rounded_full()
-                                .bg(colors.accent)
-                                .child(
-                                    div()
-                                        .h_full()
-                                        .w(gpui::relative(row.used_percent / 100.))
-                                        .rounded_full()
-                                        .bg(row.tone.color(&colors)),
-                                ),
-                        )
-                }))
-                .into_any_element(),
-        )
+                        .into(),
+                    MenuEntry::Separator,
+                    MenuItem::new("Sign out")
+                        .icon(IconName::SignOut)
+                        .destructive()
+                        .on_select({
+                            let store = store.clone();
+                            move |_, cx| store.update(cx, |store, cx| store.sign_out(cx))
+                        })
+                        .into(),
+                ];
+                let mut item = MenuItem::new(name).icon(IconName::Sparkle).trailing_text(plan).submenu(submenu);
+                if let Some(detail) = detail {
+                    item = item.description(detail);
+                }
+                entries.push(item.into());
+            }
+            Some(store) => entries.push(
+                MenuItem::new("Sign in to Athas")
+                    .icon(IconName::SignIn)
+                    .on_select(move |_, cx| store.update(cx, |store, cx| store.sign_in(cx)))
+                    .into(),
+            ),
+            None => {}
+        }
+        let login = match account::linked_accounts::github(cx) {
+            Some(linked) if linked.connected => Some(linked.login.unwrap_or_default()),
+            _ => None,
+        };
+        match login {
+            Some(login) => {
+                let profile = if login.is_empty() { "https://github.com".to_string() } else { format!("https://github.com/{login}") };
+                let submenu: Vec<MenuEntry> = vec![
+                    MenuItem::new("GitHub profile").icon(IconName::User).external().on_select(move |_, cx| cx.open_url(&profile)).into(),
+                    MenuItem::new("Copilot settings")
+                        .icon(IconName::CreditCard)
+                        .external()
+                        .on_select(|_, cx| cx.open_url("https://github.com/settings/copilot"))
+                        .into(),
+                ];
+                let trailing = if login.is_empty() { "Connected".to_string() } else { login };
+                entries.push(MenuItem::new("GitHub").icon(IconName::BrandGithub).trailing_text(trailing).submenu(submenu).into());
+            }
+            None => {
+                let integrations = urls.integrations();
+                entries.push(
+                    MenuItem::new("Connect GitHub")
+                        .icon(IconName::BrandGithub)
+                        .external()
+                        .on_select(move |_, cx| cx.open_url(&integrations))
+                        .into(),
+                );
+            }
+        }
+        entries
     }
 
     /// A sidebar session row; `emphasized` while the sidebar has focus.
@@ -521,11 +602,11 @@ impl Workbench {
                 .flex()
                 .w_full()
                 .items_center()
-                .gap(metrics::CHROME_GAP)
-                .min_h(metrics::LIST_ROW)
+                .gap(metrics::chrome_gap())
+                .min_h(metrics::list_row())
                 .px(px(6.))
                 .py(px(2.))
-                .rounded(metrics::RADIUS_MD)
+                .rounded(metrics::radius_md())
                 .bg(colors.selected)
                 .child(Icon::new(agent_ui::model_vendor::provider_icon(&session.agent)).size(IconSize::XSmall).color(colors.subtle_foreground))
                 .child(div().flex_1().min_w_0().py(px(4.)).border_b_1().border_color(colors.primary).child(input.clone()))
@@ -541,7 +622,7 @@ impl Workbench {
             .flex()
             .items_center()
             .gap(px(6.))
-            .text_size(ui::typography::TEXT_CAPTION)
+            .text_size(ui::typography::text_caption())
             .text_color(colors.subtle_foreground)
             .when(cloud, |this| this.child(Icon::new(IconName::Cloud).size(IconSize::XSmall).color(colors.subtle_foreground)))
             .when(session.pinned, |this| {
@@ -617,7 +698,7 @@ impl Workbench {
         let (open, menu_session) = (session.clone(), session.clone());
         SidebarListItem::new(gpui::ElementId::Name(format!("outside-session-{}-{}", session.agent, session.session_id).into()), session.title.clone())
             .leading(Icon::new(agent_ui::model_vendor::provider_icon(&session.agent)).size(IconSize::XSmall).color(colors.subtle_foreground))
-            .trailing(div().text_size(ui::typography::TEXT_CAPTION).text_color(colors.subtle_foreground).children(updated))
+            .trailing(div().text_size(ui::typography::text_caption()).text_color(colors.subtle_foreground).children(updated))
             .on_click(cx.listener(move |this, _, _, cx| this.import_outside_session(open.clone(), cx)))
             .on_secondary_mouse_down(cx.listener(move |this, event: &gpui::MouseDownEvent, window, cx| {
                 cx.stop_propagation();

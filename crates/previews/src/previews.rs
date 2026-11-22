@@ -9,9 +9,10 @@ pub mod tunnel;
 use std::{collections::BTreeMap, time::Duration};
 
 use account::{AccountEvent, AccountStore, ApiError, Method};
+use ui::scale::px;
 use gpui::{
     App, AppContext, ClipboardItem, Context, DismissEvent, Entity, EventEmitter, FocusHandle, Focusable, Global, SharedString, Subscription, Task, Window,
-    div, prelude::*, px,
+    div, prelude::*,
 };
 use serde::Deserialize;
 use serde_json::Value;
@@ -344,7 +345,7 @@ impl ShareLocalServerDialog {
             .gap(px(8.))
             .px(px(12.))
             .py(px(8.))
-            .rounded(metrics::RADIUS_LG)
+            .rounded(metrics::radius_lg())
             .bg(colors.surface)
             .child(
                 div()
@@ -358,11 +359,11 @@ impl ShareLocalServerDialog {
                             .flex()
                             .items_center()
                             .gap(px(6.))
-                            .text_size(typography::TEXT_SM)
+                            .text_size(typography::text_sm())
                             .child(div().truncate().child(host.clone()))
                             .children(status.map(|status| Badge::new(status.label()).tone(tone(status)))),
                     )
-                    .child(div().truncate().text_size(typography::TEXT_CAPTION).text_color(colors.subtle_foreground).child(describe_preview(preview, requests))),
+                    .child(div().truncate().text_size(typography::text_caption()).text_color(colors.subtle_foreground).child(describe_preview(preview, requests))),
             )
             .child(
                 Button::icon(SharedString::from(format!("preview-copy-{id}")), IconName::Copy)
@@ -416,7 +417,7 @@ impl Render for ShareLocalServerDialog {
                         .flex()
                         .flex_col()
                         .gap(px(12.))
-                        .child(div().text_size(typography::TEXT_SM).child(
+                        .child(div().text_size(typography::text_sm()).child(
                             "Preview links are part of Athas Pro. Share a dev server running on your computer, or an app a cloud agent is running, with a temporary link.",
                         ))
                         .child(
@@ -480,11 +481,11 @@ impl Render for ShareLocalServerDialog {
                                 .flex()
                                 .flex_col()
                                 .gap(px(6.))
-                                .child(div().font_weight(typography::MEDIUM).text_size(typography::TEXT_SM).child("Active previews"))
+                                .child(div().font_weight(typography::MEDIUM).text_size(typography::text_sm()).child("Active previews"))
                                 .children(items),
                         )
                     })
-                    .child(div().text_size(typography::TEXT_SM).text_color(colors.subtle_foreground).child(
+                    .child(div().text_size(typography::text_sm()).text_color(colors.subtle_foreground).child(
                         "Anyone with a link can open the preview until it expires after 8 hours or you stop it. Visitors see a notice with your name first.",
                     )),
             )

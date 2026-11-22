@@ -4,7 +4,8 @@
 #[cfg(target_family = "wasm")]
 use crate::athas_docker;
 use athas_docker::{DockerComposePreset, DockerDebugPreset, DockerDevContainer, DockerEnvFile, DockerProjectConfig};
-use gpui::{AnyElement, ClickEvent, Context, IntoElement, Pixels, Point, Window, div, prelude::*, px};
+use ui::scale::px;
+use gpui::{AnyElement, ClickEvent, Context, IntoElement, Pixels, Point, Window, div, prelude::*,};
 use theme::ThemeColors;
 use ui::{Button, ButtonSize, ButtonVariant, EmptyState, Icon, IconName, IconSize, MenuEntry, WithScrollbar, typography};
 
@@ -451,7 +452,7 @@ impl DockerView {
                         .px(px(10.))
                         .pt(px(10.))
                         .pb(px(4.))
-                        .text_size(typography::TEXT_CAPTION)
+                        .text_size(typography::text_caption())
                         .font_weight(typography::MEDIUM)
                         .text_color(colors.subtle_foreground)
                         .child(title)
@@ -480,8 +481,8 @@ impl DockerView {
             .gap(px(10.))
             .h(px(32.))
             .px(px(10.))
-            .rounded(ui::metrics::RADIUS_MD)
-            .text_size(typography::TEXT_SM)
+            .rounded(ui::metrics::radius_md())
+            .text_size(typography::text_sm())
             .hover(|style| style.bg(colors.accent))
             .when(busy, |this| this.opacity(0.55))
             .child(Icon::new(row.icon).size(IconSize::XSmall).color(colors.subtle_foreground))

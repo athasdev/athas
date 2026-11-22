@@ -1,5 +1,6 @@
 use gpui::prelude::*;
-use gpui::{App, Hsla, IntoElement, Pixels, RenderOnce, Styled, Window, px, svg};
+use crate::scale::px;
+use gpui::{App, Hsla, IntoElement, Pixels, RenderOnce, Styled, Window, svg};
 use theme::ActiveTheme;
 
 #[path = "icon_names.rs"]

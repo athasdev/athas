@@ -12,10 +12,11 @@ use alacritty_terminal::{
     vte::ansi::{Color, NamedColor},
 };
 use futures::{StreamExt as _, channel::mpsc::UnboundedReceiver};
+use ui::scale::px;
 use gpui::{
     Anchor, App, Bounds, ClipboardItem, Context, EventEmitter, ExternalPaths, FocusHandle, Focusable, InputHandler,
     IntoElement, KeyDownEvent, MouseDownEvent, MouseMoveEvent, MouseUpEvent, Pixels, Point, Render, ScrollEvent,
-    Subscription, Task, TouchPhase, UTF16Selection, WeakEntity, Window, anchored, deferred, div, prelude::*, px,
+    Subscription, Task, TouchPhase, UTF16Selection, WeakEntity, Window, anchored, deferred, div, prelude::*,
 };
 use theme::ActiveTheme;
 use ui::{IconName, MenuEntry, MenuItem, OpenMenu, typography};
@@ -898,11 +899,11 @@ impl TerminalView {
                         .max_w(px(512.))
                         .px(px(8.))
                         .py(px(4.))
-                        .rounded(ui::metrics::RADIUS_MD)
+                        .rounded(ui::metrics::radius_md())
                         .bg(theme.colors.surface)
                         .shadow(theme.shadows.popover.clone())
                         .font_family(typography::UI_FONT)
-                        .text_size(typography::TEXT_SM)
+                        .text_size(typography::text_sm())
                         .text_color(theme.colors.foreground)
                         .child(div().font_family(typography::MONO_FONT).truncate().child(hovered.link.label()))
                         .child(div().text_color(theme.colors.subtle_foreground).child(hovered.link.hint())),

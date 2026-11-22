@@ -12,11 +12,12 @@ use std::{
     sync::Arc,
 };
 
+use ui::scale::px;
 use gpui::{
     App, FocusHandle, KeyDownEvent, ScrollHandle, Subscription,
     AnyElement, AppContext as _, Context, Entity, Font, FontStyle, FontWeight, Hsla, InteractiveText, IntoElement, ParentElement as _,
     InteractiveElement as _, Render, SharedString, StatefulInteractiveElement as _, Styled as _, StyledText, StrikethroughStyle, TextRun, UnderlineStyle, Window, div,
-    ImageSource, font, img, prelude::FluentBuilder as _, px, relative,
+    ImageSource, font, img, prelude::FluentBuilder as _, relative,
 };
 use pulldown_cmark::{Alignment, CodeBlockKind, Event, HeadingLevel, Options, Parser, Tag, TagEnd};
 use theme::{ActiveTheme, Theme};
@@ -841,7 +842,7 @@ impl Look {
                     .overflow_x_scroll()
                     .px(px(12.))
                     .py(px(10.))
-                    .rounded(metrics::RADIUS_MD)
+                    .rounded(metrics::radius_md())
                     .bg(self.code_background)
                     .text_size(px(12.5))
                     .child(StyledText::new(code.clone()).with_runs(runs));
@@ -875,7 +876,7 @@ impl Look {
                     .flex_col()
                     .border_1()
                     .border_color(self.border)
-                    .rounded(metrics::RADIUS)
+                    .rounded(metrics::radius())
                     .child(row_element(0, header, true))
                     .children(rows.iter().enumerate().map(|(index, row)| row_element(index + 1, row, false)))
                     .into_any_element()
@@ -994,7 +995,7 @@ impl Render for MarkdownPreview {
                 .flex()
                 .flex_col()
                 .gap(px(6.))
-                .rounded(metrics::RADIUS_LG)
+                .rounded(metrics::radius_lg())
                 .bg(colors.overlay)
                 .shadow(theme.shadows.popover.clone())
                 .child(
@@ -1003,7 +1004,7 @@ impl Render for MarkdownPreview {
                         .items_center()
                         .gap(px(6.))
                         .child(div().flex_1().min_w_0().child(find.input.clone()))
-                        .children(label.map(|label| div().flex_none().text_size(typography::TEXT_SM).text_color(colors.subtle_foreground).child(label)))
+                        .children(label.map(|label| div().flex_none().text_size(typography::text_sm()).text_color(colors.subtle_foreground).child(label)))
                         .child(Button::icon("markdown-find-close", IconName::X).variant(ButtonVariant::Ghost).tooltip("Close search").on_click(move |_, window, cx| {
                             weak.update(cx, |this, cx| this.close_find(window, cx)).ok();
                         })),

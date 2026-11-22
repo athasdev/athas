@@ -8,9 +8,10 @@
 use std::{collections::HashMap, sync::Arc};
 
 use ai_providers::{Connection, SecretStore, catalog, secrets};
+use ui::scale::px;
 use gpui::{
     AnyElement, App, AppContext as _, ClickEvent, Context, DismissEvent, Entity, EventEmitter, FocusHandle, Focusable, IntoElement,
-    ParentElement, Render, SharedString, Styled, Subscription, Task, Window, div, prelude::*, px,
+    ParentElement, Render, SharedString, Styled, Subscription, Task, Window, div, prelude::*,
 };
 use theme::ActiveTheme;
 use ui::{Button, ButtonTone, ButtonVariant, Dialog, DialogLayout, DialogSize, Icon, IconName, IconSize, TextInput, TextInputEvent, typography};
@@ -266,10 +267,10 @@ impl ProviderKeyDialog {
                     .flex()
                     .items_center()
                     .gap(px(8.))
-                    .h(ui::metrics::LIST_ROW)
+                    .h(ui::metrics::list_row())
                     .px(px(8.))
-                    .rounded(ui::metrics::RADIUS_MD)
-                    .text_size(typography::TEXT_SM)
+                    .rounded(ui::metrics::radius_md())
+                    .text_size(typography::text_sm())
                     .when(selected, |this| this.bg(colors.accent))
                     .when(!selected, |this| this.hover(|style| style.bg(colors.accent)))
                     .child(crate::model_vendor::provider_mark(id, px(14.), colors.subtle_foreground))
@@ -292,7 +293,7 @@ impl ProviderKeyDialog {
             .flex()
             .flex_col()
             .gap(px(1.))
-            .when(rows.is_empty(), |this| this.child(div().p(px(8.)).text_size(typography::TEXT_SM).text_color(colors.subtle_foreground).child("No providers found")))
+            .when(rows.is_empty(), |this| this.child(div().p(px(8.)).text_size(typography::text_sm()).text_color(colors.subtle_foreground).child("No providers found")))
             .children(rows)
             .into_any_element()
     }
@@ -300,7 +301,7 @@ impl ProviderKeyDialog {
     fn render_detail(&self, cx: &mut Context<Self>) -> AnyElement {
         let colors = cx.theme().colors.clone();
         let Some(provider) = self.selected.and_then(|id| self.providers.iter().copied().find(|provider| provider.id == id)) else {
-            return div().flex_1().p(px(12.)).text_size(typography::TEXT_SM).text_color(colors.subtle_foreground).child("Select a provider").into_any_element();
+            return div().flex_1().p(px(12.)).text_size(typography::text_sm()).text_color(colors.subtle_foreground).child("Select a provider").into_any_element();
         };
         let has_key = self.has_key(provider.id);
         let typed = self.key.read(cx).text().trim().to_string();
@@ -330,7 +331,7 @@ impl ProviderKeyDialog {
             .flex()
             .flex_col()
             .gap(px(12.))
-            .text_size(typography::TEXT_SM)
+            .text_size(typography::text_sm())
             .child(
                 div()
                     .flex()

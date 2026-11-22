@@ -8,7 +8,8 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use gpui::{AnyElement, App, AppContext, Context, Entity, Global, PathPromptOptions, SharedString, Subscription, Window, div, prelude::*, px};
+use ui::scale::px;
+use gpui::{AnyElement, App, AppContext, Context, Entity, Global, PathPromptOptions, SharedString, Subscription, Window, div, prelude::*,};
 use theme::ActiveTheme;
 use ui::{
     Alert, Button, ButtonVariant, Card, IconName, Select, SelectEvent, SelectOption, SelectSearch, SelectWidth, TextArea, TextAreaEvent, TextInput, TextInputEvent, ToggleGroup, ToggleOption, Tone, metrics,
@@ -568,7 +569,7 @@ impl WorkspaceSettings {
     }
 
     fn text(text: impl Into<SharedString>, cx: &App) -> gpui::Div {
-        div().text_size(typography::TEXT_SM).text_color(cx.theme().colors.subtle_foreground).child(text.into())
+        div().text_size(typography::text_sm()).text_color(cx.theme().colors.subtle_foreground).child(text.into())
     }
 
     fn field(label: &'static str, control: impl IntoElement, cx: &App) -> AnyElement {
@@ -578,7 +579,7 @@ impl WorkspaceSettings {
             .flex_1()
             .min_w_0()
             .gap(px(6.))
-            .child(div().text_size(typography::TEXT_SM).font_weight(typography::MEDIUM).text_color(cx.theme().colors.foreground).child(label))
+            .child(div().text_size(typography::text_sm()).font_weight(typography::MEDIUM).text_color(cx.theme().colors.foreground).child(label))
             .child(control)
             .into_any_element()
     }
@@ -592,7 +593,7 @@ impl WorkspaceSettings {
             .gap(px(16.))
             .px(px(12.))
             .py(px(10.))
-            .rounded(metrics::RADIUS_MD)
+            .rounded(metrics::radius_md())
             .bg(colors.surface)
             .child(
                 div()
@@ -601,8 +602,8 @@ impl WorkspaceSettings {
                     .flex_1()
                     .min_w_0()
                     .gap(px(2.))
-                    .child(div().text_size(typography::TEXT_SM).font_weight(typography::MEDIUM).text_color(colors.foreground).child(title.into()))
-                    .child(div().text_size(typography::TEXT_SM).text_color(colors.subtle_foreground).child(description.into())),
+                    .child(div().text_size(typography::text_sm()).font_weight(typography::MEDIUM).text_color(colors.foreground).child(title.into()))
+                    .child(div().text_size(typography::text_sm()).text_color(colors.subtle_foreground).child(description.into())),
             )
             .children(action)
             .into_any_element()
@@ -622,8 +623,8 @@ impl WorkspaceSettings {
                         .flex_col()
                         .gap(px(4.))
                         .px(px(12.))
-                        .child(div().text_size(typography::TEXT_SM).font_weight(typography::MEDIUM).text_color(colors.foreground).child(title))
-                        .child(div().text_size(typography::TEXT_SM).text_color(colors.subtle_foreground).child(description)),
+                        .child(div().text_size(typography::text_sm()).font_weight(typography::MEDIUM).text_color(colors.foreground).child(title))
+                        .child(div().text_size(typography::text_sm()).text_color(colors.subtle_foreground).child(description)),
                 )
                 .child(div().flex().px(px(12.)).child(Button::new(id, label).variant(ButtonVariant::Ghost).on_click(cx.listener(move |this, _, _, cx| {
                     this.management.update(cx, |management, cx| management.set_section(section, cx));
@@ -725,7 +726,7 @@ impl WorkspaceSettings {
                             .gap(px(12.))
                             .p(px(12.))
                             .child(div().flex().gap(px(12.)).child(Self::field("Name", editor.name.clone(), cx)).child(Self::field("Repository URL", editor.url.clone(), cx)))
-                            .child(div().text_size(typography::TEXT_SM).text_color(colors.subtle_foreground).child(binding.unwrap_or_else(|| "No checkout linked on this device.".into())))
+                            .child(div().text_size(typography::text_sm()).text_color(colors.subtle_foreground).child(binding.unwrap_or_else(|| "No checkout linked on this device.".into())))
                             .child(buttons),
                     )
                     .into_any_element(),
@@ -803,7 +804,7 @@ impl WorkspaceSettings {
             .flex()
             .flex_col()
             .gap(px(8.))
-            .child(div().text_size(typography::TEXT_SM).font_weight(typography::MEDIUM).text_color(cx.theme().colors.muted_foreground).child(title))
+            .child(div().text_size(typography::text_sm()).font_weight(typography::MEDIUM).text_color(cx.theme().colors.muted_foreground).child(title))
             .children(children)
             .into_any_element()
     }
@@ -941,7 +942,7 @@ impl WorkspaceSettings {
                     .flex_col()
                     .gap(px(4.))
                     .child(Self::muted_item(title, format!("{id} · {label}"), Some(actions.into_any_element()), cx))
-                    .children(error.map(|error| div().px(px(12.)).text_size(typography::TEXT_SM).text_color(cx.theme().colors.destructive).child(error)))
+                    .children(error.map(|error| div().px(px(12.)).text_size(typography::text_sm()).text_color(cx.theme().colors.destructive).child(error)))
                     .into_any_element(),
             );
         }
@@ -1067,7 +1068,7 @@ impl Render for WorkspaceSettings {
                     .items_center()
                     .gap(px(12.))
                     .py(px(32.))
-                    .rounded(metrics::ISLAND_RADIUS)
+                    .rounded(metrics::island_radius())
                     .bg(colors.raised)
                     .child(Self::text("Add a project folder to create a workspace. Your existing files stay where they are.", cx))
                     .child(Button::new("workspace-add-empty", "Add Workspace").on_click(cx.listener(|this, _, _, cx| {
@@ -1121,7 +1122,7 @@ impl Render for WorkspaceSettings {
             );
         }
         if let Some(error) = self.action_error.clone().or_else(|| draft.as_ref().and_then(|draft| draft.4.clone())) {
-            content = content.child(div().text_size(typography::TEXT_SM).text_color(colors.destructive).child(error));
+            content = content.child(div().text_size(typography::text_sm()).text_color(colors.destructive).child(error));
         }
         let Some((config, ..)) = draft.filter(|draft| !draft.2) else {
             return content.child(Self::text("Loading workspace…", cx));

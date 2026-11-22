@@ -63,6 +63,9 @@ fn main() -> Result<()> {
     cx.update(|cx| -> Result<()> {
         ui::load_fonts(cx)?;
         ui::init(cx);
+        if let Ok(zoom) = std::env::var("ATHAS_ZOOM").map(|z| z.parse::<f32>()) {
+            ui::scale::set_zoom(zoom.unwrap_or(1.), cx);
+        }
         theme::init(cx, None, appearance, false);
         Ok(())
     })?;

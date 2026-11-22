@@ -127,7 +127,7 @@ impl Gallery {
     fn controls(&self, cx: &mut Context<Self>) -> impl IntoElement {
         let colors = cx.theme().colors.clone();
         let column = || div().flex().flex_col().gap(px(16.)).w(px(420.));
-        let caption = |text: &'static str| div().text_size(typography::TEXT_CAPTION).text_color(colors.subtle_foreground).child(text);
+        let caption = |text: &'static str| div().text_size(typography::text_caption()).text_color(colors.subtle_foreground).child(text);
         div()
             .flex()
             .gap(px(24.))
@@ -309,8 +309,8 @@ impl Gallery {
                     )
                     .child(caption("Scroll area"))
                     .child(
-                        div().h(px(96.)).flex().flex_col().rounded(metrics::RADIUS_LG).bg(colors.surface).child(
-                            ScrollArea::new("scroll").children((1..=12).map(|line| div().px(px(10.)).py(px(4.)).text_size(typography::TEXT_SM).child(format!("Line {line}")))),
+                        div().h(px(96.)).flex().flex_col().rounded(metrics::radius_lg()).bg(colors.surface).child(
+                            ScrollArea::new("scroll").children((1..=12).map(|line| div().px(px(10.)).py(px(4.)).text_size(typography::text_sm()).child(format!("Line {line}")))),
                         ),
                     ),
             )
@@ -350,7 +350,7 @@ impl Gallery {
     fn primitives(&self, cx: &mut Context<Self>) -> impl IntoElement {
         let colors = cx.theme().colors.clone();
         let column = || div().flex().flex_col().gap(px(16.)).w(px(400.));
-        let caption = |text: &'static str| div().text_size(typography::TEXT_CAPTION).text_color(colors.subtle_foreground).child(text);
+        let caption = |text: &'static str| div().text_size(typography::text_caption()).text_color(colors.subtle_foreground).child(text);
         let swatch = |background: gpui::Hsla, foreground: gpui::Hsla| {
             div().size_full().flex().items_center().justify_center().bg(background).child(div().w(px(40.)).h(px(6.)).rounded_full().bg(foreground))
         };
@@ -438,7 +438,7 @@ impl Gallery {
                 column()
                     .child(caption("Table"))
                     .child(
-                        div().rounded(metrics::RADIUS_LG).bg(colors.background).p(px(4.)).child(
+                        div().rounded(metrics::radius_lg()).bg(colors.background).p(px(4.)).child(
                             Table::new(vec![TableColumn::Flex(2.), TableColumn::Flex(1.), TableColumn::Fixed(px(64.))])
                                 .header(["Name", "Type", "Size"])
                                 .row(TableRow::new("r1").cell("users").cell("table").cell("12 MB"))
@@ -493,11 +493,11 @@ impl Gallery {
                 column()
                     .w(px(380.))
                     .child(caption("Questionnaire"))
-                    .child(div().p(px(12.)).rounded(metrics::RADIUS_LG).bg(colors.background).child(self.questionnaire.clone()))
+                    .child(div().p(px(12.)).rounded(metrics::radius_lg()).bg(colors.background).child(self.questionnaire.clone()))
                     .child(caption("Viewer states"))
-                    .child(div().rounded(metrics::RADIUS_LG).overflow_hidden().child(ViewerState::new().title("Nothing to preview").description("Binary files open in the hex viewer.").action("Open as text", |_, _| {}).layout(ViewerLayout::Section)))
-                    .child(div().rounded(metrics::RADIUS_LG).overflow_hidden().child(ViewerLoadingState::new("Loading image…").layout(ViewerLayout::Section)))
-                    .child(div().rounded(metrics::RADIUS_LG).overflow_hidden().child(ViewerErrorState::new("The PDF could not be read: unexpected end of file.").action("Retry", |_, _| {}).layout(ViewerLayout::Section))),
+                    .child(div().rounded(metrics::radius_lg()).overflow_hidden().child(ViewerState::new().title("Nothing to preview").description("Binary files open in the hex viewer.").action("Open as text", |_, _| {}).layout(ViewerLayout::Section)))
+                    .child(div().rounded(metrics::radius_lg()).overflow_hidden().child(ViewerLoadingState::new("Loading image…").layout(ViewerLayout::Section)))
+                    .child(div().rounded(metrics::radius_lg()).overflow_hidden().child(ViewerErrorState::new("The PDF could not be read: unexpected end of file.").action("Retry", |_, _| {}).layout(ViewerLayout::Section))),
             )
     }
 }
@@ -505,8 +505,8 @@ impl Gallery {
 impl Gallery {
     fn states(&self, cx: &mut Context<Self>) -> impl IntoElement {
         let colors = cx.theme().colors.clone();
-        let caption = |text: &'static str| div().w(px(120.)).flex_none().text_size(typography::TEXT_CAPTION).text_color(colors.subtle_foreground).child(text);
-        let head = |text: &'static str| div().w(px(150.)).flex_none().text_size(typography::TEXT_CAPTION).text_color(colors.subtle_foreground).child(text);
+        let caption = |text: &'static str| div().w(px(120.)).flex_none().text_size(typography::text_caption()).text_color(colors.subtle_foreground).child(text);
+        let head = |text: &'static str| div().w(px(150.)).flex_none().text_size(typography::text_caption()).text_color(colors.subtle_foreground).child(text);
         let cell = || div().w(px(150.)).flex_none().flex().items_center().gap(px(8.));
         let row = |name: &'static str, cells: Vec<gpui::AnyElement>| {
             div().flex().items_center().min_h(px(36.)).child(caption(name)).children(cells.into_iter().map(|c| cell().child(c)))
@@ -662,7 +662,7 @@ impl Render for Gallery {
             .p(px(24.))
             .bg(colors.surface)
             .font_family(typography::UI_FONT)
-            .text_size(typography::TEXT_SM)
+            .text_size(typography::text_sm())
             .text_color(colors.foreground)
             .child(island(cx).p(px(24.)).child(content))
     }

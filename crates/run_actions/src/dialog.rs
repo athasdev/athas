@@ -1,7 +1,8 @@
 //! New / Edit run action (`run-action-dialog.tsx`): name, command and working directory of an
 //! action saved for one project.
 
-use gpui::{App, Context, DismissEvent, Entity, EventEmitter, FocusHandle, Focusable, SharedString, Subscription, Window, div, prelude::*, px};
+use ui::scale::px;
+use gpui::{App, Context, DismissEvent, Entity, EventEmitter, FocusHandle, Focusable, SharedString, Subscription, Window, div, prelude::*,};
 use theme::ActiveTheme;
 use ui::{Button, ButtonVariant, Dialog, DialogSize, Field, IconName, TextInput, TextInputEvent, metrics, typography};
 
@@ -145,11 +146,11 @@ impl Render for RunActionDialog {
                     .gap(px(16.))
                     .child(
                         div()
-                            .rounded(metrics::RADIUS_LG)
+                            .rounded(metrics::radius_lg())
                             .bg(colors.surface)
                             .px(px(12.))
                             .py(px(8.))
-                            .text_size(typography::TEXT_SM)
+                            .text_size(typography::text_sm())
                             .text_color(colors.subtle_foreground)
                             .child({
                                 // One run of text, the workspace in medium foreground, wrapping as a

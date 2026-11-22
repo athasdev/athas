@@ -17,9 +17,10 @@ use std::{
     time::Duration,
 };
 
+use ui::scale::px;
 use gpui::{
     AnyElement, App, Context, Entity, EventEmitter, FocusHandle, Focusable, HighlightStyle, IntoElement,
-    KeyDownEvent, ListOffset, Render, SharedString, StyledText, Subscription, Task, Window, div, list, prelude::*, px,
+    KeyDownEvent, ListOffset, Render, SharedString, StyledText, Subscription, Task, Window, div, list, prelude::*,
 };
 use multibuffer::{Entry, Multibuffer, OpenHandler, Section, Tone};
 use theme::ActiveTheme;
@@ -48,8 +49,8 @@ pub enum SearchEvent {
 const DEBOUNCE: Duration = Duration::from_millis(200);
 /// Matches one search collects before it stops and offers to load more.
 const MATCH_LIMIT: usize = 2000;
-const ROW_HEIGHT: gpui::Pixels = px(24.);
-const LINE_HEIGHT: gpui::Pixels = px(20.);
+fn row_height() -> gpui::Pixels { px(24.) }
+fn line_height() -> gpui::Pixels { px(20.) }
 /// Files larger than this give no context lines.
 #[cfg(not(target_family = "wasm"))]
 const MAX_SOURCE_BYTES: u64 = 2 * 1024 * 1024;
@@ -668,9 +669,9 @@ impl SearchView {
             .flex()
             .flex_none()
             .items_center()
-            .h(metrics::CONTENT_HEADER)
-            .px(metrics::CHROME_PADDING_INLINE)
-            .gap(metrics::CHROME_GAP)
+            .h(metrics::content_header())
+            .px(metrics::chrome_padding_inline())
+            .gap(metrics::chrome_gap())
             .child(
                 Button::icon("search-details", if self.details_visible { IconName::ChevronDown } else { IconName::ChevronRight })
                     .size(ButtonSize::Small)
@@ -697,7 +698,7 @@ impl SearchView {
                     .flex()
                     .flex_none()
                     .items_center()
-                    .gap(metrics::CHROME_GAP_TIGHT)
+                    .gap(metrics::chrome_gap_tight())
                     .child(toggle("search-case", IconName::CaseSensitive, "Match case", options.case_sensitive).on_click(
                         cx.listener(|this, _, _, cx| this.set_option(|options| options.case_sensitive ^= true, cx)),
                     ))
@@ -714,7 +715,7 @@ impl SearchView {
                     .max_w(px(280.))
                     .truncate()
                     .px(px(4.))
-                    .text_size(typography::TEXT_CHROME)
+                    .text_size(typography::text_chrome())
                     .text_color(if warning { colors.warning } else { colors.subtle_foreground })
                     .child(status)
             }))
@@ -773,7 +774,7 @@ impl SearchView {
                 .px(px(12.))
                 .py(px(4.))
                 .bg(background)
-                .text_size(typography::TEXT_SM)
+                .text_size(typography::text_sm())
         };
         if self.confirm_replace_all {
             let matches = self.match_count();
@@ -903,11 +904,11 @@ impl SearchView {
         let base = div()
             .flex()
             .items_center()
-            .h(LINE_HEIGHT)
+            .h(line_height())
             .w_full()
             .min_w_0()
             .font_family(typography::MONO_FONT)
-            .text_size(typography::TEXT_SM)
+            .text_size(typography::text_sm())
             .whitespace_nowrap();
         match line {
             ExcerptLine::Gap => base
@@ -962,10 +963,10 @@ impl SearchView {
             .flex()
             .items_center()
             .justify_center()
-            .h(ROW_HEIGHT)
+            .h(row_height())
             .my(px(8.))
-            .rounded(metrics::RADIUS)
-            .text_size(typography::TEXT_SM)
+            .rounded(metrics::radius())
+            .text_size(typography::text_sm())
             .text_color(colors.subtle_foreground)
             .hover(move |style| style.bg(hover))
             .child(format!("Showing {} results. Load more", self.match_count()))

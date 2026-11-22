@@ -1,7 +1,8 @@
 //! Small pieces the catalog and the detail page share: extension icons, badges, progress.
 
 use extensions::{CatalogEntry, ExtensionIcon, ExtensionKind, ExtensionStatus, Operation};
-use gpui::{AnyElement, IntoElement, Pixels, div, img, prelude::*, px, relative, svg};
+use ui::scale::px;
+use gpui::{AnyElement, IntoElement, Pixels, div, img, prelude::*, relative, svg};
 use theme::ThemeColors;
 use ui::{Icon, IconName, IconSize, metrics};
 
@@ -35,7 +36,7 @@ pub(crate) fn extension_icon(entry: &CatalogEntry, size: Pixels, colors: &ThemeC
         .items_center()
         .justify_center()
         .size(size)
-        .rounded(if size > px(40.) { metrics::RADIUS_LG + px(2.) } else { metrics::RADIUS_LG })
+        .rounded(if size > px(40.) { metrics::radius_lg() + px(2.) } else { metrics::radius_lg() })
         .bg(colors.raised)
         .border_1()
         .border_color(colors.divider)

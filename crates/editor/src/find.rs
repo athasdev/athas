@@ -3,7 +3,8 @@
 
 use std::ops::Range;
 
-use gpui::{Context, Entity, IntoElement, Subscription, Window, div, prelude::*, px};
+use ui::scale::px;
+use gpui::{Context, Entity, IntoElement, Subscription, Window, div, prelude::*,};
 use regex::Regex;
 use theme::ActiveTheme;
 use ui::{Button, ButtonSize, IconName, InputAppearance, TextInput, TextInputEvent, typography};
@@ -142,7 +143,7 @@ impl Editor {
                 .h(px(24.))
                 .w(px(220.))
                 .px(px(8.))
-                .rounded(ui::metrics::RADIUS_MD)
+                .rounded(ui::metrics::radius_md())
                 .bg(colors.field)
                 .child(input)
         };
@@ -168,7 +169,7 @@ impl Editor {
                 div()
                     .min_w(px(64.))
                     .px(px(4.))
-                    .text_size(typography::TEXT_CAPTION)
+                    .text_size(typography::text_caption())
                     .text_color(if find.error || (find.matches.is_empty() && !count.is_empty()) { colors.destructive } else { colors.subtle_foreground })
                     .child(count),
             )
@@ -208,11 +209,11 @@ impl Editor {
                 .flex_col()
                 .gap(px(4.))
                 .p(px(4.))
-                .rounded(ui::metrics::ISLAND_RADIUS)
+                .rounded(ui::metrics::island_radius())
                 .bg(colors.overlay)
                 .shadow(theme.shadows.popover.clone())
                 .text_color(colors.foreground)
-                .text_size(typography::TEXT_SM)
+                .text_size(typography::text_sm())
                 .on_mouse_down(gpui::MouseButton::Left, |_, _, cx| cx.stop_propagation())
                 .on_action(cx.listener(|editor, _: &crate::FindPrevious, window, cx| editor.find_step(false, window, cx)))
                 .on_action(cx.listener(|editor, _: &crate::ReplaceAll, window, cx| editor.replace_all(window, cx)))

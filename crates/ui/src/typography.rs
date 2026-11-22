@@ -1,16 +1,19 @@
 //! The type scale (`--ui-text-*`): one family, four sizes.
 
-use gpui::{App, FontWeight, Global, Pixels, SharedString, Styled, px};
+use gpui::{App, FontWeight, Global, Pixels, SharedString, Styled};
+
+// The settings' own `uiFontSize` scales with the window too.
+use crate::scale::px;
 
 pub const UI_FONT: &str = "Inter";
 pub const MONO_FONT: &str = "JetBrains Mono";
 
-pub const TEXT_BASE: Pixels = px(13.);
-pub const TEXT_LG: Pixels = px(15.);
-pub const TEXT_SM: Pixels = px(12.);
-pub const TEXT_CAPTION: Pixels = px(11.);
+pub fn text_base() -> Pixels { crate::scale::px(13.) }
+pub fn text_lg() -> Pixels { crate::scale::px(15.) }
+pub fn text_sm() -> Pixels { crate::scale::px(12.) }
+pub fn text_caption() -> Pixels { crate::scale::px(11.) }
 /// Chrome text: headers, tabs and toolbars.
-pub const TEXT_CHROME: Pixels = TEXT_SM;
+pub fn text_chrome() -> Pixels { text_sm() }
 
 pub const MEDIUM: FontWeight = FontWeight::MEDIUM;
 pub const SEMIBOLD: FontWeight = FontWeight::SEMIBOLD;
@@ -65,16 +68,16 @@ pub fn set_ui(cx: &mut App, typography: UiTypography) {
 
 pub trait TextStyleExt: Styled + Sized {
     fn text_ui_base(self) -> Self {
-        self.text_size(TEXT_BASE)
+        self.text_size(text_base())
     }
     fn text_ui_sm(self) -> Self {
-        self.text_size(TEXT_SM)
+        self.text_size(text_sm())
     }
     fn text_ui_caption(self) -> Self {
-        self.text_size(TEXT_CAPTION)
+        self.text_size(text_caption())
     }
     fn text_ui_lg(self) -> Self {
-        self.text_size(TEXT_LG)
+        self.text_size(text_lg())
     }
     fn font_medium(self) -> Self {
         self.font_weight(MEDIUM)

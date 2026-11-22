@@ -5,9 +5,10 @@
 
 use std::{collections::HashSet, time::Duration};
 
+use ui::scale::px;
 use gpui::{
     App, ClickEvent, ClipboardItem, Context, Entity, FocusHandle, Focusable, IntoElement, ParentElement, Render, SharedString, Styled, Subscription,
-    Task, Window, div, prelude::*, px,
+    Task, Window, div, prelude::*,
 };
 use theme::ActiveTheme;
 use ui::{
@@ -189,7 +190,7 @@ impl AcpInspectorView {
             .px(px(12.))
             .border_b_1()
             .border_color(colors.border)
-            .text_size(typography::TEXT_CAPTION)
+            .text_size(typography::text_caption())
             .text_color(colors.subtle_foreground)
             .child(div().w(px(14.)))
             .child(cell(92.).child("Time"))
@@ -229,9 +230,9 @@ impl AcpInspectorView {
                     .flex()
                     .items_center()
                     .gap(px(8.))
-                    .h(ui::metrics::LIST_ROW)
+                    .h(ui::metrics::list_row())
                     .px(px(12.))
-                    .text_size(typography::TEXT_SM)
+                    .text_size(typography::text_sm())
                     .when(open, |row| row.bg(colors.selected))
                     .hover(|row| row.bg(colors.accent))
                     .on_click(cx.listener(move |this, _: &ClickEvent, _, cx| this.toggle(&key, cx)))
@@ -293,7 +294,7 @@ impl AcpInspectorView {
                                 cx.notify();
                             }))
                     }))
-                    .children(message.session_id.clone().map(|id| div().font_family(typography::MONO_FONT).text_size(typography::TEXT_CAPTION).text_color(colors.subtle_foreground).child(id)))
+                    .children(message.session_id.clone().map(|id| div().font_family(typography::MONO_FONT).text_size(typography::text_caption()).text_color(colors.subtle_foreground).child(id)))
                     .when(message.truncated, |row| row.child(Badge::new("Cut to the first 64 KiB").tone(Tone::Warning))),
             )
             .child(json_block(text, cx))
@@ -334,12 +335,12 @@ fn json_block(text: String, cx: &App) -> impl IntoElement {
         .w_full()
         .px(px(10.))
         .py(px(8.))
-        .rounded(ui::metrics::RADIUS_MD)
+        .rounded(ui::metrics::radius_md())
         .bg(colors.surface)
         .border_1()
         .border_color(colors.border)
         .font_family(typography::MONO_FONT)
-        .text_size(typography::TEXT_SM)
+        .text_size(typography::text_sm())
         .text_color(colors.foreground)
         .child(text)
 }
@@ -391,7 +392,7 @@ impl Render for AcpInspectorView {
                     .flex_1()
                     .min_w_0()
                     .truncate()
-                    .text_size(typography::TEXT_SM)
+                    .text_size(typography::text_sm())
                     .text_color(colors.subtle_foreground)
                     .child(process.as_ref().and_then(|process| process.workspace.clone()).unwrap_or_else(|| "JSON-RPC traffic between Athas and its ACP agents".into())),
             )
@@ -450,7 +451,7 @@ impl Render for AcpInspectorView {
             .flex_col()
             .bg(colors.background)
             .font_family(typography::UI_FONT)
-            .text_size(typography::TEXT_BASE)
+            .text_size(typography::text_base())
             .text_color(colors.foreground)
             .children(self.open_menu.as_ref().map(|menu| menu.render()))
             .child(header);

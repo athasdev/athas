@@ -3,9 +3,10 @@
 use ui::TooltipExt as _;
 use web_time::{SystemTime, UNIX_EPOCH};
 
+use ui::scale::px;
 use gpui::{
     Anchor, AnyElement, ClickEvent, Context, ElementId, Hsla, IntoElement, MouseButton, MouseDownEvent, Render,
-    SharedString, Window, div, point, prelude::*, px,
+    SharedString, Window, div, point, prelude::*,
 };
 use theme::{ActiveTheme, ThemeColors};
 use ui::{Button, ButtonSize, ButtonVariant, EmptyState, Icon, IconName, IconSize, Plane, WithScrollbar as _, metrics, typography};
@@ -17,7 +18,7 @@ use crate::{
 };
 
 /// A sidebar bar: the identity row and the toolbars.
-const BAR_HEIGHT: gpui::Pixels = px(32.);
+fn bar_height() -> gpui::Pixels { px(32.) }
 
 pub(crate) fn now_seconds() -> i64 {
     SystemTime::now().duration_since(UNIX_EPOCH).map_or(0, |elapsed| elapsed.as_secs() as i64)
@@ -62,7 +63,7 @@ fn diff_numbers(additions: usize, deletions: usize, colors: &ThemeColors) -> Opt
             .flex_none()
             .gap(px(4.))
             .font_family(typography::MONO_FONT)
-            .text_size(typography::TEXT_CAPTION)
+            .text_size(typography::text_caption())
             .when(additions > 0, |this| this.child(div().text_color(colors.git_added).child(format!("+{additions}"))))
             .when(deletions > 0, |this| this.child(div().text_color(colors.git_deleted).child(format!("−{deletions}"))))
             .into_any_element()
@@ -70,7 +71,7 @@ fn diff_numbers(additions: usize, deletions: usize, colors: &ThemeColors) -> Opt
 }
 
 fn caption(text: impl Into<SharedString>, colors: &ThemeColors) -> gpui::Div {
-    div().text_size(typography::TEXT_CAPTION).text_color(colors.subtle_foreground).child(text.into())
+    div().text_size(typography::text_caption()).text_color(colors.subtle_foreground).child(text.into())
 }
 
 /// An icon turning once a second, as Tailwind's `animate-spin`.
@@ -134,7 +135,7 @@ impl Row {
             item = item.detail(secondary);
         }
         if !self.meta.is_empty() {
-            item = item.trailing(div().flex().items_center().gap(px(6.)).text_size(typography::TEXT_CAPTION).children(self.meta));
+            item = item.trailing(div().flex().items_center().gap(px(6.)).text_size(typography::text_caption()).children(self.meta));
         }
         if !self.actions.is_empty() {
             item = item.hover_trailing(div().flex().items_center().gap(px(2.)).children(self.actions));
@@ -288,7 +289,7 @@ impl GitPanel {
             .gap(px(2.))
             .child(div().absolute().top(px(2.)).bottom(px(2.)).left(px(20.)).w(px(1.)).bg(colors.border))
             .children(rows)
-            .when(empty, |this| this.child(caption("No commits yet", colors).px(px(8.)).py(px(4.)).text_size(typography::TEXT_SM)))
+            .when(empty, |this| this.child(caption("No commits yet", colors).px(px(8.)).py(px(4.)).text_size(typography::text_sm())))
             .children(more)
     }
 
@@ -336,10 +337,10 @@ impl GitPanel {
             .min_w_0()
             .items_center()
             .gap(px(6.))
-            .h(metrics::CHROME_CONTROL)
+            .h(metrics::chrome_control())
             .px(px(6.))
-            .rounded(metrics::RADIUS_MD)
-            .text_size(typography::TEXT_SM)
+            .rounded(metrics::radius_md())
+            .text_size(typography::text_sm())
             .hover(move |style| style.bg(accent))
             .child(
                 Icon::new(if self.is_linked_worktree() { IconName::Nodes } else { IconName::GitBranch })
@@ -377,7 +378,7 @@ impl GitPanel {
             .flex_none()
             .items_center()
             .gap(px(2.))
-            .h(BAR_HEIGHT)
+            .h(bar_height())
             .px(px(8.))
             .child(context)
             .child(self.render_sync_button(colors, cx))
@@ -418,8 +419,8 @@ impl GitPanel {
         div()
             .flex()
             .flex_none()
-            .h(metrics::CHROME_CONTROL)
-            .text_size(typography::TEXT_SM)
+            .h(metrics::chrome_control())
+            .text_size(typography::text_sm())
             .font_weight(typography::MEDIUM)
             .text_color(tone)
             .child(
@@ -430,7 +431,7 @@ impl GitPanel {
                     .gap(px(2.))
                     .pl(px(6.))
                     .pr(px(4.))
-                    .rounded_l(metrics::RADIUS_MD)
+                    .rounded_l(metrics::radius_md())
                     .when(busy, |this| this.opacity(0.6))
                     .when(!busy, |this| this.hover(move |style| style.bg(accent)))
                     .child(if busy { spinning_icon("git-sync-spin", icon, tone) } else { Icon::new(icon).size(IconSize::XSmall).color(tone).into_any_element() })
@@ -444,7 +445,7 @@ impl GitPanel {
                     .flex()
                     .items_center()
                     .px(px(2.))
-                    .rounded_r(metrics::RADIUS_MD)
+                    .rounded_r(metrics::radius_md())
                     .hover(move |style| style.bg(accent))
                     .when(self.menu_is_open("git-remote"), |this| this.bg(accent))
                     .child(Icon::new(IconName::ChevronDown).size(IconSize::XSmall).color(tone))
@@ -470,7 +471,7 @@ impl GitPanel {
                 .flex()
                 .flex_col()
                 .relative()
-                .rounded(metrics::RADIUS_MD)
+                .rounded(metrics::radius_md())
                 .bg(colors.raised)
                 .shadow(theme.shadows.raised_inset.clone())
                 .child({
@@ -552,9 +553,9 @@ impl GitPanel {
                                         .flex()
                                         .items_center()
                                         .px(px(10.))
-                                        .rounded_l(metrics::RADIUS_MD)
+                                        .rounded_l(metrics::radius_md())
                                         .bg(colors.primary)
-                                        .text_size(typography::TEXT_SM)
+                                        .text_size(typography::text_sm())
                                         .font_weight(typography::MEDIUM)
                                         .whitespace_nowrap()
                                         .text_color(label)
@@ -570,7 +571,7 @@ impl GitPanel {
                                         .flex()
                                         .items_center()
                                         .px(px(4.))
-                                        .rounded_r(metrics::RADIUS_MD)
+                                        .rounded_r(metrics::radius_md())
                                         .border_l_1()
                                         .border_color(divider)
                                         .bg(colors.primary)
@@ -593,7 +594,7 @@ impl GitPanel {
             .flex_none()
             .items_center()
             .gap(px(2.))
-            .h(BAR_HEIGHT)
+            .h(bar_height())
             .pl(px(12.))
             .pr(px(8.))
             .child(div().flex_1().min_w_0().child(input))
@@ -679,7 +680,7 @@ impl GitPanel {
 
     /// The History search bar under its header.
     fn render_history_toolbar(&self) -> gpui::Div {
-        div().h(BAR_HEIGHT).pl(px(16.)).pr(px(8.)).flex().items_center().child(self.history_filter_input.clone())
+        div().h(bar_height()).pl(px(16.)).pr(px(8.)).flex().items_center().child(self.history_filter_input.clone())
     }
 
     /// `collapseEmptyGitSections` keeps a section without rows closed.
@@ -706,9 +707,9 @@ impl GitPanel {
                         .flex()
                         .items_center()
                         .gap(px(6.))
-                        .h(metrics::LIST_ROW)
+                        .h(metrics::list_row())
                         .px(px(8.))
-                        .rounded(metrics::RADIUS_MD)
+                        .rounded(metrics::radius_md())
                         .map(|this| ui::sidebar_row(this, false, false, cx))
                         .child(
                             Icon::new(if collapsed { IconName::ChevronRight } else { IconName::ChevronDown })
@@ -716,7 +717,7 @@ impl GitPanel {
                                 .color(colors.subtle_foreground),
                         )
                         .child(Icon::new(if collapsed { IconName::Folder } else { IconName::FolderOpen }).size(IconSize::XSmall).color(colors.subtle_foreground))
-                        .child(div().min_w_0().truncate().text_size(typography::TEXT_SM).text_color(colors.muted_foreground).child(dir))
+                        .child(div().min_w_0().truncate().text_size(typography::text_sm()).text_color(colors.muted_foreground).child(dir))
                         .child(caption(files.len().to_string(), colors).flex_none())
                         .on_click(cx.listener(move |this, _, _, cx| this.toggle_folder(key.clone(), cx))),
                 );
@@ -827,7 +828,7 @@ impl GitPanel {
                     .gap(px(2.))
                     .px(px(12.))
                     .py(px(24.))
-                    .text_size(typography::TEXT_SM)
+                    .text_size(typography::text_sm())
                     .child(div().text_color(colors.muted_foreground).child("Working tree clean"))
                     .child(div().text_color(colors.subtle_foreground).child("Edit something and it will show up here."))
                     .into_any_element(),
@@ -908,7 +909,7 @@ impl GitPanel {
                     .children(commit.description.as_deref().map(str::trim).filter(|text| !text.is_empty()).map(|description| {
                         div()
                             .mb(px(8.))
-                            .text_size(typography::TEXT_SM)
+                            .text_size(typography::text_sm())
                             .line_height(px(16.))
                             .text_color(colors.muted_foreground)
                             .line_clamp(6)
@@ -919,7 +920,7 @@ impl GitPanel {
                             .flex()
                             .items_center()
                             .gap(px(6.))
-                            .text_size(typography::TEXT_CAPTION)
+                            .text_size(typography::text_caption())
                             .text_color(colors.subtle_foreground)
                             .children(totals.map(|totals| {
                                 div().flex_none().child(format!("{} file{}", totals.files, if totals.files == 1 { "" } else { "s" }))
@@ -988,7 +989,7 @@ impl GitPanel {
                     caption(if searching { "No matching commits" } else { "No commits yet" }, colors)
                         .py(px(16.))
                         .text_center()
-                        .text_size(typography::TEXT_SM),
+                        .text_size(typography::text_sm()),
                 )
             })
             .when(self.has_more_commits && !searching, |this| {
@@ -997,9 +998,9 @@ impl GitPanel {
                         .id("git-load-more")
                         .mt(px(4.))
                         .py(px(6.))
-                        .rounded(metrics::RADIUS_MD)
+                        .rounded(metrics::radius_md())
                         .text_center()
-                        .text_size(typography::TEXT_SM)
+                        .text_size(typography::text_sm())
                         .text_color(colors.subtle_foreground)
                         .hover(move |style| style.bg(accent).text_color(hover))
                         .child("Load older commits")
@@ -1132,7 +1133,7 @@ impl Render for GitPanel {
                         .flex_1()
                         .items_center()
                         .justify_center()
-                        .text_size(typography::TEXT_SM)
+                        .text_size(typography::text_sm())
                         .text_color(colors.subtle_foreground)
                         .child("Loading Git status…"),
                 )

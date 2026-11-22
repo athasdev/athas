@@ -1,4 +1,5 @@
-use gpui::{AnyElement, App, Hsla, IntoElement, RenderOnce, SharedString, Window, div, prelude::*, px, relative};
+use crate::scale::px;
+use gpui::{AnyElement, App, Hsla, IntoElement, RenderOnce, SharedString, Window, div, prelude::*, relative};
 use theme::ActiveTheme;
 
 use crate::{Icon, IconName, Tone, metrics, typography};
@@ -151,9 +152,9 @@ impl RenderOnce for Card {
             .flex()
             .flex_col()
             .overflow_hidden()
-            .rounded(metrics::RADIUS_LG)
+            .rounded(metrics::radius_lg())
             .font_family(typography::UI_FONT)
-            .text_size(typography::TEXT_SM)
+            .text_size(typography::text_sm())
             .text_color(colors.foreground)
             .when_some(fill, |this, fill| this.bg(fill))
             .when(!shadow.is_empty(), |this| this.shadow(shadow))
@@ -321,10 +322,10 @@ impl RenderOnce for Alert {
             .px(px(10.))
             .py(px(8.))
             .bg(fill)
-            .when(self.variant != AlertVariant::Banner, |this| this.rounded(metrics::RADIUS_MD))
+            .when(self.variant != AlertVariant::Banner, |this| this.rounded(metrics::radius_md()))
             .when(self.corner_action.is_some(), |this| this.pr(px(72.)))
             .font_family(typography::UI_FONT)
-            .text_size(typography::TEXT_SM)
+            .text_size(typography::text_sm())
             .text_color(colors.foreground)
             .children(self.icon.map(|icon| div().flex_none().pt(px(2.)).child(Icon::new(icon).color(icon_color))))
             .child(

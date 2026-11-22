@@ -3,7 +3,8 @@
 
 use std::ops::Range;
 
-use gpui::{Bounds, Context, EntityInputHandler, MouseDownEvent, Pixels, Point, ScrollEvent, UTF16Selection, Window, point, px, size};
+use ui::scale::px;
+use gpui::{Bounds, Context, EntityInputHandler, MouseDownEvent, Pixels, Point, ScrollEvent, UTF16Selection, Window, point, size};
 
 use crate::{Autoscroll, Drag, Editor, buffer::char_class, element::ScrollbarLayout, history::EditKind, selection::Selection};
 

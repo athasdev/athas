@@ -4,7 +4,8 @@
 
 use std::collections::HashSet;
 
-use gpui::{AnyElement, App, ClickEvent, Context, IntoElement, ParentElement, Styled, div, prelude::*, px};
+use ui::scale::px;
+use gpui::{AnyElement, App, ClickEvent, Context, IntoElement, ParentElement, Styled, div, prelude::*,};
 use theme::ActiveTheme;
 use ui::{Button, ButtonSize, ButtonVariant, Icon, IconName, IconSize, typography};
 
@@ -610,7 +611,7 @@ impl SessionView {
                     )
                     .children(method.description.clone().map(|description| div().text_color(colors.subtle_foreground).child(description)))
                     .children(auth_command_line(program, method).map(|command| {
-                        div().font_family(typography::MONO_FONT).text_size(typography::TEXT_CAPTION).text_color(colors.subtle_foreground).child(command)
+                        div().font_family(typography::MONO_FONT).text_size(typography::text_caption()).text_color(colors.subtle_foreground).child(command)
                     }))
                     .into_any_element()
             })
@@ -683,9 +684,9 @@ impl SessionView {
         }
         let waiting_command = waiting.and_then(|id| methods.iter().find(|method| method.id == id)).and_then(|method| auth_command_line(program, method));
         let hint = match (&self.auth_error, waiting_command) {
-            (Some(error), _) => div().text_size(typography::TEXT_CAPTION).text_color(colors.destructive).truncate().child(error.clone()),
-            (None, Some(command)) => div().text_size(typography::TEXT_CAPTION).font_family(typography::MONO_FONT).text_color(colors.muted_foreground).truncate().child(command),
-            (None, None) => div().text_size(typography::TEXT_CAPTION).text_color(colors.muted_foreground).truncate().child("Choose how to sign in. The chat continues once you're done."),
+            (Some(error), _) => div().text_size(typography::text_caption()).text_color(colors.destructive).truncate().child(error.clone()),
+            (None, Some(command)) => div().text_size(typography::text_caption()).font_family(typography::MONO_FONT).text_color(colors.muted_foreground).truncate().child(command),
+            (None, None) => div().text_size(typography::text_caption()).text_color(colors.muted_foreground).truncate().child("Choose how to sign in. The chat continues once you're done."),
         };
         Some(
             div()
@@ -694,7 +695,7 @@ impl SessionView {
                 .gap(px(10.))
                 .px(px(12.))
                 .py(px(8.))
-                .rounded(ui::metrics::ISLAND_RADIUS)
+                .rounded(ui::metrics::island_radius())
                 .border_1()
                 .border_color(colors.border)
                 .bg(colors.raised)
@@ -705,7 +706,7 @@ impl SessionView {
                         .flex_col()
                         .flex_1()
                         .min_w_0()
-                        .child(div().text_size(typography::TEXT_SM).text_color(colors.foreground).child(format!("Sign in to {}", self.agent_name())))
+                        .child(div().text_size(typography::text_sm()).text_color(colors.foreground).child(format!("Sign in to {}", self.agent_name())))
                         .child(hint),
                 )
                 .children(buttons)
@@ -741,7 +742,7 @@ impl SessionView {
                 .gap(px(10.))
                 .px(px(12.))
                 .py(px(8.))
-                .rounded(ui::metrics::ISLAND_RADIUS)
+                .rounded(ui::metrics::island_radius())
                 .border_1()
                 .border_color(colors.border)
                 .bg(colors.raised)
@@ -752,8 +753,8 @@ impl SessionView {
                         .flex_col()
                         .flex_1()
                         .min_w_0()
-                        .child(div().text_size(typography::TEXT_SM).text_color(colors.foreground).child(notice.title.clone()))
-                        .child(div().text_size(typography::TEXT_CAPTION).text_color(colors.muted_foreground).truncate().child(notice.description.clone())),
+                        .child(div().text_size(typography::text_sm()).text_color(colors.foreground).child(notice.title.clone()))
+                        .child(div().text_size(typography::text_caption()).text_color(colors.muted_foreground).truncate().child(notice.description.clone())),
                 )
                 .children(notice.secondary.clone().map(|secondary| button("notice-secondary", secondary, ButtonVariant::Ghost, cx)))
                 .children(notice.primary.clone().map(|primary| button("notice-primary", primary, ButtonVariant::Default, cx)))

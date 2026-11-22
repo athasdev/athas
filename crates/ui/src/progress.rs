@@ -1,8 +1,9 @@
 use crate::TooltipExt;
 use std::rc::Rc;
 
+use crate::scale::px;
 use gpui::{
-    App, ElementId, Hsla, IntoElement, PathBuilder, RenderOnce, SharedString, Window, canvas, div, point, prelude::*, px,
+    App, ElementId, Hsla, IntoElement, PathBuilder, RenderOnce, SharedString, Window, canvas, div, point, prelude::*,
     relative,
 };
 use theme::{ActiveTheme, ThemeColors};
@@ -78,7 +79,7 @@ impl RenderOnce for Progress {
             .w_full()
             .gap(px(8.))
             .font_family(typography::UI_FONT)
-            .text_size(typography::TEXT_SM)
+            .text_size(typography::text_sm())
             .when(has_header, |this| {
                 this.child(
                     div()
@@ -265,7 +266,7 @@ impl RenderOnce for ToggleGroup {
     fn render(self, _: &mut Window, cx: &mut App) -> impl IntoElement {
         let theme = cx.theme().clone();
         let colors = &theme.colors;
-        let item_height = crate::metrics::CHROME_CONTROL - px(2.);
+        let item_height = crate::metrics::chrome_control() - px(2.);
         let items = self.options.into_iter().enumerate().map(|(index, option)| {
             let pressed = self.selected.contains(&option.value);
             let disabled = self.disabled || option.disabled;
@@ -323,7 +324,7 @@ impl RenderOnce for ToggleGroup {
             .rounded_full()
             .bg(colors.segment_track)
             .font_family(typography::UI_FONT)
-            .text_size(typography::TEXT_SM)
+            .text_size(typography::text_sm())
             .font_weight(typography::MEDIUM)
             .when(self.full_width, |this| this.w_full())
             .children(items)

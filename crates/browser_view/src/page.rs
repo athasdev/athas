@@ -5,9 +5,10 @@
 
 use athas_browser::BrowserEvent;
 use futures::{StreamExt, channel::mpsc};
+use ui::scale::px;
 use gpui::{
     App, ClickEvent, Context, Entity, EventEmitter, FocusHandle, Focusable, ObjectFit, Subscription, Window, div, img,
-    prelude::*, px,
+    prelude::*,
 };
 use ui::{
     Button, ButtonSize, ButtonVariant, DropdownMenu, EmptyState, Icon, IconName, IconSize, InputAppearance, InputGroup, MenuEntry, MenuItem,
@@ -507,8 +508,8 @@ pub(crate) fn page_placeholder(url: &str, cx: &App) -> impl IntoElement {
         .max_w(px(420.))
         .text_center()
         .child(Icon::new(IconName::Globe).size(IconSize::Custom(px(24.))).color(colors.subtle_foreground))
-        .child(div().text_size(typography::TEXT_SM).font_weight(typography::MEDIUM).text_color(colors.foreground).child(message))
-        .child(div().max_w_full().truncate().text_size(typography::TEXT_SM).text_color(colors.muted_foreground).child(url.to_string()))
+        .child(div().text_size(typography::text_sm()).font_weight(typography::MEDIUM).text_color(colors.foreground).child(message))
+        .child(div().max_w_full().truncate().text_size(typography::text_sm()).text_color(colors.muted_foreground).child(url.to_string()))
 }
 
 impl Render for BrowserPage {
@@ -576,8 +577,8 @@ impl Render for BrowserPage {
             .bg(colors.background)
             .child(
                 pane_header(cx)
-                    .child(div().flex().flex_none().items_center().gap(metrics::CHROME_GAP_TIGHT).child(back).child(forward).child(reload))
-                    .child(div().flex().flex_1().min_w_0().items_center().gap(metrics::CHROME_GAP_TIGHT).children(leading).child(address))
+                    .child(div().flex().flex_none().items_center().gap(metrics::chrome_gap_tight()).child(back).child(forward).child(reload))
+                    .child(div().flex().flex_1().min_w_0().items_center().gap(metrics::chrome_gap_tight()).children(leading).child(address))
                     .child(
                         pane_actions()
                             .children(actions)

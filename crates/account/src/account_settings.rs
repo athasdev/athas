@@ -3,7 +3,8 @@
 //! child view on the `account` page; the sharing list (`collaboration::SharingSettings`) goes
 //! under it.
 
-use gpui::{AnyElement, App, Context, Entity, IntoElement, ParentElement, Render, SharedString, Styled, Subscription, Window, div, prelude::*, px};
+use ui::scale::px;
+use gpui::{AnyElement, App, Context, Entity, IntoElement, ParentElement, Render, SharedString, Styled, Subscription, Window, div, prelude::*,};
 use theme::ActiveTheme;
 use ui::{Button, ButtonVariant, Switch, typography};
 
@@ -206,7 +207,7 @@ impl Render for AccountSettings {
         let urls = crate::urls(cx);
         let Some(store) = self.store.clone() else {
             return div()
-                .text_size(typography::TEXT_SM)
+                .text_size(typography::text_sm())
                 .text_color(cx.theme().colors.muted_foreground)
                 .child("Accounts are not available in this build.")
                 .into_any_element();

@@ -1,8 +1,8 @@
 use std::rc::Rc;
 
+use crate::scale::px;
 use gpui::{
-    AnyElement, App, BoxShadow, ClickEvent, ElementId, IntoElement, RenderOnce, SharedString, Window, div, point, prelude::*,
-    px, relative,
+    AnyElement, App, BoxShadow, ClickEvent, ElementId, IntoElement, RenderOnce, SharedString, Window, div, point, prelude::*, relative,
 };
 use theme::ActiveTheme;
 
@@ -67,7 +67,7 @@ impl RenderOnce for Message {
             .gap(px(8.))
             .when(end, |this| this.flex_row_reverse())
             .font_family(typography::UI_FONT)
-            .text_size(typography::TEXT_SM)
+            .text_size(typography::text_sm())
             .children(self.leading)
             .child(
                 div()
@@ -205,7 +205,7 @@ impl RenderOnce for Attachment {
                 .items_center()
                 .justify_center()
                 .overflow_hidden()
-                .rounded(metrics::RADIUS)
+                .rounded(metrics::radius())
                 .bg(if error { colors.destructive_soft } else { colors.accent })
                 .map(|this| if self.vertical { this.w_full().h(px(80.)) } else { this.size(px(32.)) })
                 .when(busy, |this| this.opacity(0.6))
@@ -224,11 +224,11 @@ impl RenderOnce for Attachment {
             .flex_none()
             .min_w_0()
             .gap(px(8.))
-            .rounded(metrics::RADIUS_MD)
+            .rounded(metrics::radius_md())
             .bg(colors.surface)
             .text_color(colors.foreground)
             .font_family(typography::UI_FONT)
-            .text_size(typography::TEXT_SM)
+            .text_size(typography::text_sm())
             .map(|this| {
                 if self.vertical {
                     this.flex_col().w(px(120.))
@@ -329,7 +329,7 @@ impl RenderOnce for ResourceSummary {
                                 div()
                                     .min_w_0()
                                     .truncate()
-                                    .text_size(typography::TEXT_LG)
+                                    .text_size(typography::text_lg())
                                     .font_weight(typography::SEMIBOLD)
                                     .text_color(colors.foreground)
                                     .child(self.title),
@@ -337,7 +337,7 @@ impl RenderOnce for ResourceSummary {
                             .when(!self.badges.is_empty(), |this| this.child(div().flex().flex_none().items_center().gap(px(6.)).children(self.badges))),
                     )
                     .children(self.description.map(|description| {
-                        div().mt(px(4.)).truncate().text_size(typography::TEXT_SM).text_color(colors.muted_foreground).child(description)
+                        div().mt(px(4.)).truncate().text_size(typography::text_sm()).text_color(colors.muted_foreground).child(description)
                     }))
                     .when(!self.meta.is_empty(), |this| {
                         this.child(
@@ -348,7 +348,7 @@ impl RenderOnce for ResourceSummary {
                                 .items_center()
                                 .gap_x(px(12.))
                                 .gap_y(px(4.))
-                                .text_size(typography::TEXT_SM)
+                                .text_size(typography::text_sm())
                                 .text_color(colors.muted_foreground)
                                 .children(self.meta),
                         )
@@ -401,7 +401,7 @@ impl RenderOnce for ResourceSection {
                     .justify_between()
                     .min_w_0()
                     .gap(px(8.))
-                    .child(div().text_size(typography::TEXT_SM).font_weight(typography::MEDIUM).text_color(colors.muted_foreground).child(self.title))
+                    .child(div().text_size(typography::text_sm()).font_weight(typography::MEDIUM).text_color(colors.muted_foreground).child(self.title))
                     .children(self.action),
             )
             .child(div().min_w_0().children(self.children))

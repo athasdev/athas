@@ -7,9 +7,10 @@
 use ui::WithScrollbar as _;
 use std::{path::PathBuf, time::Duration};
 
+use ui::scale::px;
 use gpui::{
     AnyElement, App, AppContext as _, ClickEvent, Context, Entity, FocusHandle, Focusable, Hsla, IntoElement, ParentElement, Render, Styled,
-    Subscription, Task, Window, div, prelude::*, px,
+    Subscription, Task, Window, div, prelude::*,
 };
 use theme::ActiveTheme;
 use ui::{
@@ -51,9 +52,9 @@ fn status_pill(status: RunStatus, cx: &App) -> impl IntoElement + use<> {
         .gap(px(4.))
         .px(px(6.))
         .h(px(20.))
-        .rounded(metrics::RADIUS)
+        .rounded(metrics::radius())
         .bg(color.opacity(0.12))
-        .text_size(typography::TEXT_CAPTION)
+        .text_size(typography::text_caption())
         .text_color(color)
         .child(div().size(px(6.)).rounded_full().bg(color))
         .child(status.label())
@@ -78,7 +79,7 @@ fn banner(icon: IconName, title: String, message: Option<String>, action: Option
         .items_center()
         .gap(px(10.))
         .p(px(12.))
-        .rounded(metrics::RADIUS_LG)
+        .rounded(metrics::radius_lg())
         .border_1()
         .border_color(colors.border)
         .bg(colors.raised)
@@ -91,23 +92,23 @@ fn banner(icon: IconName, title: String, message: Option<String>, action: Option
                 .flex_col()
                 .gap(px(2.))
                 .child(div().font_weight(typography::MEDIUM).child(title))
-                .children(message.map(|message| div().text_size(typography::TEXT_SM).text_color(colors.muted_foreground).child(message))),
+                .children(message.map(|message| div().text_size(typography::text_sm()).text_color(colors.muted_foreground).child(message))),
         )
         .children(action)
         .into_any_element()
 }
 
 fn section_title(title: &'static str, cx: &App) -> impl IntoElement + use<> {
-    div().text_size(typography::TEXT_SM).font_weight(typography::SEMIBOLD).text_color(cx.theme().colors.muted_foreground).child(title)
+    div().text_size(typography::text_sm()).font_weight(typography::SEMIBOLD).text_color(cx.theme().colors.muted_foreground).child(title)
 }
 
 fn field_label(text: &'static str, cx: &App) -> impl IntoElement + use<> {
-    div().text_size(typography::TEXT_CAPTION).text_color(cx.theme().colors.muted_foreground).child(text)
+    div().text_size(typography::text_caption()).text_color(cx.theme().colors.muted_foreground).child(text)
 }
 
 fn text_box(composer: Entity<Composer>, cx: &App) -> impl IntoElement + use<> {
     let colors = &cx.theme().colors;
-    div().min_h(px(72.)).p(px(8.)).rounded(metrics::RADIUS_LG).border_1().border_color(colors.border).bg(colors.field).child(composer)
+    div().min_h(px(72.)).p(px(8.)).rounded(metrics::radius_lg()).border_1().border_color(colors.border).bg(colors.field).child(composer)
 }
 
 struct RunForm {
@@ -374,7 +375,7 @@ impl CloudAgentsView {
             .flex_col()
             .gap(px(10.))
             .p(px(12.))
-            .rounded(metrics::RADIUS_LG)
+            .rounded(metrics::radius_lg())
             .border_1()
             .border_color(colors.border)
             .bg(colors.raised)
@@ -509,7 +510,7 @@ impl CloudAgentsView {
                         .flex()
                         .items_center()
                         .gap(px(8.))
-                        .child(div().flex_1().min_w_0().text_size(typography::TEXT_SM).text_color(colors.destructive).child(error))
+                        .child(div().flex_1().min_w_0().text_size(typography::text_sm()).text_color(colors.destructive).child(error))
                         .children(form.problem.as_ref().and_then(error_action)),
                 )
             })
@@ -553,7 +554,7 @@ impl CloudAgentsView {
             Runs::Loaded(runs) => div()
                 .flex()
                 .flex_col()
-                .rounded(metrics::RADIUS_LG)
+                .rounded(metrics::radius_lg())
                 .border_1()
                 .border_color(colors.border)
                 .overflow_hidden()
@@ -580,14 +581,14 @@ impl CloudAgentsView {
                                 .child(
                                     div()
                                         .truncate()
-                                        .text_size(typography::TEXT_CAPTION)
+                                        .text_size(typography::text_caption())
                                         .text_color(colors.muted_foreground)
                                         .child(format!("{} · {} → {}", run.repo, run.base_branch, if run.branch.is_empty() { "…" } else { &run.branch })),
                                 ),
                         )
                         .when(run.pr_url.is_some(), |this| this.child(Icon::new(IconName::GitPullRequest).size(IconSize::Small).color(colors.success)))
-                        .child(div().text_size(typography::TEXT_CAPTION).text_color(colors.subtle_foreground).child(agent_name(&run.agent).to_string()))
-                        .child(div().w(px(110.)).text_right().text_size(typography::TEXT_CAPTION).text_color(colors.subtle_foreground).child(super::short_time(&run.created_at)))
+                        .child(div().text_size(typography::text_caption()).text_color(colors.subtle_foreground).child(agent_name(&run.agent).to_string()))
+                        .child(div().w(px(110.)).text_right().text_size(typography::text_caption()).text_color(colors.subtle_foreground).child(super::short_time(&run.created_at)))
                 }))
                 .into_any_element(),
         }
@@ -601,7 +602,7 @@ impl CloudAgentsView {
             .flex_col()
             .gap(px(10.))
             .p(px(12.))
-            .rounded(metrics::RADIUS_LG)
+            .rounded(metrics::radius_lg())
             .border_1()
             .border_color(colors.border)
             .bg(colors.raised)
@@ -674,7 +675,7 @@ impl CloudAgentsView {
                             .items_center()
                             .gap(px(6.))
                             .mr(px(4.))
-                            .text_size(typography::TEXT_SM)
+                            .text_size(typography::text_sm())
                             .text_color(colors.subtle_foreground)
                             .child(Icon::new(IconName::Sparkle).size(IconSize::XSmall).color(colors.subtle_foreground))
                             .child("Start from a template"),
@@ -688,7 +689,7 @@ impl CloudAgentsView {
                         }))
                     })),
             )
-            .when_some(form.error.clone(), |this, error| this.child(div().text_size(typography::TEXT_SM).text_color(colors.destructive).child(error)))
+            .when_some(form.error.clone(), |this, error| this.child(div().text_size(typography::text_sm()).text_color(colors.destructive).child(error)))
             .child(
                 div()
                     .flex()
@@ -716,7 +717,7 @@ impl CloudAgentsView {
             .gap(px(6.))
             .px(px(12.))
             .py(px(12.))
-            .rounded(metrics::RADIUS_LG)
+            .rounded(metrics::radius_lg())
             .border_1()
             .border_color(colors.border)
             .child(
@@ -726,10 +727,10 @@ impl CloudAgentsView {
                     .items_center()
                     .gap(px(8.))
                     .child(ui::Badge::new("Continuous").tone(ui::Tone::Accent))
-                    .child(div().text_size(typography::TEXT_SM).text_color(colors.subtle_foreground).child("Runs while Athas is open")),
+                    .child(div().text_size(typography::text_sm()).text_color(colors.subtle_foreground).child("Runs while Athas is open")),
             )
             .child(div().font_weight(typography::SEMIBOLD).child("Give Athas an outcome, not another reminder."))
-            .child(div().text_size(typography::TEXT_SM).text_color(colors.muted_foreground).child(format!(
+            .child(div().text_size(typography::text_sm()).text_color(colors.muted_foreground).child(format!(
                 "Every cadence starts a fresh Agent session in {project_name}, keeps the workspace in context, and leaves a verifiable handoff in history."
             )))
             .child(div().flex().flex_wrap().gap(px(12.)).children(continuous::GOAL_TEMPLATES.iter().take(2).map(|(name, _)| {
@@ -737,7 +738,7 @@ impl CloudAgentsView {
                     .flex()
                     .items_center()
                     .gap(px(6.))
-                    .text_size(typography::TEXT_SM)
+                    .text_size(typography::text_sm())
                     .text_color(colors.subtle_foreground)
                     .child(Icon::new(IconName::Sparkle).size(IconSize::XSmall).color(colors.subtle_foreground))
                     .child(*name)
@@ -757,11 +758,11 @@ impl CloudAgentsView {
                 .gap(px(2.))
                 .px(px(12.))
                 .py(px(10.))
-                .rounded(metrics::RADIUS_LG)
+                .rounded(metrics::radius_lg())
                 .border_1()
                 .border_color(colors.border)
-                .child(div().text_size(typography::TEXT_SM).text_color(colors.subtle_foreground).child(label))
-                .child(div().text_size(typography::TEXT_LG).font_weight(typography::SEMIBOLD).child(value))
+                .child(div().text_size(typography::text_sm()).text_color(colors.subtle_foreground).child(label))
+                .child(div().text_size(typography::text_lg()).font_weight(typography::SEMIBOLD).child(value))
         };
         let overview = div()
             .flex()
@@ -772,7 +773,7 @@ impl CloudAgentsView {
         let list = div()
             .flex()
             .flex_col()
-            .rounded(metrics::RADIUS_LG)
+            .rounded(metrics::radius_lg())
             .border_1()
             .border_color(colors.border)
             .overflow_hidden()
@@ -820,12 +821,12 @@ impl CloudAgentsView {
                             .child(
                                 div()
                                     .truncate()
-                                    .text_size(typography::TEXT_CAPTION)
+                                    .text_size(typography::text_caption())
                                     .text_color(if task.last_error.is_some() { colors.warning } else { colors.muted_foreground })
                                     .child(detail),
                             ),
                     )
-                    .child(div().text_size(typography::TEXT_CAPTION).text_color(colors.subtle_foreground).child(agent_display(&task.agent_id)))
+                    .child(div().text_size(typography::text_caption()).text_color(colors.subtle_foreground).child(agent_display(&task.agent_id)))
                     .child(Button::new(("task-run", index), "Run now").variant(ButtonVariant::Ghost).size(ButtonSize::XSmall).leading_icon(IconName::Play).on_click(move |_, _, cx| {
                         run_entity.update(cx, |continuous, cx| continuous.run_now(&run_id, cx));
                     }))
@@ -850,14 +851,14 @@ impl CloudAgentsView {
             div()
                 .flex()
                 .gap(px(8.))
-                .text_size(typography::TEXT_SM)
+                .text_size(typography::text_sm())
                 .child(div().w(px(96.)).flex_none().text_color(colors.subtle_foreground).child(label))
                 .child(div().flex_1().min_w_0().text_color(colors.foreground).child(value))
         };
         let last = task.last_run_at.map_or_else(|| "Never".to_string(), |at| workspace::relative_time(at, now));
         let next = if task.enabled { continuous::format_next_run(task.next_run_at, now) } else { "Paused".to_string() };
         let runs: Vec<AnyElement> = if task.runs.is_empty() {
-            vec![div().text_size(typography::TEXT_SM).text_color(colors.subtle_foreground).child("No runs yet.").into_any_element()]
+            vec![div().text_size(typography::text_sm()).text_color(colors.subtle_foreground).child("No runs yet.").into_any_element()]
         } else {
             task.runs
                 .iter()
@@ -891,9 +892,9 @@ impl CloudAgentsView {
                         .mb(px(4.))
                         .px(px(10.))
                         .py(px(8.))
-                        .rounded(metrics::RADIUS_MD)
+                        .rounded(metrics::radius_md())
                         .bg(colors.warning_soft)
-                        .text_size(typography::TEXT_SM)
+                        .text_size(typography::text_sm())
                         .child(Icon::new(IconName::WarningCircle).size(IconSize::Small).color(colors.warning))
                         .child(div().flex_1().min_w_0().flex().flex_col().child(div().font_weight(typography::MEDIUM).child("Needs attention")).child(div().text_color(colors.muted_foreground).child(error))),
                 )
@@ -904,8 +905,8 @@ impl CloudAgentsView {
             .child(fact("Last run", last))
             .child(fact("Next run", next))
             .child(fact("Runs", task.run_count.to_string()))
-            .child(div().pt(px(4.)).text_size(typography::TEXT_SM).font_weight(typography::MEDIUM).child("Run history"))
-            .child(div().text_size(typography::TEXT_SM).text_color(colors.subtle_foreground).child("Every run stays available as a normal Agent session with its full handoff."))
+            .child(div().pt(px(4.)).text_size(typography::text_sm()).font_weight(typography::MEDIUM).child("Run history"))
+            .child(div().text_size(typography::text_sm()).text_color(colors.subtle_foreground).child("Every run stays available as a normal Agent session with its full handoff."))
             .children(runs)
             .child(
                 div()
@@ -966,7 +967,7 @@ impl Render for CloudAgentsView {
             .flex_col()
             .bg(colors.background)
             .font_family(typography::UI_FONT)
-            .text_size(typography::TEXT_BASE)
+            .text_size(typography::text_base())
             .text_color(colors.foreground)
             .child(
                 pane_header(cx)
@@ -1197,9 +1198,9 @@ impl Render for CloudRunView {
                     .flex_col()
                     .gap(px(10.))
                     .p(px(16.))
-                    .child(div().text_size(typography::TEXT_SM).text_color(colors.muted_foreground).child(facts))
+                    .child(div().text_size(typography::text_sm()).text_color(colors.muted_foreground).child(facts))
                     .when_some(run.prompt.clone(), |this, prompt| {
-                        this.child(div().p(px(10.)).rounded(metrics::RADIUS_LG).bg(colors.raised).text_size(typography::TEXT_SM).child(prompt))
+                        this.child(div().p(px(10.)).rounded(metrics::radius_lg()).bg(colors.raised).text_size(typography::text_sm()).child(prompt))
                     })
                     .when_some(run.error.clone(), |this, error| {
                         this.child(
@@ -1208,20 +1209,20 @@ impl Render for CloudRunView {
                                 .gap(px(6.))
                                 .items_center()
                                 .p(px(10.))
-                                .rounded(metrics::RADIUS_LG)
+                                .rounded(metrics::radius_lg())
                                 .bg(colors.destructive_soft)
-                                .text_size(typography::TEXT_SM)
+                                .text_size(typography::text_sm())
                                 .child(Icon::new(IconName::WarningCircle).size(IconSize::XSmall).color(colors.destructive))
                                 .child(error),
                         )
                     })
-                    .when_some(self.log_error.clone(), |this, error| this.child(div().text_size(typography::TEXT_SM).text_color(colors.warning).child(error)))
+                    .when_some(self.log_error.clone(), |this, error| this.child(div().text_size(typography::text_sm()).text_color(colors.warning).child(error)))
                     .child(
                         div()
                             .flex()
                             .items_center()
                             .gap(px(6.))
-                            .text_size(typography::TEXT_SM)
+                            .text_size(typography::text_sm())
                             .text_color(colors.muted_foreground)
                             .children(transcript.status.clone().filter(|_| run.status.is_active()).map(|status| div().min_w_0().truncate().child(status)))
                             .child(div().flex_1())
@@ -1234,12 +1235,12 @@ impl Render for CloudRunView {
                             .min_h(px(200.))
                             .overflow_scroll()
                             .p(px(10.))
-                            .rounded(metrics::RADIUS_LG)
+                            .rounded(metrics::radius_lg())
                             .border_1()
                             .border_color(colors.border)
                             .bg(colors.surface)
-                            .when(show_raw, |this| this.font_family(typography::MONO_FONT).text_size(typography::TEXT_CAPTION).line_height(px(17.)))
-                            .when(!show_raw, |this| this.flex().flex_col().gap(px(8.)).text_size(typography::TEXT_SM))
+                            .when(show_raw, |this| this.font_family(typography::MONO_FONT).text_size(typography::text_caption()).line_height(px(17.)))
+                            .when(!show_raw, |this| this.flex().flex_col().gap(px(8.)).text_size(typography::text_sm()))
                             .when(self.log.is_empty(), |this| this.child(div().text_color(colors.subtle_foreground).child(if run.status.is_active() { "Waiting for output…" } else { "No output" })))
                             .children(log_rows),
                     )
@@ -1256,7 +1257,7 @@ impl Render for CloudRunView {
             .flex_col()
             .bg(colors.background)
             .font_family(typography::UI_FONT)
-            .text_size(typography::TEXT_BASE)
+            .text_size(typography::text_base())
             .text_color(colors.foreground)
             .child(header)
             .child(body)
@@ -1301,9 +1302,9 @@ fn render_transcript(transcript: &super::transcript::CloudTranscript, cx: &App) 
                 .gap(px(6.))
                 .child(Icon::new(icon).size(IconSize::XSmall).color(color))
                 .child(div().flex_none().font_weight(typography::MEDIUM).child(call.name.clone()))
-                .children(call.detail().map(|detail| div().min_w_0().truncate().font_family(typography::MONO_FONT).text_size(typography::TEXT_CAPTION).text_color(colors.muted_foreground).child(detail.to_string())))
+                .children(call.detail().map(|detail| div().min_w_0().truncate().font_family(typography::MONO_FONT).text_size(typography::text_caption()).text_color(colors.muted_foreground).child(detail.to_string())))
                 .child(div().flex_1())
-                .children(duration.map(|duration| div().flex_none().text_size(typography::TEXT_CAPTION).text_color(colors.subtle_foreground).child(duration)))
+                .children(duration.map(|duration| div().flex_none().text_size(typography::text_caption()).text_color(colors.subtle_foreground).child(duration)))
                 .into_any_element(),
         );
     }

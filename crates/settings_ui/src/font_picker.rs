@@ -4,10 +4,11 @@
 
 use std::ops::Range;
 
+use ui::scale::px;
 use gpui::{
     App, Context, DismissEvent, Entity, EventEmitter, FocusHandle, Focusable, Global, KeyDownEvent,
     MouseButton, ScrollStrategy, SharedString, Subscription, UniformListScrollHandle, Window, div,
-    prelude::*, px, uniform_list,
+    prelude::*, uniform_list,
 };
 use theme::ActiveTheme;
 use ui::{Icon, IconName, IconSize, InputAppearance, Switch, TextInput, TextInputEvent, metrics, typography};
@@ -174,7 +175,7 @@ impl FontPicker {
                         .w_full()
                         .h(px(30.))
                         .px(px(8.))
-                        .rounded(metrics::RADIUS_MD)
+                        .rounded(metrics::radius_md())
                         .when(selected, |this| this.bg(colors.accent))
                         .on_mouse_move(cx.listener(move |this, _, _, cx| {
                             if this.selected != index {
@@ -196,7 +197,7 @@ impl FontPicker {
                                 .flex_1()
                                 .min_w_0()
                                 .truncate()
-                                .text_size(typography::TEXT_SM)
+                                .text_size(typography::text_sm())
                                 .text_color(colors.foreground)
                                 .child(display_name(&family)),
                         )
@@ -204,7 +205,7 @@ impl FontPicker {
                             div()
                                 .flex_none()
                                 .font_family(family)
-                                .text_size(typography::TEXT_SM)
+                                .text_size(typography::text_sm())
                                 .text_color(colors.subtle_foreground)
                                 .child("Aa"),
                         )
@@ -234,7 +235,7 @@ impl Render for FontPicker {
             .flex_col()
             .w(px(300.))
             .h(px(360.))
-            .rounded(metrics::RADIUS_LG)
+            .rounded(metrics::radius_lg())
             .bg(colors.overlay)
             .shadow(theme.shadows.popover.clone())
             .overflow_hidden()
@@ -269,7 +270,7 @@ impl Render for FontPicker {
                     .px(px(10.))
                     .border_t_1()
                     .border_color(colors.divider)
-                    .text_size(typography::TEXT_CAPTION)
+                    .text_size(typography::text_caption())
                     .text_color(colors.subtle_foreground)
                     .child(format!("{count} fonts"))
                     .child(

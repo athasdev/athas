@@ -7,9 +7,10 @@ pub mod release_notes;
 pub mod whats_new;
 
 use ui::WithScrollbar;
+use ui::scale::px;
 use gpui::{
     Anchor, AnyElement, App, Context, EventEmitter, FocusHandle, Focusable, Global, IntoElement, Render,
-    SharedString, Window, div, point, prelude::*, px,
+    SharedString, Window, div, point, prelude::*,
 };
 use serde_json::Value;
 use theme::ActiveTheme;
@@ -223,7 +224,7 @@ impl OnboardingView {
                 .child(
                     div()
                         .size_full()
-                        .rounded_tl(metrics::RADIUS_MD)
+                        .rounded_tl(metrics::radius_md())
                         .bg(background)
                         .p(px(6.))
                         .child(div().w(px(28.)).h(px(4.)).rounded_full().bg(foreground.opacity(0.4))),
@@ -240,7 +241,7 @@ impl OnboardingView {
                     .flex()
                     .w(px(112.))
                     .h(px(72.))
-                    .rounded(metrics::RADIUS_LG)
+                    .rounded(metrics::radius_lg())
                     .overflow_hidden()
                     .border_2()
                     .border_color(if active { colors.primary } else { colors.edge })
@@ -249,7 +250,7 @@ impl OnboardingView {
             )
             .child(
                 div()
-                    .text_size(typography::TEXT_SM)
+                    .text_size(typography::text_sm())
                     .text_color(if active { colors.foreground } else { colors.muted_foreground })
                     .child(label),
             )
@@ -349,9 +350,9 @@ impl OnboardingView {
                     // runs past the card instead of wrapping.
                     .min_w_0()
                     .gap(px(2.))
-                    .child(div().text_size(typography::TEXT_SM).text_color(colors.foreground).child(label))
+                    .child(div().text_size(typography::text_sm()).text_color(colors.foreground).child(label))
                     .children(description.map(|description| {
-                        div().text_size(typography::TEXT_CAPTION).text_color(colors.subtle_foreground).child(description)
+                        div().text_size(typography::text_caption()).text_color(colors.subtle_foreground).child(description)
                     })),
             )
             .child(div().flex_none().child(control))
@@ -386,7 +387,7 @@ impl OnboardingView {
         div()
             .flex()
             .flex_col()
-            .rounded(metrics::ISLAND_RADIUS)
+            .rounded(metrics::island_radius())
             .bg(theme.colors.raised)
             .shadow(theme.shadows.raised.clone())
             .children(rows)
@@ -473,7 +474,7 @@ impl OnboardingView {
                             div()
                                 .px(px(12.))
                                 .pb(px(10.))
-                                .text_size(typography::TEXT_CAPTION)
+                                .text_size(typography::text_caption())
                                 .text_color(colors.subtle_foreground)
                                 .child(description),
                         )
@@ -599,14 +600,14 @@ impl Render for OnboardingView {
                             .gap(px(8.))
                             .text_center()
                             .children(dots)
-                            .child(div().text_size(typography::TEXT_LG).font_weight(typography::SEMIBOLD).text_color(colors.foreground).child(title))
+                            .child(div().text_size(typography::text_lg()).font_weight(typography::SEMIBOLD).text_color(colors.foreground).child(title))
                             .child(
                                 div()
                                     .flex()
                                     .flex_wrap()
                                     .justify_center()
                                     .gap_x(px(8.))
-                                    .text_size(typography::TEXT_SM)
+                                    .text_size(typography::text_sm())
                                     .text_color(colors.muted_foreground)
                                     .child(description)
                                     .when_some(released, |this, date| this.child("·").child(format!("Released {date}"))),

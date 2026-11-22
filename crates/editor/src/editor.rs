@@ -51,9 +51,10 @@ use std::{
     time::{Duration, SystemTime},
 };
 
+use ui::scale::px;
 use gpui::{
     App, ClipboardItem, Context, Entity, EventEmitter, FocusHandle, Focusable, IntoElement, KeyBinding, KeyContext, Pixels,
-    Render, Subscription, Task, Window, actions, div, point, prelude::*, px,
+    Render, Subscription, Task, Window, actions, div, point, prelude::*,
 };
 use theme::ActiveTheme;
 use ui::{Button, ButtonSize, EmptyState, IconName, InputAppearance, TextInput, TextInputEvent, typography};
@@ -1911,7 +1912,7 @@ impl Editor {
                         .h(px(32.))
                         .w(px(320.))
                         .px(px(12.))
-                        .rounded(ui::metrics::ISLAND_RADIUS)
+                        .rounded(ui::metrics::island_radius())
                         .bg(theme.colors.overlay)
                         .shadow(theme.shadows.popover.clone())
                         .child(input.clone()),
@@ -1939,7 +1940,7 @@ impl Editor {
                 .h(px(32.))
                 .px(px(12.))
                 .bg(colors.warning_soft)
-                .text_size(typography::TEXT_SM)
+                .text_size(typography::text_sm())
                 .text_color(colors.foreground)
                 .child(div().flex_1().truncate().child(message))
                 .when(self.changed_on_disk, |this| {
@@ -1974,7 +1975,7 @@ impl Editor {
                 .items_center()
                 .justify_center()
                 .bg(background)
-                .rounded_b(ui::metrics::ISLAND_RADIUS)
+                .rounded_b(ui::metrics::island_radius())
                 .child(EmptyState::new(title).icon(IconName::FileText).message(message)),
         )
     }
@@ -2063,7 +2064,7 @@ impl Render for Editor {
             .min_h_0()
             // Rounded at the bottom like its island, so it never squares the island's corners.
             .bg(background)
-            .rounded_b(ui::metrics::ISLAND_RADIUS)
+            .rounded_b(ui::metrics::island_radius())
             .on_action(cx.listener(Self::save))
             .on_action(cx.listener(Self::find))
             .on_action(cx.listener(Self::find_replace))

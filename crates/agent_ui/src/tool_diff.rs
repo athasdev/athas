@@ -4,7 +4,8 @@
 use ui::WithScrollbar as _;
 use std::{collections::HashMap, path::PathBuf};
 
-use gpui::{App, Context, FocusHandle, Focusable, Global, IntoElement, ParentElement, Render, Styled, Window, div, prelude::*, px};
+use ui::scale::px;
+use gpui::{App, Context, FocusHandle, Focusable, Global, IntoElement, ParentElement, Render, Styled, Window, div, prelude::*,};
 use theme::ActiveTheme;
 use ui::{Icon, IconName, IconSize, typography};
 
@@ -143,8 +144,8 @@ impl Focusable for ToolDiffView {
     }
 }
 
-const NUMBER_WIDTH: gpui::Pixels = px(44.);
-const LINE_HEIGHT: gpui::Pixels = px(20.);
+fn number_width() -> gpui::Pixels { px(44.) }
+fn line_height() -> gpui::Pixels { px(20.) }
 
 impl Render for ToolDiffView {
     /// Several files laid out as the Source Control diff draws them: a header per file with its
@@ -160,11 +161,11 @@ impl Render for ToolDiffView {
                 .flex_none()
                 .gap(px(6.))
                 .font_family(typography::MONO_FONT)
-                .text_size(typography::TEXT_CAPTION)
+                .text_size(typography::text_caption())
                 .when(added > 0, |this| this.child(div().text_color(colors.git_added).child(format!("+{added}"))))
                 .when(removed > 0, |this| this.child(div().text_color(colors.git_deleted).child(format!("\u{2212}{removed}"))))
         };
-        let number = |value: Option<usize>| div().flex_none().w(NUMBER_WIDTH).pr(px(8.)).text_right().text_color(colors.subtle_foreground).children(value.map(|value| value.to_string()));
+        let number = |value: Option<usize>| div().flex_none().w(number_width()).pr(px(8.)).text_right().text_color(colors.subtle_foreground).children(value.map(|value| value.to_string()));
         // Collected before the scrollbar asks for `cx` again: the rows read the icon theme.
         let files: Vec<_> = self.changes.iter().enumerate().map(|(file_index, change)| {
             let rows = diff::diff_rows(change.old.as_deref().unwrap_or(""), &change.new);
@@ -188,9 +189,9 @@ impl Render for ToolDiffView {
                 .bg(colors.surface)
                 .border_b_1()
                 .border_color(colors.divider)
-                .text_size(typography::TEXT_SM)
+                .text_size(typography::text_sm())
                 .on_click(move |_, _, cx| workbench_api::open_file(cx, open.clone(), None))
-                .child(div().flex_none().w(px(12.)).font_family(typography::MONO_FONT).text_size(typography::TEXT_CAPTION).text_color(status.1).child(status.0))
+                .child(div().flex_none().w(px(12.)).font_family(typography::MONO_FONT).text_size(typography::text_caption()).text_color(status.1).child(status.0))
                 .child(
                     extensions::file_icon(&name, px(14.), cx)
                         .unwrap_or_else(|| Icon::new(IconName::FileCode).size(IconSize::XSmall).color(colors.subtle_foreground).into_any_element()),
@@ -207,9 +208,9 @@ impl Render for ToolDiffView {
                     .w_full()
                     .bg(colors.surface)
                     .font_family(typography::MONO_FONT)
-                    .text_size(typography::TEXT_SM)
+                    .text_size(typography::text_sm())
                     .text_color(colors.subtle_foreground)
-                    .child(div().flex().flex_none().w(NUMBER_WIDTH).justify_center().child(Icon::new(IconName::ChevronDown).size(IconSize::XSmall).color(colors.subtle_foreground)))
+                    .child(div().flex().flex_none().w(number_width()).justify_center().child(Icon::new(IconName::ChevronDown).size(IconSize::XSmall).color(colors.subtle_foreground)))
                     .child(div().flex_none().child(range.clone()))
                     .into_any_element(),
                 NumberedRow::Line { kind, text, old, new } => {
@@ -222,10 +223,10 @@ impl Render for ToolDiffView {
                     div()
                         .flex()
                         .items_center()
-                        .h(LINE_HEIGHT)
+                        .h(line_height())
                         .min_w_full()
                         .font_family(typography::MONO_FONT)
-                        .text_size(typography::TEXT_SM)
+                        .text_size(typography::text_sm())
                         .whitespace_nowrap()
                         .text_color(colors.foreground)
                         .when_some(bg, |this, bg| this.bg(bg))
@@ -245,7 +246,7 @@ impl Render for ToolDiffView {
                 .border_color(colors.divider)
                 .child(header)
                 .when(numbered.is_empty(), |this| {
-                    this.child(div().flex().items_center().justify_center().h(px(56.)).text_size(typography::TEXT_SM).text_color(colors.subtle_foreground).child("No changes"))
+                    this.child(div().flex().items_center().justify_center().h(px(56.)).text_size(typography::text_sm()).text_color(colors.subtle_foreground).child("No changes"))
                 })
                 .children(lines)
         }).collect();
@@ -259,7 +260,7 @@ impl Render for ToolDiffView {
             .flex()
             .flex_col()
             .when(self.changes.is_empty(), |this| {
-                this.child(div().p(px(16.)).text_size(typography::TEXT_SM).text_color(colors.subtle_foreground).child("This change is no longer available."))
+                this.child(div().p(px(16.)).text_size(typography::text_sm()).text_color(colors.subtle_foreground).child("This change is no longer available."))
             })
             .children(files)
     }

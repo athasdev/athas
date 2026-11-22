@@ -4,9 +4,10 @@
 use ui::WithScrollbar;
 use std::path::PathBuf;
 
+use ui::scale::px;
 use gpui::{
     AnyElement, App, Context, DismissEvent, Entity, EventEmitter, FocusHandle, Focusable, KeyDownEvent, ObjectFit,
-    Pixels, ScrollHandle, SharedString, Subscription, WeakEntity, Window, div, img, prelude::*, px,
+    Pixels, ScrollHandle, SharedString, Subscription, WeakEntity, Window, div, img, prelude::*,
 };
 use theme::ActiveTheme;
 use ui::{Icon, IconName, IconSize, InputAppearance, TextInput, TextInputEvent, typography};
@@ -59,7 +60,7 @@ pub(crate) fn custom_icon(value: &str, size: Pixels, color: gpui::Hsla) -> AnyEl
     img(PathBuf::from(value))
         .flex_none()
         .size(size)
-        .rounded(ui::metrics::RADIUS_MD)
+        .rounded(ui::metrics::radius_md())
         .object_fit(ObjectFit::Contain)
         .with_fallback(move || div().size(size).into_any_element())
         .into_any_element()
@@ -212,7 +213,7 @@ impl Render for ProjectIconPicker {
                 .flex()
                 .items_center()
                 .rounded_full()
-                .text_size(typography::TEXT_CHROME)
+                .text_size(typography::text_chrome())
                 .font_weight(typography::MEDIUM)
                 .text_color(if active { colors.foreground } else { colors.subtle_foreground })
                 .when(active, |this| this.bg(colors.selected))

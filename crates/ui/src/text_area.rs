@@ -6,11 +6,12 @@
 
 use std::{ops::Range, rc::Rc};
 
+use crate::scale::px;
 use gpui::{
     App, Bounds, ClipboardItem, Context, CursorStyle, ElementId, ElementInputHandler, Entity, EntityInputHandler,
     EventEmitter, FocusHandle, Focusable, GlobalElementId, KeyDownEvent, LayoutId, MouseButton, MouseDownEvent,
     HighlightStyle, MouseMoveEvent, MouseUpEvent, PaintQuad, Pixels, Point, SharedString, Style, TextRun, UTF16Selection,
-    UnderlineStyle, Window, WrappedLine, div, fill, point, prelude::*, px, relative, size,
+    UnderlineStyle, Window, WrappedLine, div, fill, point, prelude::*, relative, size,
 };
 use theme::ActiveTheme;
 use unicode_segmentation::UnicodeSegmentation as _;
@@ -36,7 +37,7 @@ pub enum TextAreaVariant {
     Ghost,
 }
 
-pub const LINE_HEIGHT: Pixels = px(18.);
+pub fn line_height() -> Pixels { px(18.) }
 
 /// Styles spans of the text as it is typed: weight, slant, colour, background, strikethrough.
 /// Sizes stay the field's, so every line keeps its height.
@@ -337,7 +338,7 @@ impl TextArea {
     fn vertical_move(&mut self, rows: f32, select: bool, cx: &mut Context<Self>) {
         let cursor = self.cursor_offset();
         let Some(position) = self.position_for_offset(cursor) else { return };
-        let line_height = self.layout.as_ref().map_or(LINE_HEIGHT, |layout| layout.line_height);
+        let line_height = self.layout.as_ref().map_or(line_height(), |layout| layout.line_height);
         let goal_x = self.goal_x.unwrap_or(position.x);
         let target_y = position.y + line_height * rows + line_height / 2.;
         let bottom = self.layout.as_ref().map_or(px(0.), TextLayout::bottom);
@@ -511,13 +512,13 @@ impl TextArea {
         if max == 0 {
             return;
         }
-        self.scroll_remainder -= event.delta.pixel_delta(LINE_HEIGHT).y;
-        let lines = (self.scroll_remainder / LINE_HEIGHT).trunc();
+        self.scroll_remainder -= event.delta.pixel_delta(line_height()).y;
+        let lines = (self.scroll_remainder / line_height()).trunc();
         if lines == 0. {
             cx.stop_propagation();
             return;
         }
-        self.scroll_remainder -= LINE_HEIGHT * lines;
+        self.scroll_remainder -= line_height() * lines;
         let scroll = (self.scroll_lines as isize + lines as isize).clamp(0, max as isize) as usize;
         if scroll == self.scroll_lines && self.manual_scroll.is_some() {
             return;
@@ -798,7 +799,7 @@ impl Element for TextAreaText {
             });
             let lines = shape(&text, &runs, width, line_scale.as_ref(), window);
             let visible = rows(&lines).clamp(min_rows, max_rows);
-            size(width.unwrap_or(px(0.)), LINE_HEIGHT * visible as f32)
+            size(width.unwrap_or(px(0.)), line_height() * visible as f32)
         });
         (layout_id, ())
     }
@@ -826,7 +827,7 @@ impl Element for TextAreaText {
         let lines: Vec<LaidOutLine> = shaped
             .into_iter()
             .map(|(start, wrapped, multiple)| {
-                let row_height = LINE_HEIGHT * multiple;
+                let row_height = line_height() * multiple;
                 let line = LaidOutLine { start, top, row_height, wrapped };
                 top += line.wrapped.size(row_height).height.max(row_height);
                 line
@@ -834,12 +835,12 @@ impl Element for TextAreaText {
             .collect();
         let selected = composer.selected_range.clone();
         let cursor_offset = if empty { 0 } else { composer.cursor_offset() };
-        let mut layout = TextLayout { lines, bounds, line_height: LINE_HEIGHT };
+        let mut layout = TextLayout { lines, bounds, line_height: line_height() };
 
         // Keep the cursor's row in view when the text is taller than the box.
-        let visible_rows = (bounds.size.height / LINE_HEIGHT).floor().max(1.) as usize;
-        let cursor_row = layout.position_for_offset(cursor_offset).map_or(0, |position| (position.y / LINE_HEIGHT) as usize);
-        let total_rows = (top / LINE_HEIGHT).round().max(1.) as usize;
+        let visible_rows = (bounds.size.height / line_height()).floor().max(1.) as usize;
+        let cursor_row = layout.position_for_offset(cursor_offset).map_or(0, |position| (position.y / line_height()) as usize);
+        let total_rows = (top / line_height()).round().max(1.) as usize;
         let manual = composer.manual_scroll.as_ref().is_some_and(|(range, len)| *range == composer.selected_range && *len == composer.content.len());
         let scroll = if manual {
             composer.scroll_lines.min(total_rows.saturating_sub(visible_rows))
@@ -851,7 +852,7 @@ impl Element for TextAreaText {
             composer.scroll_lines
         };
         for line in &mut layout.lines {
-            line.top -= LINE_HEIGHT * scroll as f32;
+            line.top -= line_height() * scroll as f32;
         }
 
         let origin = bounds.origin;
@@ -861,7 +862,7 @@ impl Element for TextAreaText {
             // One quad per row the selection crosses.
             let start = layout.position_for_offset(selected.start).unwrap_or_default();
             let end = layout.position_for_offset(selected.end).unwrap_or_default();
-            let row_at = |y: Pixels| layout.lines.iter().rev().find(|line| line.top <= y).map_or(LINE_HEIGHT, |line| line.row_height);
+            let row_at = |y: Pixels| layout.lines.iter().rev().find(|line| line.top <= y).map_or(line_height(), |line| line.row_height);
             let mut y = start.y;
             while y <= end.y {
                 let row = row_at(y);
@@ -878,7 +879,7 @@ impl Element for TextAreaText {
         } else {
             let position = layout.position_for_offset(cursor_offset);
             if let Some(position) = position {
-                let row = layout.lines.iter().rev().find(|line| line.top <= position.y).map_or(LINE_HEIGHT, |line| line.row_height);
+                let row = layout.lines.iter().rev().find(|line| line.top <= position.y).map_or(line_height(), |line| line.row_height);
                 cursor = Some(fill(Bounds::new(origin + position + point(px(0.), px(2.)), size(px(1.5), row - px(4.))), colors.cursor));
             }
         }
@@ -912,7 +913,7 @@ impl Element for TextAreaText {
             let layout = self.composer.update(cx, |composer, _| composer.layout.take());
             if let Some(layout) = &layout {
                 for line in &layout.lines {
-                    if line.top + LINE_HEIGHT < px(0.) || line.top > bounds.size.height {
+                    if line.top + line_height() < px(0.) || line.top > bounds.size.height {
                         continue;
                     }
                     let origin = bounds.origin + point(px(0.), line.top);
@@ -948,17 +949,17 @@ impl Render for TextArea {
             .on_mouse_move(cx.listener(Self::on_mouse_move))
             .on_scroll(cx.listener(Self::on_scroll_wheel))
             .font_family(if self.mono { typography::MONO_FONT } else { typography::UI_FONT })
-            .text_size(typography::TEXT_SM)
-            .line_height(LINE_HEIGHT)
+            .text_size(typography::text_sm())
+            .line_height(line_height())
             .text_color(colors.foreground)
             .when(self.disabled, |this| this.opacity(0.5))
             .when(boxed, |this| {
                 // A browser textarea of n rows is n lines, its padding and 2px more (64px for
                 // three rows); the extra sits under the text.
-                this.min_h(LINE_HEIGHT * self.min_rows as f32 + px(10.))
+                this.min_h(line_height() * self.min_rows as f32 + px(10.))
                     .px(px(8.))
                     .py(px(4.))
-                    .rounded(metrics::RADIUS)
+                    .rounded(metrics::radius())
                     .bg(colors.raised)
                     .shadow(theme.shadows.raised.clone())
                     .when(focused, |this| this.border_1().border_color(colors.focus_ring).px(px(6.)).py(px(2.)))

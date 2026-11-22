@@ -6,9 +6,10 @@ use std::{path::PathBuf, sync::Arc, time::Duration};
 
 use crate::gh::{Deployment, Release, ReleaseAsset};
 use chrono::Utc;
+use ui::scale::px;
 use gpui::{
     Anchor, AnyElement, App, ClickEvent, ClipboardItem, Context, Entity, FocusHandle, Focusable, IntoElement, PathPromptOptions, Render, SharedString, Subscription, Window, div,
-    prelude::*, px,
+    prelude::*,
 };
 use theme::{ActiveTheme, ThemeColors};
 use ui::{AlertAction, AlertDialog, Button, ButtonSize, ButtonVariant, Icon, IconName, IconSize, MenuEntry, OpenMenu, Switch, TextInput, TextInputEvent, metrics, typography};
@@ -652,9 +653,9 @@ impl DeliveryView {
                 .flex_1()
                 .min_w(px(240.))
                 .gap(px(6.))
-                .child(div().text_size(typography::TEXT_SM).font_weight(typography::MEDIUM).text_color(colors.foreground).child(label))
+                .child(div().text_size(typography::text_sm()).font_weight(typography::MEDIUM).text_color(colors.foreground).child(label))
                 .child(input.clone())
-                .children(description.map(|text| div().text_size(typography::TEXT_SM).text_color(colors.subtle_foreground).child(text)))
+                .children(description.map(|text| div().text_size(typography::text_sm()).text_color(colors.subtle_foreground).child(text)))
         };
         let editing = self.release.is_some();
         Some(
@@ -674,7 +675,7 @@ impl DeliveryView {
                                 .flex()
                                 .items_center()
                                 .gap(px(8.))
-                                .text_size(typography::TEXT_SM)
+                                .text_size(typography::text_sm())
                                 .child(Switch::new("release-prerelease", form.prerelease).disabled(busy).on_change({
                                     let this = cx.entity().downgrade();
                                     move |checked, _, cx| {
@@ -697,7 +698,7 @@ impl DeliveryView {
                         .flex_col()
                         .gap(px(12.))
                         .child(
-                            div().flex().items_center().justify_between().child(div().text_size(typography::TEXT_SM).text_color(colors.subtle_foreground).child("Release notes")).child(
+                            div().flex().items_center().justify_between().child(div().text_size(typography::text_sm()).text_color(colors.subtle_foreground).child("Release notes")).child(
                                 Button::new("release-generate", if form.busy == Some("generate") { "Generating…" } else { "Generate Notes" })
                                     .size(ButtonSize::Small)
                                     .disabled(!valid || busy)
@@ -706,7 +707,7 @@ impl DeliveryView {
                         )
                         .child(form.body.clone()),
                 )
-                .children(form.error.clone().map(|error| div().text_size(typography::TEXT_SM).text_color(colors.destructive).child(error)))
+                .children(form.error.clone().map(|error| div().text_size(typography::text_sm()).text_color(colors.destructive).child(error)))
                 .child(
                     div()
                         .flex()
@@ -741,7 +742,7 @@ impl DeliveryView {
                 .gap(px(10.))
                 .px(px(10.))
                 .py(px(8.))
-                .rounded(metrics::RADIUS_MD)
+                .rounded(metrics::radius_md())
                 .border_1()
                 .border_color(colors.divider)
                 .child(Icon::new(IconName::Download).size(IconSize::Small).color(colors.subtle_foreground))
@@ -751,8 +752,8 @@ impl DeliveryView {
                         .flex_col()
                         .flex_1()
                         .min_w_0()
-                        .child(div().truncate().text_size(typography::TEXT_SM).text_color(colors.foreground).child(asset.name.clone()))
-                        .child(div().text_size(typography::TEXT_SM).text_color(colors.subtle_foreground).child(format!("{} · {} downloads{state}", format_asset_size(asset.size), asset.download_count))),
+                        .child(div().truncate().text_size(typography::text_sm()).text_color(colors.foreground).child(asset.name.clone()))
+                        .child(div().text_size(typography::text_sm()).text_color(colors.subtle_foreground).child(format!("{} · {} downloads{state}", format_asset_size(asset.size), asset.download_count))),
                 )
                 .children(asset.digest.clone().map(|digest| {
                     Button::icon(SharedString::from(format!("asset-digest-{index}")), IconName::Copy).size(ButtonSize::Small).tooltip("Copy asset digest").on_click(move |_, _, cx| cx.write_to_clipboard(ClipboardItem::new_string(digest.clone())))
@@ -793,7 +794,7 @@ impl DeliveryView {
             .when(!release.immutable, |this| {
                 this.child(Button::new("asset-upload", "Upload Assets").leading_icon(IconName::Upload).size(ButtonSize::Small).disabled(busy).on_click(cx.listener(|this, _, _, cx| this.upload_assets(cx))))
             })
-            .children(self.pending.clone().map(|pending| div().min_w_0().truncate().text_size(typography::TEXT_SM).text_color(colors.subtle_foreground).child(pending)));
+            .children(self.pending.clone().map(|pending| div().min_w_0().truncate().text_size(typography::text_sm()).text_color(colors.subtle_foreground).child(pending)));
         let sources = div()
             .flex()
             .flex_wrap()
@@ -801,7 +802,7 @@ impl DeliveryView {
             .children(safe_url(release.zipball_url.as_deref()).map(|url| Button::new("asset-zip", "Source ZIP").leading_icon(IconName::Download).variant(ButtonVariant::Ghost).size(ButtonSize::Small).on_click(move |_, _, cx| cx.open_url(&url))))
             .children(safe_url(release.tarball_url.as_deref()).map(|url| Button::new("asset-tar", "Source tar.gz").leading_icon(IconName::Download).variant(ButtonVariant::Ghost).size(ButtonSize::Small).on_click(move |_, _, cx| cx.open_url(&url))));
         let empty = assets.is_empty().then(|| {
-            div().px(px(10.)).py(px(8.)).text_size(typography::TEXT_SM).text_color(colors.subtle_foreground).child(if release.assets.is_empty() { "No uploaded assets." } else { "No matching assets." })
+            div().px(px(10.)).py(px(8.)).text_size(typography::text_sm()).text_color(colors.subtle_foreground).child(if release.assets.is_empty() { "No uploaded assets." } else { "No matching assets." })
         });
         section(
             format!("Assets ({})", release.assets.len()),
@@ -811,7 +812,7 @@ impl DeliveryView {
                 .flex_col()
                 .gap(px(10.))
                 .child(toolbar)
-                .children(self.action_error.clone().filter(|_| self.confirmation.is_none()).map(|error| div().text_size(typography::TEXT_SM).text_color(colors.destructive).child(error)))
+                .children(self.action_error.clone().filter(|_| self.confirmation.is_none()).map(|error| div().text_size(typography::text_sm()).text_color(colors.destructive).child(error)))
                 .children(rows)
                 .children(empty)
                 .child(sources),
@@ -822,7 +823,7 @@ impl DeliveryView {
 
     fn render_release(&self, release: &Release, colors: &ThemeColors, cx: &mut Context<Self>) -> AnyElement {
         let notes = if self.notes.is_empty() {
-            div().text_size(typography::TEXT_SM).text_color(colors.subtle_foreground).child("No release notes provided.").into_any_element()
+            div().text_size(typography::text_sm()).text_color(colors.subtle_foreground).child("No release notes provided.").into_any_element()
         } else {
             markdown::render(&self.notes, "release-notes", cx)
         };
@@ -859,7 +860,7 @@ impl DeliveryView {
                 .gap(px(10.))
                 .px(px(10.))
                 .py(px(8.))
-                .rounded(metrics::RADIUS_MD)
+                .rounded(metrics::radius_md())
                 .border_1()
                 .border_color(colors.divider)
                 .when(index == 0, |this| this.bg(colors.surface))
@@ -870,10 +871,10 @@ impl DeliveryView {
                         .flex_1()
                         .min_w_0()
                         .gap(px(2.))
-                        .child(div().flex().items_center().gap(px(6.)).text_size(typography::TEXT_SM).child(badge(label, tone, colors)).when(index == 0, |this| this.child("Latest")))
-                        .child(div().text_size(typography::TEXT_SM).text_color(colors.muted_foreground).child(status.description.clone().filter(|text| !text.is_empty()).unwrap_or_else(|| "No status description".into())))
+                        .child(div().flex().items_center().gap(px(6.)).text_size(typography::text_sm()).child(badge(label, tone, colors)).when(index == 0, |this| this.child("Latest")))
+                        .child(div().text_size(typography::text_sm()).text_color(colors.muted_foreground).child(status.description.clone().filter(|text| !text.is_empty()).unwrap_or_else(|| "No status description".into())))
                         .child(
-                            div().text_size(typography::TEXT_SM).text_color(colors.subtle_foreground).child(format!(
+                            div().text_size(typography::text_sm()).text_color(colors.subtle_foreground).child(format!(
                                 "{}{}",
                                 model::time_ago(&status.created_at, now),
                                 status.creator.as_ref().map(|creator| format!(" · {}", creator.login)).unwrap_or_default()
@@ -890,7 +891,7 @@ impl DeliveryView {
             .gap(px(8.))
             .children(rows)
             .when(deployment.statuses.is_empty(), |this| {
-                this.child(div().text_size(typography::TEXT_SM).text_color(colors.subtle_foreground).child("Waiting for the deployment provider to report a status. This view refreshes automatically."))
+                this.child(div().text_size(typography::text_sm()).text_color(colors.subtle_foreground).child("Waiting for the deployment provider to report a status. This view refreshes automatically."))
             });
         let main = div().flex().flex_col().gap(px(32.)).flex_1().min_w_0().child(section(format!("Status history ({})", deployment.statuses.len()), None, history, colors));
         let mut sidebar = div().flex().flex_col().gap(px(24.)).w(px(240.)).flex_none();
@@ -972,8 +973,8 @@ impl Render for DeliveryView {
         let stale = self.error.clone().filter(|_| release.is_some() || deployment.is_some());
         container
             .child(div().flex_none().pt(px(20.)).pb(px(12.)).border_b_1().border_color(colors.divider).child(rail(summary)))
-            .children(stale.map(|error| rail(div().pt(px(8.)).text_size(typography::TEXT_SM).text_color(colors.destructive).child(format!("Could not refresh. Showing previously loaded data. {error}")))))
-            .children(self.action_error.clone().filter(|_| self.form.is_none() && release.is_none()).map(|error| rail(div().pt(px(8.)).text_size(typography::TEXT_SM).text_color(colors.destructive).child(error))))
+            .children(stale.map(|error| rail(div().pt(px(8.)).text_size(typography::text_sm()).text_color(colors.destructive).child(format!("Could not refresh. Showing previously loaded data. {error}")))))
+            .children(self.action_error.clone().filter(|_| self.form.is_none() && release.is_none()).map(|error| rail(div().pt(px(8.)).text_size(typography::text_sm()).text_color(colors.destructive).child(error))))
             .child(div().id("delivery-content").flex_1().min_h_0().overflow_y_scroll().pt(px(24.)).pb(px(32.)).child(rail(content)).scrollbar(_window, cx))
             .children(self.open_menu.as_ref().map(|menu| menu.render()))
             .children(self.confirmation.as_ref().map(|confirmation| confirmation.render(cx)))

@@ -4,9 +4,10 @@
 
 use std::collections::HashSet;
 
+use ui::scale::px;
 use gpui::{
     App, ClipboardItem, Context, DismissEvent, EventEmitter, FocusHandle, Focusable, Hsla, IntoElement, ParentElement,
-    SharedString, Styled, Window, div, prelude::*, px, relative,
+    SharedString, Styled, Window, div, prelude::*, relative,
 };
 use theme::ActiveTheme;
 use ui::{
@@ -18,7 +19,7 @@ use workspace::{now_ms, relative_time};
 use crate::{CATEGORIES, Notification, NotificationCategory, NotificationKind, Notifications, category_label, notification_text};
 
 /// How wide the Inbox opens beside the sidebar.
-pub const INBOX_WIDTH: gpui::Pixels = px(320.);
+pub fn inbox_width() -> gpui::Pixels { px(320.) }
 
 pub struct InboxPanel {
     focus: FocusHandle,
@@ -149,7 +150,7 @@ impl InboxPanel {
             .flex()
             .items_center()
             .justify_center()
-            .rounded(metrics::RADIUS_MD)
+            .rounded(metrics::radius_md())
             .bg(colors.accent)
             .child(Icon::new(icon).size(IconSize::Small).color(color))
             .when(fresh, |this| {
@@ -189,7 +190,7 @@ impl InboxPanel {
             .flex_col()
             .px(px(8.))
             .py(px(6.))
-            .rounded(metrics::RADIUS_LG)
+            .rounded(metrics::radius_lg())
             .when(open, |this| this.bg(colors.accent.opacity(0.6)))
             .hover(|style| style.bg(colors.accent.opacity(0.6)))
             .on_click(cx.listener(move |this, _, window, cx| match &action {
@@ -220,7 +221,7 @@ impl InboxPanel {
                                             .flex_1()
                                             .min_w_0()
                                             .truncate()
-                                            .text_size(typography::TEXT_SM)
+                                            .text_size(typography::text_sm())
                                             .line_height(px(18.))
                                             .font_weight(if fresh { typography::MEDIUM } else { gpui::FontWeight::NORMAL })
                                             .text_color(colors.foreground)
@@ -229,7 +230,7 @@ impl InboxPanel {
                                     .child(
                                         div()
                                             .flex_none()
-                                            .text_size(typography::TEXT_CAPTION)
+                                            .text_size(typography::text_caption())
                                             .text_color(colors.subtle_foreground)
                                             .group_hover("inbox-row", |style| style.invisible())
                                             .child(age),
@@ -239,7 +240,7 @@ impl InboxPanel {
                                 div()
                                     .min_w_0()
                                     .truncate()
-                                    .text_size(typography::TEXT_CAPTION)
+                                    .text_size(typography::text_caption())
                                     .line_height(px(16.))
                                     .text_color(colors.subtle_foreground)
                                     .child(subtitle),
@@ -255,7 +256,7 @@ impl InboxPanel {
                         .pl(px(38.))
                         .pt(px(6.))
                         .children(full_description.map(|description| {
-                            div().text_size(typography::TEXT_SM).line_height(px(18.)).text_color(colors.muted_foreground).child(description)
+                            div().text_size(typography::text_sm()).line_height(px(18.)).text_color(colors.muted_foreground).child(description)
                         }))
                         .child(
                             div().flex().child(

@@ -1,9 +1,10 @@
 use std::rc::Rc;
 
+use crate::scale::px;
 use gpui::{
     AnyElement, App, ClickEvent, ElementId, InteractiveElement, IntoElement, MouseButton,
     MouseDownEvent, ParentElement, RenderOnce, SharedString, StatefulInteractiveElement, Styled,
-    Window, div, prelude::FluentBuilder, px,
+    Window, div, prelude::FluentBuilder,
 };
 use theme::ActiveTheme;
 
@@ -180,12 +181,12 @@ impl RenderOnce for SidebarListItem {
             .w_full()
             .min_w_0()
             .items_center()
-            .gap(metrics::CHROME_GAP)
-            .min_h(metrics::LIST_ROW)
+            .gap(metrics::chrome_gap())
+            .min_h(metrics::list_row())
             .px(px(6.))
             .py(px(2.))
-            .rounded(metrics::RADIUS_MD)
-            .text_size(typography::TEXT_SM)
+            .rounded(metrics::radius_md())
+            .text_size(typography::text_sm())
             .line_height(gpui::relative(typography::LEADING_ROW))
             .text_color(text)
             .when_some(toned, |this, (fill, _)| this.bg(fill))
@@ -238,7 +239,7 @@ impl RenderOnce for SidebarListItem {
                                     .child(self.label),
                             )
                             .children(self.detail.map(|detail| {
-                                div().min_w_0().truncate().text_size(typography::TEXT_CAPTION).text_color(colors.subtle_foreground).child(detail)
+                                div().min_w_0().truncate().text_size(typography::text_caption()).text_color(colors.subtle_foreground).child(detail)
                             })),
                     )
                     .children(self.description.map(|description| {
@@ -255,7 +256,7 @@ impl RenderOnce for SidebarListItem {
                     .flex()
                     .flex_none()
                     .items_center()
-                    .text_size(typography::TEXT_SM)
+                    .text_size(typography::text_sm())
                     .text_color(colors.subtle_foreground)
                     .when(has_hover_trailing, |this| this.group_hover(group.clone(), |style| style.invisible()))
                     .child(trailing)
@@ -332,11 +333,11 @@ impl RenderOnce for SectionLabel {
             .flex()
             .items_center()
             .min_w_0()
-            .h(metrics::CHROME_CONTROL)
-            .gap(metrics::CHROME_GAP)
+            .h(metrics::chrome_control())
+            .gap(metrics::chrome_gap())
             .pl(px(6.))
             .pr(px(2.))
-            .text_size(typography::TEXT_SM)
+            .text_size(typography::text_sm())
             .font_weight(typography::MEDIUM)
             .text_color(colors.muted_foreground)
             .map(|this| match self.title {
@@ -439,7 +440,7 @@ impl RenderOnce for SectionHeader {
             .flex()
             .items_center()
             .justify_between()
-            .min_h(metrics::CHROME_CONTROL)
+            .min_h(metrics::chrome_control())
             .min_w_0()
             .child(
                 div()
@@ -447,11 +448,11 @@ impl RenderOnce for SectionHeader {
                     .flex()
                     .items_center()
                     .min_w_0()
-                    .gap(metrics::CHROME_GAP)
+                    .gap(metrics::chrome_gap())
                     .px(px(6.))
                     .py(px(2.))
-                    .rounded(metrics::RADIUS_MD)
-                    .text_size(typography::TEXT_SM)
+                    .rounded(metrics::radius_md())
+                    .text_size(typography::text_sm())
                     .font_weight(typography::MEDIUM)
                     .text_color(colors.muted_foreground)
                     .hover(move |style| style.text_color(hover))

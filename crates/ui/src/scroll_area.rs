@@ -1,17 +1,18 @@
 use std::{cell::Cell, rc::Rc, time::Duration};
 
+use crate::scale::px;
 use gpui::{
     AnyElement, App, Bounds, DispatchPhase, Element, ElementId, GlobalElementId, Hitbox, HitboxBehavior, Hsla,
     InspectorElementId, IntoElement, LayoutId, ListState, MouseButton, MouseDownEvent, MouseMoveEvent, MouseUpEvent,
     Pixels, Point, Position, RenderOnce, Rgba, ScrollHandle, Style, UniformListScrollHandle, Window, div, fill, point,
-    prelude::*, px, size,
+    prelude::*, size,
 };
 use theme::ActiveTheme;
 use web_time::Instant;
 
-const TRACK_WIDTH: Pixels = px(12.);
-const TRACK_INSET: Pixels = px(4.);
-const MIN_THUMB: Pixels = px(24.);
+fn track_width() -> Pixels { px(12.) }
+fn track_inset() -> Pixels { px(4.) }
+fn min_thumb() -> Pixels { px(24.) }
 /// How long the thumb stays after the content stops moving.
 const SCROLLING_LINGER: Duration = Duration::from_millis(900);
 
@@ -168,11 +169,11 @@ impl Scrollbar {
         }
         let offset = self.source.offset().clamp(px(0.), max);
         let track = Bounds::new(
-            point(bounds.origin.x, bounds.origin.y + TRACK_INSET),
-            size(bounds.size.width, (bounds.size.height - TRACK_INSET * 2.).max(px(0.))),
+            point(bounds.origin.x, bounds.origin.y + track_inset()),
+            size(bounds.size.width, (bounds.size.height - track_inset() * 2.).max(px(0.))),
         );
         let content = viewport.size.height + max;
-        let thumb_height = (track.size.height * (viewport.size.height / content)).max(MIN_THUMB).min(track.size.height);
+        let thumb_height = (track.size.height * (viewport.size.height / content)).max(min_thumb()).min(track.size.height);
         let top = track.origin.y + (track.size.height - thumb_height) * (offset / max);
         Some(Geometry { track, thumb: Bounds::new(point(track.origin.x, top), size(track.size.width, thumb_height)), max })
     }
@@ -223,7 +224,7 @@ impl Element for Scrollbar {
             // Laid out with no height (see `ScrollbarBar::request_layout`): the track is the
             // scrolling div's visible box, which it has measured before its children.
             let viewport = self.source.viewport();
-            Bounds::new(point(viewport.origin.x + viewport.size.width - TRACK_WIDTH, viewport.origin.y), size(TRACK_WIDTH, viewport.size.height))
+            Bounds::new(point(viewport.origin.x + viewport.size.width - track_width(), viewport.origin.y), size(track_width(), viewport.size.height))
         } else {
             bounds
         };
@@ -293,7 +294,7 @@ impl Element for ScrollbarBar {
             style.inset.top = px(0.).into();
             style.inset.bottom = px(0.).into();
             style.inset.right = px(0.).into();
-            style.size.width = TRACK_WIDTH.into();
+            style.size.width = track_width().into();
         }
         (window.request_layout(style, [], cx), ())
     }

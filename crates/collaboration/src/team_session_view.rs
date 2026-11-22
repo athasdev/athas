@@ -6,9 +6,10 @@ use ui::WithScrollbar as _;
 use std::time::Duration;
 
 use account::{AccountStore, widgets};
+use ui::scale::px;
 use gpui::{
     AnyElement, App, Context, Entity, EventEmitter, FocusHandle, Focusable, IntoElement, ParentElement, Render, SharedString, Styled,
-    Subscription, Task, Window, div, prelude::*, px,
+    Subscription, Task, Window, div, prelude::*,
 };
 use theme::ActiveTheme;
 use ui::{Avatar, Button, ButtonSize, ButtonVariant, IconName, PaneTitle, Person, TextInput, TextInputEvent, pane_actions, pane_header, typography};
@@ -300,7 +301,7 @@ impl TeamSessionView {
         let teammates = self.teammates(cx);
         let colors = cx.theme().colors.clone();
         let choices: Vec<AnyElement> = if teammates.is_empty() {
-            vec![div().text_size(typography::TEXT_SM).text_color(colors.subtle_foreground).child("Invite a teammate from the dashboard first").into_any_element()]
+            vec![div().text_size(typography::text_sm()).text_color(colors.subtle_foreground).child("Invite a teammate from the dashboard first").into_any_element()]
         } else {
             teammates
                 .into_iter()
@@ -317,10 +318,10 @@ impl TeamSessionView {
             .flex_col()
             .gap(px(8.))
             .p(px(12.))
-            .rounded(ui::metrics::ISLAND_RADIUS)
+            .rounded(ui::metrics::island_radius())
             .bg(colors.raised)
             .shadow(cx.theme().shadows.raised.clone())
-            .child(div().text_size(typography::TEXT_SM).font_weight(typography::MEDIUM).child(to.title()))
+            .child(div().text_size(typography::text_sm()).font_weight(typography::MEDIUM).child(to.title()))
             .child(self.note.clone())
             .child(div().flex().flex_wrap().gap(px(6.)).children(choices))
             .child(
@@ -343,16 +344,16 @@ impl TeamSessionView {
             .flex_col()
             .gap(px(4.))
             .p(px(10.))
-            .rounded(ui::metrics::RADIUS_LG)
+            .rounded(ui::metrics::radius_lg())
             .when(user, |this| this.bg(colors.selected))
             .child(
                 div()
-                    .text_size(typography::TEXT_CAPTION)
+                    .text_size(typography::text_caption())
                     .font_weight(typography::MEDIUM)
                     .text_color(colors.subtle_foreground)
                     .child(if user { "Prompt" } else { "Agent" }),
             )
-            .child(div().text_size(typography::TEXT_SM).text_color(colors.foreground).child(SharedString::from(content.to_string())))
+            .child(div().text_size(typography::text_sm()).text_color(colors.foreground).child(SharedString::from(content.to_string())))
             .into_any_element()
     }
 
@@ -379,13 +380,13 @@ impl TeamSessionView {
                             .flex_wrap()
                             .items_baseline()
                             .gap(px(6.))
-                            .text_size(typography::TEXT_SM)
+                            .text_size(typography::text_sm())
                             .child(div().font_weight(typography::MEDIUM).text_color(colors.foreground).child(comment.author_name.clone()))
                             .children(comment.kind.verb().map(|verb| div().text_color(colors.muted_foreground).child(verb)))
                             .when(!location.is_empty(), |this| this.child(div().font_family(typography::MONO_FONT).text_color(colors.subtle_foreground).child(location)))
                             .child(div().text_color(colors.subtle_foreground).child(widgets::relative_time(comment.created_at.as_deref()))),
                     )
-                    .when(!comment.body.is_empty(), |this| this.child(div().text_size(typography::TEXT_SM).text_color(colors.foreground).child(comment.body.clone()))),
+                    .when(!comment.body.is_empty(), |this| this.child(div().text_size(typography::text_sm()).text_color(colors.foreground).child(comment.body.clone()))),
             )
             .into_any_element()
     }
@@ -412,7 +413,7 @@ impl Render for TeamSessionView {
                 .flex_1()
                 .items_center()
                 .justify_center()
-                .text_size(typography::TEXT_SM)
+                .text_size(typography::text_sm())
                 .text_color(colors.subtle_foreground)
                 .child(self.error.clone().unwrap_or_else(|| "Opening the shared session…".into()))
                 .into_any_element(),
@@ -433,12 +434,12 @@ impl Render for TeamSessionView {
                     .gap(px(12.))
                     .children(picker)
                     .children(self.error.clone().map(|error| widgets::error_text(error, cx)))
-                    .when(messages.is_empty(), |this| this.child(div().text_size(typography::TEXT_SM).text_color(colors.subtle_foreground).child("This session has no messages yet.")))
+                    .when(messages.is_empty(), |this| this.child(div().text_size(typography::text_sm()).text_color(colors.subtle_foreground).child("This session has no messages yet.")))
                     .children(messages)
                     .child(div().h(px(1.)).bg(colors.divider))
                     .child(
                         div()
-                            .text_size(typography::TEXT_SM)
+                            .text_size(typography::text_sm())
                             .font_weight(typography::MEDIUM)
                             .text_color(colors.muted_foreground)
                             .child(if comments.is_empty() { "No comments yet".to_string() } else { format!("Comments · {}", comments.len()) }),

@@ -5,9 +5,10 @@
 
 use std::{path::PathBuf, rc::Rc};
 
+use ui::scale::px;
 use gpui::{
     AnyElement, App, ClickEvent, Context, ExternalPaths, FontStyle, FontWeight, HighlightStyle, Hsla, InteractiveText, IntoElement,
-    MouseButton, SharedString, StrikethroughStyle, StyledText, UnderlineStyle, Window, div, list, prelude::*, px,
+    MouseButton, SharedString, StrikethroughStyle, StyledText, UnderlineStyle, Window, div, list, prelude::*,
 };
 use theme::ActiveTheme;
 use ui::WithScrollbar as _;
@@ -76,7 +77,7 @@ impl Render for SessionView {
                             div()
                                 .w_full()
                                 .text_center()
-                                .text_size(typography::TEXT_LG)
+                                .text_size(typography::text_lg())
                                 .font_weight(typography::SEMIBOLD)
                                 .child("Where should we begin?"),
                         )
@@ -162,7 +163,7 @@ impl Render for SessionView {
             .flex_col()
             .bg(colors.background)
             .font_family(typography::UI_FONT)
-            .text_size(typography::TEXT_BASE)
+            .text_size(typography::text_base())
             .text_color(colors.foreground)
             .child(body)
             .child(self.render_session_drop_hint(cx))
@@ -194,11 +195,11 @@ impl SessionView {
                     .gap(px(8.))
                     .px(px(16.))
                     .py(px(12.))
-                    .rounded(metrics::RADIUS_XL)
+                    .rounded(metrics::radius_xl())
                     .border_1()
                     .border_color(colors.primary)
                     .bg(colors.primary_soft)
-                    .text_size(typography::TEXT_SM)
+                    .text_size(typography::text_sm())
                     .font_weight(typography::MEDIUM)
                     .text_color(colors.primary)
                     .child(Icon::new(IconName::FilePlus).size(IconSize::Small).color(colors.primary))
@@ -305,7 +306,7 @@ impl SessionView {
                     .w_full()
                     .max_w(px(CONTENT_WIDTH))
                     .min_w_0()
-                    .when(matched, |this| this.p(px(6.)).rounded(metrics::ISLAND_RADIUS).border_1().border_color(if active { colors.primary } else { colors.border }))
+                    .when(matched, |this| this.p(px(6.)).rounded(metrics::island_radius()).border_1().border_color(if active { colors.primary } else { colors.border }))
                     .child(content)
             })
             .into_any_element()
@@ -467,9 +468,9 @@ impl SessionView {
             .gap(px(8.))
             .px(px(10.))
             .py(px(8.))
-            .rounded(metrics::RADIUS_LG)
+            .rounded(metrics::radius_lg())
             .bg(colors.destructive_soft)
-            .text_size(typography::TEXT_SM)
+            .text_size(typography::text_sm())
             .line_height(px(19.))
             .child(div().pt(px(2.)).child(Icon::new(IconName::WarningCircle).size(IconSize::Medium).color(colors.destructive)))
             .child(
@@ -533,7 +534,7 @@ impl SessionView {
                         .size(px(64.))
                         .flex_none()
                         .overflow_hidden()
-                        .rounded(metrics::RADIUS_MD)
+                        .rounded(metrics::radius_md())
                         .border_1()
                         .border_color(colors.border)
                         .child(gpui::img(decoded).size_full().object_fit(gpui::ObjectFit::Cover))
@@ -581,7 +582,7 @@ impl SessionView {
                     .min_w_0()
                     .px(px(12.))
                     .py(px(8.))
-                    .rounded(metrics::RADIUS_LG)
+                    .rounded(metrics::radius_lg())
                     .bg(colors.accent)
                     .text_color(colors.foreground)
                     .line_height(px(20.))
@@ -611,7 +612,7 @@ impl SessionView {
                         .items_center()
                         .min_h(px(24.))
                         .gap(px(2.))
-                        .text_size(typography::TEXT_SM)
+                        .text_size(typography::text_sm())
                         .text_color(colors.subtle_foreground)
                         .invisible()
                         .group_hover("user-turn", |style| style.visible())
@@ -695,7 +696,7 @@ impl SessionView {
                             .size(px(96.))
                             .flex_none()
                             .overflow_hidden()
-                            .rounded(metrics::RADIUS_MD)
+                            .rounded(metrics::radius_md())
                             .border_1()
                             .border_color(colors.border)
                             .child(gpui::img(decoded).size_full().object_fit(gpui::ObjectFit::Cover))
@@ -775,7 +776,7 @@ impl SessionView {
                 .flex()
                 .items_center()
                 .gap(px(2.))
-                .text_size(typography::TEXT_SM)
+                .text_size(typography::text_sm())
                 .text_color(colors.subtle_foreground)
                 .child(
                     div().flex().invisible().group_hover(TURN_TAIL, |style| style.visible()).child(
@@ -807,7 +808,7 @@ impl SessionView {
                 div()
                     .flex()
                     .flex_col()
-                    .rounded(metrics::RADIUS_MD)
+                    .rounded(metrics::radius_md())
                     .border_1()
                     .border_color(if current { colors.primary } else { colors.border })
                     .when(current, |this| this.bg(colors.primary_soft))
@@ -819,7 +820,7 @@ impl SessionView {
                             .gap(px(6.))
                             .px(px(8.))
                             .py(px(6.))
-                            .rounded(metrics::RADIUS_MD)
+                            .rounded(metrics::radius_md())
                             .hover(|style| style.bg(colors.accent))
                             .child(Icon::new(icon).size(IconSize::Small).color(color))
                             .child(div().flex_1().min_w_0().font_weight(FontWeight::MEDIUM).text_color(colors.foreground).child(format!("{}. {}", step.index + 1, step.title)))
@@ -840,7 +841,7 @@ impl SessionView {
                                 .border_color(colors.border)
                                 .px(px(12.))
                                 .py(px(10.))
-                                .text_size(typography::TEXT_SM)
+                                .text_size(typography::text_sm())
                                 .text_color(colors.muted_foreground)
                                 .children(render_blocks(&blocks, &SpanPath::entry(index).child(2).child(step.index), &self.selecting(cx), cx)),
                         )
@@ -858,7 +859,7 @@ impl SessionView {
                 div()
                     .flex()
                     .flex_col()
-                    .rounded(metrics::RADIUS_LG)
+                    .rounded(metrics::radius_lg())
                     .border_1()
                     .border_color(colors.primary)
                     .bg(colors.primary_soft)
@@ -924,7 +925,7 @@ impl SessionView {
                 .gap(px(8.))
                 .min_h(px(22.))
                 .min_w_0()
-                .text_size(typography::TEXT_SM)
+                .text_size(typography::text_sm())
                 .text_color(colors.muted_foreground)
                 .child(match call.status {
                     CallStatus::InProgress => busy_spinner(("cloud-call", position), colors.muted_foreground),
@@ -932,8 +933,8 @@ impl SessionView {
                 })
                 .child(div().flex_none().text_color(colors.foreground).child(call.name.clone()))
                 .children(detail.map(|detail| div().min_w_0().flex_shrink(1.).truncate().child(detail)))
-                .children(status.map(|status| div().flex_none().text_size(typography::TEXT_CAPTION).text_color(color).child(status)))
-                .children(duration.map(|duration| div().flex_none().text_size(typography::TEXT_CAPTION).text_color(colors.subtle_foreground).child(duration)))
+                .children(status.map(|status| div().flex_none().text_size(typography::text_caption()).text_color(color).child(status)))
+                .children(duration.map(|duration| div().flex_none().text_size(typography::text_caption()).text_color(colors.subtle_foreground).child(duration)))
         });
         Some(div().flex().flex_col().gap(px(2.)).children(rows).into_any_element())
     }
@@ -957,7 +958,7 @@ impl SessionView {
                     .gap(px(8.))
                     .h(px(24.))
                     .w_full()
-                    .text_size(typography::TEXT_SM)
+                    .text_size(typography::text_sm())
                     .text_color(colors.subtle_foreground)
                     .hover(|style| style.text_color(colors.foreground))
                     .child(Icon::new(IconName::Brain).size(IconSize::Small).color(if thinking { colors.primary } else { colors.subtle_foreground }))
@@ -971,7 +972,7 @@ impl SessionView {
                         .ml(px(20.))
                         .mt(px(2.))
                         .mb(px(6.))
-                        .text_size(typography::TEXT_SM)
+                        .text_size(typography::text_sm())
                         .line_height(px(19.))
                         .text_color(colors.muted_foreground)
                         .child({
@@ -1009,7 +1010,7 @@ impl SessionView {
                 Icon::new(icon).size(IconSize::Small).color(color).into_any_element()
             }
         };
-        let caption = |text: String, color: Hsla| div().flex_none().text_size(typography::TEXT_CAPTION).text_color(color).child(text).into_any_element();
+        let caption = |text: String, color: Hsla| div().flex_none().text_size(typography::text_caption()).text_color(color).child(text).into_any_element();
         let status: Option<AnyElement> = match summary.phase {
             Phase::Failed => Some(caption("Failed".into(), colors.destructive)),
             Phase::Declined => Some(caption("Declined".into(), colors.subtle_foreground)),
@@ -1020,7 +1021,7 @@ impl SessionView {
                     .flex()
                     .flex_none()
                     .gap(px(4.))
-                    .text_size(typography::TEXT_CAPTION)
+                    .text_size(typography::text_caption())
                     .child(div().text_color(colors.git_added).child(format!("+{}", summary.additions)))
                     .child(div().text_color(colors.git_deleted).child(format!("-{}", summary.deletions)))
                     .into_any_element(),
@@ -1102,7 +1103,7 @@ impl SessionView {
                     .min_h(px(24.))
                     .w_full()
                     .min_w_0()
-                    .text_size(typography::TEXT_SM)
+                    .text_size(typography::text_sm())
                     .text_color(colors.muted_foreground)
                     .when(has_body, |this| {
                         this.hover(|style| style.text_color(colors.foreground))
@@ -1136,7 +1137,7 @@ impl SessionView {
                             ),
                     )
                     .children(status)
-                    .children(duration.map(|duration| div().flex_none().text_size(typography::TEXT_CAPTION).text_color(colors.subtle_foreground).child(duration)))
+                    .children(duration.map(|duration| div().flex_none().text_size(typography::text_caption()).text_color(colors.subtle_foreground).child(duration)))
                     .when(has_body, |this| this.child(disclosure(expanded, colors.subtle_foreground)))
                     .when(command_running || command_output.is_some(), |this| {
                         let call_id = call.id.clone();
@@ -1257,7 +1258,7 @@ impl SessionView {
                     let sel = self.selecting(cx);
                     body.push(
                         div()
-                            .text_size(typography::TEXT_SM)
+                            .text_size(typography::text_sm())
                             .line_height(px(19.))
                             .text_color(colors(cx).muted_foreground)
                             .child(selectable_text(text.trim(), path, &sel, cx))
@@ -1270,7 +1271,7 @@ impl SessionView {
                     let sel = self.selecting(cx);
                     body.push(
                         div()
-                            .text_size(typography::TEXT_SM)
+                            .text_size(typography::text_sm())
                             .line_height(px(19.))
                             .text_color(colors(cx).muted_foreground)
                             .flex()
@@ -1309,7 +1310,7 @@ impl SessionView {
                             let palette = colors(cx);
                             body.push(
                                 div()
-                                    .text_size(typography::TEXT_SM)
+                                    .text_size(typography::text_sm())
                                     .text_color(if failed { palette.destructive } else { palette.subtle_foreground })
                                     .child(reason)
                                     .into_any_element(),
@@ -1334,7 +1335,7 @@ impl SessionView {
             } else {
                 "No output"
             };
-            body.push(div().text_size(typography::TEXT_SM).text_color(colors(cx).subtle_foreground).child(text).into_any_element());
+            body.push(div().text_size(typography::text_sm()).text_color(colors(cx).subtle_foreground).child(text).into_any_element());
         }
         if let Some(rows) = crate::tool_locations::location_tree(&call.locations, self.info.cwd.as_deref()) {
             body.push(self.render_location_tree(index, rows, cx));
@@ -1348,7 +1349,7 @@ impl SessionView {
                 if kind == ToolKind::Think {
                     let path = self.part_path(index, &body);
                     let sel = self.selecting(cx);
-                    body.push(div().text_size(typography::TEXT_SM).line_height(px(19.)).text_color(colors(cx).muted_foreground).child(selectable_text(text.trim(), path, &sel, cx)).into_any_element());
+                    body.push(div().text_size(typography::text_sm()).line_height(px(19.)).text_color(colors(cx).muted_foreground).child(selectable_text(text.trim(), path, &sel, cx)).into_any_element());
                 } else {
                     body.push(code_box(&last_lines(text.trim_end(), OUTPUT_LINE_LIMIT), self.part_path(index, &body), &self.selecting(cx), cx));
                 }
@@ -1368,7 +1369,7 @@ impl SessionView {
         div()
             .flex()
             .flex_col()
-            .text_size(typography::TEXT_SM)
+            .text_size(typography::text_sm())
             .children(rows.into_iter().enumerate().map(|(row_index, row)| {
                 let (depth, name, open) = match row {
                     crate::tool_locations::TreeRow::Folder { depth, name } => (depth, name, None),
@@ -1388,7 +1389,7 @@ impl SessionView {
                     .h(px(22.))
                     .pl(px(6. + depth as f32 * 14.))
                     .pr(px(6.))
-                    .rounded(metrics::RADIUS_MD)
+                    .rounded(metrics::radius_md())
                     .text_color(colors.muted_foreground)
                     .child(icon)
                     .child(div().min_w_0().truncate().child(name))
@@ -1443,7 +1444,7 @@ impl SessionView {
         let diff_box = div()
             .w_full()
             .min_w_0()
-            .rounded(metrics::RADIUS_LG)
+            .rounded(metrics::radius_lg())
             .bg(colors.raised)
             .shadow(cx.theme().shadows.raised.clone())
             .overflow_hidden()
@@ -1458,7 +1459,7 @@ impl SessionView {
                         .px(px(10.))
                         .bg(colors.surface)
                         .when(!folded, |this| this.border_b_1().border_color(colors.divider))
-                        .text_size(typography::TEXT_SM)
+                        .text_size(typography::text_sm())
                         .hover(|style| style.bg(colors.accent))
                         .on_click(cx.listener(move |this, _: &ClickEvent, _, cx| {
                             if !this.expanded.remove(&fold_key) {
@@ -1489,7 +1490,7 @@ impl SessionView {
                         .overflow_x_scroll()
                         .bg(colors.background)
                         .font_family(typography::MONO_FONT)
-                        .text_size(typography::TEXT_CAPTION)
+                        .text_size(typography::text_caption())
                         .line_height(px(DIFF_ROW_HEIGHT))
                         .child(div().flex().flex_col().min_w_full().children(lines)),
                 )
@@ -1505,7 +1506,7 @@ impl SessionView {
                     div()
                         .id(("expand-diff", index * 100 + content_index))
                         .self_start()
-                        .text_size(typography::TEXT_SM)
+                        .text_size(typography::text_sm())
                         .text_color(colors.primary)
                         .hover(|style| style.underline())
                         .on_click(cx.listener(move |this, _: &ClickEvent, _, cx| this.open_review(cx)))
@@ -1529,11 +1530,11 @@ impl SessionView {
                 .gap(px(6.))
                 .h(px(34.))
                 .px(px(10.))
-                .rounded(metrics::RADIUS_LG)
+                .rounded(metrics::radius_lg())
                 .border_1()
                 .border_color(colors.border)
                 .bg(colors.raised)
-                .text_size(typography::TEXT_SM)
+                .text_size(typography::text_sm())
                 .child(Icon::new(IconName::GitDiff).size(IconSize::XSmall).color(colors.muted_foreground))
                 .child(div().child(format!("{files} {} changed", if files == 1 { "file" } else { "files" })))
                 .child(div().text_color(colors.git_added).child(format!("+{added}")))
@@ -1580,9 +1581,9 @@ impl SessionView {
                     .items_center()
                     .gap(px(8.))
                     .p(px(10.))
-                    .rounded(metrics::RADIUS_LG)
+                    .rounded(metrics::radius_lg())
                     .bg(colors.warning_soft)
-                    .text_size(typography::TEXT_SM)
+                    .text_size(typography::text_sm())
                     .child(Icon::new(IconName::Warning).size(IconSize::Small).color(colors.warning))
                     .child(
                         div()
@@ -1615,7 +1616,7 @@ impl SessionView {
                     .items_center()
                     .gap(px(8.))
                     .h(px(24.))
-                    .text_size(typography::TEXT_SM)
+                    .text_size(typography::text_sm())
                     .text_color(colors.subtle_foreground)
                     .child(busy_spinner("agent-starting", colors.subtle_foreground))
                     .child(format!("Starting {}…", self.agent_name()))
@@ -1631,7 +1632,7 @@ impl SessionView {
                         .items_center()
                         .gap(px(8.))
                         .h(px(24.))
-                        .text_size(typography::TEXT_SM)
+                        .text_size(typography::text_sm())
                         .text_color(colors.subtle_foreground)
                         .child(busy_spinner("agent-waiting", colors.subtle_foreground))
                         .child(if stalled { "Still waiting for the agent…" } else { "Waiting for response…" })
@@ -1665,10 +1666,10 @@ impl SessionView {
                 .w_full()
                 .flex()
                 .flex_col()
-                .rounded(metrics::RADIUS_LG)
+                .rounded(metrics::radius_lg())
                 .bg(colors.raised)
                 .shadow(cx.theme().shadows.raised.clone())
-                .text_size(typography::TEXT_SM)
+                .text_size(typography::text_sm())
                 .child(
                     div()
                         .id("plan-header")
@@ -1808,11 +1809,11 @@ impl SessionView {
                 .overflow_hidden()
                 .px(px(10.))
                 .py(px(6.))
-                .rounded(metrics::RADIUS_MD)
+                .rounded(metrics::radius_md())
                 .border_1()
                 .border_color(colors.border)
                 .bg(colors.raised)
-                .text_size(typography::TEXT_SM)
+                .text_size(typography::text_sm())
                 .text_color(colors.muted_foreground)
                 .when(mono, |this| this.font_family(typography::MONO_FONT))
                 .child(text)
@@ -1840,10 +1841,10 @@ impl SessionView {
             .gap(px(8.))
             .px(px(10.))
             .py(px(6.))
-            .rounded(metrics::RADIUS_XL)
+            .rounded(metrics::radius_xl())
             .bg(colors.raised)
             .shadow(cx.theme().shadows.raised.clone())
-            .text_size(typography::TEXT_SM)
+            .text_size(typography::text_sm())
             .child(Icon::new(IconName::Key).size(IconSize::Small).color(colors.subtle_foreground))
             .child(
                 // "Permission / what it would do", the summary in the mono face.
@@ -1935,7 +1936,7 @@ impl SessionView {
                     .flex()
                     .flex_col()
                     .gap(px(2.))
-                    .child(div().text_size(typography::TEXT_CAPTION).text_color(colors.subtle_foreground).child(if matches!(pending.elicitation.mode, Mode::Url { .. }) {
+                    .child(div().text_size(typography::text_caption()).text_color(colors.subtle_foreground).child(if matches!(pending.elicitation.mode, Mode::Url { .. }) {
                         format!("{agent} asks you to open a link")
                     } else {
                         format!("{agent} is asking")
@@ -1966,7 +1967,7 @@ impl SessionView {
                                 .flex_col()
                                 .gap(px(2.))
                                 .child(div().font_weight(FontWeight::MEDIUM).text_color(colors.foreground).child(host.clone()))
-                                .child(div().text_size(typography::TEXT_CAPTION).text_color(colors.muted_foreground).child(url.clone()))
+                                .child(div().text_size(typography::text_caption()).text_color(colors.muted_foreground).child(url.clone()))
                                 .into_any_element(),
                         );
                         if *punycode {
@@ -2005,7 +2006,7 @@ impl SessionView {
                         );
                     }
                     Link::Refused(reason) => {
-                        body.push(div().text_size(typography::TEXT_CAPTION).text_color(colors.muted_foreground).child(url.clone()).into_any_element());
+                        body.push(div().text_size(typography::text_caption()).text_color(colors.muted_foreground).child(url.clone()).into_any_element());
                         body.push(div().text_color(colors.destructive).child(reason.clone()).into_any_element());
                     }
                 }
@@ -2042,9 +2043,9 @@ impl SessionView {
                             .items_baseline()
                             .gap(px(6.))
                             .child(div().font_weight(FontWeight::MEDIUM).text_color(colors.foreground).child(question.title.clone()))
-                            .when(!question.required, |this| this.child(div().text_size(typography::TEXT_CAPTION).text_color(colors.subtle_foreground).child("Optional")))
+                            .when(!question.required, |this| this.child(div().text_size(typography::text_caption()).text_color(colors.subtle_foreground).child("Optional")))
                             .when(total > 1, |this| {
-                                this.child(div().flex_1()).child(div().text_size(typography::TEXT_CAPTION).text_color(colors.subtle_foreground).child(format!("{} of {total}", step + 1)))
+                                this.child(div().flex_1()).child(div().text_size(typography::text_caption()).text_color(colors.subtle_foreground).child(format!("{} of {total}", step + 1)))
                             })
                             .into_any_element(),
                     );
@@ -2069,7 +2070,7 @@ impl SessionView {
                                 .gap(px(8.))
                                 .px(px(8.))
                                 .py(px(4.))
-                                .rounded(metrics::RADIUS_LG)
+                                .rounded(metrics::radius_lg())
                                 .when(chosen, |this| this.bg(colors.selected))
                                 .hover(|this| this.bg(colors.accent))
                                 .on_click(cx.listener(move |this, _: &ClickEvent, _, cx| this.choose_elicitation_option(&name, &value, cx)))
@@ -2082,16 +2083,16 @@ impl SessionView {
                                         .flex_col()
                                         .gap(px(2.))
                                         .child(div().text_color(colors.foreground).child(option.label.clone()))
-                                        .children(option.description.clone().map(|text| div().text_size(typography::TEXT_CAPTION).text_color(colors.muted_foreground).child(text)))
+                                        .children(option.description.clone().map(|text| div().text_size(typography::text_caption()).text_color(colors.muted_foreground).child(text)))
                                         .children(option.preview.clone().map(|preview| {
                                             div()
                                                 .mt(px(2.))
                                                 .px(px(6.))
                                                 .py(px(4.))
-                                                .rounded(metrics::RADIUS_MD)
+                                                .rounded(metrics::radius_md())
                                                 .bg(colors.background)
                                                 .font_family(typography::MONO_FONT)
-                                                .text_size(typography::TEXT_CAPTION)
+                                                .text_size(typography::text_caption())
                                                 .child(preview)
                                         })),
                                 )
@@ -2163,10 +2164,10 @@ impl SessionView {
                 .flex_col()
                 .gap(px(10.))
                 .p(px(10.))
-                .rounded(metrics::RADIUS_XL)
+                .rounded(metrics::radius_xl())
                 .bg(colors.raised)
                 .shadow(cx.theme().shadows.raised.clone())
-                .text_size(typography::TEXT_SM)
+                .text_size(typography::text_sm())
                 .child(header)
                 .children(body)
                 .into_any_element(),
@@ -2232,8 +2233,8 @@ impl SessionView {
                     .gap(px(4.))
                     .h(px(22.))
                     .px(px(6.))
-                    .rounded(metrics::RADIUS_MD)
-                    .text_size(typography::TEXT_SM)
+                    .rounded(metrics::radius_md())
+                    .text_size(typography::text_sm())
                     .text_color(if active { colors.foreground } else { colors.muted_foreground })
                     .when(active, |this| this.bg(colors.accent))
                     .hover(|style| style.bg(colors.accent).text_color(colors.foreground))
@@ -2262,7 +2263,7 @@ impl SessionView {
                 .flex_col()
                 .gap(px(1.))
                 .p(px(4.))
-                .rounded(metrics::RADIUS_MD)
+                .rounded(metrics::radius_md())
                 .bg(colors.surface)
                 .child(
                     div()
@@ -2270,7 +2271,7 @@ impl SessionView {
                         .items_center()
                         .justify_between()
                         .pl(px(4.))
-                        .child(div().text_size(typography::TEXT_SM).font_weight(typography::MEDIUM).text_color(colors.foreground).child(group.label.clone()))
+                        .child(div().text_size(typography::text_sm()).font_weight(typography::MEDIUM).text_color(colors.foreground).child(group.label.clone()))
                         .child(
                             Button::new("clear-attachment-group", "Clear")
                                 .variant(ButtonVariant::Ghost)
@@ -2320,9 +2321,9 @@ impl SessionView {
                 .h(px(22.))
                 .pl(px(6.))
                 .pr(px(2.))
-                .rounded(metrics::RADIUS_MD)
+                .rounded(metrics::radius_md())
                 .bg(colors.accent)
-                .text_size(typography::TEXT_SM)
+                .text_size(typography::text_sm())
                 .text_color(colors.foreground)
                 .tooltip(ui::Tooltip::text(tooltip))
                 .child(leading)
@@ -2365,7 +2366,7 @@ impl SessionView {
                 .gap(px(8.))
                 .px(px(4.))
                 .py(px(2.))
-                .rounded(metrics::RADIUS_MD)
+                .rounded(metrics::radius_md())
                 .hover(|style| style.bg(colors.accent))
                 .child(media)
                 .child(
@@ -2374,9 +2375,9 @@ impl SessionView {
                         .min_w_0()
                         .flex()
                         .flex_col()
-                        .child(div().truncate().text_size(typography::TEXT_SM).text_color(colors.foreground).child(name.clone()))
+                        .child(div().truncate().text_size(typography::text_sm()).text_color(colors.foreground).child(name.clone()))
                         .children((!description.is_empty() && description != name).then(|| {
-                            div().truncate().text_size(typography::TEXT_CAPTION).text_color(colors.subtle_foreground).child(description)
+                            div().truncate().text_size(typography::text_caption()).text_color(colors.subtle_foreground).child(description)
                         })),
                 )
                 .child(
@@ -2404,7 +2405,7 @@ impl SessionView {
                 .size(size)
                 .flex_none()
                 .overflow_hidden()
-                .rounded(metrics::RADIUS)
+                .rounded(metrics::radius())
                 .child(gpui::img(image).size_full().object_fit(gpui::ObjectFit::Cover))
                 .into_any_element();
         }
@@ -2477,7 +2478,7 @@ impl SessionView {
             .flex_col()
             .gap(px(6.))
             .p(px(10.))
-            .rounded(metrics::RADIUS_XL)
+            .rounded(metrics::radius_xl())
             .bg(colors.raised)
             .shadow(cx.theme().shadows.raised.clone())
             .cursor_text()
@@ -2505,7 +2506,7 @@ impl SessionView {
                                 .id("terminal-folder")
                                 .min_w_0()
                                 .truncate()
-                                .text_size(typography::TEXT_SM)
+                                .text_size(typography::text_sm())
                                 .text_color(colors.muted_foreground)
                                 .when(!title.is_empty(), |this| {
                                     let title: SharedString = title.into();
@@ -2516,7 +2517,7 @@ impl SessionView {
                 )
             })
             .when_some(self.input_notice.clone(), |this, notice| {
-                this.child(div().text_size(typography::TEXT_CAPTION).text_color(colors.warning).child(notice))
+                this.child(div().text_size(typography::text_caption()).text_color(colors.warning).child(notice))
             })
             .child(div().px(px(2.)).min_h(px(40.)).child(self.composer.clone()))
             .child(
@@ -2532,7 +2533,7 @@ impl SessionView {
                                 .px(px(6.))
                                 .min_w_0()
                                 .truncate()
-                                .text_size(typography::TEXT_SM)
+                                .text_size(typography::text_sm())
                                 .text_color(colors.muted_foreground)
                                 .child(if terminal_enabled { "Enter to run · Output appears in chat" } else { "Enable Terminal in Settings to run commands" }),
                         )
@@ -2575,13 +2576,13 @@ impl SessionView {
                 div()
                     .absolute()
                     .inset_0()
-                    .rounded(metrics::RADIUS_XL)
+                    .rounded(metrics::radius_xl())
                     .bg(colors.primary_soft)
                     .flex()
                     .items_center()
                     .justify_center()
                     .gap(px(6.))
-                    .text_size(typography::TEXT_SM)
+                    .text_size(typography::text_sm())
                     .font_weight(typography::MEDIUM)
                     .text_color(colors.primary)
                     .invisible()
@@ -2675,7 +2676,7 @@ impl SessionView {
                         .flex()
                         .flex_col()
                         .child(div().truncate().text_color(colors.foreground).child(title))
-                        .children(description.map(|description| div().truncate().text_size(typography::TEXT_SM).text_color(colors.subtle_foreground).child(description))),
+                        .children(description.map(|description| div().truncate().text_size(typography::text_sm()).text_color(colors.subtle_foreground).child(description))),
                 )
                 .child(div().flex_none().flex().items_center().gap(px(4.)).children(actions))
                 .into_any_element()
@@ -2736,11 +2737,11 @@ impl SessionView {
                 .mt(px(8.))
                 .flex()
                 .flex_col()
-                .rounded(metrics::RADIUS_LG)
+                .rounded(metrics::radius_lg())
                 .border_1()
                 .border_color(colors.border)
                 .bg(colors.raised)
-                .text_size(typography::TEXT_SM)
+                .text_size(typography::text_sm())
                 .children(rows)
                 .into_any_element(),
         )
@@ -2797,9 +2798,9 @@ impl SessionView {
                 .flex()
                 .items_center()
                 .gap(px(8.))
-                .h(ui::metrics::LIST_ROW)
+                .h(ui::metrics::list_row())
                 .px(px(8.))
-                .rounded(metrics::RADIUS_MD)
+                .rounded(metrics::radius_md())
                 .when(selected, |this| this.bg(colors.selected))
                 .when(!selected, |this| this.hover(|style| style.bg(colors.accent)))
                 .on_click(cx.listener(move |this, _: &ClickEvent, _, cx| this.accept_completion(index, cx)))
@@ -2812,7 +2813,7 @@ impl SessionView {
                 .child(div().flex_1().min_w_0().truncate().text_color(colors.subtle_foreground).child(detail))
                 .when_some(badge, |this, badge| {
                     this.child(
-                        div().flex_none().px(px(4.)).rounded(metrics::RADIUS).bg(colors.accent).text_size(typography::TEXT_CAPTION).text_color(colors.muted_foreground).child(badge),
+                        div().flex_none().px(px(4.)).rounded(metrics::radius()).bg(colors.accent).text_size(typography::text_caption()).text_color(colors.muted_foreground).child(badge),
                     )
                 });
             div()
@@ -2837,17 +2838,17 @@ impl SessionView {
                 .flex_col()
                 .gap(px(1.))
                 .p(px(4.))
-                .rounded(metrics::RADIUS_XL)
+                .rounded(metrics::radius_xl())
                 .bg(colors.overlay)
                 .shadow(cx.theme().shadows.raised.clone())
-                .text_size(typography::TEXT_SM)
+                .text_size(typography::text_sm())
                 .child(
                     div()
                         .flex()
                         .items_center()
                         .h(px(22.))
                         .px(px(8.))
-                        .text_size(typography::TEXT_CAPTION)
+                        .text_size(typography::text_caption())
                         .text_color(colors.subtle_foreground)
                         .child(title)
                         .child(div().flex_1())
@@ -2911,17 +2912,17 @@ impl SessionView {
                 .flex()
                 .flex_col()
                 .py(px(4.))
-                .rounded(metrics::RADIUS_XL)
+                .rounded(metrics::radius_xl())
                 .bg(colors.raised)
                 .shadow(cx.theme().shadows.raised.clone())
-                .text_size(typography::TEXT_SM)
+                .text_size(typography::text_sm())
                 .child(
                     div()
                         .flex()
                         .items_center()
                         .h(px(22.))
                         .px(px(8.))
-                        .text_size(typography::TEXT_CAPTION)
+                        .text_size(typography::text_caption())
                         .text_color(colors.subtle_foreground)
                         .child(format!("Queued ({})", self.queue.len()))
                         .child(div().flex_1())
@@ -3325,9 +3326,9 @@ fn attachment_chip(icon: IconName, label: String, cx: &App) -> gpui::Div {
         .max_w(px(220.))
         .h(px(22.))
         .px(px(6.))
-        .rounded(metrics::RADIUS_MD)
+        .rounded(metrics::radius_md())
         .bg(colors.accent)
-        .text_size(typography::TEXT_CAPTION)
+        .text_size(typography::text_caption())
         .text_color(colors.muted_foreground)
         .child(leading)
         .child(div().min_w_0().truncate().child(label))
@@ -3374,7 +3375,7 @@ fn render_notice(kind: NoticeKind, text: &str, path: SpanPath, sel: &Selecting, 
         .items_start()
         .gap(px(8.))
         .py(px(2.))
-        .text_size(typography::TEXT_SM)
+        .text_size(typography::text_sm())
         .line_height(px(19.))
         .text_color(color)
         .child(div().pt(px(2.)).child(Icon::new(icon).size(IconSize::Small).color(color)))
@@ -3396,12 +3397,12 @@ fn code_box(text: &str, path: SpanPath, sel: &Selecting, cx: &mut Context<Sessio
         .min_w_0()
         .px(px(10.))
         .py(px(8.))
-        .rounded(metrics::RADIUS_LG)
+        .rounded(metrics::radius_lg())
         .bg(colors.field)
         .border_1()
         .border_color(colors.border)
         .font_family(typography::MONO_FONT)
-        .text_size(typography::TEXT_CAPTION)
+        .text_size(typography::text_caption())
         .line_height(px(17.))
         .text_color(colors.muted_foreground)
         .child(linked_text(text, colors.primary, path, sel, cx))
@@ -3472,8 +3473,8 @@ fn render_block(block: &Block, path: &SpanPath, sel: &Selecting, cx: &mut Contex
         Block::Heading { level, text } => {
             let size = match level {
                 1 => px(18.),
-                2 => typography::TEXT_LG,
-                _ => typography::TEXT_BASE,
+                2 => typography::text_lg(),
+                _ => typography::text_base(),
             };
             div()
                 .pt(px(4.))
@@ -3488,7 +3489,7 @@ fn render_block(block: &Block, path: &SpanPath, sel: &Selecting, cx: &mut Contex
             div()
                 .w_full()
                 .min_w_0()
-                .rounded(metrics::RADIUS_LG)
+                .rounded(metrics::radius_lg())
                 .bg(colors.field)
                 .border_1()
                 .border_color(colors.border)
@@ -3501,7 +3502,7 @@ fn render_block(block: &Block, path: &SpanPath, sel: &Selecting, cx: &mut Contex
                         .h(px(26.))
                         .pl(px(10.))
                         .pr(px(4.))
-                        .text_size(typography::TEXT_CAPTION)
+                        .text_size(typography::text_caption())
                         .text_color(colors.subtle_foreground)
                         .child(div().flex_1().child(language.clone().unwrap_or_default()))
                         .child(
@@ -3520,7 +3521,7 @@ fn render_block(block: &Block, path: &SpanPath, sel: &Selecting, cx: &mut Contex
                         .px(px(10.))
                         .pb(px(8.))
                         .font_family(typography::MONO_FONT)
-                        .text_size(typography::TEXT_SM)
+                        .text_size(typography::text_sm())
                         .line_height(px(19.))
                         .whitespace_nowrap()
                         .child({
@@ -3612,11 +3613,11 @@ fn render_block(block: &Block, path: &SpanPath, sel: &Selecting, cx: &mut Contex
                 .collect();
             div()
                 .w_full()
-                .rounded(metrics::RADIUS_LG)
+                .rounded(metrics::radius_lg())
                 .border_1()
                 .border_color(colors.border)
                 .overflow_hidden()
-                .text_size(typography::TEXT_SM)
+                .text_size(typography::text_sm())
                 .child(header_row)
                 .children(body_rows)
                 .into_any_element()
@@ -3897,8 +3898,8 @@ fn link_card(href: &str, root: Option<&std::path::Path>, details: Option<&GitHub
                     .flex()
                     .flex_col()
                     .child(div().font_weight(typography::MEDIUM).text_color(colors.foreground).child(title))
-                    .children(meta.map(|meta| div().mt(px(2.)).truncate().text_size(typography::TEXT_SM).text_color(colors.subtle_foreground).child(meta)))
-                    .child(div().mt(px(8.)).text_size(typography::TEXT_SM).text_color(colors.subtle_foreground).child(hint)),
+                    .children(meta.map(|meta| div().mt(px(2.)).truncate().text_size(typography::text_sm()).text_color(colors.subtle_foreground).child(meta)))
+                    .child(div().mt(px(8.)).text_size(typography::text_sm()).text_color(colors.subtle_foreground).child(hint)),
             ),
     )
 }

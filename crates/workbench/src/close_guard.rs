@@ -436,7 +436,7 @@ impl Render for UnsavedChangesDialog {
                             .on_click(cx.listener(|this, _, window, cx| this.save(window, cx)))
                             .into_any_element(),
                     ])
-                    .child(div().text_size(typography::TEXT_SM).text_color(colors.foreground).child(message)),
+                    .child(div().text_size(typography::text_sm()).text_color(colors.foreground).child(message)),
             )
     }
 }

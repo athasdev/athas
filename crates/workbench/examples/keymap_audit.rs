@@ -151,7 +151,7 @@ fn main() -> Result<()> {
             cx.run_until_parked();
         }
         for (key, label) in [("cmd+=", "zoom in"), ("cmd+-", "zoom out")] {
-            let before = cx.update(|cx| (editor::zoom_level(cx), settings::get(cx).terminal_font_size));
+            let before = cx.update(|cx| (ui::scale::zoom(), settings::get(cx).terminal_font_size));
             let keys = keymap::to_gpui_keystrokes(key).unwrap();
             cx.update_window(window, |_, window, cx| {
                 for chord in keys.split_whitespace() {
@@ -161,9 +161,9 @@ fn main() -> Result<()> {
                 }
             })?;
             cx.run_until_parked();
-            let after = cx.update(|cx| (editor::zoom_level(cx), settings::get(cx).terminal_font_size));
+            let after = cx.update(|cx| (ui::scale::zoom(), settings::get(cx).terminal_font_size));
             let moved = match (after.0 != before.0, after.1 != before.1) {
-                (true, _) => "the editors",
+                (true, _) => "the whole window",
                 (_, true) => "the terminal font",
                 _ => "NOTHING",
             };

@@ -2,14 +2,15 @@
 //! grapheme-aware movement, drawn with the workbench's tokens.
 use crate::TooltipExt;
 
-use std::ops::Range;
+use std::{ops::Range, time::Duration};
 
+use crate::scale::px;
 use gpui::{
     App, Bounds, ClipboardItem, Context, CursorStyle, ElementId, ElementInputHandler, Entity,
     EntityInputHandler, EventEmitter, FocusHandle, Focusable, GlobalElementId, KeyBinding,
     LayoutId, MouseButton, MouseDownEvent, MouseMoveEvent, MouseUpEvent, PaintQuad, Pixels, Point,
-    ShapedLine, SharedString, Style, TextRun, UTF16Selection, UnderlineStyle, Window, actions,
-    div, fill, point, prelude::*, px, relative, size,
+    ShapedLine, SharedString, Style, Task, TextRun, UTF16Selection, UnderlineStyle, Window, actions,
+    div, fill, point, prelude::*, relative, size,
 };
 use theme::ActiveTheme;
 use unicode_segmentation::UnicodeSegmentation as _;
@@ -121,18 +122,50 @@ pub struct TextInput {
     centered: bool,
     strong_placeholder: bool,
     masked: bool,
+    focused: bool,
+    /// The caret's half of the blink; `false` is the beat it is away.
+    caret_visible: bool,
+    blink: Option<Task<()>>,
 }
 
 /// What a masked field draws for each character.
 const MASK: char = '•';
+
+/// How long the caret rests on each side of a blink, as the editor's caret does.
+const BLINK_INTERVAL: Duration = Duration::from_millis(530);
+
+/// The caret's own room before the placeholder, so the two do not sit on the same pixel.
+fn placeholder_gap() -> Pixels { px(3.) }
 
 impl EventEmitter<TextInputEvent> for TextInput {}
 
 impl TextInput {
     pub fn new(window: &mut Window, cx: &mut Context<Self>) -> Self {
         let focus_handle = cx.focus_handle();
-        cx.on_focus(&focus_handle, window, |_, _, cx| cx.emit(TextInputEvent::Focused)).detach();
-        cx.on_blur(&focus_handle, window, |_, _, cx| cx.emit(TextInputEvent::Blurred)).detach();
+        cx.on_focus(&focus_handle, window, |this: &mut Self, _, cx| {
+            this.focused = true;
+            this.restart_blink(cx);
+            cx.emit(TextInputEvent::Focused);
+        })
+        .detach();
+        cx.on_blur(&focus_handle, window, |this: &mut Self, _, cx| {
+            this.focused = false;
+            this.blink = None;
+            this.caret_visible = true;
+            cx.emit(TextInputEvent::Blurred);
+        })
+        .detach();
+        // A window in the background draws no caret: it should not keep a timer waking its window
+        // either.
+        cx.observe_window_activation(window, |this: &mut Self, window, cx| {
+            if window.is_window_active() {
+                this.restart_blink(cx);
+            } else {
+                this.blink = None;
+                this.caret_visible = true;
+            }
+        })
+        .detach();
         Self {
             focus_handle,
             content: SharedString::default(),
@@ -150,7 +183,33 @@ impl TextInput {
             centered: false,
             strong_placeholder: false,
             masked: false,
+            focused: false,
+            caret_visible: true,
+            blink: None,
         }
+    }
+
+    /// Shows the caret and starts the blink over, so it stays solid while the field is being
+    /// typed in and only blinks once it rests.
+    fn restart_blink(&mut self, cx: &mut Context<Self>) {
+        self.caret_visible = true;
+        if !self.focused || self.disabled {
+            self.blink = None;
+            return;
+        }
+        self.blink = Some(cx.spawn(async move |this, cx| {
+            loop {
+                cx.background_executor().timer(BLINK_INTERVAL).await;
+                let beat = this.update(cx, |input, cx| {
+                    input.caret_visible = !input.caret_visible;
+                    cx.notify();
+                });
+                if beat.is_err() {
+                    break;
+                }
+            }
+        }));
+        cx.notify();
     }
 
     /// Draws a dot for each character, as a password field does, and keeps the text off the
@@ -413,6 +472,7 @@ impl TextInput {
     fn move_to(&mut self, offset: usize, window: &Window, cx: &mut Context<Self>) {
         self.selected_range = offset..offset;
         self.selection_reversed = false;
+        self.restart_blink(cx);
         window.notify_text_selection_changed(&self.focus_handle);
         cx.notify()
     }
@@ -447,6 +507,7 @@ impl TextInput {
             self.selection_reversed = !self.selection_reversed;
             self.selected_range = self.selected_range.end..self.selected_range.start;
         }
+        self.restart_blink(cx);
         window.notify_text_selection_changed(&self.focus_handle);
         cx.notify()
     }
@@ -578,6 +639,7 @@ impl EntityInputHandler for TextInput {
         self.selected_range = range.start + new_text.len()..range.start + new_text.len();
         self.selection_reversed = false;
         self.marked_range.take();
+        self.restart_blink(cx);
         window.notify_text_input_changed(&self.focus_handle);
         self.changed(cx);
     }
@@ -665,6 +727,8 @@ struct TextElement {
 struct PrepaintState {
     line: Option<ShapedLine>,
     cursor: Option<PaintQuad>,
+    /// How far in the text itself is drawn: a placeholder stands clear of the caret.
+    line_offset: Pixels,
     selection: Option<PaintQuad>,
 }
 
@@ -763,14 +827,19 @@ impl Element for TextElement {
 
         let font_size = style.font_size.to_pixels(window.rem_size());
         let line = window.text_system().shape_line(display_text, font_size, &runs, None);
-        let cursor_x = if input.content.is_empty() { px(0.) } else { line.x_for_index(cursor) };
+        let empty = input.content.is_empty();
+        let cursor_x = if empty { px(0.) } else { line.x_for_index(cursor) };
+        // An empty field draws its placeholder a caret's width in, so the two never share a pixel.
+        let line_offset = if empty { placeholder_gap() } else { px(0.) };
         let (selection, cursor) = if selected_range.is_empty() {
             (
                 None,
-                Some(fill(
-                    Bounds::new(point(bounds.left() + cursor_x, bounds.top()), size(px(1.5), bounds.bottom() - bounds.top())),
-                    colors.cursor,
-                )),
+                input.caret_visible.then(|| {
+                    fill(
+                        Bounds::new(point(bounds.left() + cursor_x, bounds.top()), size(px(1.5), bounds.bottom() - bounds.top())),
+                        colors.cursor,
+                    )
+                }),
             )
         } else {
             (
@@ -784,7 +853,7 @@ impl Element for TextElement {
                 None,
             )
         };
-        PrepaintState { line: Some(line), cursor, selection }
+        PrepaintState { line: Some(line), cursor, selection, line_offset }
     }
 
     fn paint(
@@ -803,7 +872,8 @@ impl Element for TextElement {
             window.paint_quad(selection)
         }
         let Some(line) = prepaint.line.take() else { return };
-        line.paint(bounds.origin, window.line_height(), gpui::TextAlign::Left, None, window, cx).ok();
+        let origin = point(bounds.left() + prepaint.line_offset, bounds.top());
+        line.paint(origin, window.line_height(), gpui::TextAlign::Left, None, window, cx).ok();
         if focus_handle.is_focused(window) && window.is_window_active()
             && let Some(cursor) = prepaint.cursor.take()
         {
@@ -857,14 +927,16 @@ impl Render for TextInput {
             .on_mouse_up(MouseButton::Left, cx.listener(Self::on_mouse_up))
             .on_mouse_up_out(MouseButton::Left, cx.listener(Self::on_mouse_up))
             .on_mouse_move(cx.listener(Self::on_mouse_move))
-            .text_size(typography::TEXT_SM)
+            .text_size(typography::text_sm())
             .line_height(px(18.))
             .text_color(theme.colors.foreground)
             .when(self.disabled, |this| this.opacity(0.5))
             .when(field, |this| {
+                // A rounded box, not a pill: the rows and panels a field sits among are drawn the
+                // same way, and a capsule read as a web form control among them.
                 this.h(px(28.))
-                    .px(px(12.))
-                    .rounded_full()
+                    .px(px(10.))
+                    .rounded(crate::metrics::radius_lg())
                     .bg(theme.colors.raised)
                     // A 1px ring in the accent outside the pill, which keeps its size: the 3px ring
                     // of the web build read as a thick halo at the app's scale.

@@ -4,7 +4,8 @@
 
 use std::ops::Range;
 
-use gpui::{FontStyle, FontWeight, HighlightStyle, StrikethroughStyle, px};
+use ui::scale::px;
+use gpui::{FontStyle, FontWeight, HighlightStyle, StrikethroughStyle,};
 use theme::ThemeColors;
 use ui::IconName;
 

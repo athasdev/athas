@@ -4,7 +4,8 @@
 
 use std::collections::HashMap;
 
-use gpui::{App, Context, Entity, SharedString, Subscription, Window, div, prelude::*, px};
+use ui::scale::px;
+use gpui::{App, Context, Entity, SharedString, Subscription, Window, div, prelude::*,};
 use serde_json::{Map, Value};
 use theme::ActiveTheme;
 use ui::{Button, ButtonTone, ButtonVariant, IconName, OpenMenu, TextArea, TextAreaEvent, TextInput, TextInputEvent, metrics, typography};
@@ -147,7 +148,7 @@ impl TerminalProfiles {
     }
 
     fn label(text: &'static str, cx: &App) -> impl IntoElement {
-        div().text_size(typography::TEXT_SM).font_weight(typography::MEDIUM).text_color(cx.theme().colors.foreground).child(text)
+        div().text_size(typography::text_sm()).font_weight(typography::MEDIUM).text_color(cx.theme().colors.foreground).child(text)
     }
 
     /// The Profiles section: its header with Add Profile, then a block per profile.
@@ -200,7 +201,7 @@ impl TerminalProfiles {
                             .items_start()
                             .justify_between()
                             .gap(px(12.))
-                            .child(div().flex_1().min_w_0().text_size(typography::TEXT_SM).font_weight(typography::MEDIUM).text_color(colors.foreground).child(name.clone()))
+                            .child(div().flex_1().min_w_0().text_size(typography::text_sm()).font_weight(typography::MEDIUM).text_color(colors.foreground).child(name.clone()))
                             .child(
                                 Button::icon(("terminal-profile-delete", index), IconName::Trash)
                                     .variant(ButtonVariant::Ghost)
@@ -227,7 +228,7 @@ impl TerminalProfiles {
                 div()
                     .px(px(12.))
                     .py(px(10.))
-                    .text_size(typography::TEXT_SM)
+                    .text_size(typography::text_sm())
                     .text_color(colors.muted_foreground)
                     .child("No custom profiles")
                     .into_any_element(),
@@ -243,7 +244,7 @@ impl TerminalProfiles {
                     .items_center()
                     .justify_between()
                     .px(px(12.))
-                    .child(div().text_size(typography::TEXT_SM).font_weight(typography::MEDIUM).text_color(colors.muted_foreground).child("Profiles"))
+                    .child(div().text_size(typography::text_sm()).font_weight(typography::MEDIUM).text_color(colors.muted_foreground).child("Profiles"))
                     .child(
                         Button::new("terminal-profile-add", "Add Profile")
                             .variant(ButtonVariant::Ghost)
@@ -255,7 +256,7 @@ impl TerminalProfiles {
                 div()
                     .flex()
                     .flex_col()
-                    .rounded(metrics::ISLAND_RADIUS)
+                    .rounded(metrics::island_radius())
                     .bg(colors.raised)
                     .shadow(cx.theme().shadows.raised.clone())
                     .children(blocks),

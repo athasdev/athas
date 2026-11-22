@@ -8,7 +8,8 @@ use std::{
 };
 
 use anyhow::{Context as _, Result, bail};
-use gpui::{AnyElement, App, Context, Entity, Focusable, SharedString, Subscription, Window, div, prelude::*, px};
+use ui::scale::px;
+use gpui::{AnyElement, App, Context, Entity, Focusable, SharedString, Subscription, Window, div, prelude::*,};
 use palette::{FuzzyMatch, Picker, PickerDelegate, fuzzy_match};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
@@ -589,8 +590,8 @@ impl PickerDelegate for LocalHistoryDelegate {
             .mb(px(4.))
             .px(px(12.))
             .py(px(8.))
-            .rounded(metrics::RADIUS_LG)
-            .text_size(typography::TEXT_BASE)
+            .rounded(metrics::radius_lg())
+            .text_size(typography::text_base())
             .map(|this| ui::sidebar_row(this, selected, false, cx))
             .child(Icon::new(IconName::History).size(IconSize::Small).color(colors.subtle_foreground))
             .child(

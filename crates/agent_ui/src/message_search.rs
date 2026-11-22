@@ -2,9 +2,10 @@
 //! the search row of `chat-header.tsx`): Cmd-F in the session opens a field; every occurrence in
 //! user and agent messages counts, Enter and Shift-Enter step through them, Escape closes it.
 
+use ui::scale::px;
 use gpui::{
     AnyElement, AppContext as _, ClickEvent, Context, Entity, Focusable as _, IntoElement, KeyBinding, ParentElement, Styled, Subscription, Window, actions, div,
-    prelude::*, px,
+    prelude::*,
 };
 use theme::ActiveTheme;
 use ui::{Button, ButtonSize, ButtonVariant, IconName, TextInput, TextInputEvent, typography};
@@ -123,7 +124,7 @@ impl SessionView {
                 .border_b_1()
                 .border_color(colors.border)
                 .child(div().flex_1().child(search.input.clone()))
-                .child(div().text_size(typography::TEXT_SM).text_color(colors.subtle_foreground).child(count))
+                .child(div().text_size(typography::text_sm()).text_color(colors.subtle_foreground).child(count))
                 .child(
                     Button::icon("search-previous", IconName::ChevronUp)
                         .variant(ButtonVariant::Ghost)

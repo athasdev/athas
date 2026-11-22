@@ -1,7 +1,8 @@
 //! Release notes drawn from their markdown (`release-notes-content.tsx`): headings, paragraphs,
 //! lists, code blocks, tables and links, which open in the browser.
 
-use gpui::{AnyElement, App, FontWeight, Hsla, SharedString, div, prelude::*, px, relative};
+use ui::scale::px;
+use gpui::{AnyElement, App, FontWeight, Hsla, SharedString, div, prelude::*, relative};
 use pulldown_cmark::{Alignment, Event, HeadingLevel, Options, Parser, Tag, TagEnd};
 use theme::ActiveTheme;
 use ui::typography;
@@ -166,7 +167,7 @@ fn inline(id: SharedString, spans: &[Span], size: gpui::Pixels, weight: FontWeig
 /// 0.75em 1em under a rule, the first column flush, a rule under the last row.
 fn table(id: SharedString, alignments: &[CellAlign], header: &[Vec<Span>], rows: &[Vec<Vec<Span>>], colors: (Hsla, Hsla, Hsla, Hsla)) -> AnyElement {
     let (foreground, muted, link, rule) = colors;
-    let em = f32::from(typography::TEXT_SM);
+    let em = f32::from(typography::text_sm());
     let columns = header.len().max(rows.iter().map(Vec::len).max().unwrap_or(0));
     let cell = |row: usize, column: usize, spans: Option<&Vec<Span>>, head: bool| {
         let align = alignments.get(column).copied().unwrap_or(CellAlign::Start);
@@ -182,7 +183,7 @@ fn table(id: SharedString, alignments: &[CellAlign], header: &[Vec<Span>], rows:
             .when(!head, |this| this.border_t_1().border_color(rule))
             .when(align == CellAlign::Center, |this| this.justify_center())
             .when(align == CellAlign::End, |this| this.justify_end())
-            .children(spans.map(|spans| inline(format!("{id}-{row}-{column}").into(), spans, typography::TEXT_SM, weight, text, link)))
+            .children(spans.map(|spans| inline(format!("{id}-{row}-{column}").into(), spans, typography::text_sm(), weight, text, link)))
     };
     let row = |index: usize, cells: &[Vec<Span>], head: bool| div().flex().w_full().children((0..columns).map(|column| cell(index, column, cells.get(column), head)));
     div()
@@ -204,29 +205,29 @@ pub fn render(markdown: &str, cx: &App) -> AnyElement {
     div()
         .flex()
         .flex_col()
-        .gap(typography::TEXT_SM * 0.75)
+        .gap(typography::text_sm() * 0.75)
         .line_height(relative(1.68))
         .min_w_0()
         .children(parse(markdown).into_iter().enumerate().map(|(index, block)| {
             let id = SharedString::from(format!("release-notes-{index}"));
             match block {
                 Block::Heading(level, spans) => {
-                    let size = if level == 1 { typography::TEXT_LG } else { typography::TEXT_BASE };
+                    let size = if level == 1 { typography::text_lg() } else { typography::text_base() };
                     div().pt(px(6.)).child(inline(id, &spans, size, typography::SEMIBOLD, foreground, link)).into_any_element()
                 }
-                Block::Paragraph(spans) => inline(id, &spans, typography::TEXT_SM, FontWeight::NORMAL, muted, link),
+                Block::Paragraph(spans) => inline(id, &spans, typography::text_sm(), FontWeight::NORMAL, muted, link),
                 Block::Item(spans) => div()
                     .flex()
                     .gap(px(8.))
-                    .child(div().flex_none().text_size(typography::TEXT_SM).text_color(muted).child("•"))
-                    .child(div().flex_1().min_w_0().child(inline(id, &spans, typography::TEXT_SM, FontWeight::NORMAL, muted, link)))
+                    .child(div().flex_none().text_size(typography::text_sm()).text_color(muted).child("•"))
+                    .child(div().flex_1().min_w_0().child(inline(id, &spans, typography::text_sm(), FontWeight::NORMAL, muted, link)))
                     .into_any_element(),
                 Block::Code(text) => div()
                     .id(id)
                     .overflow_x_scroll()
                     .px(px(12.))
                     .py(px(10.))
-                    .rounded(ui::metrics::RADIUS_MD)
+                    .rounded(ui::metrics::radius_md())
                     .bg(code_background)
                     .font_family(typography::MONO_FONT)
                     .text_size(px(12.))

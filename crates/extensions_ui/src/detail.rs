@@ -5,7 +5,8 @@ use extensions::{
     CatalogEntry, ExtensionManifest, ExtensionStatus, McpServerConfig, Operation, ToolDescriptor, ToolKind, ToolState,
     ToolStatuses, manifest::ToolRuntime,
 };
-use gpui::{AnyElement, ClickEvent, Context, Hsla, SharedString, div, img, prelude::*, px};
+use ui::scale::px;
+use gpui::{AnyElement, ClickEvent, Context, Hsla, SharedString, div, img, prelude::*,};
 use theme::{ActiveTheme, ThemeColors};
 use ui::{Button, ButtonSize, ButtonVariant, Icon, IconName, IconSize, Switch, WithScrollbar, metrics, pane_header, typography};
 
@@ -68,15 +69,15 @@ pub(crate) fn render(
                         .gap(px(8.))
                         .child(
                             div()
-                                .text_size(typography::TEXT_LG)
+                                .text_size(typography::text_lg())
                                 .font_weight(typography::SEMIBOLD)
                                 .text_color(colors.foreground)
                                 .child(manifest.display_name.clone()),
                         )
                         .children(status_badge(&status, colors)),
                 )
-                .child(div().text_size(typography::TEXT_SM).text_color(colors.subtle_foreground).child(subtitle))
-                .child(div().pt(px(2.)).text_size(typography::TEXT_BASE).text_color(colors.muted_foreground).child(manifest.description.clone()))
+                .child(div().text_size(typography::text_sm()).text_color(colors.subtle_foreground).child(subtitle))
+                .child(div().pt(px(2.)).text_size(typography::text_base()).text_color(colors.muted_foreground).child(manifest.description.clone()))
                 .child(render_actions(entry, &status, colors, cx)),
         );
 
@@ -127,7 +128,7 @@ fn crumb(id: &'static str, label: &'static str, colors: &ThemeColors) -> gpui::S
         .id(id)
         .flex_none()
         .px(px(4.))
-        .rounded(metrics::RADIUS)
+        .rounded(metrics::radius())
         .text_color(colors.subtle_foreground)
         .hover(move |style| style.text_color(hover))
         .child(label)
@@ -149,7 +150,7 @@ fn render_actions(
         };
         return row
             .child(progress_bar(fraction, px(160.), colors))
-            .child(div().text_size(typography::TEXT_SM).text_color(colors.muted_foreground).child(operation_label(operation)))
+            .child(div().text_size(typography::text_sm()).text_color(colors.muted_foreground).child(operation_label(operation)))
             .into_any_element();
     }
 
@@ -158,7 +159,7 @@ fn render_actions(
             .child(Icon::new(IconName::ShieldCheck).size(IconSize::Small).color(colors.warning))
             .child(
                 div()
-                    .text_size(typography::TEXT_SM)
+                    .text_size(typography::text_sm())
                     .text_color(colors.muted_foreground)
                     .child("Your organization's extension allowlist does not include this extension."),
             )
@@ -176,7 +177,7 @@ fn render_actions(
                 .on_click(cx.listener(move |this, _: &ClickEvent, _, cx| this.install(&install_id, cx))),
         );
         if let Some(size) = size {
-            row = row.child(div().text_size(typography::TEXT_SM).text_color(colors.subtle_foreground).child(size.trim_start_matches(" · ").to_string()));
+            row = row.child(div().text_size(typography::text_sm()).text_color(colors.subtle_foreground).child(size.trim_start_matches(" · ").to_string()));
         }
         return row.into_any_element();
     }
@@ -245,7 +246,7 @@ fn render_actions(
             .items_center()
             .gap(px(8.))
             .ml(px(4.))
-            .text_size(typography::TEXT_SM)
+            .text_size(typography::text_sm())
             .text_color(colors.muted_foreground)
             .child(Switch::new("extension-enabled", enabled).on_change(move |enabled, _, cx| {
                 view.update(cx, |view, cx| view.set_enabled(&toggle_id, enabled, cx)).ok();
@@ -270,7 +271,7 @@ fn render_error(id: &str, error: SharedString, colors: &ThemeColors, cx: &mut Co
         .gap(px(8.))
         .px(px(12.))
         .py(px(8.))
-        .rounded(metrics::RADIUS_LG)
+        .rounded(metrics::radius_lg())
         .bg(colors.destructive_soft)
         .child(div().pt(px(1.)).child(Icon::new(IconName::WarningCircle).size(IconSize::Small).color(colors.destructive)))
         .child(
@@ -280,7 +281,7 @@ fn render_error(id: &str, error: SharedString, colors: &ThemeColors, cx: &mut Co
                 .flex_1()
                 .min_w_0()
                 .gap(px(2.))
-                .text_size(typography::TEXT_SM)
+                .text_size(typography::text_sm())
                 .child(div().font_weight(typography::MEDIUM).text_color(colors.foreground).child("The extension could not be installed"))
                 .child(div().text_color(colors.muted_foreground).child(error)),
         )
@@ -310,7 +311,7 @@ fn section_with_action(title: &'static str, body: AnyElement, action: Option<Any
                 .min_h(px(24.))
                 .child(
                     div()
-                        .text_size(typography::TEXT_SM)
+                        .text_size(typography::text_sm())
                         .font_weight(typography::SEMIBOLD)
                         .text_color(colors.foreground)
                         .child(title),
@@ -321,7 +322,7 @@ fn section_with_action(title: &'static str, body: AnyElement, action: Option<Any
             div()
                 .flex()
                 .flex_col()
-                .rounded(metrics::RADIUS_LG)
+                .rounded(metrics::radius_lg())
                 .border_1()
                 .border_color(colors.divider)
                 .overflow_hidden()
@@ -339,7 +340,7 @@ fn item(label: impl Into<SharedString>, value: impl IntoElement, detail: Option<
         .py(px(8.))
         .border_b_1()
         .border_color(colors.divider)
-        .text_size(typography::TEXT_SM)
+        .text_size(typography::text_sm())
         .child(div().flex_none().w(px(150.)).text_color(colors.subtle_foreground).child(label.into()))
         .child(
             div()
@@ -358,7 +359,7 @@ fn item(label: impl Into<SharedString>, value: impl IntoElement, detail: Option<
 fn mono(text: impl Into<SharedString>, colors: &ThemeColors) -> impl IntoElement {
     div()
         .font_family(typography::MONO_FONT)
-        .text_size(typography::TEXT_CAPTION)
+        .text_size(typography::text_caption())
         .text_color(colors.foreground)
         .child(text.into())
 }
@@ -423,7 +424,7 @@ fn render_contributions(entry: &CatalogEntry, colors: &ThemeColors, cx: &mut Con
                         .flex()
                         .items_center()
                         .gap(px(4.))
-                        .text_size(typography::TEXT_CAPTION)
+                        .text_size(typography::text_caption())
                         .text_color(colors.muted_foreground)
                         .child(img(source).size(px(16.)))
                         .child(name.to_string()),
@@ -494,7 +495,7 @@ fn render_tool_issue(kind: ToolKind, message: SharedString, colors: &ThemeColors
         .gap(px(8.))
         .px(px(12.))
         .py(px(8.))
-        .rounded(metrics::RADIUS_LG)
+        .rounded(metrics::radius_lg())
         .bg(colors.destructive_soft)
         .child(div().pt(px(1.)).child(Icon::new(IconName::WarningCircle).size(IconSize::Small).color(colors.destructive)))
         .child(
@@ -504,7 +505,7 @@ fn render_tool_issue(kind: ToolKind, message: SharedString, colors: &ThemeColors
                 .flex_1()
                 .min_w_0()
                 .gap(px(2.))
-                .text_size(typography::TEXT_SM)
+                .text_size(typography::text_sm())
                 .child(div().font_weight(typography::MEDIUM).text_color(colors.foreground).child(format!("The {} could not be installed", kind.label().to_lowercase())))
                 .child(div().text_color(colors.muted_foreground).child(message)),
         )
@@ -549,7 +550,7 @@ fn render_tools(manifest: &ExtensionManifest, statuses: &ToolStatuses, colors: &
                 .flex()
                 .items_center()
                 .gap(px(8.))
-                .text_size(typography::TEXT_CAPTION)
+                .text_size(typography::text_caption())
                 .text_color(colors.muted_foreground)
                 .child(progress_bar(*fraction, px(96.), colors))
                 .child(if *fraction > 0. { format!("{}%", (fraction * 100.).round() as u32) } else { "Installing".into() })

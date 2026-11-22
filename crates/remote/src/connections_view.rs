@@ -5,9 +5,10 @@
 //! The workbench floats it with `open_modal` and opens the project on
 //! [`ConnectionsEvent::OpenProject`]; it emits `DismissEvent` when it is done.
 
+use ui::scale::px;
 use gpui::{
     App, Context, DismissEvent, Entity, EventEmitter, FocusHandle, Focusable, KeyDownEvent, PathPromptOptions,
-    SharedString, Subscription, Window, div, prelude::*, px,
+    SharedString, Subscription, Window, div, prelude::*,
 };
 use theme::ActiveTheme;
 use ui::{
@@ -605,7 +606,7 @@ fn remember_toggle(cx: &mut Context<ConnectionsView>) -> impl Fn(bool, &mut Wind
 }
 
 fn label(text: &str, cx: &App) -> impl IntoElement {
-    div().text_size(typography::TEXT_SM).font_weight(typography::MEDIUM).text_color(cx.theme().colors.foreground).child(text.to_string())
+    div().text_size(typography::text_sm()).font_weight(typography::MEDIUM).text_color(cx.theme().colors.foreground).child(text.to_string())
 }
 
 /// A `FieldSet` with its legend and description, as the original's two form sections.
@@ -620,8 +621,8 @@ fn field_set(legend: &str, description: &str, cx: &App) -> gpui::Div {
             div()
                 .flex()
                 .flex_col()
-                .child(div().text_size(typography::TEXT_BASE).font_weight(typography::MEDIUM).text_color(colors.foreground).child(legend.to_string()))
-                .child(div().text_size(typography::TEXT_SM).text_color(colors.muted_foreground).child(description.to_string())),
+                .child(div().text_size(typography::text_base()).font_weight(typography::MEDIUM).text_color(colors.foreground).child(legend.to_string()))
+                .child(div().text_size(typography::text_sm()).text_color(colors.muted_foreground).child(description.to_string())),
         )
 }
 
@@ -635,7 +636,7 @@ fn optional_field(name: &str, input: impl IntoElement, cx: &App) -> impl IntoEle
         .flex()
         .gap(px(4.))
         .child(label(name, cx))
-        .child(div().text_size(typography::TEXT_SM).text_color(cx.theme().colors.subtle_foreground).child("(optional)"));
+        .child(div().text_size(typography::text_sm()).text_color(cx.theme().colors.subtle_foreground).child("(optional)"));
     div().flex().flex_col().gap(px(6.)).flex_1().min_w_0().child(label).child(input)
 }
 
@@ -651,7 +652,7 @@ impl ConnectionsView {
                 .px(px(6.))
                 .pt(px(8.))
                 .pb(px(2.))
-                .text_size(typography::TEXT_CAPTION)
+                .text_size(typography::text_caption())
                 .font_weight(typography::MEDIUM)
                 .text_color(colors.subtle_foreground)
                 .child(title.to_string())
@@ -901,7 +902,7 @@ impl Render for ConnectionsView {
                         div()
                             .px(px(10.))
                             .py(px(8.))
-                            .rounded(metrics::RADIUS_LG)
+                            .rounded(metrics::radius_lg())
                             .bg(colors.raised)
                             .font_family(typography::MONO_FONT)
                             .text_color(colors.foreground)
@@ -923,7 +924,7 @@ impl Render for ConnectionsView {
                     .pb(px(12.))
                     .child(
                         div()
-                            .text_size(typography::TEXT_SM)
+                            .text_size(typography::text_sm())
                             .text_color(colors.subtle_foreground)
                             .child("Enter the password for ")
                             .child(div().font_weight(typography::MEDIUM).text_color(colors.foreground).child(connection.name.clone()))
@@ -931,7 +932,7 @@ impl Render for ConnectionsView {
                             .flex()
                             .flex_wrap(),
                     )
-                    .when(*rejected, |this| this.child(div().text_size(typography::TEXT_SM).text_color(colors.destructive).child("That password was refused. Try again.")))
+                    .when(*rejected, |this| this.child(div().text_size(typography::text_sm()).text_color(colors.destructive).child("That password was refused. Try again.")))
                     .child(self.password.clone())
                     .child(
                         div()
@@ -1026,10 +1027,10 @@ impl Render for ConnectionsView {
             // The add-remote step is `w-[min(44rem,…)]` in the original.
             .w(px(if matches!(self.stage, Stage::Form { .. }) { 704. } else { 520. }))
             .max_w_full()
-            .rounded(metrics::ISLAND_RADIUS)
+            .rounded(metrics::island_radius())
             .bg(colors.overlay)
             .shadow(theme.shadows.dialog.clone())
-            .text_size(typography::TEXT_SM)
+            .text_size(typography::text_sm())
             .text_color(colors.foreground)
             .child(
                 div()
@@ -1049,7 +1050,7 @@ impl Render for ConnectionsView {
                     })
                     .when(!back, |this| this.child(Icon::new(IconName::Remote).size(IconSize::Small).color(colors.subtle_foreground)))
                     .when(matches!(self.stage, Stage::Form { .. }), |this| this.child(Icon::new(IconName::HardDrives).size(IconSize::Small).color(colors.subtle_foreground)))
-                    .child(div().flex_1().min_w_0().truncate().text_size(typography::TEXT_BASE).font_weight(typography::MEDIUM).child(title))
+                    .child(div().flex_1().min_w_0().truncate().text_size(typography::text_base()).font_weight(typography::MEDIUM).child(title))
                     .child(
                         Button::icon("close-connections", IconName::X)
                             .size(ButtonSize::Small)

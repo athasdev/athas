@@ -4,7 +4,8 @@ use ui::WithScrollbar as _;
 use std::{path::PathBuf, sync::Arc};
 
 use crate::gh::{Label, WorkflowListItem};
-use gpui::{App, ClickEvent, Context, DismissEvent, Entity, FocusHandle, Focusable, IntoElement, Render, SharedString, Subscription, Window, div, prelude::*, px};
+use ui::scale::px;
+use gpui::{App, ClickEvent, Context, DismissEvent, Entity, FocusHandle, Focusable, IntoElement, Render, SharedString, Subscription, Window, div, prelude::*,};
 use theme::{ActiveTheme, ThemeColors};
 use ui::{Button, ButtonSize, ButtonVariant, Icon, IconName, IconSize, MenuSize, Select, SelectEvent, SelectOption, SelectSearch, SelectVariant, SelectWidth, Switch, TextInput, TextInputEvent, metrics, typography};
 
@@ -429,7 +430,7 @@ impl CreateView {
 
     fn render_error(&self, colors: &ThemeColors) -> Option<impl IntoElement> {
         let error = self.error.clone()?;
-        Some(div().mt(px(12.)).px(px(12.)).py(px(8.)).rounded(metrics::RADIUS_LG).bg(colors.destructive_soft).text_size(typography::TEXT_SM).text_color(colors.destructive).child(error))
+        Some(div().mt(px(12.)).px(px(12.)).py(px(8.)).rounded(metrics::radius_lg()).bg(colors.destructive_soft).text_size(typography::text_sm()).text_color(colors.destructive).child(error))
     }
 
     fn render_action_form(&self, colors: &ThemeColors, cx: &mut Context<Self>) -> gpui::AnyElement {
@@ -440,7 +441,7 @@ impl CreateView {
                 .min_w(px(224.))
                 .items_center()
                 .gap(px(8.))
-                .child(div().flex_none().text_size(typography::TEXT_SM).text_color(colors.subtle_foreground).child(label))
+                .child(div().flex_none().text_size(typography::text_sm()).text_color(colors.subtle_foreground).child(label))
                 .child(div().flex_1().min_w_0().child(select.clone()))
         };
         div()
@@ -457,13 +458,13 @@ impl CreateView {
                             .flex()
                             .items_center()
                             .gap(px(8.))
-                            .text_size(typography::TEXT_SM)
+                            .text_size(typography::text_sm())
                             .text_color(colors.subtle_foreground)
                             .child(Icon::new(IconName::Activity).size(IconSize::Small).color(colors.subtle_foreground))
                             .child(self.repository_name()),
                     )
-                    .child(div().text_size(typography::TEXT_BASE).font_weight(typography::SEMIBOLD).text_color(colors.foreground).child("Run workflow"))
-                    .child(div().text_size(typography::TEXT_SM).text_color(colors.subtle_foreground).child("Choose a workflow and the branch or tag it should run against.")),
+                    .child(div().text_size(typography::text_base()).font_weight(typography::SEMIBOLD).text_color(colors.foreground).child("Run workflow"))
+                    .child(div().text_size(typography::text_sm()).text_color(colors.subtle_foreground).child("Choose a workflow and the branch or tag it should run against.")),
             )
             .child(div().flex().flex_wrap().items_center().gap(px(12.)).py(px(8.)).child(field("Workflow", &self.workflow)).child(field("Ref", &self.reference)))
             .children(self.render_error(colors))
@@ -484,7 +485,7 @@ impl CreateView {
         let kind = self.kind;
         let theme = cx.theme().clone();
         let branches = (kind == CreateKind::PullRequest).then(|| {
-            let caption = |text: &'static str| div().flex_none().text_size(typography::TEXT_SM).text_color(colors.subtle_foreground).child(text);
+            let caption = |text: &'static str| div().flex_none().text_size(typography::text_sm()).text_color(colors.subtle_foreground).child(text);
             div()
                 .flex()
                 .flex_wrap()
@@ -505,7 +506,7 @@ impl CreateView {
                         .gap(px(8.))
                         .h(px(28.))
                         .px(px(8.))
-                        .text_size(typography::TEXT_SM)
+                        .text_size(typography::text_sm())
                         .text_color(colors.subtle_foreground)
                         .child(Switch::new("create-draft", self.draft).on_change({
                             let this = cx.entity().downgrade();
@@ -542,7 +543,7 @@ impl CreateView {
                     .children(selected_labels.iter().map(|label| label_chip(&label.name, &label.color, colors)))
                     .child(Button::icon("create-assignees", IconName::User).size(ButtonSize::Small).tooltip("Edit assignees").on_click(cx.listener(|this, event: &ClickEvent, window, cx| this.open_assignee_picker(event, window, cx))))
                     .when(!self.assignees.is_empty(), |this| {
-                        this.child(div().min_w_0().truncate().text_size(typography::TEXT_SM).text_color(colors.subtle_foreground).child(self.assignees.iter().map(|login| format!("@{login}")).collect::<Vec<_>>().join(", ")))
+                        this.child(div().min_w_0().truncate().text_size(typography::text_sm()).text_color(colors.subtle_foreground).child(self.assignees.iter().map(|login| format!("@{login}")).collect::<Vec<_>>().join(", ")))
                     })
                     .when(milestones, |this| this.child(div().w(px(160.)).child(self.milestone.clone())))
                     .when(types, |this| this.child(div().w(px(160.)).child(self.issue_type.clone()))),
@@ -585,17 +586,17 @@ impl CreateView {
                             .flex()
                             .items_center()
                             .gap(px(8.))
-                            .text_size(typography::TEXT_SM)
+                            .text_size(typography::text_sm())
                             .text_color(colors.subtle_foreground)
                             .child(Icon::new(kind.icon()).size(IconSize::Small).color(colors.subtle_foreground))
                             .child(self.repository_name()),
                     )
-                    .child(div().text_size(typography::TEXT_BASE).child(self.title.clone())),
+                    .child(div().text_size(typography::text_base()).child(self.title.clone())),
             )
             .children(branches)
-            .child(div().rounded(metrics::RADIUS_LG).shadow(theme.shadows.raised.clone()).child(self.body.clone()))
+            .child(div().rounded(metrics::radius_lg()).shadow(theme.shadows.raised.clone()).child(self.body.clone()))
             .children(self.metadata_error.clone().map(|error| {
-                div().mt(px(12.)).text_size(typography::TEXT_SM).text_color(colors.destructive).child(format!("Labels and milestones are unavailable. {error}"))
+                div().mt(px(12.)).text_size(typography::text_sm()).text_color(colors.destructive).child(format!("Labels and milestones are unavailable. {error}"))
             }))
             .children(self.render_error(colors))
             .child(footer)
@@ -616,7 +617,7 @@ impl CreateView {
                 .items_start()
                 .gap(px(12.))
                 .py(px(24.))
-                .child(div().flex().items_center().gap(px(8.)).text_size(typography::TEXT_SM).text_color(colors.foreground).child(Icon::new(IconName::CheckCircle).size(IconSize::Small).color(colors.success)).child(message))
+                .child(div().flex().items_center().gap(px(8.)).text_size(typography::text_sm()).text_color(colors.foreground).child(Icon::new(IconName::CheckCircle).size(IconSize::Small).color(colors.success)).child(message))
                 .child(
                     div()
                         .flex()

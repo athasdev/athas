@@ -1,4 +1,5 @@
-use gpui::{AnyElement, App, IntoElement, prelude::FluentBuilder, ParentElement, RenderOnce, SharedString, Styled, Window, div, px};
+use crate::scale::px;
+use gpui::{AnyElement, App, IntoElement, prelude::FluentBuilder, ParentElement, RenderOnce, SharedString, Styled, Window, div,};
 use theme::ActiveTheme;
 
 use crate::{Icon, IconName, IconSize, metrics, typography};
@@ -52,7 +53,7 @@ impl RenderOnce for EmptyState {
                     .flex()
                     .items_center()
                     .justify_center()
-                    .rounded(metrics::RADIUS_MD)
+                    .rounded(metrics::radius_md())
                     .bg(colors.accent)
                     .child(Icon::new(icon).size(IconSize::Medium).color(colors.muted_foreground))
             }))
@@ -65,7 +66,7 @@ impl RenderOnce for EmptyState {
                     .when(!self.title.is_empty(), |this| {
                         this.child(
                             div()
-                                .text_size(typography::TEXT_BASE)
+                                .text_size(typography::text_base())
                                 .line_height(gpui::relative(1.5))
                                 .font_weight(typography::MEDIUM)
                                 .text_color(colors.foreground)
@@ -74,7 +75,7 @@ impl RenderOnce for EmptyState {
                     })
                     .children(self.message.map(|message| {
                         div()
-                            .text_size(typography::TEXT_SM)
+                            .text_size(typography::text_sm())
                             .line_height(gpui::relative(1.625))
                             .text_color(colors.muted_foreground)
                             .child(message)

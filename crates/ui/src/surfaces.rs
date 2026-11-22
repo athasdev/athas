@@ -2,10 +2,11 @@
 
 use std::rc::Rc;
 
-use gpui::{AnyElement, AnyView, App, ClickEvent, Context, ElementId, IntoElement, Pixels, Render, RenderOnce, SharedString, Window, div, img, prelude::*, px};
+use crate::scale::px;
+use gpui::{AnyElement, AnyView, App, ClickEvent, Context, ElementId, IntoElement, Pixels, Render, RenderOnce, SharedString, Window, div, img, prelude::*,};
 use theme::ActiveTheme;
 
-use crate::{Button, ButtonVariant, Icon, IconName, IconSize, MenuSize, OVERLAY_MAX_WIDTH, ThinkingOrb, ThinkingOrbState, typography};
+use crate::{Button, ButtonVariant, Icon, IconName, IconSize, MenuSize, overlay_max_width, ThinkingOrb, ThinkingOrbState, typography};
 
 /// How wide a [`Table`] column is.
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -142,7 +143,7 @@ impl RenderOnce for Table {
             .flex_col()
             .w_full()
             .font_family(typography::UI_FONT)
-            .text_size(typography::TEXT_SM)
+            .text_size(typography::text_sm())
             .children(header)
             .children(rows)
             .children(footer)
@@ -202,14 +203,14 @@ impl RenderOnce for HoverCard {
             .occlude()
             .flex()
             .flex_col()
-            .max_w(OVERLAY_MAX_WIDTH)
+            .max_w(overlay_max_width())
             .when_some(self.size.width(), |this, width| this.w(width))
             .map(|this| if self.preview { this.overflow_hidden() } else { this.p(px(12.)).gap(px(8.)) })
-            .rounded(crate::metrics::RADIUS_XL)
+            .rounded(crate::metrics::radius_xl())
             .bg(theme.colors.overlay)
             .shadow(theme.shadows.popover.clone())
             .font_family(typography::UI_FONT)
-            .text_size(typography::TEXT_CHROME)
+            .text_size(typography::text_chrome())
             .text_color(theme.colors.foreground)
             .children(self.children)
     }
@@ -309,9 +310,9 @@ impl RenderOnce for ViewerState {
                     .gap(px(4.))
                     .max_w(px(420.))
                     .children(self.title.map(|title| {
-                        div().text_size(typography::TEXT_BASE).font_weight(typography::SEMIBOLD).text_color(if self.error { colors.destructive } else { colors.foreground }).child(title)
+                        div().text_size(typography::text_base()).font_weight(typography::SEMIBOLD).text_color(if self.error { colors.destructive } else { colors.foreground }).child(title)
                     }))
-                    .children(self.description.map(|description| div().text_size(typography::TEXT_SM).text_color(colors.muted_foreground).child(description))),
+                    .children(self.description.map(|description| div().text_size(typography::text_sm()).text_color(colors.muted_foreground).child(description))),
             )
             .children(self.action.map(|(label, handler)| viewer_action("viewer-state-action", label, handler)))
     }
@@ -343,7 +344,7 @@ impl RenderOnce for ViewerLoadingState {
                 .flex()
                 .items_center()
                 .gap(px(8.))
-                .text_size(typography::TEXT_SM)
+                .text_size(typography::text_sm())
                 .text_color(muted)
                 .child(ThinkingOrb::new("viewer-loading-orb").state(ThinkingOrbState::Working).size(px(20.)))
                 .child(self.label),
@@ -388,7 +389,7 @@ impl RenderOnce for ViewerErrorState {
                     .gap(px(8.))
                     .max_w(px(448.))
                     .child(Icon::new(IconName::WarningCircle).size(IconSize::Custom(px(20.))).color(colors.destructive))
-                    .child(div().text_size(typography::TEXT_SM).text_color(colors.muted_foreground).child(self.message)),
+                    .child(div().text_size(typography::text_sm()).text_color(colors.muted_foreground).child(self.message)),
             )
             .children(self.action.map(|(label, handler)| viewer_action("viewer-error-action", label, handler)))
     }
@@ -403,13 +404,13 @@ pub fn checkerboard(colors: &theme::ThemeColors) -> impl IntoElement {
         |_, _, _| {},
         move |bounds, _, window, _| {
             window.paint_quad(gpui::fill(bounds, light));
-            let columns = (f32::from(bounds.size.width) / f32::from(CHECKER_SQUARE)).ceil() as usize;
-            let rows = (f32::from(bounds.size.height) / f32::from(CHECKER_SQUARE)).ceil() as usize;
+            let columns = (f32::from(bounds.size.width) / f32::from(checker_square())).ceil() as usize;
+            let rows = (f32::from(bounds.size.height) / f32::from(checker_square())).ceil() as usize;
             window.with_content_mask(Some(gpui::ContentMask { bounds }), |window| {
                 for row in 0..rows {
                     for column in (0..columns).filter(|column| (column + row) % 2 == 1) {
-                        let origin = bounds.origin + gpui::point(CHECKER_SQUARE * column as f32, CHECKER_SQUARE * row as f32);
-                        window.paint_quad(gpui::fill(gpui::Bounds::new(origin, gpui::size(CHECKER_SQUARE, CHECKER_SQUARE)), dark));
+                        let origin = bounds.origin + gpui::point(checker_square() * column as f32, checker_square() * row as f32);
+                        window.paint_quad(gpui::fill(gpui::Bounds::new(origin, gpui::size(checker_square(), checker_square())), dark));
                     }
                 }
             });
@@ -419,7 +420,7 @@ pub fn checkerboard(colors: &theme::ThemeColors) -> impl IntoElement {
     .inset_0()
 }
 
-const CHECKER_SQUARE: Pixels = px(8.);
+fn checker_square() -> Pixels { px(8.) }
 
 pub fn agent_brand_image(agent: &str) -> Option<&'static str> {
     Some(match agent {

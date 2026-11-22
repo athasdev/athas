@@ -3,9 +3,10 @@
 
 use std::time::Duration;
 
+use crate::scale::px;
 use gpui::{
     Animation, AnimationExt as _, App, ElementId, Hsla, HighlightStyle, IntoElement, PathBuilder, Pixels, RenderOnce, SharedString, StyleRefinement,
-    StyledText, Window, canvas, div, point, prelude::*, px,
+    StyledText, Window, canvas, div, point, prelude::*,
 };
 use theme::ActiveTheme;
 
@@ -87,7 +88,7 @@ impl RenderOnce for Spinner {
             .items_center()
             .gap(px(8.))
             .font_family(typography::UI_FONT)
-            .text_size(typography::TEXT_SM)
+            .text_size(typography::text_sm())
             .text_color(colors.muted_foreground)
             .child(ring)
             .child(self.label)
@@ -116,7 +117,7 @@ impl Styled for Skeleton {
 
 impl RenderOnce for Skeleton {
     fn render(self, _: &mut Window, cx: &mut App) -> impl IntoElement {
-        let mut block = div().rounded(crate::metrics::RADIUS_MD).bg(cx.theme().colors.accent);
+        let mut block = div().rounded(crate::metrics::radius_md()).bg(cx.theme().colors.accent);
         *block.style() = block.style().clone().refined(self.style);
         if theme::accessibility(cx).reduce_motion {
             return block.into_any_element();

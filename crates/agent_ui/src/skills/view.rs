@@ -5,9 +5,10 @@
 use ui::WithScrollbar as _;
 use std::sync::Arc;
 
+use ui::scale::px;
 use gpui::{
     AnyElement, App, AppContext as _, ClickEvent, Context, Entity, EventEmitter, FocusHandle, Focusable, IntoElement, ParentElement, Render,
-    Styled, Subscription, Task, Window, div, prelude::*, px,
+    Styled, Subscription, Task, Window, div, prelude::*,
 };
 use theme::ActiveTheme;
 use ui::{Button, ButtonSize, ButtonVariant, EmptyState, Icon, IconName, IconSize, TextInput, TextInputEvent, metrics, pane_header, typography};
@@ -276,7 +277,7 @@ impl SkillsView {
                 .gap(px(8.))
                 .px(px(8.))
                 .py(px(8.))
-                .rounded(metrics::RADIUS_MD)
+                .rounded(metrics::radius_md())
                 .child(
                     div()
                         .flex_1()
@@ -285,8 +286,8 @@ impl SkillsView {
                         .flex_col()
                         .gap(px(2.))
                         .child(div().truncate().font_weight(typography::MEDIUM).child(skill.title.clone()))
-                        .child(div().text_size(typography::TEXT_CAPTION).text_color(colors.muted_foreground).child(skill.description.clone()))
-                        .when(!meta.is_empty(), |this| this.child(div().truncate().text_size(typography::TEXT_CAPTION).text_color(colors.subtle_foreground).child(meta))),
+                        .child(div().text_size(typography::text_caption()).text_color(colors.muted_foreground).child(skill.description.clone()))
+                        .when(!meta.is_empty(), |this| this.child(div().truncate().text_size(typography::text_caption()).text_color(colors.subtle_foreground).child(meta))),
                 )
                 .child(button.size(ButtonSize::Small).on_click(cx.listener(move |this, _: &ClickEvent, _, cx| this.install(target.clone(), cx))))
         });
@@ -300,7 +301,7 @@ impl SkillsView {
             .flex()
             .flex_col()
             .gap(px(1.))
-            .when_some(self.marketplace_error.clone(), |this, error| this.child(div().px(px(8.)).py(px(4.)).text_size(typography::TEXT_SM).text_color(colors.destructive).child(error)))
+            .when_some(self.marketplace_error.clone(), |this, error| this.child(div().px(px(8.)).py(px(4.)).text_size(typography::text_sm()).text_color(colors.destructive).child(error)))
             .children(rows)
             .into_any_element()
     }
@@ -326,7 +327,7 @@ impl SkillsView {
                 .gap(px(2.))
                 .px(px(8.))
                 .py(px(6.))
-                .rounded(metrics::RADIUS_MD)
+                .rounded(metrics::radius_md())
                 .when(selected, |this| this.bg(colors.selected))
                 .when(!selected, |this| this.hover(|style| style.bg(colors.accent)))
                 .on_click(cx.listener(move |this, _: &ClickEvent, _, cx| {
@@ -340,12 +341,12 @@ impl SkillsView {
                         .items_center()
                         .gap(px(6.))
                         .child(div().flex_1().min_w_0().truncate().font_weight(typography::MEDIUM).child(skill.title.clone()))
-                        .child(div().text_size(typography::TEXT_CAPTION).text_color(colors.subtle_foreground).child(skill.source.label())),
+                        .child(div().text_size(typography::text_caption()).text_color(colors.subtle_foreground).child(skill.source.label())),
                 )
                 .child(
                     div()
                         .truncate()
-                        .text_size(typography::TEXT_CAPTION)
+                        .text_size(typography::text_caption())
                         .text_color(colors.muted_foreground)
                         .child(if skill.description.is_empty() { format!("/{}", skill.command()) } else { skill.description.clone() }),
                 )
@@ -355,12 +356,12 @@ impl SkillsView {
 
     fn render_editor(&self, editor: &Editor, cx: &mut Context<Self>) -> AnyElement {
         let colors = cx.theme().colors.clone();
-        let label = |text: &'static str| div().text_size(typography::TEXT_CAPTION).text_color(colors.muted_foreground).child(text);
+        let label = |text: &'static str| div().text_size(typography::text_caption()).text_color(colors.muted_foreground).child(text);
         div()
             .flex()
             .flex_col()
             .gap(px(10.))
-            .child(div().text_size(typography::TEXT_LG).font_weight(typography::SEMIBOLD).child(if editor.id.is_some() { "Edit skill" } else { "New skill" }))
+            .child(div().text_size(typography::text_lg()).font_weight(typography::SEMIBOLD).child(if editor.id.is_some() { "Edit skill" } else { "New skill" }))
             .child(div().flex().flex_col().gap(px(4.)).child(label("Title")).child(editor.title.clone()))
             .child(div().flex().flex_col().gap(px(4.)).child(label("Description")).child(editor.description.clone()))
             .child(
@@ -368,14 +369,14 @@ impl SkillsView {
                     div()
                         .min_h(px(160.))
                         .p(px(8.))
-                        .rounded(metrics::RADIUS_LG)
+                        .rounded(metrics::radius_lg())
                         .border_1()
                         .border_color(colors.border)
                         .bg(colors.field)
                         .child(editor.content.clone()),
                 ),
             )
-            .when_some(editor.error.clone(), |this, error| this.child(div().text_size(typography::TEXT_SM).text_color(colors.destructive).child(error)))
+            .when_some(editor.error.clone(), |this, error| this.child(div().text_size(typography::text_sm()).text_color(colors.destructive).child(error)))
             .child(
                 div()
                     .flex()
@@ -408,7 +409,7 @@ impl SkillsView {
                     .flex()
                     .items_center()
                     .gap(px(8.))
-                    .child(div().flex_1().min_w_0().truncate().text_size(typography::TEXT_LG).font_weight(typography::SEMIBOLD).child(skill.title.clone()))
+                    .child(div().flex_1().min_w_0().truncate().text_size(typography::text_lg()).font_weight(typography::SEMIBOLD).child(skill.title.clone()))
                     .when_some(file, |this, file| {
                         this.child(Button::new("skill-open", "Open file").variant(ButtonVariant::Ghost).size(ButtonSize::Small).leading_icon(IconName::OpenExternal).on_click(
                             move |_, _, cx| workbench_api::open_file(cx, file.clone(), None),
@@ -430,7 +431,7 @@ impl SkillsView {
                 div()
                     .flex()
                     .gap(px(8.))
-                    .text_size(typography::TEXT_SM)
+                    .text_size(typography::text_sm())
                     .text_color(colors.subtle_foreground)
                     .child(div().font_family(typography::MONO_FONT).text_color(colors.muted_foreground).child(format!("/{}", skill.command())))
                     .child(div().min_w_0().truncate().child(origin)),
@@ -439,12 +440,12 @@ impl SkillsView {
             .child(
                 div()
                     .p(px(12.))
-                    .rounded(metrics::RADIUS_LG)
+                    .rounded(metrics::radius_lg())
                     .border_1()
                     .border_color(colors.border)
                     .bg(colors.raised)
                     .font_family(typography::MONO_FONT)
-                    .text_size(typography::TEXT_SM)
+                    .text_size(typography::text_sm())
                     .line_height(px(19.))
                     .child(skill.content.clone()),
             )
@@ -481,14 +482,14 @@ impl Render for SkillsView {
             .flex_col()
             .bg(colors.background)
             .font_family(typography::UI_FONT)
-            .text_size(typography::TEXT_BASE)
+            .text_size(typography::text_base())
             .text_color(colors.foreground)
             .child(
                 pane_header(cx)
                     .gap(px(8.))
                     .child(Icon::new(IconName::BookOpen).size(IconSize::Small).color(colors.muted_foreground))
                     .child(div().font_weight(typography::MEDIUM).child("Skills"))
-                    .child(div().text_size(typography::TEXT_SM).text_color(colors.subtle_foreground).child(format!("{count}")))
+                    .child(div().text_size(typography::text_sm()).text_color(colors.subtle_foreground).child(format!("{count}")))
                     .child(div().flex_1())
                     .child(
                         Button::new("skills-library", "Library")
@@ -528,7 +529,7 @@ impl Render for SkillsView {
                             .flex_col()
                             .border_r_1()
                             .border_color(colors.border)
-                            .child(div().px(metrics::PANE_INSET).py(px(8.)).child(self.search.clone()))
+                            .child(div().px(metrics::pane_inset()).py(px(8.)).child(self.search.clone()))
                             .child(if self.browsing { self.render_marketplace(cx) } else { self.render_list(cx) }),
                     )
                     .child(div().id("skill-detail").flex_1().min_w_0().h_full().overflow_y_scroll().scrollbar(window, cx).p(px(20.)).child(detail)),

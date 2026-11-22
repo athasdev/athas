@@ -2,7 +2,8 @@
 //! credential (`GITHUB_TOKEN`/`GH_TOKEN` or its `gh` CLI), so the rows show which one is active and
 //! whom it belongs to. The token itself never reaches the browser.
 
-use gpui::{AnyElement, Context, Window, div, prelude::*, px};
+use ui::scale::px;
+use gpui::{AnyElement, Context, Window, div, prelude::*,};
 use ui::{Badge, Button, ButtonVariant};
 use github_panel::relay::TokenStatus;
 

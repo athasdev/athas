@@ -3,7 +3,8 @@
 
 use std::path::PathBuf;
 
-use gpui::{AnyElement, App, Context, EventEmitter, SharedString, Window, div, prelude::*, px};
+use ui::scale::px;
+use gpui::{AnyElement, App, Context, EventEmitter, SharedString, Window, div, prelude::*,};
 use keymap::KeybindingsImport;
 use notifications::{NotificationCategory, NotificationKind};
 use serde_json::Value;
@@ -217,7 +218,7 @@ impl EditorImport {
                         cx.notify();
                     })),
             )
-            .child(div().flex_1().text_size(typography::TEXT_BASE).font_weight(typography::MEDIUM).text_color(colors.foreground).child(title))
+            .child(div().flex_1().text_size(typography::text_base()).font_weight(typography::MEDIUM).text_color(colors.foreground).child(title))
             .into_any_element()
     }
 
@@ -226,7 +227,7 @@ impl EditorImport {
         div()
             .flex()
             .flex_col()
-            .rounded(metrics::ISLAND_RADIUS)
+            .rounded(metrics::island_radius())
             .bg(colors.raised)
             .shadow(cx.theme().shadows.raised.clone())
             .overflow_hidden()
@@ -273,10 +274,10 @@ impl EditorImport {
                             .flex_col()
                             .flex_1()
                             .min_w_0()
-                            .child(div().text_size(typography::TEXT_SM).text_color(colors.foreground).child(source.editor.name()))
-                            .child(div().truncate().text_size(typography::TEXT_CAPTION).text_color(colors.subtle_foreground).child(detail)),
+                            .child(div().text_size(typography::text_sm()).text_color(colors.foreground).child(source.editor.name()))
+                            .child(div().truncate().text_size(typography::text_caption()).text_color(colors.subtle_foreground).child(detail)),
                     )
-                    .child(div().text_size(typography::TEXT_CAPTION).text_color(colors.subtle_foreground).child(summary))
+                    .child(div().text_size(typography::text_caption()).text_color(colors.subtle_foreground).child(summary))
                     .when(found, |this| this.child(Icon::new(IconName::ChevronRight).size(IconSize::Small).color(colors.subtle_foreground)))
                     .into_any_element()
             })
@@ -289,7 +290,7 @@ impl EditorImport {
             .child(
                 div()
                     .px(px(12.))
-                    .text_size(typography::TEXT_SM)
+                    .text_size(typography::text_sm())
                     .text_color(colors.muted_foreground)
                     .child("Settings and keybindings are read from the editor's own files. You review every change before it applies."),
             )
@@ -323,8 +324,8 @@ impl EditorImport {
                             .flex_col()
                             .flex_1()
                             .min_w_0()
-                            .child(div().text_size(typography::TEXT_SM).text_color(colors.foreground).child(label_for(change.key)))
-                            .child(div().truncate().text_size(typography::TEXT_CAPTION).text_color(colors.subtle_foreground).child(format!("from {}", change.from))),
+                            .child(div().text_size(typography::text_sm()).text_color(colors.foreground).child(label_for(change.key)))
+                            .child(div().truncate().text_size(typography::text_caption()).text_color(colors.subtle_foreground).child(format!("from {}", change.from))),
                     )
                     .child(
                         div()
@@ -332,7 +333,7 @@ impl EditorImport {
                             .items_center()
                             .gap(px(6.))
                             .max_w(px(280.))
-                            .text_size(typography::TEXT_SM)
+                            .text_size(typography::text_sm())
                             .child(div().truncate().text_color(colors.subtle_foreground).line_through().child(value_label(&change.old)))
                             .child(Icon::new(IconName::ArrowRight).size(IconSize::XSmall).color(colors.subtle_foreground))
                             .child(div().truncate().text_color(colors.foreground).child(value_label(&change.new))),
@@ -357,7 +358,7 @@ impl EditorImport {
         sections.push(
             div()
                 .px(px(12.))
-                .text_size(typography::TEXT_SM)
+                .text_size(typography::text_sm())
                 .font_weight(typography::MEDIUM)
                 .text_color(colors.muted_foreground)
                 .child(format!("Settings ({})", source.changes.len()))
@@ -369,7 +370,7 @@ impl EditorImport {
                     vec![
                         div()
                             .p(px(16.))
-                            .text_size(typography::TEXT_SM)
+                            .text_size(typography::text_sm())
                             .text_color(colors.muted_foreground)
                             .child("Nothing to change: your settings already match.")
                             .into_any_element(),
@@ -387,7 +388,7 @@ impl EditorImport {
             sections.push(
                 div()
                     .px(px(12.))
-                    .text_size(typography::TEXT_SM)
+                    .text_size(typography::text_sm())
                     .font_weight(typography::MEDIUM)
                     .text_color(colors.muted_foreground)
                     .child("Keybindings")
@@ -408,13 +409,13 @@ impl EditorImport {
                                 .flex_col()
                                 .flex_1()
                                 .min_w_0()
-                                .child(div().text_size(typography::TEXT_SM).text_color(colors.foreground).child(format!(
+                                .child(div().text_size(typography::text_sm()).text_color(colors.foreground).child(format!(
                                     "{} keybinding{} from {}",
                                     import.keybindings.len(),
                                     if import.keybindings.len() == 1 { "" } else { "s" },
                                     home_relative(file)
                                 )))
-                                .children(summary.map(|summary| div().text_size(typography::TEXT_CAPTION).text_color(colors.subtle_foreground).child(summary))),
+                                .children(summary.map(|summary| div().text_size(typography::text_caption()).text_color(colors.subtle_foreground).child(summary))),
                         )
                         .child(Switch::new("import-keybindings", keybindings).disabled(import.keybindings.is_empty()).on_change(move |checked, _, cx| {
                             this.update(cx, |this, cx| {
@@ -436,7 +437,7 @@ impl EditorImport {
             sections.push(
                 div()
                     .px(px(12.))
-                    .text_size(typography::TEXT_SM)
+                    .text_size(typography::text_sm())
                     .font_weight(typography::MEDIUM)
                     .text_color(colors.muted_foreground)
                     .child("Recent Projects")
@@ -451,7 +452,7 @@ impl EditorImport {
                         .min_h(px(44.))
                         .px(px(12.))
                         .py(px(6.))
-                        .child(div().flex_1().min_w_0().text_size(typography::TEXT_SM).text_color(colors.foreground).child(format!(
+                        .child(div().flex_1().min_w_0().text_size(typography::text_sm()).text_color(colors.foreground).child(format!(
                             "{} recent project{} from {}",
                             source.projects.len(),
                             if source.projects.len() == 1 { "" } else { "s" },

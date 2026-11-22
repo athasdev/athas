@@ -1,5 +1,6 @@
+use crate::scale::px;
 use gpui::{
-    AnyElement, App, BoxShadow, FocusHandle, IntoElement, RenderOnce, SharedString, Window, div, point, prelude::*, px,
+    AnyElement, App, BoxShadow, FocusHandle, IntoElement, RenderOnce, SharedString, Window, div, point, prelude::*,
     relative,
 };
 use theme::ActiveTheme;
@@ -30,7 +31,7 @@ impl RenderOnce for Label {
             .flex()
             .items_center()
             .gap(px(8.))
-            .text_size(typography::TEXT_SM)
+            .text_size(typography::text_sm())
             .font_weight(typography::MEDIUM)
             .line_height(relative(1.375))
             .text_color(cx.theme().colors.foreground)
@@ -133,7 +134,7 @@ impl RenderOnce for Field {
         let colors = &cx.theme().colors;
         let title = self.label.map(|label| {
             div()
-                .text_size(typography::TEXT_SM)
+                .text_size(typography::text_sm())
                 .font_weight(typography::MEDIUM)
                 .line_height(relative(1.375))
                 .text_color(colors.foreground)
@@ -141,9 +142,9 @@ impl RenderOnce for Field {
                 .child(label)
         });
         let description = self.description.map(|description| {
-            div().text_size(typography::TEXT_SM).line_height(relative(1.5)).text_color(colors.muted_foreground).child(description)
+            div().text_size(typography::text_sm()).line_height(relative(1.5)).text_color(colors.muted_foreground).child(description)
         });
-        let error = self.error.map(|error| div().text_size(typography::TEXT_SM).text_color(colors.destructive).child(error));
+        let error = self.error.map(|error| div().text_size(typography::text_sm()).text_color(colors.destructive).child(error));
         let field = div().flex().w_full().gap(px(8.)).font_family(typography::UI_FONT);
         match self.orientation {
             FieldOrientation::Vertical => field.flex_col().children(title).children(self.control).children(description).children(error),
@@ -177,7 +178,7 @@ impl RenderOnce for FieldSeparator {
             .items_center()
             .justify_center()
             .h(px(20.))
-            .text_size(typography::TEXT_SM)
+            .text_size(typography::text_sm())
             .text_color(colors.subtle_foreground)
             .child(div().absolute().left_0().right_0().top(px(10.)).h(px(1.)).bg(colors.divider))
             .children(self.label.map(|label| div().relative().px(px(8.)).bg(colors.background).child(label)))
@@ -280,7 +281,7 @@ pub fn input_group_text(text: impl Into<SharedString>, cx: &App) -> gpui::Div {
         .flex()
         .items_center()
         .gap(px(8.))
-        .text_size(typography::TEXT_SM)
+        .text_size(typography::text_sm())
         .font_weight(typography::MEDIUM)
         .text_color(cx.theme().colors.muted_foreground)
         .child(text.into())
@@ -310,7 +311,7 @@ impl RenderOnce for InputGroup {
                     .py(px(4.))
                     .when(side == "start", |this| this.pl(px(8.)))
                     .when(side == "end", |this| this.pr(px(8.)))
-                    .text_size(typography::TEXT_SM)
+                    .text_size(typography::text_sm())
                     .font_weight(typography::MEDIUM)
                     .text_color(colors.muted_foreground)
                     .children(children)
@@ -330,13 +331,13 @@ impl RenderOnce for InputGroup {
             .min_w_0()
             .min_h(px(28.))
             .font_family(typography::UI_FONT)
-            .text_size(typography::TEXT_SM)
+            .text_size(typography::text_sm())
             .text_color(colors.foreground)
             .when(self.variant == InputGroupVariant::Default, |this| this.bg(colors.raised))
             .when(self.variant == InputGroupVariant::Surface, |this| this.bg(colors.surface))
             .when(!shadow.is_empty(), |this| this.shadow(shadow))
             .when(self.disabled, |this| this.opacity(0.5))
-            .map(|this| if block { this.flex_col().rounded(crate::metrics::RADIUS_LG) } else { this.items_center().rounded_full() })
+            .map(|this| if block { this.flex_col().rounded(crate::metrics::radius_lg()) } else { this.items_center().rounded_full() })
             .children(self.block_start.map(|addon| div().flex().items_center().w_full().px(px(10.)).pt(px(8.)).child(addon)))
             .child(row)
             .children(self.block_end.map(|addon| div().flex().items_center().w_full().px(px(10.)).pb(px(8.)).child(addon)))

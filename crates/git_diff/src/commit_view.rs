@@ -3,7 +3,8 @@
 
 use std::path::PathBuf;
 
-use gpui::{AnyElement, App, ClipboardItem, Context, EventEmitter, FocusHandle, Focusable, Render, SharedString, Window, div, prelude::*, px};
+use ui::scale::px;
+use gpui::{AnyElement, App, ClipboardItem, Context, EventEmitter, FocusHandle, Focusable, Render, SharedString, Window, div, prelude::*,};
 use theme::{ActiveTheme, ThemeColors};
 use ui::{Avatar, Button, ButtonSize, Icon, IconName, IconSize, metrics, typography};
 
@@ -84,11 +85,11 @@ impl CommitView {
             .pb(px(16.))
             .border_b_1()
             .border_color(colors.divider)
-            .child(div().text_size(typography::TEXT_LG).font_weight(typography::SEMIBOLD).text_color(colors.foreground).child(details.summary.clone()))
+            .child(div().text_size(typography::text_lg()).font_weight(typography::SEMIBOLD).text_color(colors.foreground).child(details.summary.clone()))
             .when(!details.body.is_empty(), |this| {
                 this.child(
                     div()
-                        .text_size(typography::TEXT_SM)
+                        .text_size(typography::text_sm())
                         .text_color(colors.muted_foreground)
                         .font_family(typography::MONO_FONT)
                         .children(details.body.lines().map(|line| div().min_h(px(16.)).child(line.to_string()))),
@@ -100,7 +101,7 @@ impl CommitView {
                     .flex_wrap()
                     .items_center()
                     .gap(px(8.))
-                    .text_size(typography::TEXT_SM)
+                    .text_size(typography::text_sm())
                     .text_color(colors.subtle_foreground)
                     .child(Avatar::new(&author.name).size(px(18.)).image(crate::avatar::author_avatar(&author.email, cx)))
                     .child(div().font_weight(typography::MEDIUM).text_color(colors.foreground).child(author.name.clone()))
@@ -115,7 +116,7 @@ impl CommitView {
                     .flex_wrap()
                     .items_center()
                     .gap(px(6.))
-                    .text_size(typography::TEXT_SM)
+                    .text_size(typography::text_sm())
                     .text_color(colors.subtle_foreground)
                     .child(Icon::new(IconName::GitCommit).size(IconSize::XSmall).color(colors.subtle_foreground))
                     .child(div().font_family(typography::MONO_FONT).text_color(colors.foreground).child(hash))
@@ -167,10 +168,10 @@ impl CommitView {
             .flex()
             .items_center()
             .gap(px(8.))
-            .h(metrics::LIST_ROW)
+            .h(metrics::list_row())
             .px(px(8.))
-            .rounded(metrics::RADIUS_MD)
-            .text_size(typography::TEXT_SM)
+            .rounded(metrics::radius_md())
+            .text_size(typography::text_sm())
             .hover(move |style| style.bg(accent))
             .child(
                 div()
@@ -183,12 +184,12 @@ impl CommitView {
             )
             .child(multibuffer::file_icon(&name, multibuffer::Tone::Subtle, cx))
             .child(div().flex_none().text_color(colors.foreground).child(name))
-            .child(div().min_w_0().truncate().text_size(typography::TEXT_CAPTION).text_color(colors.subtle_foreground).child(match &file.old_path {
+            .child(div().min_w_0().truncate().text_size(typography::text_caption()).text_color(colors.subtle_foreground).child(match &file.old_path {
                 Some(old) => format!("{dir} ← {old}"),
                 None => dir,
             }))
             .child(div().ml_auto().flex().flex_none().items_center().gap(px(8.)).when(file.binary, |this| {
-                this.child(div().text_size(typography::TEXT_CAPTION).text_color(colors.subtle_foreground).child("binary"))
+                this.child(div().text_size(typography::text_caption()).text_color(colors.subtle_foreground).child("binary"))
             }).children(diff_numbers(file.additions, file.deletions, colors)))
             .on_click(cx.listener(move |this, _, _, cx| this.open_file_diff(&hash, &path, cx)))
             .into_any_element()
@@ -230,9 +231,9 @@ impl Render for CommitView {
                         .flex()
                         .items_center()
                         .gap(px(8.))
-                        .h(metrics::LIST_ROW)
+                        .h(metrics::list_row())
                         .px(px(8.))
-                        .text_size(typography::TEXT_SM)
+                        .text_size(typography::text_sm())
                         .font_weight(typography::MEDIUM)
                         .text_color(colors.muted_foreground)
                         .child(format!("{} changed", if details.files.len() == 1 { "1 file".to_string() } else { format!("{} files", details.files.len()) }))
@@ -240,7 +241,7 @@ impl Render for CommitView {
                 )
                 .children(files)
                 .when(details.files.is_empty(), |this| {
-                    this.child(div().px(px(8.)).py(px(12.)).text_size(typography::TEXT_SM).text_color(colors.subtle_foreground).child("No files changed"))
+                    this.child(div().px(px(8.)).py(px(12.)).text_size(typography::text_sm()).text_color(colors.subtle_foreground).child("No files changed"))
                 }),
         )
     }

@@ -1,6 +1,7 @@
 //! The workbench's shared controls, drawn the way `src/ui` draws them in the web workbench.
 
 mod assets;
+pub mod scale;
 pub mod avatar;
 mod badge;
 mod breadcrumb;
@@ -53,7 +54,7 @@ pub use controls::{
     ToggleTone, ToggleVariant,
 };
 pub use disclosure::{Accordion, AccordionItem, AccordionTrigger, Collapsible};
-pub use dialog::{AlertAction, AlertDialog, ConfirmOptions, DIALOG_RADIUS, Dialog, DialogLayout, DialogSize, PromptDialog, focus_ring};
+pub use dialog::{AlertAction, AlertDialog, ConfirmOptions, dialog_radius, Dialog, DialogLayout, DialogSize, PromptDialog, focus_ring};
 pub use dropdown::{DropdownAlign, DropdownMenu};
 pub use empty_state::EmptyState;
 pub use field::{Field, FieldOrientation, FieldSeparator, InputGroup, InputGroupVariant, Label, Separator, input_group_text};
@@ -62,7 +63,7 @@ pub use item::{GroupedSection, GroupedSectionVariant, Item, ItemMedia, ItemSize,
 pub use kbd::{Kbd, shortcut_text};
 pub use list::{SectionHeader, SectionLabel, AccordionRow, SidebarListItem, SidebarListItemTone, sidebar_row};
 pub use loading::{Shimmer, Skeleton, Spinner, ThinkingOrb, ThinkingOrbState, shimmer_band};
-pub use menu::{CloseSubmenu, Menu, MenuEntry, MenuItem, MenuItemTone, MenuQuerySource, MenuSize, OVERLAY_MAX_HEIGHT, OVERLAY_MAX_WIDTH, OpenMenu};
+pub use menu::{CloseSubmenu, Menu, MenuEntry, MenuItem, MenuItemTone, MenuQuerySource, MenuSize, overlay_max_height, overlay_max_width, OpenMenu};
 pub use message::{Attachment, AttachmentState, Message, ResourceSection, ResourceSummary, message_action};
 pub use number_input::{NumberInput, NumberInputEvent};
 pub use occlusion::occluder;

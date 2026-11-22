@@ -3,16 +3,17 @@
 //! typing into the trigger itself.
 use crate::TooltipExt;
 
+use crate::scale::px;
 use gpui::{
     Anchor, AnyElement, App, Bounds, Context, Entity, EventEmitter, FocusHandle, Focusable, Hsla, KeyDownEvent,
     MouseButton, MouseDownEvent, Pixels, SharedString, Subscription, Window, anchored, canvas, deferred, div,
-    prelude::*, px,
+    prelude::*,
 };
 use theme::ActiveTheme;
 
 use crate::{
     Icon, IconName, IconSize, InputAppearance, MenuSize, TextInput, TextInputEvent, Tooltip,
-    menu::{OVERLAY_MAX_HEIGHT, OVERLAY_MAX_WIDTH},
+    menu::{overlay_max_height, overlay_max_width},
     typography,
 };
 
@@ -486,11 +487,11 @@ impl Select {
             .items_center()
             .justify_between()
             .gap(px(6.))
-            .h(crate::metrics::LIST_ROW)
+            .h(crate::metrics::list_row())
             .min_w_0()
             .max_w_full()
             .rounded_full()
-            .text_size(typography::TEXT_SM)
+            .text_size(typography::text_sm())
             .line_height(gpui::relative(typography::LEADING_ROW))
             .font_weight(typography::MEDIUM)
             .whitespace_nowrap()
@@ -549,7 +550,7 @@ impl Select {
             .min_w_0()
             .w_full()
             .rounded_full()
-            .text_size(typography::TEXT_SM)
+            .text_size(typography::text_sm())
             .text_color(colors.foreground)
             .when_some(bg, |this, bg| this.bg(bg))
             .when_some(hover, |this, hover| this.hover(move |style| style.bg(hover)))
@@ -618,7 +619,7 @@ impl Select {
                     .w_full()
                     .px(px(8.))
                     .py(px(4.))
-                    .rounded(crate::metrics::RADIUS)
+                    .rounded(crate::metrics::radius())
                     .whitespace_nowrap()
                     .text_color(text)
                     .when(highlighted, |this| this.bg(colors.primary))
@@ -645,7 +646,7 @@ impl Select {
             .id("select-list")
             .flex()
             .flex_col()
-            .max_h(OVERLAY_MAX_HEIGHT)
+            .max_h(overlay_max_height())
             .overflow_y_scroll()
             .track_scroll(&self.scroll)
             .when(self.search != SelectSearch::None, |this| this.p(px(4.)))
@@ -656,7 +657,7 @@ impl Select {
                         .w_full()
                         .justify_center()
                         .p(px(12.))
-                        .text_size(typography::TEXT_SM)
+                        .text_size(typography::text_sm())
                         .text_color(colors.muted_foreground)
                         .child(self.empty_label.clone()),
                 )
@@ -671,14 +672,14 @@ impl Select {
             .flex_col()
             .overflow_hidden()
             .min_w(trigger_width.unwrap_or(px(0.)).max(floor))
-            .max_w(OVERLAY_MAX_WIDTH)
+            .max_w(overlay_max_width())
             .when(self.width == SelectWidth::Full, |this| this.when_some(trigger_width, |this, width| this.w(width.max(floor))))
             .p(px(4.))
-            .rounded(crate::metrics::RADIUS_LG)
+            .rounded(crate::metrics::radius_lg())
             .bg(colors.overlay)
             .shadow(theme.shadows.popover.clone())
             .font_family(typography::UI_FONT)
-            .text_size(typography::TEXT_CHROME)
+            .text_size(typography::text_chrome())
             .line_height(px(16.))
             .text_color(colors.foreground)
             .when(self.search == SelectSearch::Menu, |this| {

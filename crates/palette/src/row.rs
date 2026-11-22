@@ -1,4 +1,5 @@
-use gpui::{AnyElement, App, IntoElement, ParentElement, RenderOnce, SharedString, Styled, Window, div, prelude::*, px};
+use ui::scale::px;
+use gpui::{AnyElement, App, IntoElement, ParentElement, RenderOnce, SharedString, Styled, Window, div, prelude::*,};
 use theme::ActiveTheme;
 use ui::{Icon, IconName, IconSize, Kbd, metrics, typography};
 
@@ -154,8 +155,8 @@ impl RenderOnce for PaletteRow {
             .mb(px(2.))
             .px(px(10.))
             .py(px(8.))
-            .rounded(metrics::RADIUS_MD)
-            .text_size(typography::TEXT_SM)
+            .rounded(metrics::radius_md())
+            .text_size(typography::text_sm())
             .line_height(gpui::relative(typography::LEADING_ROW))
             .when(self.selected, |this| this.bg(colors.primary))
             .children(icon.map(|icon| div().flex().flex_none().items_center().justify_center().size(px(24.)).child(icon)))
@@ -166,7 +167,7 @@ impl RenderOnce for PaletteRow {
                     .px(px(6.))
                     .rounded_full()
                     .bg(if self.selected { colors.primary_foreground.opacity(0.2) } else { colors.accent })
-                    .text_size(typography::TEXT_CAPTION)
+                    .text_size(typography::text_caption())
                     .text_color(muted)
                     .child(badge)
             }))

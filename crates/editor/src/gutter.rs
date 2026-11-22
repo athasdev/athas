@@ -1,6 +1,7 @@
 //! Gutter, minimap and sticky-scroll interaction: breakpoints, fold chevrons, minimap dragging.
 
-use gpui::{Context, Pixels, Point, Window, px};
+use ui::scale::px;
+use gpui::{Context, Pixels, Point, Window,};
 
 use crate::{Autoscroll, Drag, Editor, element::MinimapLayout};
 

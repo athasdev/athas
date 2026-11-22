@@ -14,8 +14,9 @@ use std::{
 
 use athas_browser::BrowserEvent;
 use futures::{StreamExt, channel::mpsc};
+use ui::scale::px;
 use gpui::{
-    AnyView, App, ClickEvent, Context, Entity, FocusHandle, Focusable, Image, ImageFormat, ObjectFit, Window, div, img, prelude::*, px,
+    AnyView, App, ClickEvent, Context, Entity, FocusHandle, Focusable, Image, ImageFormat, ObjectFit, Window, div, img, prelude::*,
 };
 use ui::{Button, ButtonSize, ButtonVariant, EmptyState, IconName, PaneTitle, pane_actions, pane_header, prelude::*};
 
@@ -391,7 +392,7 @@ impl PreviewView {
                             .items_center()
                             .justify_center()
                             .overflow_hidden()
-                            .rounded(metrics::RADIUS_LG)
+                            .rounded(metrics::radius_lg())
                             .bg(gpui::white())
                             .shadow(cx.theme().shadows.raised.clone())
                             .children(snapshot.map(|picture| img(picture).absolute().top_0().left_0().size_full().object_fit(ObjectFit::Fill)))

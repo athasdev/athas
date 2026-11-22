@@ -1,7 +1,8 @@
 //! The Help menu's keyboard shortcuts reference: the shortcuts people reach for most, read from
 //! the active keymap so remapped keys show as they are bound.
 
-use gpui::{App, Context, DismissEvent, EventEmitter, FocusHandle, Focusable, Window, div, prelude::*, px};
+use ui::scale::px;
+use gpui::{App, Context, DismissEvent, EventEmitter, FocusHandle, Focusable, Window, div, prelude::*,};
 use theme::ActiveTheme;
 use ui::{Button, Dialog, DialogSize, IconName, Kbd, typography};
 
@@ -90,7 +91,7 @@ impl Render for ShortcutsDialog {
                 .flex()
                 .flex_col()
                 .gap(px(2.))
-                .child(div().pb(px(4.)).text_size(typography::TEXT_CAPTION).font_weight(typography::MEDIUM).text_color(colors.subtle_foreground).child(*title))
+                .child(div().pb(px(4.)).text_size(typography::text_caption()).font_weight(typography::MEDIUM).text_color(colors.subtle_foreground).child(*title))
                 .children(rows.iter().filter_map(|(label, command)| {
                     let keys = shortcut(command, cx)?;
                     Some(
@@ -100,7 +101,7 @@ impl Render for ShortcutsDialog {
                             .justify_between()
                             .gap(px(12.))
                             .h(px(26.))
-                            .text_size(typography::TEXT_SM)
+                            .text_size(typography::text_sm())
                             .text_color(colors.foreground)
                             .child(*label)
                             .child(Kbd::new(keys)),

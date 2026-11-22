@@ -1,4 +1,5 @@
-use gpui::{Context, IntoElement, ParentElement, Styled, Window, div, prelude::*, px};
+use ui::scale::px;
+use gpui::{Context, IntoElement, ParentElement, Styled, Window, div, prelude::*,};
 use ui::{Avatar, Button, ButtonSize, IconName, TooltipExt, metrics};
 use workspace::SidebarView;
 
@@ -76,7 +77,7 @@ impl Workbench {
                         .flex()
                         .items_center()
                         .justify_center()
-                        .size(metrics::RAIL_CONTROL)
+                        .size(metrics::rail_control())
                         .child(ui::Spinner::new("update-spinner").label(if status.downloading { "Downloading" } else { "Installing" }).compact())
                         .anchored_tooltip(move || ui::Tooltip::new(tooltip.clone()).side(ui::TooltipSide::Right))
                         .into_any_element(),
@@ -163,7 +164,7 @@ impl Workbench {
             .flex_none()
             .items_center()
             .h_full()
-            .w(metrics::RAIL_CONTROL)
+            .w(metrics::rail_control())
             .overflow_hidden()
             .child(
                 div()
@@ -172,8 +173,8 @@ impl Workbench {
                     .flex_1()
                     .min_h_0()
                     .items_center()
-                    .gap(metrics::CHROME_GAP_TIGHT)
-                    .pt(metrics::CHROME_GAP_TIGHT)
+                    .gap(metrics::chrome_gap_tight())
+                    .pt(metrics::chrome_gap_tight())
                     .child(item(SidebarView::Agents, cx))
                     .children(tools.into_iter().map(|view| item(view, cx)))
                     .children(extension_items),
@@ -184,9 +185,9 @@ impl Workbench {
                     .flex_col()
                     .flex_none()
                     .items_center()
-                    .gap(metrics::CHROME_GAP_TIGHT)
-                    .pt(metrics::CHROME_GAP_TIGHT)
-                    .pb(metrics::WORKBENCH_GAP)
+                    .gap(metrics::chrome_gap_tight())
+                    .pt(metrics::chrome_gap_tight())
+                    .pb(metrics::workbench_gap())
                     .children(update_control)
                     .children(self.render_diagnostics_control(cx))
                     .child(
@@ -248,7 +249,7 @@ impl Workbench {
                             .tooltip("Help")
                             .tooltip_side(ui::TooltipSide::Right)
                             .on_click(cx.listener(|this, _: &gpui::ClickEvent, window, cx| {
-                                let position = gpui::point(metrics::WORKBENCH_GAP + metrics::RAIL_CONTROL + px(4.), window.viewport_size().height - px(12.));
+                                let position = gpui::point(metrics::workbench_gap() + metrics::rail_control() + px(4.), window.viewport_size().height - px(12.));
                                 this.show_help_menu(position, window, cx);
                             })),
                     )

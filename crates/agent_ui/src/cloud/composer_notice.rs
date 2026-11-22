@@ -2,7 +2,8 @@
 //! an agent that only runs locally, GitHub not connected, or no repository to run in. It shows
 //! over the composer of a cloud session that has not started yet, under the composer notice.
 
-use gpui::{AnyElement, ClickEvent, Context, IntoElement, ParentElement, Styled, div, prelude::*, px};
+use ui::scale::px;
+use gpui::{AnyElement, ClickEvent, Context, IntoElement, ParentElement, Styled, div, prelude::*,};
 use theme::ActiveTheme;
 use ui::{Button, ButtonSize, ButtonVariant, Icon, IconName, IconSize, typography};
 
@@ -128,7 +129,7 @@ impl SessionView {
                 .gap(px(10.))
                 .px(px(12.))
                 .py(px(8.))
-                .rounded(ui::metrics::ISLAND_RADIUS)
+                .rounded(ui::metrics::island_radius())
                 .border_1()
                 .border_color(colors.border)
                 .bg(colors.raised)
@@ -140,8 +141,8 @@ impl SessionView {
                         .flex_col()
                         .flex_1()
                         .min_w_0()
-                        .child(div().text_size(typography::TEXT_SM).text_color(colors.foreground).child(notice.title))
-                        .child(div().text_size(typography::TEXT_CAPTION).text_color(colors.muted_foreground).child(notice.description.clone())),
+                        .child(div().text_size(typography::text_sm()).text_color(colors.foreground).child(notice.title))
+                        .child(div().text_size(typography::text_caption()).text_color(colors.muted_foreground).child(notice.description.clone())),
                 )
                 .children(notice.action.map(|(action, label)| {
                     Button::new("cloud-notice-action", label).variant(ButtonVariant::Default).size(ButtonSize::Small).on_click(cx.listener(move |this, _: &ClickEvent, _, cx| match action {

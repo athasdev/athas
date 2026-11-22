@@ -7,7 +7,8 @@
 
 use std::rc::Rc;
 
-use gpui::{AnyElement, App, Context, Global, SharedString, Window, actions, div, prelude::*, px};
+use ui::scale::px;
+use gpui::{AnyElement, App, Context, Global, SharedString, Window, actions, div, prelude::*,};
 use palette::{PaletteRow, Picker, PickerDelegate, fuzzy_match};
 use ui::{Button, ButtonVariant, IconName, MenuEntry, MenuSize, OpenMenu};
 
@@ -91,7 +92,7 @@ impl Workbench {
             return;
         }
         let entries = (chrome.account_menu)(cx);
-        let position = gpui::point(ui::metrics::WORKBENCH_GAP + ui::metrics::RAIL_CONTROL + px(4.), window.viewport_size().height - px(12.));
+        let position = gpui::point(ui::metrics::workbench_gap() + ui::metrics::rail_control() + px(4.), window.viewport_size().height - px(12.));
         self.open_menu = Some(OpenMenu::sized(ACCOUNT_MENU_KEY, entries, MenuSize::Wide, position, gpui::Anchor::BottomLeft, window, cx, |this, _| this.open_menu = None));
         cx.notify();
     }

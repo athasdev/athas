@@ -1,7 +1,8 @@
 //! Create Theme (`custom-theme-creator-dialog.tsx`): a name, an id and a base theme make a theme
 //! file, which can be edited before it is saved as JSON or installed.
 
-use gpui::{App, Context, DismissEvent, Entity, EventEmitter, SharedString, Subscription, Window, div, prelude::*, px};
+use ui::scale::px;
+use gpui::{App, Context, DismissEvent, Entity, EventEmitter, SharedString, Subscription, Window, div, prelude::*,};
 use theme::{
     ActiveTheme,
     theme_file::{format_theme_file, parse_theme_file_json, theme_file_from_base, theme_id_from_name},
@@ -187,7 +188,7 @@ impl Render for CustomThemeCreator {
             .child(
                 div()
                     .font_family(typography::UI_FONT)
-                    .text_size(typography::TEXT_SM)
+                    .text_size(typography::text_sm())
                     .text_color(colors.subtle_foreground)
                     .child("Start from an installed theme, then edit the generated JSON before saving or installing it."),
             )

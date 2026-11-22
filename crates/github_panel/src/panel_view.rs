@@ -3,8 +3,9 @@
 use ui::TooltipExt as _;
 use crate::gh::{Deployment, IssueListItem, PullRequest, Release, WorkflowRunListItem};
 use chrono::Utc;
+use ui::scale::px;
 use gpui::{
-    Anchor, AnyElement, ClickEvent, Context, IntoElement, MouseButton, MouseDownEvent, Render, SharedString, Window, div, prelude::*, px,
+    Anchor, AnyElement, ClickEvent, Context, IntoElement, MouseButton, MouseDownEvent, Render, SharedString, Window, div, prelude::*,
 };
 use theme::{ActiveTheme, ThemeColors};
 use ui::{Button, ButtonSize, ButtonVariant, EmptyState, Icon, IconName, IconSize, MenuEntry, Plane, metrics, typography};
@@ -19,7 +20,7 @@ use crate::{
 };
 
 /// The repository row and the filter row.
-const BAR_HEIGHT: gpui::Pixels = px(32.);
+fn bar_height() -> gpui::Pixels { px(32.) }
 /// Rows a section shows before "Show more", as the git sidebar's history does.
 const SHOWN: usize = 5;
 
@@ -244,17 +245,17 @@ impl GitHubPanel {
         let accent = colors.accent;
         let tooltip = self.repository().map(|repo| format!("{}\n{}", repo.slug.full_name(), repo.root.display())).unwrap_or_default();
         let buttons = self.render_header_buttons(cx);
-        div().flex().flex_none().items_center().gap(px(2.)).h(BAR_HEIGHT).px(px(8.)).child(
+        div().flex().flex_none().items_center().gap(px(2.)).h(bar_height()).px(px(8.)).child(
             div()
                 .id("github-repo-button")
                 .flex()
                 .min_w_0()
                 .items_center()
                 .gap(px(6.))
-                .h(metrics::CHROME_CONTROL)
+                .h(metrics::chrome_control())
                 .px(px(6.))
-                .rounded(metrics::RADIUS_MD)
-                .text_size(typography::TEXT_SM)
+                .rounded(metrics::radius_md())
+                .text_size(typography::text_sm())
                 .hover(move |style| style.bg(accent))
                 .when(menus::is_open(&self.open_menu, "github-repo"), |this| this.bg(accent))
                 .child(Icon::new(IconName::Github).size(IconSize::XSmall).color(colors.subtle_foreground))
@@ -346,7 +347,7 @@ impl GitHubPanel {
     }
 
     fn render_toolbar(&self) -> impl IntoElement {
-        div().flex().flex_none().items_center().h(BAR_HEIGHT).pl(px(12.)).pr(px(8.)).child(div().flex_1().min_w_0().child(self.filter_input.clone()))
+        div().flex().flex_none().items_center().h(bar_height()).pl(px(12.)).pr(px(8.)).child(div().flex_1().min_w_0().child(self.filter_input.clone()))
     }
 
     fn query(&self, cx: &Context<Self>) -> String {
@@ -779,10 +780,10 @@ impl GitHubPanel {
                     .items_start()
                     .gap(px(8.))
                     .p(px(8.))
-                    .rounded(metrics::RADIUS_LG)
+                    .rounded(metrics::radius_lg())
                     .bg(colors.raised)
                     .shadow(theme.shadows.raised.clone())
-                    .text_size(typography::TEXT_SM)
+                    .text_size(typography::text_sm())
                     .child(div().pt(px(2.)).child(Icon::new(icon).size(IconSize::XSmall).color(tone)))
                     .child(div().flex_1().min_w_0().text_color(colors.foreground).child(notice.message.clone()))
                     .child(Button::icon("github-notice-close", IconName::X).size(ButtonSize::XSmall).tooltip("Dismiss").on_click(cx.listener(|this, _, _, cx| {

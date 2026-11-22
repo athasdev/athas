@@ -9,9 +9,10 @@
 use ui::TooltipExt as _;
 use std::{collections::HashMap, path::PathBuf, rc::Rc};
 
+use ui::scale::px;
 use gpui::{
     AnyView, AnyWindowHandle, App, Context, FocusHandle, Focusable, Global, MouseButton, MouseMoveEvent, SharedString,
-    Subscription, Window, WindowControlArea, actions, div, prelude::*, px,
+    Subscription, Window, WindowControlArea, actions, div, prelude::*,
 };
 use theme::ActiveTheme;
 use ui::{Icon, IconName, IconSize, metrics, typography};
@@ -367,8 +368,8 @@ impl DetachedWindow {
             return;
         }
         match step {
-            Some(in_) => editor::zoom_editors(cx, in_),
-            None => editor::reset_editor_zoom(cx),
+            Some(in_) => ui::scale::zoom_by(in_, cx),
+            None => ui::scale::reset_zoom(cx),
         }
     }
 
@@ -446,7 +447,7 @@ impl DetachedWindow {
                     .child(
                         div()
                             .truncate()
-                            .text_size(typography::TEXT_SM)
+                            .text_size(typography::text_sm())
                             .font_weight(typography::MEDIUM)
                             .text_color(colors.muted_foreground)
                             .child(title),
@@ -492,7 +493,7 @@ impl Render for DetachedWindow {
         let overlay = self.content.overlays_title_bar();
         let body = div().flex().flex_col().flex_1().min_h_0().min_w_0().overflow_hidden();
         let body = if plane {
-            body.px(metrics::WORKBENCH_GAP).pb(metrics::WORKBENCH_GAP).child(ui::island(cx).flex_1().child(self.view.clone()))
+            body.px(metrics::workbench_gap()).pb(metrics::workbench_gap()).child(ui::island(cx).flex_1().child(self.view.clone()))
         } else {
             body.child(self.view.clone())
         };

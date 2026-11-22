@@ -31,7 +31,8 @@ use ai_providers::{
     test_support::{MockResponse, MockServer},
 };
 use anyhow::{Context as _, Result};
-use gpui::{AnyView, AppContext, Context, HeadlessAppContext, IntoElement, ParentElement, Render, Styled, Window, div, px, size};
+use ui::scale::px;
+use gpui::{AnyView, AppContext, Context, HeadlessAppContext, IntoElement, ParentElement, Render, Styled, Window, div, size};
 use serde_json::json;
 use theme::{ActiveTheme, Appearance};
 

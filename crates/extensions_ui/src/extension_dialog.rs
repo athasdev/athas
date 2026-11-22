@@ -2,7 +2,8 @@
 //! extension's view for the dialog's id. Closing it tells the host.
 
 use extension_host::Dialog;
-use gpui::{Context, DismissEvent, Entity, EventEmitter, FocusHandle, Focusable, Render, Window, div, prelude::*, px};
+use ui::scale::px;
+use gpui::{Context, DismissEvent, Entity, EventEmitter, FocusHandle, Focusable, Render, Window, div, prelude::*,};
 use ui::DialogSize;
 
 use crate::extension_view::{ExtensionView, Surface};

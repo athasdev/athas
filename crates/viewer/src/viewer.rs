@@ -14,10 +14,11 @@ use std::{
     sync::Arc,
 };
 
+use ui::scale::px;
 use gpui::{
     Anchor, AnyElement, App, Bounds, ClipboardItem, Context, DismissEvent, Entity, FocusHandle, Focusable, IntoElement, ListAlignment,
     ListState, MouseButton, MouseDownEvent, MouseMoveEvent, ObjectFit, Pixels, Point, Render, RenderImage, ScrollEvent,
-    ScrollHandle, SharedString, Subscription, Task, UniformListScrollHandle, Window, canvas, deferred, div, img, list, prelude::*, px,
+    ScrollHandle, SharedString, Subscription, Task, UniformListScrollHandle, Window, canvas, deferred, div, img, list, prelude::*,
     uniform_list,
 };
 use theme::ActiveTheme;
@@ -32,8 +33,8 @@ const MAX_ZOOM: f32 = 16.;
 const HEX_LIMIT: usize = 16 * 1024 * 1024;
 /// Rendered PDF pages kept in memory.
 const PDF_CACHE: usize = 12;
-const PDF_GAP: Pixels = px(12.);
-const TABLE_ROW: Pixels = px(26.);
+fn pdf_gap() -> Pixels { px(12.) }
+fn table_row() -> Pixels { px(26.) }
 /// Width of one character of the monospace table text at `TEXT_SM`.
 const MONO_CHAR: f32 = 7.3;
 
@@ -622,7 +623,7 @@ impl FileViewer {
         // `csv-preview.tsx`: Delimiter [select], Header On/Off, CSV and JSON copies.
         let toolbar = self
             .toolbar(Some(format!("{} columns", state.table.headers.len())), cx)
-            .child(div().mr(px(4.)).text_size(typography::TEXT_SM).text_color(colors.subtle_foreground).child("Delimiter"))
+            .child(div().mr(px(4.)).text_size(typography::text_sm()).text_color(colors.subtle_foreground).child("Delimiter"))
             .children(state.delimiter_select.clone())
             .child(
                 Button::new("viewer-header-row", if state.has_header { "Header On" } else { "Header Off" })
@@ -678,11 +679,11 @@ impl FileViewer {
         let header = div()
             .flex()
             .flex_none()
-            .h(TABLE_ROW)
+            .h(table_row())
             .bg(colors.surface)
             .border_b_1()
             .border_color(colors.border)
-            .text_size(typography::TEXT_SM)
+            .text_size(typography::text_sm())
             .font_weight(typography::MEDIUM)
             .text_color(colors.foreground)
             .child(cell(number_width).justify_end().text_color(colors.subtle_foreground).child("#"))
@@ -750,13 +751,13 @@ impl FileViewer {
                     div()
                         .id(("viewer-csv-row", index))
                         .flex()
-                        .h(TABLE_ROW)
+                        .h(table_row())
                         .border_b_1()
                         .border_color(colors.divider)
                         .when(index % 2 == 1, |this| this.bg(colors.surface.opacity(0.5)))
                         .hover(|style| style.bg(colors.accent))
                         .font_family(typography::MONO_FONT)
-                        .text_size(typography::TEXT_SM)
+                        .text_size(typography::text_sm())
                         .text_color(colors.foreground)
                         .child(cell(number_width).justify_end().text_color(colors.subtle_foreground).child((index + 1).to_string()))
                         .children(
@@ -848,7 +849,7 @@ impl FileViewer {
             pdf::LinkTarget::Page { index, top } => {
                 let Content::Pdf(state) = &mut self.content else { return };
                 let offset = top.map(|top| pdf::destination_top(&state.document, index, top) * state.page_zoom(index)).unwrap_or(0.);
-                let gap = if index == 0 { PDF_GAP * 2. } else { PDF_GAP };
+                let gap = if index == 0 { pdf_gap() * 2. } else { pdf_gap() };
                 state.list.scroll_to(gpui::ListOffset { item_ix: index, offset_in_item: gap + px(offset) });
             }
         }
@@ -865,7 +866,7 @@ impl FileViewer {
             .child(
                 div()
                     .px(px(6.))
-                    .text_size(typography::TEXT_SM)
+                    .text_size(typography::text_sm())
                     .text_color(colors.muted_foreground)
                     .child(format!("Page {current} of {count}")),
             )
@@ -944,8 +945,8 @@ impl FileViewer {
                     .flex()
                     .justify_center()
                     .min_w(width + px(48.))
-                    .pt(if index == 0 { PDF_GAP * 2. } else { PDF_GAP })
-                    .when(index + 1 == count, |this| this.pb(PDF_GAP * 2.))
+                    .pt(if index == 0 { pdf_gap() * 2. } else { pdf_gap() })
+                    .when(index + 1 == count, |this| this.pb(pdf_gap() * 2.))
                     .child(page)
                     .into_any_element()
             })
@@ -1003,12 +1004,12 @@ impl FileViewer {
                 .items_baseline()
                 .gap(px(8.))
                 .min_w_0()
-                .text_size(typography::TEXT_SM)
+                .text_size(typography::text_sm())
                 .child(div().flex_none().text_color(colors.subtle_foreground).child(label))
                 .child(div().min_w_0().truncate().text_color(colors.foreground).child(value))
         };
         let grid = |rows: Vec<gpui::Div>| div().grid().grid_cols(2).gap_x(px(24.)).gap_y(px(8.)).children(rows);
-        let heading = |title: &'static str| div().mb(px(12.)).text_size(typography::TEXT_SM).text_color(colors.foreground).child(title);
+        let heading = |title: &'static str| div().mb(px(12.)).text_size(typography::text_sm()).text_color(colors.foreground).child(title);
         let section = || div().py(px(16.));
         let information = section().child(heading("File Information")).child(grid(vec![
             info_row("Type", file_type.to_string()),
@@ -1028,7 +1029,7 @@ impl FileViewer {
                     .flex_col()
                     .border_y_1()
                     .border_color(colors.divider)
-                    .text_size(typography::TEXT_SM)
+                    .text_size(typography::text_sm())
                     .child(
                         div()
                             .flex()
@@ -1066,7 +1067,7 @@ impl FileViewer {
                 .overflow_x_scroll()
                 .font_family(typography::MONO_FONT)
                 .font_features(gpui::FontFeatures::disable_ligatures())
-                .text_size(typography::TEXT_SM)
+                .text_size(typography::text_sm())
                 .line_height(px(18.))
                 .text_color(colors.subtle_foreground)
                 .whitespace_nowrap()
@@ -1121,12 +1122,12 @@ impl FileViewer {
         // path from the project's folder, then the detail.
         let path = self.relative_path(cx);
         pane_header(cx)
-            .h(metrics::CONTENT_HEADER)
-            .px(metrics::CHROME_PADDING_INLINE)
+            .h(metrics::content_header())
+            .px(metrics::chrome_padding_inline())
             .gap(px(8.))
             .border_b_1()
             .border_color(colors.divider)
-            .child(div().min_w_0().overflow_hidden().text_size(typography::TEXT_SM).child(PathBreadcrumb::from_path("viewer-breadcrumb", &path)))
+            .child(div().min_w_0().overflow_hidden().text_size(typography::text_sm()).child(PathBreadcrumb::from_path("viewer-breadcrumb", &path)))
             .children(detail.filter(|detail| !detail.is_empty()).map(|detail| div().flex_none().text_color(colors.muted_foreground).child(detail)))
             .child(pane_actions())
     }
@@ -1155,7 +1156,7 @@ impl FileViewer {
             .items_center()
             .gap(px(8.))
             .child(button("zoom-out", IconName::Minus, "Zoom out", Some(false), cx))
-            .child(div().min_w(px(50.)).px(px(8.)).text_center().text_size(typography::TEXT_SM).text_color(colors.subtle_foreground).child(percent(zoom)))
+            .child(div().min_w(px(50.)).px(px(8.)).text_center().text_size(typography::text_sm()).text_color(colors.subtle_foreground).child(percent(zoom)))
             .child(button("zoom-in", IconName::Plus, "Zoom in", Some(true), cx))
             .child(button("zoom-reset", IconName::ArrowCounterClockwise, "Reset zoom", None, cx))
     }
@@ -1172,7 +1173,7 @@ impl FileViewer {
             .px(px(12.))
             .border_t_1()
             .border_color(colors.divider)
-            .text_size(typography::TEXT_CAPTION)
+            .text_size(typography::text_caption())
             .text_color(colors.subtle_foreground)
             .whitespace_nowrap()
             .child(div().flex().flex_none().gap(px(12.)).children(info.start))

@@ -11,7 +11,8 @@ use std::{
 };
 
 use futures::future::{Either, select};
-use gpui::{App, AppContext as _, Context, Entity, Focusable as _, Global, Modifiers, Pixels, Point, Subscription, Task, Window, px};
+use ui::scale::px;
+use gpui::{App, AppContext as _, Context, Entity, Focusable as _, Global, Modifiers, Pixels, Point, Subscription, Task, Window,};
 use lsp_client::{
     DiagnosticsStore, Document, FileLocation, LanguageServer, LspStore, LspStoreEvent, OpenError, Severity,
     lsp,

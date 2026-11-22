@@ -6,11 +6,12 @@ use alacritty_terminal::{
     term::cell::{Cell, Flags},
     vte::ansi::{Color, CursorShape, NamedColor},
 };
+use ui::scale::px;
 use gpui::{
     App, Bounds, ContentMask, CursorStyle, DispatchPhase, Element, ElementId, Entity, FocusHandle, Font, FontFallbacks,
     FontFeatures, FontStyle, FontWeight, GlobalElementId, Hitbox, HitboxBehavior, Hsla, LayoutId, MouseDownEvent,
     MouseMoveEvent, MouseUpEvent, PaintQuad, Pixels, Point, ScrollEvent, ShapedLine, SharedString,
-    StrikethroughStyle, Style, TextAlign, TextRun, UnderlineStyle, Window, fill, outline, point, px, relative, size,
+    StrikethroughStyle, Style, TextAlign, TextRun, UnderlineStyle, Window, fill, outline, point, relative, size,
 };
 use theme::ActiveTheme;
 use ui::typography::MONO_FONT;

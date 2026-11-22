@@ -3,9 +3,10 @@
 
 use std::rc::Rc;
 
+use ui::scale::px;
 use gpui::{
     AnyElement, App, Context, DismissEvent, Entity, EventEmitter, FocusHandle, Focusable, IntoElement, ParentElement, Render,
-    SharedString, Styled, Subscription, Window, div, prelude::*, px,
+    SharedString, Styled, Subscription, Window, div, prelude::*,
 };
 use theme::ActiveTheme;
 use ui::{Avatar, Icon, IconName, IconSize, metrics, typography};
@@ -227,8 +228,8 @@ impl AccountMenu {
             .gap(px(8.))
             .h(px(28.))
             .px(px(8.))
-            .rounded(metrics::RADIUS_MD)
-            .text_size(typography::TEXT_SM)
+            .rounded(metrics::radius_md())
+            .text_size(typography::text_sm())
             .text_color(text)
             .when(highlighted, |this| this.bg(colors.accent))
             .on_hover(cx.listener(move |this, hovered: &bool, _, cx| {
@@ -239,8 +240,8 @@ impl AccountMenu {
             }))
             .child(Icon::new(icon).size(IconSize::Small).color(colors.subtle_foreground))
             .child(div().flex_1().min_w_0().truncate().child(label))
-            .children(trailing.map(|trailing| div().text_size(typography::TEXT_CAPTION).text_color(colors.subtle_foreground).child(trailing)))
-            .children(shortcut.map(|shortcut| div().text_size(typography::TEXT_CAPTION).text_color(colors.subtle_foreground).child(shortcut)))
+            .children(trailing.map(|trailing| div().text_size(typography::text_caption()).text_color(colors.subtle_foreground).child(trailing)))
+            .children(shortcut.map(|shortcut| div().text_size(typography::text_caption()).text_color(colors.subtle_foreground).child(shortcut)))
             .when(external, |this| this.child(Icon::new(IconName::OpenExternal).size(IconSize::Small).color(colors.subtle_foreground)))
             .on_click(cx.listener(move |this, _, window, cx| {
                 if let Some(item) = item.borrow_mut().take() {
@@ -261,7 +262,7 @@ impl AccountMenu {
                     .gap(px(8.))
                     .px(px(8.))
                     .py(px(6.))
-                    .text_size(typography::TEXT_CAPTION)
+                    .text_size(typography::text_caption())
                     .text_color(colors.warning)
                     .child(Icon::new(IconName::CloudWarning).size(IconSize::Small).color(colors.warning))
                     .child(div().flex_1().child(format!("{} Trying again in {}s.", check.message, check.retry_in.as_secs())))
@@ -290,8 +291,8 @@ impl AccountMenu {
                                 .flex_col()
                                 .flex_1()
                                 .min_w_0()
-                                .child(div().truncate().text_size(typography::TEXT_SM).font_weight(typography::MEDIUM).text_color(colors.foreground).child(name))
-                                .children(detail.map(|detail| div().truncate().text_size(typography::TEXT_CAPTION).text_color(colors.subtle_foreground).child(detail))),
+                                .child(div().truncate().text_size(typography::text_sm()).font_weight(typography::MEDIUM).text_color(colors.foreground).child(name))
+                                .children(detail.map(|detail| div().truncate().text_size(typography::text_caption()).text_color(colors.subtle_foreground).child(detail))),
                         )
                         .child(widgets::badge(store.plan_label(), None, cx)),
                 )
@@ -304,15 +305,15 @@ impl AccountMenu {
                             div()
                                 .flex()
                                 .justify_between()
-                                .text_size(typography::TEXT_CAPTION)
+                                .text_size(typography::text_caption())
                                 .text_color(colors.subtle_foreground)
                                 .child("Included AI credit")
                                 .child(usage.label),
                         )
                         .child(widgets::meter(usage.fraction, cx))
-                        .children(usage.detail.map(|detail| div().text_size(typography::TEXT_CAPTION).text_color(colors.subtle_foreground).child(detail)))
+                        .children(usage.detail.map(|detail| div().text_size(typography::text_caption()).text_color(colors.subtle_foreground).child(detail)))
                 }))
-                .children(store.state().error.clone().map(|error| div().text_size(typography::TEXT_CAPTION).text_color(colors.warning).child(error)))
+                .children(store.state().error.clone().map(|error| div().text_size(typography::text_caption()).text_color(colors.warning).child(error)))
                 .into_any_element(),
         )
     }
@@ -338,7 +339,7 @@ impl Render for AccountMenu {
                         .px(px(8.))
                         .pt(px(6.))
                         .pb(px(2.))
-                        .text_size(typography::TEXT_CAPTION)
+                        .text_size(typography::text_caption())
                         .font_weight(typography::MEDIUM)
                         .text_color(colors.subtle_foreground)
                         .child(label)
@@ -364,7 +365,7 @@ impl Render for AccountMenu {
             .when(header.is_some(), |this| this.w(px(288.)))
             .when(header.is_none(), |this| this.min_w(px(200.)).max_w(px(288.)))
             .p(px(4.))
-            .rounded(metrics::RADIUS_LG)
+            .rounded(metrics::radius_lg())
             .bg(colors.overlay)
             .shadow(theme.shadows.popover.clone())
             .font_family(typography::UI_FONT)

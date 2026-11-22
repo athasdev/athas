@@ -1,7 +1,8 @@
 //! Small pieces the account, sharing and team views share: settings-style sections and rows, a
 //! badge, a meter and a dialog frame, drawn as `settings_ui` and `src/ui` draw them.
 
-use gpui::{AnyElement, App, Div, Hsla, IntoElement, ParentElement, SharedString, Styled, div, prelude::*, px};
+use ui::scale::px;
+use gpui::{AnyElement, App, Div, Hsla, IntoElement, ParentElement, SharedString, Styled, div, prelude::*,};
 use theme::ActiveTheme;
 use ui::{metrics, typography};
 
@@ -23,7 +24,7 @@ pub fn section(title: Option<&str>, rows: Vec<AnyElement>, cx: &App) -> AnyEleme
         .children(title.map(|title| {
             div()
                 .px(px(12.))
-                .text_size(typography::TEXT_SM)
+                .text_size(typography::text_sm())
                 .font_weight(typography::MEDIUM)
                 .text_color(theme.colors.muted_foreground)
                 .child(SharedString::from(title.to_string()))
@@ -32,7 +33,7 @@ pub fn section(title: Option<&str>, rows: Vec<AnyElement>, cx: &App) -> AnyEleme
             div()
                 .flex()
                 .flex_col()
-                .rounded(metrics::ISLAND_RADIUS)
+                .rounded(metrics::island_radius())
                 .bg(theme.colors.raised)
                 .shadow(theme.shadows.raised.clone())
                 .children(rows),
@@ -58,9 +59,9 @@ pub fn row(label: impl Into<SharedString>, description: Option<SharedString>, co
                 .flex_1()
                 .min_w_0()
                 .gap(px(2.))
-                .child(div().text_size(typography::TEXT_SM).text_color(colors.foreground).child(label.into()))
+                .child(div().text_size(typography::text_sm()).text_color(colors.foreground).child(label.into()))
                 .children(description.map(|description| {
-                    div().text_size(typography::TEXT_CAPTION).text_color(colors.subtle_foreground).child(description)
+                    div().text_size(typography::text_caption()).text_color(colors.subtle_foreground).child(description)
                 })),
         )
         .child(div().flex().flex_none().items_center().gap(px(6.)).child(controls))
@@ -78,9 +79,9 @@ pub fn badge(label: impl Into<SharedString>, tone: Option<Hsla>, cx: &App) -> Di
         .flex_none()
         .px(px(6.))
         .py(px(1.))
-        .rounded(metrics::RADIUS)
+        .rounded(metrics::radius())
         .bg(fill)
-        .text_size(typography::TEXT_CAPTION)
+        .text_size(typography::text_caption())
         .font_weight(typography::MEDIUM)
         .text_color(text)
         .child(label.into())
@@ -100,7 +101,7 @@ pub fn dialog(title: impl Into<SharedString>, body: impl IntoElement, footer: Ve
         .flex_col()
         .w(px(520.))
         .max_w_full()
-        .rounded(metrics::OVERLAY_RADIUS)
+        .rounded(metrics::overlay_radius())
         .overflow_hidden()
         .bg(theme.colors.background)
         .shadow(theme.shadows.dialog.clone())
@@ -111,9 +112,9 @@ pub fn dialog(title: impl Into<SharedString>, body: impl IntoElement, footer: Ve
                 .flex()
                 .flex_none()
                 .items_center()
-                .h(metrics::PANE_HEADER)
+                .h(metrics::pane_header())
                 .px(px(20.))
-                .text_size(typography::TEXT_BASE)
+                .text_size(typography::text_base())
                 .font_weight(typography::SEMIBOLD)
                 .child(title.into()),
         )
@@ -140,15 +141,15 @@ pub fn field(label: impl Into<SharedString>, control: impl IntoElement, hint: Op
         .flex()
         .flex_col()
         .gap(px(6.))
-        .child(div().text_size(typography::TEXT_SM).font_weight(typography::MEDIUM).text_color(colors.foreground).child(label.into()))
+        .child(div().text_size(typography::text_sm()).font_weight(typography::MEDIUM).text_color(colors.foreground).child(label.into()))
         .child(control)
-        .children(hint.map(|hint| div().text_size(typography::TEXT_CAPTION).text_color(colors.subtle_foreground).child(hint)))
+        .children(hint.map(|hint| div().text_size(typography::text_caption()).text_color(colors.subtle_foreground).child(hint)))
         .into_any_element()
 }
 
 /// A line of error text.
 pub fn error_text(message: impl Into<SharedString>, cx: &App) -> AnyElement {
-    div().text_size(typography::TEXT_SM).text_color(cx.theme().colors.destructive).child(message.into()).into_any_element()
+    div().text_size(typography::text_sm()).text_color(cx.theme().colors.destructive).child(message.into()).into_any_element()
 }
 
 /// "5m ago", "3h ago", "2d ago", or the date, for an ISO timestamp.

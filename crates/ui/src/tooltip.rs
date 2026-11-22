@@ -4,9 +4,10 @@ use std::sync::Mutex;
 use std::time::Duration;
 
 use gpui::prelude::*;
+use crate::scale::px;
 use gpui::{
     AnyElement, AnyView, App, Bounds, Context, Element, GlobalElementId, InspectorElementId, IntoElement, LayoutId,
-    ParentElement, Pixels, Point, Render, SharedString, Style, Styled, Task, Window, canvas, div, point, px, size,
+    ParentElement, Pixels, Point, Render, SharedString, Style, Styled, Task, Window, canvas, div, point, size,
 };
 use theme::ActiveTheme;
 use web_time::Instant;
@@ -161,10 +162,10 @@ impl Tooltip {
             .gap(px(8.))
             .px(px(8.))
             .py(px(4.))
-            .rounded(crate::metrics::RADIUS_MD)
+            .rounded(crate::metrics::radius_md())
             .bg(theme.colors.overlay)
             .shadow(theme.shadows.popover.clone())
-            .text_size(typography::TEXT_SM)
+            .text_size(typography::text_sm())
             .font_family(typography::UI_FONT)
             .text_color(theme.colors.foreground)
             .child(text.into())

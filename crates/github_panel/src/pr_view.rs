@@ -7,9 +7,10 @@ use std::{path::PathBuf, rc::Rc, sync::Arc};
 
 use crate::gh::{Label, PullRequestComment, PullRequestDetails, PullRequestFile};
 use chrono::Utc;
+use ui::scale::px;
 use gpui::{
     Anchor, AnyElement, App, ClickEvent, Context, DismissEvent, Entity, FocusHandle, Focusable, IntoElement, Render, SharedString,
-    Subscription, Window, div, list, prelude::*, px, relative,
+    Subscription, Window, div, list, prelude::*, relative,
 };
 use multibuffer::{Entry, Header, Multibuffer, OpenHandler, Section};
 use theme::{ActiveTheme, ThemeColors};
@@ -782,7 +783,7 @@ impl PullRequestView {
 
     fn render_title(&self, title: &str, colors: &ThemeColors, cx: &mut Context<Self>) -> AnyElement {
         if let Some((input, _)) = &self.title_input {
-            return div().w(px(560.)).min_w_0().text_size(typography::TEXT_BASE).child(input.clone()).into_any_element();
+            return div().w(px(560.)).min_w_0().text_size(typography::text_base()).child(input.clone()).into_any_element();
         }
         editable_title("pr-title", title, colors).on_click(cx.listener(|this, _, window, cx| this.start_title_edit(window, cx))).into_any_element()
     }
@@ -906,7 +907,7 @@ impl PullRequestView {
         let body = if page.body.is_empty() {
             div()
                 .id("pr-body-empty")
-                .text_size(typography::TEXT_SM)
+                .text_size(typography::text_sm())
                 .italic()
                 .text_color(colors.subtle_foreground)
                 .child("No description provided")
@@ -960,12 +961,12 @@ impl PullRequestView {
                         .flex_col()
                         .gap(px(12.))
                         .p(px(12.))
-                        .rounded(metrics::RADIUS_LG)
+                        .rounded(metrics::radius_lg())
                         .border_1()
                         .border_color(colors.divider)
                         .bg(colors.surface)
                         .shadow(theme.shadows.raised.clone())
-                        .child(div().text_size(typography::TEXT_SM).font_weight(typography::MEDIUM).text_color(colors.foreground).child(action.kind.title()))
+                        .child(div().text_size(typography::text_sm()).font_weight(typography::MEDIUM).text_color(colors.foreground).child(action.kind.title()))
                         .child(body)
                         .child(editor::save_row(
                             "pr-action",
@@ -1019,12 +1020,12 @@ impl PullRequestView {
                                 .gap(px(6.))
                                 .mx(px(-6.))
                                 .px(px(6.))
-                                .rounded(metrics::RADIUS_MD)
+                                .rounded(metrics::radius_md())
                                 .hover(move |style| style.bg(accent))
                                 .child(strong(&commit.author))
                                 .child("committed")
                                 .child(div().min_w_0().truncate().text_color(colors.muted_foreground).child(commit.headline.clone()))
-                                .child(div().flex_none().font_family(typography::MONO_FONT).text_size(typography::TEXT_CAPTION).child(model::short_sha(&commit.sha).to_string()))
+                                .child(div().flex_none().font_family(typography::MONO_FONT).text_size(typography::text_caption()).child(model::short_sha(&commit.sha).to_string()))
                                 .child(time(at))
                                 .when(!url.is_empty(), |this| this.on_click(move |_, _, cx| cx.open_url(&url)))
                                 .into_any_element(),
@@ -1122,7 +1123,7 @@ impl PullRequestView {
         }
         let mut activity = div().flex().flex_col().gap(px(16.)).child(timeline(items, colors));
         if let Some(error) = &page.comments_error {
-            activity = activity.child(div().text_size(typography::TEXT_SM).text_color(colors.destructive).child(error.clone()));
+            activity = activity.child(div().text_size(typography::text_sm()).text_color(colors.destructive).child(error.clone()));
         }
         let can_comment = self.mutation.is_none() && !self.composer.read(cx).text(cx).trim().is_empty();
         activity
@@ -1273,7 +1274,7 @@ impl PullRequestView {
                     .h(px(28.))
                     .mx(px(-6.))
                     .px(px(6.))
-                    .rounded(metrics::RADIUS_MD)
+                    .rounded(metrics::radius_md())
                     .text_color(colors.muted_foreground)
                     .hover(move |style| style.bg(accent).text_color(hover))
                     .child(widgets::run_status_icon(&state, IconSize::Small, colors))
@@ -1309,7 +1310,7 @@ impl PullRequestView {
             .overflow_y_scroll()
             .pt(px(24.))
             .pb(px(32.))
-            .child(rail(div().text_size(typography::TEXT_SM).child(self.render_checks_list(page, false, colors, cx))))
+            .child(rail(div().text_size(typography::text_sm()).child(self.render_checks_list(page, false, colors, cx))))
             .scrollbar(window, cx)
             .into_any_element()
     }
@@ -1413,7 +1414,7 @@ impl PullRequestView {
     fn render_diff_row(&self, file: usize, index: usize, cx: &mut Context<Self>) -> AnyElement {
         let colors = cx.theme().colors.clone();
         let Some(file) = self.changes.as_ref().and_then(|changes| changes.diffs.get(file)) else { return div().into_any_element() };
-        let notice = |text: &str| div().flex().items_center().justify_center().h(px(56.)).text_size(typography::TEXT_SM).text_color(colors.subtle_foreground).child(text.to_string()).into_any_element();
+        let notice = |text: &str| div().flex().items_center().justify_center().h(px(56.)).text_size(typography::text_sm()).text_color(colors.subtle_foreground).child(text.to_string()).into_any_element();
         if file.binary {
             return notice("Binary file not shown");
         }
@@ -1438,7 +1439,7 @@ impl PullRequestView {
             .w_full()
             .overflow_hidden()
             .font_family(typography::MONO_FONT)
-            .text_size(typography::TEXT_SM)
+            .text_size(typography::text_sm())
             .line_height(relative(1.5))
             .whitespace_nowrap()
             .when_some(bg, |this, bg| this.bg(bg))
@@ -1462,10 +1463,10 @@ impl PullRequestView {
                 .items_start()
                 .gap(px(8.))
                 .p(px(10.))
-                .rounded(metrics::RADIUS_LG)
+                .rounded(metrics::radius_lg())
                 .bg(colors.overlay)
                 .shadow(theme.shadows.popover.clone())
-                .text_size(typography::TEXT_SM)
+                .text_size(typography::text_sm())
                 .child(Icon::new(if tone == Tone::Error { IconName::WarningCircle } else { IconName::CheckCircle }).size(IconSize::Small).color(tone_color(tone, colors)))
                 .child(div().flex_1().min_w_0().text_color(colors.foreground).child(message))
                 .child(Button::icon("pr-notice-close", IconName::X).size(ButtonSize::XSmall).on_click(cx.listener(|this, _, _, cx| {
@@ -1526,7 +1527,7 @@ pub(crate) fn comment_item(
                         .items_center()
                         .gap_x(px(6.))
                         .min_w_0()
-                        .text_size(typography::TEXT_SM)
+                        .text_size(typography::text_sm())
                         .text_color(colors.subtle_foreground)
                         .child(div().font_weight(typography::MEDIUM).text_color(colors.foreground).child(login.to_string()))
                         .child(action.to_string())
@@ -1541,7 +1542,7 @@ pub(crate) fn comment_item(
         )
         .child(div().pl(px(36.)).min_w_0().child(match editor {
             Some(editor) => editor,
-            None if body.is_empty() => div().text_size(typography::TEXT_SM).text_color(colors.subtle_foreground).child("No description provided").into_any_element(),
+            None if body.is_empty() => div().text_size(typography::text_sm()).text_color(colors.subtle_foreground).child("No description provided").into_any_element(),
             None => markdown::render(body, id, cx),
         }))
         .into_any_element()
@@ -1582,7 +1583,7 @@ impl Render for PullRequestView {
         container
             .child(div().flex_none().pt(px(20.)).pb(px(8.)).child(rail(self.render_summary(&page, &colors, cx))))
             .when_some(self.error.clone(), |this, error| {
-                this.child(rail(div().pb(px(6.)).text_size(typography::TEXT_SM).text_color(colors.destructive).child(error)))
+                this.child(rail(div().pb(px(6.)).text_size(typography::text_sm()).text_color(colors.destructive).child(error)))
             })
             .child(div().flex_none().border_b_1().border_color(colors.divider).child(rail(self.render_tabs(&page, &colors, cx))))
             .child(div().flex().flex_col().flex_1().min_h_0().child(content))
@@ -1601,7 +1602,7 @@ pub(crate) fn editable_title(id: &'static str, title: &str, colors: &ThemeColors
         .min_w_0()
         .px(px(4.))
         .ml(px(-4.))
-        .rounded(metrics::RADIUS_MD)
+        .rounded(metrics::radius_md())
         .truncate()
         .hover(move |style| style.bg(accent))
         .anchored_tooltip({ let tip: SharedString = ("Edit title").into(); move || ui::Tooltip::new(tip.clone()) })
@@ -1621,9 +1622,9 @@ pub(crate) fn metadata_error(id: &'static str, error: SharedString, colors: &The
         .flex_col()
         .gap(px(4.))
         .p(px(8.))
-        .rounded(metrics::RADIUS_MD)
+        .rounded(metrics::radius_md())
         .bg(colors.destructive_soft)
-        .text_size(typography::TEXT_SM)
+        .text_size(typography::text_sm())
         .text_color(colors.destructive)
         .child(div().font_weight(typography::MEDIUM).child("Labels and milestones are unavailable"))
         .child(div().text_color(colors.muted_foreground).child(error))

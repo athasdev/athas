@@ -13,7 +13,8 @@ mod dialog;
 
 pub use dialog::RunActionDialog;
 
-use gpui::{Anchor, AnyElement, App, Context, Focusable, SharedString, Task, Window, div, prelude::*, px};
+use ui::scale::px;
+use gpui::{Anchor, AnyElement, App, Context, Focusable, SharedString, Task, Window, div, prelude::*,};
 use palette::{FuzzyMatch, Picker, PickerDelegate, PaletteRow, fuzzy_match};
 use regex::Regex;
 use serde::{Deserialize, Serialize};
@@ -551,10 +552,10 @@ impl PickerDelegate for RunActionsDelegate {
                 .flex()
                 .items_center()
                 .gap(px(8.))
-                .h(metrics::LIST_ROW)
+                .h(metrics::list_row())
                 .px(px(8.))
-                .rounded(metrics::RADIUS_MD)
-                .text_size(typography::TEXT_SM)
+                .rounded(metrics::radius_md())
+                .text_size(typography::text_sm())
                 .text_color(if disabled { colors.subtle_foreground } else { colors.foreground })
                 .when(!disabled, |this| this.hover(move |style| style.bg(hover)))
                 // A row without an icon starts its label at the edge, as `DropdownMenuItem` does.

@@ -2,9 +2,10 @@
 //! link. Public links are free; email and organization links need Pro.
 
 use account::{AccountStore, widgets};
+use ui::scale::px;
 use gpui::{
     AnyElement, App, ClipboardItem, Context, DismissEvent, Entity, EventEmitter, FocusHandle, Focusable, IntoElement, ParentElement, Render,
-    SharedString, Styled, Subscription, Window, div, prelude::*, px,
+    SharedString, Styled, Subscription, Window, div, prelude::*,
 };
 use theme::ActiveTheme;
 use ui::{Button, ButtonSize, ButtonVariant, Switch, TextInput, TextInputEvent, WithScrollbar, typography};
@@ -209,8 +210,8 @@ impl ShareDialog {
                             .flex_1()
                             .min_w_0()
                             .gap(px(2.))
-                            .child(div().text_size(typography::TEXT_SM).font_weight(typography::MEDIUM).child("Keep this link up to date"))
-                            .child(div().text_size(typography::TEXT_CAPTION).text_color(colors.subtle_foreground).child(
+                            .child(div().text_size(typography::text_sm()).font_weight(typography::MEDIUM).child("Keep this link up to date"))
+                            .child(div().text_size(typography::text_caption()).text_color(colors.subtle_foreground).child(
                                 "New responses and edits appear here while Athas is running. You can pause this in Settings.",
                             )),
                     )
@@ -238,7 +239,7 @@ impl ShareDialog {
                     .items_center()
                     .justify_between()
                     .gap(px(12.))
-                    .child(div().text_size(typography::TEXT_SM).text_color(colors.muted_foreground).child("Email and organization restrictions require Athas Pro."))
+                    .child(div().text_size(typography::text_sm()).text_color(colors.muted_foreground).child("Email and organization restrictions require Athas Pro."))
                     .child(Button::new("share-pro", "View Pro plan").size(ButtonSize::Small).on_click(move |_, _, cx| cx.open_url(&pricing)))
                     .into_any_element(),
             );
@@ -277,25 +278,25 @@ impl Render for ShareDialog {
         let signed_in = AccountStore::global(cx).is_some_and(|store| store.read(cx).is_signed_in());
         let preview: String = self.draft.content.chars().take(600).collect();
         let mut body = vec![
-            div().text_size(typography::TEXT_SM).text_color(colors.muted_foreground).child("Share a read-only view on athas.dev.").into_any_element(),
+            div().text_size(typography::text_sm()).text_color(colors.muted_foreground).child("Share a read-only view on athas.dev.").into_any_element(),
             widgets::field(
                 "Content",
                 div()
                     .flex()
                     .flex_col()
                     .gap(px(6.))
-                    .child(div().text_size(typography::TEXT_SM).font_weight(typography::MEDIUM).child(self.draft.title.clone()))
+                    .child(div().text_size(typography::text_sm()).font_weight(typography::MEDIUM).child(self.draft.title.clone()))
                     .child(
                         div()
                             .id("share-preview")
                             .max_h(px(140.))
                             .overflow_y_scroll()
                             .p(px(10.))
-                            .rounded(ui::metrics::RADIUS_LG)
+                            .rounded(ui::metrics::radius_lg())
                             .bg(colors.field)
                             .border_1()
                             .border_color(colors.border)
-                            .text_size(typography::TEXT_CAPTION)
+                            .text_size(typography::text_caption())
                             .font_family(typography::MONO_FONT)
                             .text_color(colors.muted_foreground)
                             .child(preview)
@@ -306,12 +307,12 @@ impl Render for ShareDialog {
             ),
         ];
         if self.draft.content.is_empty() {
-            body.push(div().text_size(typography::TEXT_SM).text_color(colors.subtle_foreground).child("There is no text to share.").into_any_element());
+            body.push(div().text_size(typography::text_sm()).text_color(colors.subtle_foreground).child("There is no text to share.").into_any_element());
         }
         if self.draft.content.chars().count() > MAX_SHARE_CHARS {
             body.push(
                 div()
-                    .text_size(typography::TEXT_SM)
+                    .text_size(typography::text_sm())
                     .text_color(colors.subtle_foreground)
                     .child("Select less text. Snapshots support up to 500,000 characters.")
                     .into_any_element(),
@@ -324,11 +325,11 @@ impl Render for ShareDialog {
                 div()
                     .px(px(10.))
                     .py(px(6.))
-                    .rounded(ui::metrics::RADIUS_MD)
+                    .rounded(ui::metrics::radius_md())
                     .bg(colors.field)
                     .border_1()
                     .border_color(colors.border)
-                    .text_size(typography::TEXT_SM)
+                    .text_size(typography::text_sm())
                     .child(result.url.clone()),
                 self.copied.then(|| "Copied to the clipboard.".into()),
                 cx,

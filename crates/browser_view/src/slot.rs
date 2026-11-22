@@ -38,8 +38,8 @@ impl Element for WebviewSlot {
 
     fn request_layout(&mut self, _: Option<&GlobalElementId>, _: Option<&InspectorElementId>, window: &mut Window, cx: &mut App) -> (LayoutId, ()) {
         let mut style = Style { position: Position::Absolute, ..Style::default() };
-        style.inset.top = gpui::px(0.).into();
-        style.inset.left = gpui::px(0.).into();
+        style.inset.top = ui::scale::px(0.).into();
+        style.inset.left = ui::scale::px(0.).into();
         style.size.width = gpui::relative(1.).into();
         style.size.height = gpui::relative(1.).into();
         (window.request_layout(style, [], cx), ())

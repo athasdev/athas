@@ -1,4 +1,5 @@
-use gpui::{App, IntoElement, ParentElement, RenderOnce, SharedString, Styled, Window, div, px};
+use crate::scale::px;
+use gpui::{App, IntoElement, ParentElement, RenderOnce, SharedString, Styled, Window, div,};
 use theme::ActiveTheme;
 
 use crate::typography;
@@ -94,9 +95,9 @@ impl RenderOnce for Kbd {
                 .h(px(16.))
                 .min_w(px(16.))
                 .px(px(4.))
-                .rounded(crate::metrics::RADIUS_SM)
+                .rounded(crate::metrics::radius_sm())
                 .bg(accent)
-                .text_size(typography::TEXT_CAPTION)
+                .text_size(typography::text_caption())
                 .font_weight(typography::MEDIUM)
                 .line_height(px(16.))
                 .text_color(muted)
@@ -105,7 +106,7 @@ impl RenderOnce for Kbd {
         let mut group = div().flex().flex_none().items_center().gap(px(4.)).whitespace_nowrap();
         for (index, chord) in self.keys.split(' ').filter(|chord| !chord.is_empty()).enumerate() {
             if index > 0 {
-                group = group.child(div().text_size(typography::TEXT_CAPTION).text_color(subtle).child("then"));
+                group = group.child(div().text_size(typography::text_caption()).text_color(subtle).child("then"));
             }
             group = group.children(chord_keys(chord).into_iter().map(keycap));
         }

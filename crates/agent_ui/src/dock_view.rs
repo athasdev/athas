@@ -6,9 +6,10 @@
 use ui::WithScrollbar as _;
 use std::{path::PathBuf, time::Duration};
 
+use ui::scale::px;
 use gpui::{
     AnyElement, AnyView, App, ClickEvent, Context, Entity, Hsla, IntoElement, ParentElement, Pixels, Render, SharedString, Styled,
-    Subscription, Task, WeakEntity, Window, div, prelude::*, px, relative,
+    Subscription, Task, WeakEntity, Window, div, prelude::*, relative,
 };
 use serde_json::Value;
 use theme::ActiveTheme;
@@ -25,9 +26,9 @@ use crate::{
 /// Files listed in the Changes box before "N more".
 const MAX_BOX_CHANGES: usize = 8;
 /// The column's width.
-const SIDE_COLUMN_WIDTH: Pixels = px(268.);
+fn side_column_width() -> Pixels { px(268.) }
 /// Below this width of the session view the column stays hidden.
-const SIDE_MIN_VIEW_WIDTH: Pixels = px(900.);
+fn side_min_view_width() -> Pixels { px(900.) }
 /// Settings keys: whether the column shows, and the boxes folded away.
 const SHOWN_KEY: &str = "agentSessionSidePanel";
 const COLLAPSED_KEY: &str = "agentSessionCollapsedBoxes";
@@ -79,7 +80,7 @@ impl SessionView {
     /// The conversation with the side column beside it, when the view is wide enough and the
     /// column is on. The view's width is measured each frame; crossing the threshold redraws.
     pub(crate) fn with_side_column(&mut self, body: AnyElement, window: &mut Window, cx: &mut Context<Self>) -> AnyElement {
-        let wide = self.side_wide.unwrap_or_else(|| window.viewport_size().width >= SIDE_MIN_VIEW_WIDTH + px(300.));
+        let wide = self.side_wide.unwrap_or_else(|| window.viewport_size().width >= side_min_view_width() + px(300.));
         let show = wide && side_panel_shown(cx);
         let side = show.then(|| {
             let view = match &self.side_boxes {
@@ -92,7 +93,7 @@ impl SessionView {
                     view
                 }
             };
-            div().flex_none().w(SIDE_COLUMN_WIDTH).h_full().min_h_0().flex().flex_col().child(AnyView::from(view))
+            div().flex_none().w(side_column_width()).h_full().min_h_0().flex().flex_col().child(AnyView::from(view))
         });
         let weak = cx.weak_entity();
         let measured = self.side_wide;
@@ -105,7 +106,7 @@ impl SessionView {
             .child(
                 gpui::canvas(
                     move |bounds, _, cx| {
-                        let now = bounds.size.width >= SIDE_MIN_VIEW_WIDTH;
+                        let now = bounds.size.width >= side_min_view_width();
                         if measured != Some(now) {
                             cx.defer(move |cx| {
                                 weak.update(cx, |this, cx| {
@@ -312,7 +313,7 @@ impl SessionDockView {
             .min_w_0()
             .px(px(12.))
             .py(px(10.))
-            .rounded(ui::metrics::ISLAND_RADIUS)
+            .rounded(ui::metrics::island_radius())
             .bg(colors.surface.opacity(0.55))
             .child(
                 div()
@@ -322,7 +323,7 @@ impl SessionDockView {
                     .items_center()
                     .gap(px(6.))
                     .h(px(18.))
-                    .text_size(typography::TEXT_CAPTION)
+                    .text_size(typography::text_caption())
                     .text_color(colors.subtle_foreground)
                     .on_click(cx.listener(move |this, _: &ClickEvent, _, cx| this.toggle(id, cx)))
                     .child(div().font_weight(typography::MEDIUM).hover(|style| style.text_color(colors.muted_foreground)).child(title))
@@ -379,14 +380,14 @@ fn file_row(name: String, folder: Option<String>, trailing: Option<AnyElement>, 
 
 fn row_parts(leading: Option<AnyElement>, label: impl Into<SharedString>, detail: Option<String>, inline: bool, trailing: Option<AnyElement>, cx: &App) -> gpui::Div {
     let colors = &cx.theme().colors;
-    let detail = detail.map(|detail| div().truncate().text_size(typography::TEXT_CAPTION).text_color(colors.subtle_foreground).child(detail));
+    let detail = detail.map(|detail| div().truncate().text_size(typography::text_caption()).text_color(colors.subtle_foreground).child(detail));
     div()
         .flex()
         .items_center()
         .gap(px(8.))
         .min_w_0()
         .min_h(px(24.))
-        .text_size(typography::TEXT_SM)
+        .text_size(typography::text_sm())
         .text_color(colors.muted_foreground)
         .children(leading.map(|leading| div().flex().flex_none().child(leading)))
         .child(if inline {
@@ -405,11 +406,11 @@ fn row_parts(leading: Option<AnyElement>, label: impl Into<SharedString>, detail
 }
 
 fn note(text: impl Into<SharedString>, cx: &App) -> AnyElement {
-    div().text_size(typography::TEXT_SM).text_color(cx.theme().colors.subtle_foreground).child(text.into()).into_any_element()
+    div().text_size(typography::text_sm()).text_color(cx.theme().colors.subtle_foreground).child(text.into()).into_any_element()
 }
 
 fn reading(text: impl Into<SharedString>, cx: &App) -> AnyElement {
-    div().text_size(typography::TEXT_CAPTION).text_color(cx.theme().colors.subtle_foreground).child(text.into()).into_any_element()
+    div().text_size(typography::text_caption()).text_color(cx.theme().colors.subtle_foreground).child(text.into()).into_any_element()
 }
 
 fn diff_stats(additions: usize, deletions: usize, cx: &App) -> AnyElement {
@@ -417,7 +418,7 @@ fn diff_stats(additions: usize, deletions: usize, cx: &App) -> AnyElement {
     div()
         .flex()
         .gap(px(4.))
-        .text_size(typography::TEXT_CAPTION)
+        .text_size(typography::text_caption())
         .when(additions > 0, |this| this.child(div().text_color(colors.git_added).child(format!("+{additions}"))))
         .when(deletions > 0, |this| this.child(div().text_color(colors.git_deleted).child(format!("−{deletions}"))))
         .into_any_element()
@@ -429,7 +430,7 @@ fn segmented_bar(segments: &[(f32, Hsla)], cx: &App) -> AnyElement {
         .flex()
         .h(px(4.))
         .w_full()
-        .rounded(ui::metrics::RADIUS_SM)
+        .rounded(ui::metrics::radius_sm())
         .overflow_hidden()
         .bg(cx.theme().colors.divider)
         .children(segments.iter().filter(|(fraction, _)| *fraction > 0.).map(|(fraction, color)| div().h_full().flex_none().bg(*color).w(relative(fraction.clamp(0., 1.)))))
@@ -486,7 +487,7 @@ impl Render for SessionDockView {
                         cx,
                     )
                     .id("env-pull-request")
-                    .rounded(ui::metrics::RADIUS_MD)
+                    .rounded(ui::metrics::radius_md())
                     .hover(|style| style.text_color(colors.foreground))
                     .on_click(move |_, _, cx| workbench_api::open_resource(cx, "github-pr", &number.to_string(), &format!("#{number} {title}")))
                     .into_any_element(),
@@ -512,10 +513,10 @@ impl Render for SessionDockView {
                     .flex()
                     .items_baseline()
                     .gap(px(8.))
-                    .text_size(typography::TEXT_SM)
+                    .text_size(typography::text_sm())
                     .child(div().text_color(colors.foreground).child(headline))
                     .child(div().flex_1())
-                    .children(amount.map(|amount| div().text_size(typography::TEXT_CAPTION).text_color(colors.subtle_foreground).child(amount)))
+                    .children(amount.map(|amount| div().text_size(typography::text_caption()).text_color(colors.subtle_foreground).child(amount)))
                     .into_any_element(),
             );
             let total = if context.size > 0 { context.size } else { context.used.max(1) };
@@ -607,7 +608,7 @@ impl Render for SessionDockView {
                     .id(("side-change", index))
                     .px(px(4.))
                     .mx(px(-4.))
-                    .rounded(ui::metrics::RADIUS_MD)
+                    .rounded(ui::metrics::radius_md())
                     .when(failed, |this| this.text_color(colors.destructive))
                     .hover(|style| style.bg(colors.accent).text_color(colors.foreground))
                     .on_click(cx.listener(move |this, _: &ClickEvent, _, cx| this.with_session(cx, |session, cx| session.open_net_diff(&path, cx))))
@@ -645,7 +646,7 @@ impl Render for SessionDockView {
                     .id("side-changes-total")
                     .px(px(4.))
                     .mr(px(-4.))
-                    .rounded(ui::metrics::RADIUS)
+                    .rounded(ui::metrics::radius())
                     .hover(|style| style.bg(colors.accent))
                     .tooltip(ui::Tooltip::text("Review all changes"))
                     .on_click(|_, window, cx| {
@@ -681,7 +682,7 @@ impl Render for SessionDockView {
                         .gap(px(8.))
                         .min_w_0()
                         .py(px(2.))
-                        .text_size(typography::TEXT_SM)
+                        .text_size(typography::text_sm())
                         .text_color(if done { colors.subtle_foreground } else if running { colors.foreground } else { colors.muted_foreground })
                         .child(div().mt(px(2.)).flex().flex_none().size(px(14.)).items_center().justify_center().child(mark))
                         .child(div().flex_1().min_w_0().child(entry.content.clone()))
@@ -730,7 +731,7 @@ impl Render for SessionDockView {
                     .flex()
                     .items_center()
                     .gap(px(2.))
-                    .rounded(ui::metrics::RADIUS_MD)
+                    .rounded(ui::metrics::radius_md())
                     .hover(|style| style.bg(colors.accent))
                     .child(dot(colors.success))
                     .child(row(None, label, None, Some(Icon::new(IconName::Globe).size(IconSize::XSmall).color(colors.subtle_foreground).into_any_element()), cx).flex_1())
@@ -802,7 +803,7 @@ impl Render for SessionDockView {
             .pb(px(12.))
             .pr(px(12.))
             .font_family(typography::UI_FONT)
-            .text_size(typography::TEXT_SM)
+            .text_size(typography::text_sm())
             .text_color(colors.foreground)
             .children(boxes)
     }

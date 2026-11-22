@@ -2,7 +2,8 @@
 
 use std::ops::Range;
 
-use gpui::{AnyElement, Hsla, IntoElement, ParentElement, SharedString, Styled, div, prelude::*, px};
+use ui::scale::px;
+use gpui::{AnyElement, Hsla, IntoElement, ParentElement, SharedString, Styled, div, prelude::*,};
 use theme::ThemeColors;
 use ui::{EmptyState, IconName, typography};
 
@@ -25,7 +26,7 @@ pub fn diff_numbers(additions: usize, deletions: usize, colors: &ThemeColors) ->
             .flex_none()
             .gap(px(6.))
             .font_family(typography::MONO_FONT)
-            .text_size(typography::TEXT_CAPTION)
+            .text_size(typography::text_caption())
             .when(additions > 0, |this| this.child(div().text_color(colors.git_added).child(format!("+{additions}"))))
             .when(deletions > 0, |this| this.child(div().text_color(colors.git_deleted).child(format!("−{deletions}"))))
             .into_any_element()
@@ -41,7 +42,7 @@ pub fn status_badge(status: FileStatus, colors: &ThemeColors) -> impl IntoElemen
         .rounded_full()
         .bg(tone.opacity(0.14))
         .text_color(tone)
-        .text_size(typography::TEXT_CAPTION)
+        .text_size(typography::text_caption())
         .font_weight(typography::MEDIUM)
         .child(status.label())
 }

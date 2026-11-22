@@ -6,9 +6,10 @@
 
 use std::{collections::HashMap, path::PathBuf, rc::Rc};
 
+use ui::scale::px;
 use gpui::{
     AnyWindowHandle, App, Context, Global, MouseButton, SharedString, SystemWindowTabController, Window, WindowId,
-    actions, div, prelude::*, px,
+    actions, div, prelude::*,
 };
 use theme::ActiveTheme;
 use ui::{Button, ButtonSize, IconName, Plane, Tab, metrics};
@@ -35,8 +36,8 @@ pub const TABBING_IDENTIFIER: &str = "dev.athas.workspace";
 
 /// The window tab strip's height, with the tabs a little down from the top so a tab's centre
 /// lines up with the traffic lights (`--athas-window-tabs-height`, `--athas-window-tabs-top`).
-pub const WINDOW_TABS_HEIGHT: gpui::Pixels = px(42.);
-const WINDOW_TABS_TOP: gpui::Pixels = px(5.);
+pub fn window_tabs_height() -> gpui::Pixels { px(42.) }
+fn window_tabs_top() -> gpui::Pixels { px(5.) }
 
 pub type WindowSetup = Box<dyn FnOnce(&mut Workbench, &mut Window, &mut Context<Workbench>)>;
 
@@ -314,7 +315,7 @@ impl Workbench {
     /// at the end; the workbench starts below it.
     pub(crate) fn render_window_tabs(&self, tabs: Vec<WindowTab>, window: &Window, cx: &mut Context<Self>) -> gpui::AnyElement {
         let only_tab = tabs.len() == 1;
-        let inset = if window.is_fullscreen() { metrics::WORKBENCH_GAP + metrics::CHROME_PADDING_INLINE } else { metrics::TRAFFIC_LIGHTS_INSET };
+        let inset = if window.is_fullscreen() { metrics::workbench_gap() + metrics::chrome_padding_inline() } else { metrics::traffic_lights_inset() };
         let muted = cx.theme().colors.subtle_foreground;
         let items: Vec<gpui::AnyElement> = tabs
             .into_iter()
@@ -359,11 +360,11 @@ impl Workbench {
             .flex()
             .flex_none()
             .items_center()
-            .gap(metrics::CHROME_GAP)
-            .h(WINDOW_TABS_HEIGHT)
-            .pt(WINDOW_TABS_TOP)
+            .gap(metrics::chrome_gap())
+            .h(window_tabs_height())
+            .pt(window_tabs_top())
             .pl(inset)
-            .pr(metrics::WORKBENCH_GAP)
+            .pr(metrics::workbench_gap())
             .w_full()
             .child(
                 div()

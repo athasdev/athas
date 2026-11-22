@@ -22,9 +22,10 @@ use std::{
 
 use anyhow::Context as _;
 use futures::StreamExt as _;
+use ui::scale::px;
 use gpui::{
     Anchor, AnyElement, App, ClickEvent, ClipboardItem, Context, DismissEvent, Entity, EventEmitter, FocusHandle, Focusable, KeyBinding, KeyDownEvent, MouseButton, MouseDownEvent, Pixels, Point, Render, ScrollStrategy, SharedString,
-    Subscription, Task, UniformListScrollHandle, WeakEntity, Window, actions, div, img, point, prelude::*, px, svg,
+    Subscription, Task, UniformListScrollHandle, WeakEntity, Window, actions, div, img, point, prelude::*, svg,
     uniform_list,
 };
 use theme::ActiveTheme;
@@ -77,9 +78,9 @@ actions!(
 const BASE_INDENT: f32 = 10.;
 /// An indent guide runs this far right of its level's start, under the parent's icon.
 const GUIDE_OFFSET: f32 = 7.;
-const VIEWPORT_PADDING: Pixels = px(4.);
+fn viewport_padding() -> Pixels { px(4.) }
 /// Icons are 1em of the row text.
-const ICON_SIZE: Pixels = px(12.);
+fn icon_size() -> Pixels { px(12.) }
 /// A lost focus this soon after a name field opens is a closing menu taking it back, not the
 /// user leaving the field (`RENAME_FOCUS_SETTLE_MS`).
 const EDIT_FOCUS_SETTLE: Duration = Duration::from_millis(400);
@@ -380,7 +381,7 @@ impl Render for PropertiesDialog {
             .on_close(move |_, cx| {
                 this.update(cx, |_, cx| cx.emit(DismissEvent)).ok();
             })
-            .child(div().flex().flex_col().gap(px(8.)).text_size(typography::TEXT_BASE).children(rows.into_iter().map(|(label, value)| {
+            .child(div().flex().flex_col().gap(px(8.)).text_size(typography::text_base()).children(rows.into_iter().map(|(label, value)| {
                 div()
                     .flex()
                     .gap(px(12.))
@@ -417,10 +418,10 @@ impl Render for DraggedEntryPreview {
         div()
             .px(px(8.))
             .py(px(2.))
-            .rounded(metrics::RADIUS)
+            .rounded(metrics::radius())
             .bg(colors.overlay)
             .shadow(cx.theme().shadows.popover.clone())
-            .text_size(typography::TEXT_SM)
+            .text_size(typography::text_sm())
             .text_color(colors.foreground)
             .child(if self.0.paths.len() > 1 { format!("{} items", self.0.paths.len()) } else { self.0.name.clone() })
     }
@@ -2199,8 +2200,8 @@ impl FileTree {
             div()
                 .relative()
                 .flex_none()
-                .size(ICON_SIZE)
-                .child(img(source).size(ICON_SIZE))
+                .size(icon_size())
+                .child(img(source).size(icon_size()))
                 .when(row.is_symlink, |this| {
                     this.child(
                         svg()
@@ -2223,7 +2224,7 @@ impl FileTree {
                 .px(px(4.))
                 .flex()
                 .items_center()
-                .rounded(metrics::RADIUS)
+                .rounded(metrics::radius())
                 .bg(colors.field)
                 .border_1()
                 .border_color(colors.focus_ring)
@@ -2261,7 +2262,7 @@ impl FileTree {
             .gap(px(6.))
             .pl(px(BASE_INDENT + row.depth as f32 * indent))
             .pr(px(6.))
-            .rounded(metrics::RADIUS)
+            .rounded(metrics::radius())
             .border_1()
             .border_color(if has_ring { colors.focus_ring } else { gpui::transparent_black() })
             .when(highlighted, |this| ui::sidebar_row(this, true, false, cx))
@@ -2350,9 +2351,9 @@ impl FileTree {
             .gap(px(6.))
             .m(px(6.))
             .p(px(8.))
-            .rounded(metrics::RADIUS_LG)
+            .rounded(metrics::radius_lg())
             .bg(colors.destructive_soft)
-            .text_size(typography::TEXT_SM)
+            .text_size(typography::text_sm())
             .text_color(colors.destructive)
             .child(Icon::new(IconName::WarningCircle).size(IconSize::Small).color(colors.destructive))
             .child(div().flex_1().min_w_0().child(message))
@@ -2384,7 +2385,7 @@ impl Render for FileTree {
                 .flex_1()
                 .items_center()
                 .justify_center()
-                .text_size(typography::TEXT_SM)
+                .text_size(typography::text_sm())
                 .text_color(cx.theme().colors.subtle_foreground)
                 .child("Loading files")
                 .into_any_element()
@@ -2393,8 +2394,8 @@ impl Render for FileTree {
                 uniform_list("file-tree-rows", self.rows.len(), cx.processor(Self::render_rows))
                     .track_scroll(&self.scroll_handle)
                     .flex_1()
-                    .pt(VIEWPORT_PADDING)
-                    .px(metrics::CHROME_PADDING_INLINE),
+                    .pt(viewport_padding())
+                    .px(metrics::chrome_padding_inline()),
                 ui::Scrollbar::uniform("file-tree-scrollbar", &self.scroll_handle),
             )
             .into_any_element()

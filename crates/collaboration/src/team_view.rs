@@ -11,9 +11,10 @@ use account::{
     state::Session,
     widgets,
 };
+use ui::scale::px;
 use gpui::{
     AnyElement, App, Context, Entity, EventEmitter, FocusHandle, Focusable, Hsla, IntoElement, ParentElement, Render, SharedString, Styled,
-    Subscription, Task, Window, div, prelude::*, px,
+    Subscription, Task, Window, div, prelude::*,
 };
 use theme::ActiveTheme;
 use ui::{Avatar, Button, ButtonSize, ButtonVariant, EmptyState, IconName, PaneTitle, Person, SidebarListItem, WithScrollbar, pane_actions, pane_header, typography};
@@ -139,7 +140,7 @@ impl TeamView {
                     .gap(px(6.))
                     .px(px(6.))
                     .pb(px(4.))
-                    .text_size(typography::TEXT_SM)
+                    .text_size(typography::text_sm())
                     .font_weight(typography::MEDIUM)
                     .text_color(colors.muted_foreground)
                     .child(SharedString::from(title.to_string()))
@@ -167,7 +168,7 @@ impl TeamView {
                     .collect::<Vec<_>>()
                     .join(" · ");
                 let trailing = if item.read_at.is_some() {
-                    div().text_size(typography::TEXT_CAPTION).text_color(colors.subtle_foreground).child(widgets::relative_time(item.created_at.as_deref())).into_any_element()
+                    div().text_size(typography::text_caption()).text_color(colors.subtle_foreground).child(widgets::relative_time(item.created_at.as_deref())).into_any_element()
                 } else {
                     div().size(px(8.)).rounded_full().bg(colors.primary).into_any_element()
                 };
@@ -248,7 +249,7 @@ impl TeamView {
                     .in_content()
                     .active(following)
                     .leading(presence_avatar(&person, true, cx))
-                    .when(following, |row| row.trailing(div().text_size(typography::TEXT_SM).text_color(colors.subtle_foreground).child("Following")))
+                    .when(following, |row| row.trailing(div().text_size(typography::text_sm()).text_color(colors.subtle_foreground).child("Following")))
                     .on_click(move |_, _, cx| set_following(if following { None } else { user_id }, cx));
                 match detail {
                     Some(detail) => row.description(detail),
@@ -271,7 +272,7 @@ impl TeamView {
             .map(|member| {
                 let mut trailing = vec![widgets::badge(member.role.clone(), None, cx).into_any_element()];
                 if member.status != "active" && !member.status.is_empty() {
-                    trailing.insert(0, div().text_size(typography::TEXT_CAPTION).text_color(colors.subtle_foreground).child(member.status.clone()).into_any_element());
+                    trailing.insert(0, div().text_size(typography::text_caption()).text_color(colors.subtle_foreground).child(member.status.clone()).into_any_element());
                 }
                 SidebarListItem::new(("member", member.id as u64), member.name.clone())
                     .in_content()
@@ -365,7 +366,7 @@ impl TeamView {
             .gap(px(16.))
             .children(self.error.clone().map(|error| div().px(px(6.)).child(widgets::error_text(error, cx))))
             .when(sections.is_empty(), |this| {
-                this.child(div().px(px(6.)).py(px(8.)).text_size(typography::TEXT_SM).text_color(colors.subtle_foreground).child("Nothing here yet"))
+                this.child(div().px(px(6.)).py(px(8.)).text_size(typography::text_sm()).text_color(colors.subtle_foreground).child("Nothing here yet"))
             })
             .children(sections)
             .scrollbar(window, cx)

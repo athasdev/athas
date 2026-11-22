@@ -3,9 +3,10 @@
 
 use std::rc::Rc;
 
+use crate::scale::px;
 use gpui::{
     AnyElement, App, BoxShadow, ClickEvent, Context, DismissEvent, ElementId, Entity, EventEmitter, FocusHandle,
-    Focusable, KeyDownEvent, MouseButton, Pixels, SharedString, Window, div, point, prelude::*, px, relative,
+    Focusable, KeyDownEvent, MouseButton, Pixels, SharedString, Window, div, point, prelude::*, relative,
 };
 use theme::ActiveTheme;
 
@@ -13,7 +14,7 @@ use crate::{Button, ButtonVariant, Icon, IconName, IconSize, TextInput, TextInpu
 
 type Handler = Rc<dyn Fn(&mut Window, &mut App)>;
 
-pub const DIALOG_RADIUS: Pixels = px(12.);
+pub fn dialog_radius() -> Pixels { px(12.) }
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub enum DialogSize {
@@ -198,11 +199,11 @@ impl RenderOnce for Dialog {
             .max_h(viewport.height * 0.9)
             .when(size == DialogSize::Settings, |this| this.h(px(768.).min(viewport.height - px(64.))))
             .overflow_hidden()
-            .rounded(DIALOG_RADIUS)
+            .rounded(dialog_radius())
             .bg(colors.overlay)
             .shadow(theme.shadows.dialog.clone())
             .font_family(typography::UI_FONT)
-            .text_size(typography::TEXT_SM)
+            .text_size(typography::text_sm())
             .text_color(colors.foreground)
             .when(!hide_header, |this| {
                 this.child(
@@ -224,7 +225,7 @@ impl RenderOnce for Dialog {
                                     div()
                                         .min_w_0()
                                         .truncate()
-                                        .text_size(typography::TEXT_BASE)
+                                        .text_size(typography::text_base())
                                         .font_weight(typography::MEDIUM)
                                         .child(title),
                                 ),
@@ -484,7 +485,7 @@ impl Render for AlertDialog {
             .gap(px(20.))
             .w(px(384.).min(viewport.width - px(32.)))
             .p(px(16.))
-            .rounded(DIALOG_RADIUS)
+            .rounded(dialog_radius())
             .bg(colors.overlay)
             .shadow(theme.shadows.dialog.clone())
             .font_family(typography::UI_FONT)
@@ -503,10 +504,10 @@ impl Render for AlertDialog {
                             }),
                         )
                     }))
-                    .child(div().text_size(typography::TEXT_BASE).font_weight(typography::MEDIUM).child(self.title.clone()))
+                    .child(div().text_size(typography::text_base()).font_weight(typography::MEDIUM).child(self.title.clone()))
                     .child(
                         div()
-                            .text_size(typography::TEXT_SM)
+                            .text_size(typography::text_sm())
                             .line_height(relative(1.625))
                             .text_color(colors.muted_foreground)
                             .child(self.message.clone()),
@@ -611,7 +612,7 @@ impl Render for PromptDialog {
                     .flex()
                     .flex_col()
                     .gap(px(8.))
-                    .text_size(typography::TEXT_SM)
+                    .text_size(typography::text_sm())
                     .text_color(colors.foreground)
                     .child(self.message.clone())
                     .child(self.input.clone()),

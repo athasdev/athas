@@ -1,9 +1,10 @@
 use crate::TooltipExt;
 use std::rc::Rc;
 
+use crate::scale::px;
 use gpui::{
     App, ClickEvent, ElementId, InteractiveElement, IntoElement, ParentElement, RenderOnce,
-    SharedString, StatefulInteractiveElement, Styled, Window, div, prelude::FluentBuilder, px,
+    SharedString, StatefulInteractiveElement, Styled, Window, div, prelude::FluentBuilder,
 };
 use theme::ActiveTheme;
 
@@ -170,12 +171,12 @@ impl RenderOnce for Tab {
             .relative()
             .flex()
             .items_center()
-            .gap(metrics::CHROME_GAP)
-            .h(metrics::TAB)
+            .gap(metrics::chrome_gap())
+            .h(metrics::tab())
             .when(self.stretch, |this| this.flex_1().min_w_0().justify_center().px(px(20.)))
-            .when(!self.stretch, |this| this.flex_none().min_w(px(80.)).max_w(metrics::TAB_MAX_WIDTH).pl(px(8.)).pr(px(24.)))
-            .rounded(metrics::RADIUS_MD)
-            .text_size(typography::TEXT_CHROME)
+            .when(!self.stretch, |this| this.flex_none().min_w(px(80.)).max_w(metrics::tab_max_width()).pl(px(8.)).pr(px(24.)))
+            .rounded(metrics::radius_md())
+            .text_size(typography::text_chrome())
             .text_color(text)
             .when(self.active, |this| {
                 this.font_weight(typography::MEDIUM).bg(colors.segment_knob).shadow(theme.shadows.raised_inset.clone())
@@ -198,7 +199,7 @@ impl RenderOnce for Tab {
                     .items_center()
                     .justify_center()
                     .size(px(20.))
-                    .rounded(metrics::RADIUS_MD)
+                    .rounded(metrics::radius_md())
                     .group("ui-tab-close")
                     .text_color(subtle)
                     .hover(move |style| style.bg(close_hover))

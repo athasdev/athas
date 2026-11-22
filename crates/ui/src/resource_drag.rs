@@ -2,7 +2,8 @@
 //! release, deployment, commit or diff from the git and GitHub sidebars. Dropped on an editor
 //! group it opens there; dropped on the agent composer it goes along as context.
 
-use gpui::{App, AppContext as _, Context, Entity, IntoElement, ParentElement, Render, SharedString, Styled, Window, div, px};
+use crate::scale::px;
+use gpui::{App, AppContext as _, Context, Entity, IntoElement, ParentElement, Render, SharedString, Styled, Window, div,};
 use theme::ActiveTheme;
 
 use crate::{Icon, IconName, IconSize, metrics, typography};
@@ -45,10 +46,10 @@ impl Render for DraggedResourcePreview {
             .max_w(px(280.))
             .px(px(8.))
             .py(px(2.))
-            .rounded(metrics::RADIUS)
+            .rounded(metrics::radius())
             .bg(colors.overlay)
             .shadow(cx.theme().shadows.popover.clone())
-            .text_size(typography::TEXT_SM)
+            .text_size(typography::text_sm())
             .text_color(colors.foreground)
             .child(Icon::new(self.0.icon).size(IconSize::XSmall).color(colors.muted_foreground))
             .child(div().min_w_0().truncate().child(self.0.label.clone()))

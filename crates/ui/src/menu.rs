@@ -1,11 +1,12 @@
 use crate::TooltipExt;
 use std::rc::Rc;
 
+use crate::scale::px;
 use gpui::{
     Anchor, AnyElement, App, Bounds, Context, DismissEvent, Entity, EventEmitter, FocusHandle, Focusable,
     InteractiveElement, IntoElement, KeyDownEvent, MouseDownEvent, ParentElement, Pixels, Point, Render,
     SharedString, StatefulInteractiveElement, Styled, Subscription, WeakEntity, Window, anchored, canvas,
-    deferred, div, prelude::FluentBuilder, px,
+    deferred, div, prelude::FluentBuilder,
 };
 use gpui::prelude::*;
 use theme::ActiveTheme;
@@ -57,8 +58,8 @@ impl MenuSize {
     }
 }
 
-pub const OVERLAY_MAX_WIDTH: Pixels = px(480.);
-pub const OVERLAY_MAX_HEIGHT: Pixels = px(320.);
+pub fn overlay_max_width() -> Pixels { px(480.) }
+pub fn overlay_max_height() -> Pixels { px(320.) }
 /// Where an open menu paints among the deferred overlays: above the anchored popovers, cards and
 /// prompts, which draw at 3 and below. A submenu paints one step above its parent.
 pub const MENU_PRIORITY: usize = 4;
@@ -663,7 +664,7 @@ impl Render for Menu {
                     .px(px(8.))
                     .pt(px(6.))
                     .pb(px(4.))
-                    .text_size(typography::TEXT_CAPTION)
+                    .text_size(typography::text_caption())
                     .line_height(px(16.))
                     .font_weight(typography::MEDIUM)
                     .text_color(colors.subtle_foreground)
@@ -672,7 +673,7 @@ impl Render for Menu {
                 MenuEntry::Text(text) => div()
                     .px(px(8.))
                     .pb(px(4.))
-                    .text_size(typography::TEXT_SM)
+                    .text_size(typography::text_sm())
                     .line_height(px(16.))
                     .text_color(colors.subtle_foreground)
                     .child(text.clone())
@@ -720,7 +721,7 @@ impl Render for Menu {
                         .w_full()
                         .px(px(8.))
                         .py(px(4.))
-                        .rounded(metrics::RADIUS)
+                        .rounded(metrics::radius())
                         .whitespace_nowrap()
                         .text_color(text)
                         .when_some(item.tooltip.clone(), |this, tooltip| this.anchored_tooltip(move || crate::Tooltip::new(tooltip.clone())))
@@ -806,15 +807,15 @@ impl Render for Menu {
             .flex()
             .flex_col()
             .min_w(px(128.))
-            .max_w(OVERLAY_MAX_WIDTH)
+            .max_w(overlay_max_width())
             .when_some(self.size.width(), |this, width| this.w(width))
             .relative()
             .max_h(window.viewport_size().height - px(20.))
-            .rounded(metrics::RADIUS_LG)
+            .rounded(metrics::radius_lg())
             .bg(colors.overlay)
             .shadow(theme.shadows.popover.clone())
             .font_family(typography::UI_FONT)
-            .text_size(typography::TEXT_CHROME)
+            .text_size(typography::text_chrome())
             .line_height(px(16.))
             .text_color(colors.foreground)
             .child(div()

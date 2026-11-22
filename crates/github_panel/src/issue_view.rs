@@ -7,8 +7,9 @@ use std::{path::PathBuf, sync::Arc};
 
 use crate::gh::{IssueComment, IssueDetails, Label};
 use chrono::Utc;
+use ui::scale::px;
 use gpui::{
-    Anchor, AnyElement, App, ClickEvent, Context, DismissEvent, Entity, FocusHandle, Focusable, IntoElement, Render, SharedString, Subscription, Window, div, prelude::*, px,
+    Anchor, AnyElement, App, ClickEvent, Context, DismissEvent, Entity, FocusHandle, Focusable, IntoElement, Render, SharedString, Subscription, Window, div, prelude::*,
 };
 use theme::{ActiveTheme, ThemeColors};
 use ui::{Button, ButtonSize, ButtonVariant, Icon, IconName, IconSize, MenuEntry, OpenMenu, Select, SelectEvent, SelectOption, SelectVariant, SelectWidth, TextInput, TextInputEvent, typography};
@@ -598,7 +599,7 @@ impl IssueView {
         meta.push(div().child(model::plural(issue.comments.len(), "comment")).into_any_element());
         let icon = Icon::new(IconName::CircleDot).size(IconSize::Custom(px(20.))).color(tone_color(tone, colors));
         let title = match &self.title_input {
-            Some((input, _)) => div().w(px(560.)).min_w_0().text_size(typography::TEXT_BASE).child(input.clone()).into_any_element(),
+            Some((input, _)) => div().w(px(560.)).min_w_0().text_size(typography::text_base()).child(input.clone()).into_any_element(),
             None => editable_title("issue-title", &issue.title, colors).on_click(cx.listener(|this, _, window, cx| this.start_title_edit(window, cx))).into_any_element(),
         };
         Summary { icon: icon.into_any_element(), title, badges, description: None, meta, actions, aside: None }.render(colors).into_any_element()
@@ -628,7 +629,7 @@ impl IssueView {
         let body = if page.body.is_empty() {
             div()
                 .id("issue-body-empty")
-                .text_size(typography::TEXT_SM)
+                .text_size(typography::text_sm())
                 .italic()
                 .text_color(colors.subtle_foreground)
                 .child("No description provided")
@@ -734,7 +735,7 @@ impl IssueView {
             .flex_col()
             .gap(px(20.))
             .child(timeline(items, colors))
-            .when(issue.comments.is_empty(), |this| this.child(div().pl(px(36.)).text_size(typography::TEXT_SM).text_color(colors.subtle_foreground).child("No comments yet")))
+            .when(issue.comments.is_empty(), |this| this.child(div().pl(px(36.)).text_size(typography::text_sm()).text_color(colors.subtle_foreground).child("No comments yet")))
             .child(editor::composer(
                 "issue-composer",
                 &self.composer,
@@ -814,10 +815,10 @@ impl IssueView {
                 .items_start()
                 .gap(px(8.))
                 .p(px(10.))
-                .rounded(ui::metrics::RADIUS_LG)
+                .rounded(ui::metrics::radius_lg())
                 .bg(colors.overlay)
                 .shadow(theme.shadows.popover.clone())
-                .text_size(typography::TEXT_SM)
+                .text_size(typography::text_sm())
                 .child(Icon::new(IconName::WarningCircle).size(IconSize::Small).color(colors.destructive))
                 .child(div().flex_1().min_w_0().text_color(colors.foreground).child(message))
                 .child(Button::icon("issue-notice-close", IconName::X).size(ButtonSize::XSmall).on_click(cx.listener(|this, _, _, cx| {
@@ -866,7 +867,7 @@ impl Render for IssueView {
             .child(section("Activity", None, self.render_activity(&page, &colors, cx), &colors));
         container
             .child(div().flex_none().pt(px(20.)).pb(px(12.)).border_b_1().border_color(colors.divider).child(rail(self.render_summary(&page, &colors, cx))))
-            .when_some(self.error.clone(), |this, error| this.child(rail(div().py(px(6.)).text_size(typography::TEXT_SM).text_color(colors.destructive).child(error))))
+            .when_some(self.error.clone(), |this, error| this.child(rail(div().py(px(6.)).text_size(typography::text_sm()).text_color(colors.destructive).child(error))))
             .child(
                 div()
                     .id("issue-content")

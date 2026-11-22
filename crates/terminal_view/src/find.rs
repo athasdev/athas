@@ -2,7 +2,8 @@
 //! whole word and regex toggles and previous/next (`terminal-search.tsx` on `SearchPopover`).
 
 use alacritty_terminal::{index::Line, term::search::Match};
-use gpui::{App, Context, Entity, Focusable, IntoElement, KeyDownEvent, SharedString, Subscription, Window, div, prelude::*, px};
+use ui::scale::px;
+use gpui::{App, Context, Entity, Focusable, IntoElement, KeyDownEvent, SharedString, Subscription, Window, div, prelude::*,};
 use theme::ActiveTheme;
 use ui::{Button, ButtonSize, IconName, TextInput, TextInputEvent, typography};
 
@@ -196,11 +197,11 @@ impl TerminalView {
                 .flex()
                 .flex_col()
                 .gap(px(6.))
-                .rounded(ui::metrics::RADIUS_LG)
+                .rounded(ui::metrics::radius_lg())
                 .bg(colors.overlay)
                 .shadow(theme.shadows.popover.clone())
                 .text_color(colors.foreground)
-                .text_size(typography::TEXT_SM)
+                .text_size(typography::text_sm())
                 .cursor_default()
                 .on_mouse_down(gpui::MouseButton::Left, |_, _, cx| cx.stop_propagation())
                 .on_mouse_down(gpui::MouseButton::Right, |_, _, cx| cx.stop_propagation())

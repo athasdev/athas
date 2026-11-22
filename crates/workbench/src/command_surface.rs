@@ -1,7 +1,8 @@
 //! The floating command panel (`ui/command.tsx`) for surfaces with steps of their own, such as the
 //! project picker: a header with the field, a list of rows, then a footer of actions.
 
-use gpui::{AnyElement, App, ClickEvent, ElementId, MouseButton, SharedString, Stateful, Window, div, prelude::*, px, relative};
+use ui::scale::px;
+use gpui::{AnyElement, App, ClickEvent, ElementId, MouseButton, SharedString, Stateful, Window, div, prelude::*, relative};
 use theme::ActiveTheme;
 use ui::{Icon, IconName, IconSize, metrics, typography};
 
@@ -17,7 +18,7 @@ pub(crate) fn panel(id: impl Into<ElementId>, window: &Window, cx: &App) -> Stat
         .flex_col()
         .w((viewport.width - px(32.)).min(px(800.)))
         .max_h((viewport.height * 0.72).min(px(608.)))
-        .rounded(metrics::OVERLAY_RADIUS)
+        .rounded(metrics::overlay_radius())
         .bg(theme.colors.overlay)
         .shadow(theme.shadows.dialog.clone())
         .overflow_hidden()
@@ -64,7 +65,7 @@ pub(crate) fn header_title(icon: IconName, title: impl Into<SharedString>, accen
         .items_center()
         .gap(px(8.))
         .child(Icon::new(icon).size(IconSize::Medium).color(if accent { colors.primary } else { colors.subtle_foreground }))
-        .child(div().min_w_0().truncate().text_size(typography::TEXT_BASE).font_weight(typography::MEDIUM).child(title.into()))
+        .child(div().min_w_0().truncate().text_size(typography::text_base()).font_weight(typography::MEDIUM).child(title.into()))
 }
 
 pub(crate) fn list(id: impl Into<ElementId>) -> Stateful<gpui::Div> {
@@ -87,7 +88,7 @@ pub(crate) fn empty(message: impl Into<SharedString>, cx: &App) -> gpui::Div {
     div()
         .p(px(12.))
         .text_center()
-        .text_size(typography::TEXT_SM)
+        .text_size(typography::text_sm())
         .line_height(relative(typography::LEADING_ROW))
         .text_color(cx.theme().colors.muted_foreground)
         .child(message.into())
@@ -108,7 +109,7 @@ pub(crate) fn badge(label: impl Into<SharedString>, warning: bool, selected: boo
         .px(px(6.))
         .rounded_full()
         .bg(background)
-        .text_size(typography::TEXT_CAPTION)
+        .text_size(typography::text_caption())
         .text_color(text)
         .child(label.into())
         .into_any_element()
@@ -185,8 +186,8 @@ impl RenderOnce for CommandRow {
             .mb(px(2.))
             .px(px(10.))
             .py(px(6.))
-            .rounded(metrics::RADIUS_MD)
-            .text_size(typography::TEXT_SM)
+            .rounded(metrics::radius_md())
+            .text_size(typography::text_sm())
             .line_height(relative(typography::LEADING_ROW))
             .when(self.selected, |this| this.bg(colors.primary))
             .children(self.leading.map(|leading| {

@@ -7,7 +7,8 @@ use ui::WithScrollbar;
 use std::{collections::HashMap, path::PathBuf};
 
 use agent_ui::project_suggestions::{self, ProjectState};
-use gpui::{AnyElement, Context, Global, IntoElement, ParentElement, Styled, Window, div, prelude::*, px};
+use ui::scale::px;
+use gpui::{AnyElement, Context, Global, IntoElement, ParentElement, Styled, Window, div, prelude::*,};
 use theme::ActiveTheme;
 use ui::{Button, ButtonVariant, EmptyState, IconName, SidebarListItem, typography};
 use workspace::{ProjectId, SessionStatus, now_ms};
@@ -149,7 +150,7 @@ impl Workbench {
                 let (project, prompt) = (project.id.clone(), suggestion.prompt.clone());
                 let mut row = SidebarListItem::new(gpui::ElementId::Name(format!("suggestion-{}", suggestion.id).into()), suggestion.title).leading(ui::Icon::new(suggestion.icon).size(ui::IconSize::XSmall).when(suggestion.id.starts_with("issue-"), |icon| icon.color(colors.success)));
                 if let Some(meta) = suggestion.meta {
-                    row = row.trailing(div().text_size(typography::TEXT_SM).text_color(colors.subtle_foreground).child(meta));
+                    row = row.trailing(div().text_size(typography::text_sm()).text_color(colors.subtle_foreground).child(meta));
                 }
                 row.on_click(cx.listener(move |this, _, window, cx| this.start_session_with_prompt(project.clone(), prompt.clone(), window, cx)))
                     .into_any_element()
@@ -160,7 +161,7 @@ impl Workbench {
             .flex()
             .items_center()
             .gap(px(12.))
-            .child(crate::project_icon::project_glyph(Some(&project.path), project.custom_icon.as_deref(), typography::TEXT_BASE, colors.foreground))
+            .child(crate::project_icon::project_glyph(Some(&project.path), project.custom_icon.as_deref(), typography::text_base(), colors.foreground))
             .child(
                 div()
                     .flex()
@@ -175,7 +176,7 @@ impl Workbench {
                             .items_center()
                             .gap(px(8.))
                             .min_w_0()
-                            .child(div().min_w_0().text_size(typography::TEXT_LG).font_weight(typography::MEDIUM).truncate().child(project.name.clone()))
+                            .child(div().min_w_0().text_size(typography::text_lg()).font_weight(typography::MEDIUM).truncate().child(project.name.clone()))
                             .when_some(state.clone().filter(|state| !state.branch.is_empty()), |row, state| {
                         let changes = (state.changed_files > 0).then(|| {
                             let files = format!("{} changed file{}", state.changed_files, if state.changed_files == 1 { "" } else { "s" });
@@ -192,7 +193,7 @@ impl Workbench {
                             div()
                                 .id("dashboard-changes")
                                 .px(px(6.))
-                                .rounded(ui::metrics::RADIUS)
+                                .rounded(ui::metrics::radius())
                                 .hover(|style| style.bg(colors.accent))
                                 .anchored_tooltip({ let text: gpui::SharedString = (format!("{files}, review the diff")).into(); move || ui::Tooltip::new(text.clone()) })
                                 .on_click({
@@ -206,14 +207,14 @@ impl Workbench {
                                 .flex()
                                 .items_center()
                                 .gap(px(4.))
-                                .text_size(typography::TEXT_SM)
+                                .text_size(typography::text_sm())
                                 .child(ui::Badge::new(project_suggestions::branch_label(&state)).icon(IconName::GitBranch))
                                 .children(changes),
                         )
                     }),
                     )
                     .when(!summary.is_empty(), |column| {
-                        column.child(div().text_size(typography::TEXT_SM).text_color(colors.subtle_foreground).truncate().child(summary))
+                        column.child(div().text_size(typography::text_sm()).text_color(colors.subtle_foreground).truncate().child(summary))
                     }),
             )
             .when(ai_enabled, |header| {
@@ -239,7 +240,7 @@ impl Workbench {
             .child(section_title("Sessions"))
             .child(div().flex().flex_col().gap(px(1.)).px(px(4.)).map(|list| {
                 if rows.is_empty() {
-                    list.child(div().px(px(8.)).py(px(6.)).text_size(typography::TEXT_SM).text_color(colors.subtle_foreground).child("No sessions yet"))
+                    list.child(div().px(px(8.)).py(px(6.)).text_size(typography::text_sm()).text_color(colors.subtle_foreground).child("No sessions yet"))
                 } else {
                     list.children(rows)
                 }
@@ -256,7 +257,7 @@ impl Workbench {
                     .child(
                         SidebarListItem::new(gpui::ElementId::Name(format!("dashboard-pr-{}", pr.number).into()), pr.title.clone())
                             .leading(ui::Icon::new(IconName::GitPullRequest).size(ui::IconSize::XSmall).color(if pr.draft { colors.muted_foreground } else { colors.success }))
-                            .trailing(div().text_size(typography::TEXT_SM).text_color(colors.subtle_foreground).child(trailing))
+                            .trailing(div().text_size(typography::text_sm()).text_color(colors.subtle_foreground).child(trailing))
                             .on_click(cx.listener(move |this, _, _, cx| this.update_state(cx, |state| state.open_resource("github-pr", &number.to_string(), &title)))),
                     )
                     .into_any_element()
@@ -279,7 +280,7 @@ impl Workbench {
                         SidebarListItem::new(gpui::ElementId::Name(format!("dashboard-worktree-{}", worktree.path).into()), name)
                             .leading(ui::Icon::new(IconName::GitBranch).size(ui::IconSize::XSmall))
                             .when_some(worktree.size.filter(|size| *size > 0), |row, size| {
-                                row.trailing(div().text_size(typography::TEXT_SM).text_color(colors.subtle_foreground).child(project_suggestions::format_file_size(size)))
+                                row.trailing(div().text_size(typography::text_sm()).text_color(colors.subtle_foreground).child(project_suggestions::format_file_size(size)))
                             })
                             .on_click(cx.listener(move |this, _, _, cx| this.open_project_path(path.clone(), cx))),
                     )
@@ -299,7 +300,7 @@ impl Workbench {
             .min_h_0()
             .overflow_y_scroll()
             .font_family(typography::UI_FONT)
-            .text_size(typography::TEXT_BASE)
+            .text_size(typography::text_base())
             .text_color(colors.foreground)
             .child(
                 div().w_full().flex().justify_center().px(px(24.)).py(px(20.)).child(
@@ -440,5 +441,5 @@ impl Workbench {
 
 /// A dashboard section's heading (`GroupedSection` with the `flat` variant).
 fn section_title(title: &'static str) -> impl IntoElement {
-    div().flex().items_center().min_h(px(24.)).px(px(12.)).text_size(typography::TEXT_BASE).font_weight(typography::MEDIUM).child(title)
+    div().flex().items_center().min_h(px(24.)).px(px(12.)).text_size(typography::text_base()).font_weight(typography::MEDIUM).child(title)
 }

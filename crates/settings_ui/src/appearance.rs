@@ -3,7 +3,8 @@
 //! style as two segmented controls, and the themes as a tight grid of swatches, each drawn in the
 //! theme's own editor colors.
 
-use gpui::{AnyElement, App, HighlightStyle, SharedString, StyledText, div, prelude::*, px};
+use ui::scale::px;
+use gpui::{AnyElement, App, HighlightStyle, SharedString, StyledText, div, prelude::*,};
 use theme::{ActiveTheme, Theme};
 use ui::{Icon, IconName, IconSize, Tabs, TabsTrigger, metrics, typography};
 
@@ -104,7 +105,7 @@ fn theme_swatch(theme: &Theme, key: &'static str, active: bool, cx: &App) -> Any
         .flex_none()
         .w(px(SWATCH_WIDTH))
         .p(px(2.))
-        .rounded(metrics::RADIUS_LG + px(2.))
+        .rounded(metrics::radius_lg() + px(2.))
         .border_1()
         .border_color(if active { app.primary } else { gpui::transparent_black() })
         .when(!active, |this| this.hover(move |style| style.border_color(hover_border)))
@@ -115,7 +116,7 @@ fn theme_swatch(theme: &Theme, key: &'static str, active: bool, cx: &App) -> Any
                 .gap(px(2.))
                 .px(px(8.))
                 .py(px(6.))
-                .rounded(metrics::RADIUS_LG)
+                .rounded(metrics::radius_lg())
                 .overflow_hidden()
                 .bg(colors.background)
                 .border_1()
@@ -127,7 +128,7 @@ fn theme_swatch(theme: &Theme, key: &'static str, active: bool, cx: &App) -> Any
                         .justify_between()
                         .gap(px(4.))
                         .h(px(14.))
-                        .text_size(typography::TEXT_CAPTION)
+                        .text_size(typography::text_caption())
                         .text_color(colors.foreground)
                         .when(active, |this| this.font_weight(typography::MEDIUM))
                         .child(div().min_w_0().truncate().child(theme.name.clone()))
@@ -172,7 +173,7 @@ fn theme_grid(caption: Option<(IconName, &'static str)>, key: &'static str, dark
                 .items_center()
                 .gap(px(6.))
                 .px(px(2.))
-                .text_size(typography::TEXT_SM)
+                .text_size(typography::text_sm())
                 .text_color(muted)
                 .child(Icon::new(icon).size(IconSize::Custom(px(13.))).color(muted))
                 .child(label)

@@ -1,7 +1,8 @@
 //! A question flow one step at a time (`ui/questionnaire.tsx`): each step offers choices (radios,
 //! or checkboxes when several may be picked) and may take a typed answer, alone or beside them.
 
-use gpui::{App, ClickEvent, Context, Entity, EventEmitter, IntoElement, Render, SharedString, Subscription, Window, div, prelude::*, px};
+use crate::scale::px;
+use gpui::{App, ClickEvent, Context, Entity, EventEmitter, IntoElement, Render, SharedString, Subscription, Window, div, prelude::*,};
 use theme::ActiveTheme;
 
 use crate::{Button, ButtonVariant, Icon, IconName, IconSize, TextInput, TextInputEvent, metrics, typography};
@@ -199,7 +200,7 @@ impl Render for Questionnaire {
                 .justify_center()
                 .size(px(14.))
                 .border_1()
-                .map(|this| if question.multiple { this.rounded(metrics::RADIUS) } else { this.rounded_full() })
+                .map(|this| if question.multiple { this.rounded(metrics::radius()) } else { this.rounded_full() })
                 .border_color(if checked { colors.primary } else { colors.border_strong })
                 .bg(if checked { colors.primary } else { colors.background })
                 .when(checked && question.multiple, |this| this.child(Icon::new(IconName::Check).size(IconSize::Custom(px(12.))).color(colors.primary_foreground)))
@@ -211,8 +212,8 @@ impl Render for Questionnaire {
                 .gap(px(8.))
                 .px(px(10.))
                 .py(px(8.))
-                .rounded(metrics::RADIUS_MD)
-                .text_size(typography::TEXT_SM)
+                .rounded(metrics::radius_md())
+                .text_size(typography::text_sm())
                 .text_color(colors.foreground)
                 .map(|this| if checked { this.bg(colors.primary_soft).border_1().border_color(colors.primary) } else { this.bg(colors.raised).shadow(theme.shadows.raised.clone()).hover(move |style| style.bg(hover)) })
                 .child(indicator)
@@ -234,12 +235,12 @@ impl Render for Questionnaire {
                             .items_center()
                             .justify_center()
                             .size(px(16.))
-                            .rounded(metrics::RADIUS)
+                            .rounded(metrics::radius())
                             .border_1()
                             .border_color(colors.border)
                             .bg(colors.background)
                             .font_family(typography::MONO_FONT)
-                            .text_size(typography::TEXT_CAPTION)
+                            .text_size(typography::text_caption())
                             .text_color(colors.subtle_foreground)
                             .child((index + 1).to_string()),
                     )
@@ -254,17 +255,17 @@ impl Render for Questionnaire {
             .min_w_0()
             .gap(px(12.))
             .font_family(typography::UI_FONT)
-            .child(div().text_size(typography::TEXT_CAPTION).text_color(colors.subtle_foreground).child(format!("{} of {total}", self.step + 1)))
+            .child(div().text_size(typography::text_caption()).text_color(colors.subtle_foreground).child(format!("{} of {total}", self.step + 1)))
             .child(
                 div()
                     .flex()
                     .flex_col()
                     .gap(px(8.))
-                    .child(div().text_size(typography::TEXT_SM).font_weight(typography::MEDIUM).text_color(colors.foreground).child(question.title.clone()))
-                    .children(question.description.clone().map(|description| div().text_size(typography::TEXT_SM).text_color(colors.muted_foreground).child(description)))
+                    .child(div().text_size(typography::text_sm()).font_weight(typography::MEDIUM).text_color(colors.foreground).child(question.title.clone()))
+                    .children(question.description.clone().map(|description| div().text_size(typography::text_sm()).text_color(colors.muted_foreground).child(description)))
                     .when(!question.choices.is_empty(), |this| this.child(div().flex().flex_col().gap(px(6.)).children(choices)))
                     .children(input)
-                    .children(self.error.clone().map(|error| div().text_size(typography::TEXT_SM).text_color(colors.destructive).child(error))),
+                    .children(self.error.clone().map(|error| div().text_size(typography::text_sm()).text_color(colors.destructive).child(error))),
             )
             .child(
                 div()

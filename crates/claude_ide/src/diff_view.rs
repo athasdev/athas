@@ -7,7 +7,8 @@
 use std::collections::HashMap;
 
 use agent_ui::diff::{self, DiffRow, LineKind};
-use gpui::{App, Context, FocusHandle, Focusable, Global, IntoElement, ParentElement, Render, SharedString, Styled, Window, div, prelude::*, px};
+use ui::scale::px;
+use gpui::{App, Context, FocusHandle, Focusable, Global, IntoElement, ParentElement, Render, SharedString, Styled, Window, div, prelude::*,};
 use theme::ActiveTheme;
 use ui::{Button, ButtonSize, ButtonTone, ButtonVariant, IconName, PaneTitle, ScrollArea, typography};
 
@@ -118,7 +119,7 @@ impl Render for ClaudeDiffView {
                 .items_center()
                 .justify_center()
                 .bg(colors.background)
-                .text_size(typography::TEXT_SM)
+                .text_size(typography::text_sm())
                 .text_color(colors.subtle_foreground)
                 .child("Claude Code no longer waits on this change")
                 .into_any_element();
@@ -166,8 +167,8 @@ impl Render for ClaudeDiffView {
                     .border_b_1()
                     .border_color(colors.divider)
                     .child(PaneTitle::new("Claude Code proposes changes").icon(IconName::GitDiff).detail(path))
-                    .child(div().text_size(typography::TEXT_CAPTION).text_color(colors.git_added).child(format!("+{added}")))
-                    .child(div().text_size(typography::TEXT_CAPTION).text_color(colors.git_deleted).child(format!("-{removed}")))
+                    .child(div().text_size(typography::text_caption()).text_color(colors.git_added).child(format!("+{added}")))
+                    .child(div().text_size(typography::text_caption()).text_color(colors.git_deleted).child(format!("-{removed}")))
                     .child(
                         Button::new("claude-diff-reject", "Reject")
                             .variant(ButtonVariant::Ghost)
@@ -187,7 +188,7 @@ impl Render for ClaudeDiffView {
             )
             .child(
                 ScrollArea::new("claude-diff-rows").child(
-                    div().py(px(6.)).font_family(typography::MONO_FONT).text_size(typography::TEXT_SM).line_height(px(20.)).children(rows),
+                    div().py(px(6.)).font_family(typography::MONO_FONT).text_size(typography::text_sm()).line_height(px(20.)).children(rows),
                 ),
             )
             .into_any_element()

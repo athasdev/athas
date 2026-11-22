@@ -1,6 +1,8 @@
 //! The workbench's spacing and sizes (`--athas-*` in `styles/theme.css`).
 
-use gpui::{Pixels, px};
+use gpui::Pixels;
+
+use crate::scale;
 
 /// The spacing scale: every gap, padding and margin in the app is one of these steps.
 ///
@@ -12,30 +14,30 @@ use gpui::{Pixels, px};
 /// Two steps apart is a visible difference, one step is a nudge. Reach for the next step up
 /// rather than the half-step that is not here.
 pub mod space {
-    use super::{Pixels, px};
+    use super::{Pixels, scale};
 
     /// Touching: a dot against its label.
-    pub const HAIR: Pixels = px(1.);
+    pub fn hair() -> Pixels { scale::px(1.) }
     /// Inside one control, between parts that belong to each other.
-    pub const TIGHT: Pixels = px(2.);
+    pub fn tight() -> Pixels { scale::px(2.) }
     /// An icon from its label; a row's vertical padding.
-    pub const SNUG: Pixels = px(4.);
+    pub fn snug() -> Pixels { scale::px(4.) }
     /// Between controls in a group; a dense row's inline padding.
-    pub const COZY: Pixels = px(6.);
+    pub fn cozy() -> Pixels { scale::px(6.) }
     /// The default: most gaps and most padding inside a row or a control.
-    pub const BASE: Pixels = px(8.);
+    pub fn base() -> Pixels { scale::px(8.) }
     /// A touch looser than the default, where `BASE` crowds.
-    pub const COMFY: Pixels = px(10.);
+    pub fn comfy() -> Pixels { scale::px(10.) }
     /// Between the parts of a pane: a header from its list, a field from the next.
-    pub const SECTION: Pixels = px(12.);
+    pub fn section() -> Pixels { scale::px(12.) }
     /// Between sections of a page.
-    pub const GROUP: Pixels = px(16.);
+    pub fn group() -> Pixels { scale::px(16.) }
     /// A page's inset from its pane.
-    pub const PAGE: Pixels = px(20.);
+    pub fn page() -> Pixels { scale::px(20.) }
     /// Around a dialog's content, and between a page's major blocks.
-    pub const WIDE: Pixels = px(24.);
+    pub fn wide() -> Pixels { scale::px(24.) }
     /// The widest step: an empty state's breathing room.
-    pub const BROAD: Pixels = px(32.);
+    pub fn broad() -> Pixels { scale::px(32.) }
 
     /// Every step, smallest first — what the design guard measures against.
     pub const STEPS: [f32; 12] = [0., 1., 2., 4., 6., 8., 10., 12., 16., 20., 24., 32.];
@@ -92,49 +94,49 @@ pub mod space {
 }
 
 /// Every pane header (editor tabs, sessions, dock panes, the bottom pane) is this one row.
-pub const PANE_HEADER: Pixels = px(40.);
+pub fn pane_header() -> Pixels { scale::px(40.) }
 /// A bar at the top of a pane's content, such as a search field (`ChromeBar region="content"`).
-pub const CONTENT_HEADER: Pixels = px(28.);
+pub fn content_header() -> Pixels { scale::px(28.) }
 /// One row of a list: sessions, files, branches and every other sidebar or dock list.
-pub const LIST_ROW: Pixels = px(28.);
-pub const TAB: Pixels = px(24.);
-pub const TAB_MAX_WIDTH: Pixels = px(200.);
+pub fn list_row() -> Pixels { scale::px(28.) }
+pub fn tab() -> Pixels { scale::px(24.) }
+pub fn tab_max_width() -> Pixels { scale::px(200.) }
 /// The one gutter: around the workbench and between its columns and stacked panes.
-pub const WORKBENCH_GAP: Pixels = px(6.);
+pub fn workbench_gap() -> Pixels { scale::px(6.) }
 /// Islands round a little more than controls, so they read as cards set into the window.
-pub const ISLAND_RADIUS: Pixels = px(10.);
+pub fn island_radius() -> Pixels { scale::px(10.) }
 /// Where a pane's first item starts from its island's edge.
-pub const PANE_INSET: Pixels = px(12.);
-pub const CHROME_CONTROL: Pixels = px(24.);
+pub fn pane_inset() -> Pixels { scale::px(12.) }
+pub fn chrome_control() -> Pixels { scale::px(24.) }
 /// The activity bar's controls, and the bar's width: one trigger wide, no slack around it, so a
 /// rail icon measures the same as the list row beside it.
-pub const RAIL_CONTROL: Pixels = px(28.);
-pub const CHROME_HIT_TARGET: Pixels = px(28.);
-pub const CHROME_GAP_TIGHT: Pixels = px(2.);
-pub const CHROME_GAP: Pixels = px(4.);
-pub const CHROME_PADDING_INLINE: Pixels = px(6.);
+pub fn rail_control() -> Pixels { scale::px(28.) }
+pub fn chrome_hit_target() -> Pixels { scale::px(28.) }
+pub fn chrome_gap_tight() -> Pixels { scale::px(2.) }
+pub fn chrome_gap() -> Pixels { scale::px(4.) }
+pub fn chrome_padding_inline() -> Pixels { scale::px(6.) }
 /// The radius ladder. A corner belongs to the surface it is on: the smaller the thing, the
 /// tighter the corner, so a key cap and a command palette do not round the same way.
 /// Smallest things: a key cap, a chip inside a row.
-pub const RADIUS_SM: Pixels = px(2.);
+pub fn radius_sm() -> Pixels { scale::px(2.) }
 /// The base: buttons, fields, rows and anything else a pointer acts on.
-pub const RADIUS: Pixels = px(4.);
+pub fn radius() -> Pixels { scale::px(4.) }
 /// A little softer, for popovers and surfaces that sit over content.
-pub const RADIUS_MD: Pixels = px(6.);
-pub const RADIUS_LG: Pixels = px(8.);
+pub fn radius_md() -> Pixels { scale::px(6.) }
+pub fn radius_lg() -> Pixels { scale::px(8.) }
 /// A block of content rather than a control: a message bubble, a grouped panel.
-pub const RADIUS_XL: Pixels = px(12.);
+pub fn radius_xl() -> Pixels { scale::px(12.) }
 /// What floats clear of the window: the command palette and the surfaces like it.
-pub const OVERLAY_RADIUS: Pixels = px(16.);
+pub fn overlay_radius() -> Pixels { scale::px(16.) }
 /// The macOS traffic lights take this much of the top-left row. AppKit places them from
 /// `options`' x 16 and spaces them itself: the three 14px buttons centre at 23, 46 and 69, so the
 /// last ends at 76. One inline padding after that keeps the first trigger clear of them.
-pub const TRAFFIC_LIGHTS_INSET: Pixels = px(82.);
-pub const SIDEBAR_DEFAULT_WIDTH: Pixels = px(220.);
-pub const SIDEBAR_MIN_WIDTH: Pixels = px(140.);
+pub fn traffic_lights_inset() -> Pixels { scale::px(82.) }
+pub fn sidebar_default_width() -> Pixels { scale::px(220.) }
+pub fn sidebar_min_width() -> Pixels { scale::px(140.) }
 /// The column of session boxes the dock shows while no tool pane is open.
-pub const SESSION_BOXES_WIDTH: Pixels = px(288.);
-pub const DOCK_DEFAULT_WIDTH: Pixels = px(420.);
-pub const MIN_CENTRE_WIDTH: Pixels = px(360.);
+pub fn session_boxes_width() -> Pixels { scale::px(288.) }
+pub fn dock_default_width() -> Pixels { scale::px(420.) }
+pub fn min_centre_width() -> Pixels { scale::px(360.) }
 /// Below this window width the sidebar floats over the centre instead of taking a column.
-pub const NARROW_WINDOW: Pixels = px(760.);
+pub fn narrow_window() -> Pixels { scale::px(760.) }

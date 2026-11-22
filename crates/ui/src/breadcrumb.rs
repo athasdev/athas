@@ -1,6 +1,7 @@
 use std::rc::Rc;
 
-use gpui::{AnyElement, App, ClickEvent, ElementId, IntoElement, RenderOnce, SharedString, Window, div, prelude::*, px};
+use crate::scale::px;
+use gpui::{AnyElement, App, ClickEvent, ElementId, IntoElement, RenderOnce, SharedString, Window, div, prelude::*,};
 use theme::ActiveTheme;
 
 use crate::{Icon, IconName, IconSize, typography};
@@ -50,7 +51,7 @@ impl RenderOnce for Breadcrumb {
             children.push(match handler {
                 Some(handler) => div()
                     .id(index)
-                    .rounded(crate::metrics::RADIUS)
+                    .rounded(crate::metrics::radius())
                     .text_color(colors.muted_foreground)
                     .hover(|style| style.text_color(colors.foreground))
                     .on_click(move |event, window, cx| handler(event, window, cx))
@@ -65,7 +66,7 @@ impl RenderOnce for Breadcrumb {
             .flex_wrap()
             .items_center()
             .gap(px(6.))
-            .text_size(typography::TEXT_SM)
+            .text_size(typography::text_sm())
             .text_color(colors.muted_foreground)
             .children(children)
     }
@@ -155,7 +156,7 @@ impl RenderOnce for PathBreadcrumb {
             .items_center()
             .min_w_0()
             .overflow_hidden()
-            .text_size(typography::TEXT_SM)
+            .text_size(typography::text_sm())
             .text_color(colors.muted_foreground)
             .children(children)
     }

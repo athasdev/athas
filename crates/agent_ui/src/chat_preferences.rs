@@ -5,7 +5,8 @@
 //! `lib/session-config-option-classifier.ts` and the `EffortSlider` of
 //! `components/input/composer-model-submenus.tsx`.
 
-use gpui::{AnyElement, Context, IntoElement, MouseButton, Pixels, Point, div, prelude::*, px};
+use ui::scale::px;
+use gpui::{AnyElement, Context, IntoElement, MouseButton, Pixels, Point, div, prelude::*,};
 use ui::{IconName, MenuEntry, MenuItem, MenuSize, Popover, StepSlider, StepSliderStep};
 
 use crate::{

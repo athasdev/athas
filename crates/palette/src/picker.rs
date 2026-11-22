@@ -1,7 +1,8 @@
+use ui::scale::px;
 use gpui::{
     Action, AnyElement, App, Context, DismissEvent, Entity, EventEmitter, FocusHandle, Focusable,
     KeyBinding, MouseButton, ScrollHandle, SharedString, Subscription, Window, actions, div,
-    prelude::*, px, relative,
+    prelude::*, relative,
 };
 use theme::ActiveTheme;
 use ui::{Icon, IconName, IconSize, InputAppearance, Kbd, TextInput, TextInputEvent, metrics, typography};
@@ -288,7 +289,7 @@ impl<D: PickerDelegate> Render for Picker<D> {
                         .px(px(10.))
                         .pt(px(8.))
                         .pb(px(4.))
-                        .text_size(typography::TEXT_CHROME)
+                        .text_size(typography::text_chrome())
                         .font_weight(typography::MEDIUM)
                         .text_color(colors.subtle_foreground)
                         .child(label)
@@ -322,11 +323,11 @@ impl<D: PickerDelegate> Render for Picker<D> {
                 .min_w_0()
                 .px(px(12.))
                 .pt(px(10.))
-                .text_size(typography::TEXT_BASE)
+                .text_size(typography::text_base())
                 .child(Icon::new(self.delegate.title_icon()).size(IconSize::Small).color(colors.subtle_foreground))
                 .child(div().flex_none().font_weight(typography::MEDIUM).text_color(colors.foreground).child(title))
                 .children(subtitle.map(|subtitle| {
-                    div().min_w_0().truncate().text_size(typography::TEXT_SM).text_color(colors.subtle_foreground).child(subtitle)
+                    div().min_w_0().truncate().text_size(typography::text_sm()).text_color(colors.subtle_foreground).child(subtitle)
                 }))
         });
         let header = div()
@@ -369,8 +370,8 @@ impl<D: PickerDelegate> Render for Picker<D> {
                     .flex()
                     .flex_none()
                     .items_center()
-                    .gap(metrics::CHROME_GAP)
-                    .h(metrics::CHROME_CONTROL)
+                    .gap(metrics::chrome_gap())
+                    .h(metrics::chrome_control())
                     .px(px(12.))
                     .rounded_full()
                     .whitespace_nowrap()
@@ -390,7 +391,7 @@ impl<D: PickerDelegate> Render for Picker<D> {
                     .p(px(2.))
                     .rounded_full()
                     .bg(colors.segment_track)
-                    .text_size(typography::TEXT_CHROME)
+                    .text_size(typography::text_chrome())
                     .font_weight(typography::MEDIUM)
                     .children(tabs),
             )
@@ -413,7 +414,7 @@ impl<D: PickerDelegate> Render for Picker<D> {
                     div()
                         .p(px(12.))
                         .text_center()
-                        .text_size(typography::TEXT_SM)
+                        .text_size(typography::text_sm())
                         .text_color(colors.muted_foreground)
                         .child(self.delegate.empty_message()),
                 )
@@ -435,7 +436,7 @@ impl<D: PickerDelegate> Render for Picker<D> {
             .flex_col()
             .w((viewport.width - px(32.)).min(px(800.)))
             .max_h((viewport.height * 0.72).min(px(608.)))
-            .rounded(metrics::OVERLAY_RADIUS)
+            .rounded(metrics::overlay_radius())
             .bg(colors.overlay)
             .shadow(theme.shadows.dialog.clone())
             .overflow_hidden()

@@ -12,9 +12,10 @@ pub mod ui_extensions;
 mod widgets;
 
 use extensions::{CatalogEntry, CatalogSource, ExtensionKind, ExtensionStatus, Extensions, Operation};
+use ui::scale::px;
 use gpui::{
     AnyElement, App, Context, EventEmitter, FocusHandle, Focusable, KeyBinding, ScrollHandle,
-    SharedString, Subscription, Window, actions, div, prelude::*, px,
+    SharedString, Subscription, Window, actions, div, prelude::*,
 };
 use theme::{ActiveTheme, ThemeColors};
 use ui::{
@@ -400,7 +401,7 @@ impl ExtensionsView {
                     .when(!embedded, |this| {
                         this.child(
                             div()
-                                .text_size(typography::TEXT_LG)
+                                .text_size(typography::text_lg())
                                 .line_height(px(21.))
                                 .font_weight(typography::MEDIUM)
                                 .text_color(colors.foreground)
@@ -410,7 +411,7 @@ impl ExtensionsView {
                     .child(
                         div()
                             .when(!embedded, |this| this.mt(px(2.)))
-                            .text_size(typography::TEXT_SM)
+                            .text_size(typography::text_sm())
                             .line_height(px(20.))
                             .text_color(colors.subtle_foreground)
                             .child(detail),
@@ -469,9 +470,9 @@ impl ExtensionsView {
                 .mb(px(12.))
                 .px(px(10.))
                 .py(px(6.))
-                .rounded(metrics::RADIUS_MD)
+                .rounded(metrics::radius_md())
                 .bg(colors.warning_soft)
-                .text_size(typography::TEXT_SM)
+                .text_size(typography::text_sm())
                 .child(Icon::new(IconName::CloudWarning).size(IconSize::Small).color(colors.warning))
                 .child(
                     div()
@@ -503,7 +504,7 @@ impl ExtensionsView {
                     .flex()
                     .items_center()
                     .gap(px(8.))
-                    .text_size(typography::TEXT_CAPTION)
+                    .text_size(typography::text_caption())
                     .text_color(colors.muted_foreground)
                     .child(operation_label(operation))
                     .child(progress_bar(

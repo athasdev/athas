@@ -4,11 +4,12 @@
 
 use std::{ops::Range, sync::Arc};
 
+use ui::scale::px;
 use gpui::{
     AnyElement, App, AvailableSpace, Bounds, ContentMask, CursorStyle, DispatchPhase, Element, ElementId, ElementInputHandler, Entity, Font, FontFeatures,
     FontStyle, FontWeight, GlobalElementId, Hitbox, HitboxBehavior, Hsla, LayoutId, MouseButton, MouseDownEvent,
     MouseMoveEvent, MouseUpEvent, PaintQuad, PathBuilder, Pixels, Point, ScrollEvent, ShapedLine, SharedString, Style, TextAlign,
-    TextRun, TransformationMatrix, UnderlineStyle, Window, fill, font, point, px, relative, size,
+    TextRun, TransformationMatrix, UnderlineStyle, Window, fill, font, point, relative, size,
 };
 use theme::ActiveTheme;
 use ui::IconName;
@@ -29,20 +30,20 @@ use crate::{
 };
 
 /// Space between the gutter and the first column.
-const TEXT_PADDING: Pixels = px(6.);
+fn text_padding() -> Pixels { px(6.) }
 /// The gutter, left to right: breakpoints (and diagnostics), folds, line numbers with git changes
 /// in their right padding.
-const BREAKPOINT_LANE: Pixels = px(18.);
-const FOLD_LANE: Pixels = px(10.);
-const NUMBER_PAD_LEFT: Pixels = px(16.);
-const NUMBER_GAP: Pixels = px(12.);
-const GIT_BAR: Pixels = px(3.);
-const SCROLLBAR_WIDTH: Pixels = px(10.);
+fn breakpoint_lane() -> Pixels { px(18.) }
+fn fold_lane() -> Pixels { px(10.) }
+fn number_pad_left() -> Pixels { px(16.) }
+fn number_gap() -> Pixels { px(12.) }
+fn git_bar() -> Pixels { px(3.) }
+fn scrollbar_width() -> Pixels { px(10.) }
 /// The minimap is at most this wide, and a sixth of the editor when that is narrower.
-const MINIMAP_MAX_WIDTH: Pixels = px(120.);
+fn minimap_max_width() -> Pixels { px(120.) }
 /// The minimap draws the text this many times smaller.
 const MINIMAP_SCALE: f32 = 4.;
-const MINIMAP_PADDING: Pixels = px(4.);
+fn minimap_padding() -> Pixels { px(4.) }
 /// Longer rows are cut when shaped (without soft wrap); minified files stay responsive.
 const MAX_SHAPED_ROW: usize = 8 * 1024;
 /// Highlight queries look at no more text than this per frame.
@@ -307,7 +308,7 @@ impl Element for EditorElement {
         // Rounded at the bottom like the island the editor sits in: where it reaches the island's
         // bottom edge a square fill covered the island's rounded corners; elsewhere the corner
         // shows the island's own background, the same colour.
-        let radius = ui::metrics::ISLAND_RADIUS;
+        let radius = ui::metrics::island_radius();
         window.paint_quad(fill(bounds, state.background).corner_radii(gpui::Corners { top_left: px(0.), top_right: px(0.), bottom_right: radius, bottom_left: radius }));
         let focus_handle = self.editor.read(cx).focus_handle.clone();
         window.handle_input(&focus_handle, ElementInputHandler::new(state.text_bounds, self.editor.clone()), cx);
@@ -650,16 +651,16 @@ impl Editor {
         let buffer = self.document.buffer.clone();
         let line_count = buffer.line_count();
         let digits = line_count.to_string().len().max(2);
-        let numbers_width = if frame.line_numbers { NUMBER_PAD_LEFT + char_width * digits as f32 + NUMBER_GAP } else { GIT_BAR * 2. };
-        let gutter_width = BREAKPOINT_LANE + FOLD_LANE + numbers_width;
+        let numbers_width = if frame.line_numbers { number_pad_left() + char_width * digits as f32 + number_gap() } else { git_bar() * 2. };
+        let gutter_width = breakpoint_lane() + fold_lane() + numbers_width;
         let gutter_bounds = Bounds::new(bounds.origin, size(gutter_width, bounds.size.height));
-        let fold_left = gutter_bounds.left() + BREAKPOINT_LANE;
-        let numbers_right = gutter_bounds.right() - if frame.line_numbers { NUMBER_GAP } else { GIT_BAR * 2. };
-        let git_left = gutter_bounds.right() - GIT_BAR * 2.;
-        let minimap_width = if frame.minimap && bounds.size.width > px(240.) { MINIMAP_MAX_WIDTH.min(bounds.size.width / 6.).round() } else { px(0.) };
-        let text_right = bounds.right() - if minimap_width > px(0.) { minimap_width + SCROLLBAR_WIDTH } else { px(0.) };
+        let fold_left = gutter_bounds.left() + breakpoint_lane();
+        let numbers_right = gutter_bounds.right() - if frame.line_numbers { number_gap() } else { git_bar() * 2. };
+        let git_left = gutter_bounds.right() - git_bar() * 2.;
+        let minimap_width = if frame.minimap && bounds.size.width > px(240.) { minimap_max_width().min(bounds.size.width / 6.).round() } else { px(0.) };
+        let text_right = bounds.right() - if minimap_width > px(0.) { minimap_width + scrollbar_width() } else { px(0.) };
         let text_bounds = Bounds::from_corners(point(bounds.left() + gutter_width, bounds.top()), point(text_right, bounds.bottom()));
-        let text_width = text_bounds.size.width - TEXT_PADDING - if minimap_width > px(0.) { px(0.) } else { SCROLLBAR_WIDTH };
+        let text_width = text_bounds.size.width - text_padding() - if minimap_width > px(0.) { px(0.) } else { scrollbar_width() };
         let viewport_height = bounds.size.height;
 
         let wrap = self.soft_wrap(cx);
@@ -991,7 +992,7 @@ impl Editor {
             }
         }
         self.scroll.x = self.scroll.x.clamp(px(0.), max_scroll_x.max(self.scroll.x.min(px(0.))));
-        let origin = point(text_bounds.left() + TEXT_PADDING - self.scroll.x, text_bounds.top() - self.scroll.y);
+        let origin = point(text_bounds.left() + text_padding() - self.scroll.x, text_bounds.top() - self.scroll.y);
         let row_origin = |row: &RowHit| point(origin.x, row.top);
 
         // Decorations under the text.
@@ -1256,7 +1257,7 @@ impl Editor {
         let mut gutter_icons: Vec<(Bounds<Pixels>, SharedString, Hsla)> = Vec::new();
         let mut gutter_paths: Vec<(Vec<Point<Pixels>>, Hsla)> = Vec::new();
         let fold_ranges = self.fold_ranges();
-        let lane_center = gutter_bounds.left() + BREAKPOINT_LANE / 2.;
+        let lane_center = gutter_bounds.left() + breakpoint_lane() / 2.;
         let mut lightbulb_hit = None;
         for (row, plan) in rows.iter().zip(&plans) {
             if !plan.first_in_line {
@@ -1269,7 +1270,7 @@ impl Editor {
                 let bounds = Bounds::new(point(lane_center - icon / 2., middle - icon / 2.), size(icon, icon));
                 let color = if bulb.has_quick_fix() { colors.warning } else { colors.muted_foreground };
                 gutter_icons.push((bounds, IconName::Lightbulb.path().into(), color));
-                lightbulb_hit = Some(Bounds::new(point(gutter_bounds.left(), row.top), size(BREAKPOINT_LANE, line_height)));
+                lightbulb_hit = Some(Bounds::new(point(gutter_bounds.left(), row.top), size(breakpoint_lane(), line_height)));
             } else if let Some(breakpoint) = file_breakpoints.iter().find(|breakpoint| breakpoint.row as usize == plan.line) {
                 let dot = px(10.);
                 let color = if breakpoint.enabled { colors.destructive } else { colors.subtle_foreground };
@@ -1319,7 +1320,7 @@ impl Editor {
                 let icon = px(12.);
                 let path = if folded { IconName::ChevronRight } else { IconName::ChevronDown }.path();
                 let color = if folded { colors.foreground } else { colors.subtle_foreground };
-                gutter_icons.push((Bounds::new(point(fold_left + (FOLD_LANE - icon) / 2., middle - icon / 2.), size(icon, icon)), path.into(), color));
+                gutter_icons.push((Bounds::new(point(fold_left + (fold_lane() - icon) / 2., middle - icon / 2.), size(icon, icon)), path.into(), color));
             }
         }
         for hunk in &self.git.hunks {
@@ -1341,7 +1342,7 @@ impl Editor {
             }
             for (row, plan) in rows.iter().zip(&plans) {
                 if hunk.lines.contains(&plan.line) {
-                    gutter_marks.push(fill(Bounds::new(point(git_left, row.top), size(GIT_BAR, line_height)), color));
+                    gutter_marks.push(fill(Bounds::new(point(git_left, row.top), size(git_bar(), line_height)), color));
                 }
             }
         }
@@ -1586,7 +1587,7 @@ impl Editor {
                         runs.push(TextRun { len: display_at(text.len()) - display_at(at), font: frame.font.clone(), color: colors.foreground, background_color: None, underline: None, strikethrough: None });
                     }
                     let shaped = text_system.shape_line(SharedString::from(display), font_size, &runs, None);
-                    sticky_rows.push((shaped, point(text_bounds.left() + TEXT_PADDING - self.scroll.x, top)));
+                    sticky_rows.push((shaped, point(text_bounds.left() + text_padding() - self.scroll.x, top)));
                     if frame.line_numbers {
                         let number = shape_number(*line, false);
                         sticky_rows.push((number.clone(), point(numbers_right - number.width, top)));
@@ -1616,7 +1617,7 @@ impl Editor {
             let blocks = self.minimap_blocks(&map, minimap_first, visible_rows, &theme);
             for (row, column, len, color) in blocks.iter() {
                 let top = area.top() + pitch * (*row - minimap_first) as f32;
-                let left = area.left() + MINIMAP_PADDING + minimap_char * *column as f32;
+                let left = area.left() + minimap_padding() + minimap_char * *column as f32;
                 let width = (minimap_char * *len as f32).min(area.right() - left);
                 if width > px(0.) {
                     minimap.push(fill(Bounds::new(point(left, top), size(width, (pitch - px(1.)).max(px(1.)))), *color));
@@ -1633,22 +1634,22 @@ impl Editor {
         let mut scrollbar = Vec::new();
         let mut scrollbar_layout = None;
         if content_height > viewport_height && max_scroll_y > px(0.) {
-            let track = Bounds::new(point(bounds.right() - SCROLLBAR_WIDTH, bounds.top()), size(SCROLLBAR_WIDTH, viewport_height));
+            let track = Bounds::new(point(bounds.right() - scrollbar_width(), bounds.top()), size(scrollbar_width(), viewport_height));
             let thumb_height = (viewport_height * (viewport_height / content_height)).max(px(24.)).min(viewport_height);
             let thumb_top = track.top() + (viewport_height - thumb_height) * (self.scroll.y / max_scroll_y);
-            let thumb = Bounds::new(point(track.left() + px(2.), thumb_top), size(SCROLLBAR_WIDTH - px(4.), thumb_height));
+            let thumb = Bounds::new(point(track.left() + px(2.), thumb_top), size(scrollbar_width() - px(4.), thumb_height));
             let dragging = matches!(self.drag, Some(Drag::Scrollbar { .. }));
             let mark_y = |offset: usize| track.top() + viewport_height * (map.to_display(offset).row as f32 / row_count.max(1) as f32);
             if self.find_open
                 && let Some(find) = &self.find
             {
                 for range in find.matches.iter().step_by((find.matches.len() / 2000).max(1)) {
-                    scrollbar.push(fill(Bounds::new(point(track.left() + px(2.), mark_y(range.start)), size(SCROLLBAR_WIDTH - px(4.), px(2.))), colors.primary.opacity(0.7)));
+                    scrollbar.push(fill(Bounds::new(point(track.left() + px(2.), mark_y(range.start)), size(scrollbar_width() - px(4.), px(2.))), colors.primary.opacity(0.7)));
                 }
             }
             for diagnostic in self.lsp.diagnostics.iter().filter(|diagnostic| diagnostic.severity <= Severity::Warning).take(2000) {
                 let color = severity_color(diagnostic.severity, &theme);
-                scrollbar.push(fill(Bounds::new(point(track.left() + SCROLLBAR_WIDTH / 2., mark_y(diagnostic.range.start)), size(SCROLLBAR_WIDTH / 2., px(2.))), color));
+                scrollbar.push(fill(Bounds::new(point(track.left() + scrollbar_width() / 2., mark_y(diagnostic.range.start)), size(scrollbar_width() / 2., px(2.))), color));
             }
             for hunk in &self.git.hunks {
                 let color = match hunk.kind {
@@ -1662,7 +1663,7 @@ impl Editor {
                 scrollbar.push(fill(Bounds::new(point(track.left(), top), size(px(3.), height)), color));
             }
             for selection in selections.iter().take(500) {
-                scrollbar.push(fill(Bounds::new(point(track.left(), mark_y(selection.head)), size(SCROLLBAR_WIDTH, px(2.))), colors.foreground.opacity(0.35)));
+                scrollbar.push(fill(Bounds::new(point(track.left(), mark_y(selection.head)), size(scrollbar_width(), px(2.))), colors.foreground.opacity(0.35)));
             }
             scrollbar.push(fill(thumb, colors.foreground.opacity(if dragging { 0.28 } else { 0.14 })).corner_radii(px(3.)));
             scrollbar_layout = Some(ScrollbarLayout { track, thumb });
@@ -1675,8 +1676,8 @@ impl Editor {
 
         self.layout = Some(HitLayout {
             text_bounds,
-            breakpoint_lane: gutter_bounds.left()..gutter_bounds.left() + BREAKPOINT_LANE,
-            fold_lane: fold_left..fold_left + FOLD_LANE,
+            breakpoint_lane: gutter_bounds.left()..gutter_bounds.left() + breakpoint_lane(),
+            fold_lane: fold_left..fold_left + fold_lane(),
             fold_placeholders,
             sticky: sticky_hits,
             lenses: lens_hits,
