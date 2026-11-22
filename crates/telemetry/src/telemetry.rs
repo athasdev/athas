@@ -25,7 +25,6 @@ const STARTUP_DELAY: Duration = Duration::from_secs(10);
 const FLUSH_INTERVAL: Duration = Duration::from_secs(5 * 60);
 const REQUEST_TIMEOUT: Duration = Duration::from_secs(10);
 /// Sending on quit gets less time: whatever is not sent stays queued for the next launch.
-const QUIT_TIMEOUT: Duration = Duration::from_secs(2);
 
 pub struct TelemetryConfig {
     /// The account service, such as `https://athas.dev`.
@@ -81,11 +80,14 @@ pub fn init(cx: &mut App, config: TelemetryConfig) {
             queue.enqueue("crash_report", payload, Mode::Optional, enabled(cx), false, None);
         }
     }
+    // Nothing is sent on the way out. GPUI gives every quit handler 200 ms together, a request
+    // rarely finishes in that, and the queue is on disk after each event anyway: what is left
+    // goes with the next start. Waiting here only delayed the quit and logged a timeout.
     let quit = cx.on_app_quit(|cx| {
-        let flush = flush_with_timeout(cx, QUIT_TIMEOUT);
-        async move {
-            flush.await;
+        if let Some(telemetry) = telemetry_mut(cx) {
+            telemetry.queue.save_now();
         }
+        async {}
     });
     let timer = cx.spawn(async move |cx: &mut AsyncApp| {
         cx.background_executor().timer(STARTUP_DELAY).await;
@@ -112,7 +114,16 @@ pub fn install_panic_hook(store_path: Option<PathBuf>) {
             .or_else(|| info.payload().downcast_ref::<String>().cloned())
             .unwrap_or_default();
         let source = info.location().map(|location| format!("{}:{}", location.file(), location.line()));
-        let report = crash_payload("panic", &message, None, source.as_deref());
+        // A panic that cannot unwind panics again on its way out ("panic in a function that cannot
+        // unwind"), and that second report used to overwrite the first: every abort reached the
+        // crash list with the wrapper's words and none of the cause. The first panic of a run is
+        // the one that explains it, so it stays.
+        if path.exists() {
+            previous(info);
+            return;
+        }
+        let backtrace = std::backtrace::Backtrace::force_capture().to_string();
+        let report = crash_payload("panic", &message, Some(&backtrace), source.as_deref());
         if let Some(parent) = path.parent() {
             let _ = std::fs::create_dir_all(parent);
         }

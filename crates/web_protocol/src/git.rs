@@ -72,7 +72,8 @@ pub fn parse_status(output: &str) -> Status {
         }
         let kind = field.chars().next().unwrap_or(' ');
         if kind == '?' {
-            result.files.push(StatusFile { path: field[2..].into(), status: FileStatus::Untracked, staged: false, old_path: None });
+            let path = field.char_indices().nth(2).map_or("", |(start, _)| &field[start..]);
+            result.files.push(StatusFile { path: path.into(), status: FileStatus::Untracked, staged: false, old_path: None });
             continue;
         }
         if !matches!(kind, '1' | '2' | 'u') {

@@ -293,6 +293,11 @@ impl Queue {
         self.stored.log.drain(..excess);
     }
 
+    /// Writes the queue out now, for the quit handler; every change already saves as it is made.
+    pub fn save_now(&self) {
+        self.save();
+    }
+
     fn save(&self) {
         let Some(path) = &self.path else { return };
         if let Err(error) = write_atomically(path, &self.stored) {

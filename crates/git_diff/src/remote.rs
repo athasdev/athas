@@ -181,7 +181,12 @@ pub fn parse_patch(patch: &str) -> Vec<FileDiff> {
             continue;
         }
         budget -= 1;
-        let text = if kind == LineKind::NoNewline || line.is_empty() { String::new() } else { line[1..].to_string() };
+        // A diff line's first character is its marker, but the bytes come from git: slicing past
+        // a character boundary on a malformed line would take the app down with it.
+        let text = match kind {
+            LineKind::NoNewline => String::new(),
+            _ => line.char_indices().nth(1).map_or(String::new(), |(start, _)| line[start..].to_string()),
+        };
         let (old, new) = match kind {
             LineKind::Context => (Some(old_line), Some(new_line)),
             LineKind::Added => (None, Some(new_line)),

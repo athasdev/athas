@@ -56,7 +56,7 @@ pub struct ExtensionManifest {
     pub installation: Option<Installation>,
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Deserialize, Serialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize)]
 pub enum Category {
     Language,
     #[serde(rename = "AI")]
@@ -74,6 +74,30 @@ pub enum Category {
     #[serde(rename = "UI")]
     Ui,
     Other,
+}
+
+/// A category Athas does not know is `Other`, not a manifest that will not load: extensions
+/// installed by an older Athas carry categories this one has never heard of, and an upgrade must
+/// not drop them.
+impl<'de> Deserialize<'de> for Category {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        let name = String::deserialize(deserializer)?;
+        Ok(match name.as_str() {
+            "Language" => Category::Language,
+            "AI" => Category::Ai,
+            "Integration" => Category::Integration,
+            "Agent" => Category::Agent,
+            "Skill" => Category::Skill,
+            "Icon Theme" => Category::IconTheme,
+            "Linter" => Category::Linter,
+            "Formatter" => Category::Formatter,
+            "Theme" => Category::Theme,
+            "Keymaps" => Category::Keymaps,
+            "Snippets" => Category::Snippets,
+            "UI" => Category::Ui,
+            _ => Category::Other,
+        })
+    }
 }
 
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
@@ -488,6 +512,31 @@ pub fn is_newer(candidate: &str, installed: &str) -> bool {
 
 #[cfg(test)]
 mod tests {
+    /// A manifest written by the Tauri app (top-level contributions, no `contributes`) still
+    /// loads: an upgrade must not drop the extensions someone already installed.
+    #[test]
+    fn an_old_install_still_loads() {
+        let json = r#"{
+            "$schema": "https://athas.dev/schemas/extension.json",
+            "id": "athas.database.postgres",
+            "name": "PostgreSQL",
+            "displayName": "PostgreSQL Provider",
+            "version": "1.0.0",
+            "description": "PostgreSQL connection, schema, and query provider.",
+            "publisher": "Athas",
+            "categories": ["Database"],
+            "activationEvents": ["onDatabase:postgres"],
+            "databaseProviders": [
+                {"id": "postgres", "label": "PostgreSQL", "isFileBased": false, "defaultPort": 5432,
+                 "sidecar": {"darwin-arm64": "bin/athas-db-postgres"}}
+            ],
+            "license": "MIT",
+            "icon": "icon.svg"
+        }"#;
+        let manifest = super::ExtensionManifest::from_json(json).expect("an old manifest loads");
+        assert_eq!(manifest.id, "athas.database.postgres");
+    }
+
     use super::*;
 
     fn minimal(extra: &str) -> String {
@@ -505,7 +554,10 @@ mod tests {
         assert!(ExtensionManifest::from_json(&minimal("").replace("1.0.0", "1.0")).is_err());
         assert!(ExtensionManifest::from_json(&minimal("").replace("athas.test", "Athas.Test")).is_err());
         assert!(ExtensionManifest::from_json(&minimal("").replace("\"Theme\"", "\"Theme\", \"Theme\"")).is_err());
-        assert!(ExtensionManifest::from_json(&minimal("").replace("\"Theme\"", "\"Nonsense\"")).is_err());
+        // A category this Athas has not heard of reads as Other rather than throwing the manifest
+        // away: see `an_old_install_still_loads`.
+        let unknown = ExtensionManifest::from_json(&minimal("").replace("\"Theme\"", "\"Nonsense\"")).expect("an unknown category loads");
+        assert_eq!(unknown.categories, vec![Category::Other]);
         assert!(ExtensionManifest::from_json(&minimal(r#", "main": "../escape.js""#)).is_err());
     }
 
