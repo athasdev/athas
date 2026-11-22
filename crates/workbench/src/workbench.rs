@@ -1320,12 +1320,12 @@ impl Workbench {
             cx.notify();
             return;
         }
-        // The original's 288px dropdown with a search field, opening beside the rail from the
+        // A 224px dropdown with a search field, opening beside the rail from the
         // button rather than wherever the pointer was.
         let x = metrics::WORKBENCH_GAP + metrics::RAIL_CONTROL + px(6.);
         let y = if position.y > px(0.) { position.y + px(12.) } else { window.viewport_size().height - px(48.) };
         self.open_menu = Some(
-            OpenMenu::sized("run-actions", entries, ui::MenuSize::Wide, point(x, y), Anchor::BottomLeft, window, cx, |this: &mut Self, _| this.open_menu = None)
+            OpenMenu::sized("run-actions", entries, ui::MenuSize::Default, point(x, y), Anchor::BottomLeft, window, cx, |this: &mut Self, _| this.open_menu = None)
                 .searchable("Search actions", "No actions match", cx),
         );
         cx.notify();
