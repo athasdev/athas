@@ -142,7 +142,7 @@ impl Editor {
                 .h(px(24.))
                 .w(px(220.))
                 .px(px(8.))
-                .rounded(px(6.))
+                .rounded(ui::metrics::RADIUS_MD)
                 .bg(colors.field)
                 .child(input)
         };
@@ -208,7 +208,7 @@ impl Editor {
                 .flex_col()
                 .gap(px(4.))
                 .p(px(4.))
-                .rounded(px(10.))
+                .rounded(ui::metrics::ISLAND_RADIUS)
                 .bg(colors.overlay)
                 .shadow(theme.shadows.popover.clone())
                 .text_color(colors.foreground)

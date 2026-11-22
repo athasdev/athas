@@ -17,7 +17,7 @@ pub(crate) fn panel(id: impl Into<ElementId>, window: &Window, cx: &App) -> Stat
         .flex_col()
         .w((viewport.width - px(32.)).min(px(800.)))
         .max_h((viewport.height * 0.72).min(px(608.)))
-        .rounded(px(16.))
+        .rounded(metrics::OVERLAY_RADIUS)
         .bg(theme.colors.overlay)
         .shadow(theme.shadows.dialog.clone())
         .overflow_hidden()

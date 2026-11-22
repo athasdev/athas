@@ -161,7 +161,7 @@ impl Tooltip {
             .gap(px(8.))
             .px(px(8.))
             .py(px(4.))
-            .rounded(px(6.))
+            .rounded(crate::metrics::RADIUS_MD)
             .bg(theme.colors.overlay)
             .shadow(theme.shadows.popover.clone())
             .text_size(typography::TEXT_SM)

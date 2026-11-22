@@ -59,7 +59,7 @@ pub(crate) fn custom_icon(value: &str, size: Pixels, color: gpui::Hsla) -> AnyEl
     img(PathBuf::from(value))
         .flex_none()
         .size(size)
-        .rounded(px(6.))
+        .rounded(ui::metrics::RADIUS_MD)
         .object_fit(ObjectFit::Contain)
         .with_fallback(move || div().size(size).into_any_element())
         .into_any_element()

@@ -391,7 +391,7 @@ impl PreviewView {
                             .items_center()
                             .justify_center()
                             .overflow_hidden()
-                            .rounded(px(8.))
+                            .rounded(metrics::RADIUS_LG)
                             .bg(gpui::white())
                             .shadow(cx.theme().shadows.raised.clone())
                             .children(snapshot.map(|picture| img(picture).absolute().top_0().left_0().size_full().object_fit(ObjectFit::Fill)))

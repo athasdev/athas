@@ -524,7 +524,7 @@ impl Render for OutlinePanel {
                     .h(px(24.))
                     .pl(px(6. + row.depth as f32 * 14.))
                     .pr(px(8.))
-                    .rounded(px(5.))
+                    .rounded(ui::metrics::RADIUS_MD)
                     .text_size(typography::TEXT_SM)
                     .map(|this| ui::sidebar_row(this, is_active, false, cx))
                     .when(is_selected, |this| this.border_1().border_color(colors.focus_ring))
@@ -564,7 +564,7 @@ impl Render for OutlinePanel {
             .gap(px(4.))
             .mx(px(8.))
             .mb(px(4.))
-            .child(div().flex_1().min_w_0().h(px(30.)).px(px(8.)).flex().items_center().rounded(px(6.)).bg(colors.field).child(self.filter.clone()))
+            .child(div().flex_1().min_w_0().h(px(30.)).px(px(8.)).flex().items_center().rounded(ui::metrics::RADIUS_MD).bg(colors.field).child(self.filter.clone()))
             .when(!filter.is_empty(), |this| {
                 this.child(
                     Button::icon("outline-clear-filter", IconName::X)

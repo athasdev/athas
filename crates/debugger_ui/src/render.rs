@@ -645,7 +645,7 @@ impl DebuggerView {
                 div()
                     .size(px(9.))
                     .rounded_full()
-                    .when(breakpoint.log_message.is_some(), |this| this.rounded(px(2.)))
+                    .when(breakpoint.log_message.is_some(), |this| this.rounded(metrics::RADIUS_SM))
                     .when(breakpoint.enabled && !unverified, |this| this.bg(dot_color))
                     .when(!breakpoint.enabled || unverified, |this| this.border_1().border_color(dot_color)),
             )
@@ -776,7 +776,7 @@ impl DebuggerView {
                                 .size(px(14.))
                                 .items_center()
                                 .justify_center()
-                                .rounded(px(3.))
+                                .rounded(metrics::RADIUS)
                                 .border_1()
                                 .border_color(if enabled { colors.primary } else { colors.border_strong })
                                 .when(enabled, |this| {

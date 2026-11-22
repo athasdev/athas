@@ -100,7 +100,7 @@ pub fn dialog(title: impl Into<SharedString>, body: impl IntoElement, footer: Ve
         .flex_col()
         .w(px(520.))
         .max_w_full()
-        .rounded(px(16.))
+        .rounded(metrics::OVERLAY_RADIUS)
         .overflow_hidden()
         .bg(theme.colors.background)
         .shadow(theme.shadows.dialog.clone())

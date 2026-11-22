@@ -180,7 +180,7 @@ impl Workbench {
             .group_drag_over::<gpui::ExternalPaths>("workbench", |style| style.opacity(1.))
             .child(
                 div()
-                    .rounded(px(12.))
+                    .rounded(metrics::RADIUS_XL)
                     .border_2()
                     .border_dashed()
                     .border_color(colors.primary)

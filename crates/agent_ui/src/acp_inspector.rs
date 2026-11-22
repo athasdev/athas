@@ -334,7 +334,7 @@ fn json_block(text: String, cx: &App) -> impl IntoElement {
         .w_full()
         .px(px(10.))
         .py(px(8.))
-        .rounded(px(6.))
+        .rounded(ui::metrics::RADIUS_MD)
         .bg(colors.surface)
         .border_1()
         .border_color(colors.border)

@@ -740,7 +740,7 @@ impl SessionView {
                         .px(px(8.))
                         .rounded(metrics::RADIUS_MD)
                         .bg(colors.segment_track)
-                        .child(div().flex().items_center().justify_center().size(px(22.)).rounded(px(6.)).bg(colors.primary.opacity(0.16)).child(Icon::new(IconName::ListChecks).size(IconSize::XSmall).color(colors.primary)))
+                        .child(div().flex().items_center().justify_center().size(px(22.)).rounded(metrics::RADIUS_MD).bg(colors.primary.opacity(0.16)).child(Icon::new(IconName::ListChecks).size(IconSize::XSmall).color(colors.primary)))
                         .child(div().text_size(typography::TEXT_SM).font_weight(typography::MEDIUM).text_color(colors.foreground).child("Tasks"))
                         .child(div().text_size(typography::TEXT_SM).text_color(colors.subtle_foreground).child(total.to_string()))
                         .child(div().flex_1())

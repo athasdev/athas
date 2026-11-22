@@ -1911,7 +1911,7 @@ impl Editor {
                         .h(px(32.))
                         .w(px(320.))
                         .px(px(12.))
-                        .rounded(px(10.))
+                        .rounded(ui::metrics::ISLAND_RADIUS)
                         .bg(theme.colors.overlay)
                         .shadow(theme.shadows.popover.clone())
                         .child(input.clone()),

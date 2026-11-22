@@ -226,7 +226,7 @@ pub fn render(markdown: &str, cx: &App) -> AnyElement {
                     .overflow_x_scroll()
                     .px(px(12.))
                     .py(px(10.))
-                    .rounded(px(6.))
+                    .rounded(ui::metrics::RADIUS_MD)
                     .bg(code_background)
                     .font_family(typography::MONO_FONT)
                     .text_size(px(12.))

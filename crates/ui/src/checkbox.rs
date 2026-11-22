@@ -89,7 +89,7 @@ impl RenderOnce for Checkbox {
             .items_center()
             .justify_center()
             .size(size)
-            .rounded(px(3.))
+            .rounded(crate::metrics::RADIUS)
             .border_1()
             .border_color(if self.forced_hover && !self.disabled { hover_border } else { border })
             .bg(if checked { colors.primary } else { colors.surface })

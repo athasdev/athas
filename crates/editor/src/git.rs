@@ -370,7 +370,7 @@ impl Editor {
             .gap(px(6.))
             .p(px(10.))
             .max_w(px(360.))
-            .rounded(px(8.))
+            .rounded(ui::metrics::RADIUS_LG)
             .border_1()
             .border_color(colors.border)
             .bg(colors.overlay)

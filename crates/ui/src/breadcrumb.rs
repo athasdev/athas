@@ -50,7 +50,7 @@ impl RenderOnce for Breadcrumb {
             children.push(match handler {
                 Some(handler) => div()
                     .id(index)
-                    .rounded(px(3.))
+                    .rounded(crate::metrics::RADIUS)
                     .text_color(colors.muted_foreground)
                     .hover(|style| style.text_color(colors.foreground))
                     .on_click(move |event, window, cx| handler(event, window, cx))

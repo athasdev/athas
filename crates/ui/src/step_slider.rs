@@ -125,7 +125,7 @@ impl RenderOnce for StepSlider {
                 .items_center()
                 .h(px(20.))
                 .px(px(6.))
-                .rounded(px(3.))
+                .rounded(crate::metrics::RADIUS)
                 .text_size(typography::TEXT_CAPTION)
                 .map(|this| {
                     if is_auto {

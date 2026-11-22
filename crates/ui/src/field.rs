@@ -336,7 +336,7 @@ impl RenderOnce for InputGroup {
             .when(self.variant == InputGroupVariant::Surface, |this| this.bg(colors.surface))
             .when(!shadow.is_empty(), |this| this.shadow(shadow))
             .when(self.disabled, |this| this.opacity(0.5))
-            .map(|this| if block { this.flex_col().rounded(px(8.)) } else { this.items_center().rounded_full() })
+            .map(|this| if block { this.flex_col().rounded(crate::metrics::RADIUS_LG) } else { this.items_center().rounded_full() })
             .children(self.block_start.map(|addon| div().flex().items_center().w_full().px(px(10.)).pt(px(8.)).child(addon)))
             .child(row)
             .children(self.block_end.map(|addon| div().flex().items_center().w_full().px(px(10.)).pb(px(8.)).child(addon)))

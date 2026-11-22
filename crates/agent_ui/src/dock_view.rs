@@ -312,7 +312,7 @@ impl SessionDockView {
             .min_w_0()
             .px(px(12.))
             .py(px(10.))
-            .rounded(px(10.))
+            .rounded(ui::metrics::ISLAND_RADIUS)
             .bg(colors.surface.opacity(0.55))
             .child(
                 div()
@@ -431,7 +431,7 @@ fn segmented_bar(segments: &[(f32, Hsla)], cx: &App) -> AnyElement {
         .flex()
         .h(px(4.))
         .w_full()
-        .rounded(px(2.))
+        .rounded(ui::metrics::RADIUS_SM)
         .overflow_hidden()
         .bg(cx.theme().colors.divider)
         .children(segments.iter().filter(|(fraction, _)| *fraction > 0.).map(|(fraction, color)| div().h_full().flex_none().bg(*color).w(relative(fraction.clamp(0., 1.)))))
@@ -488,7 +488,7 @@ impl Render for SessionDockView {
                         cx,
                     )
                     .id("env-pull-request")
-                    .rounded(px(6.))
+                    .rounded(ui::metrics::RADIUS_MD)
                     .hover(|style| style.text_color(colors.foreground))
                     .on_click(move |_, _, cx| workbench_api::open_resource(cx, "github-pr", &number.to_string(), &format!("#{number} {title}")))
                     .into_any_element(),
@@ -609,7 +609,7 @@ impl Render for SessionDockView {
                     .id(("side-change", index))
                     .px(px(4.))
                     .mx(px(-4.))
-                    .rounded(px(6.))
+                    .rounded(ui::metrics::RADIUS_MD)
                     .when(failed, |this| this.text_color(colors.destructive))
                     .hover(|style| style.bg(colors.accent).text_color(colors.foreground))
                     .on_click(cx.listener(move |this, _: &ClickEvent, _, cx| this.with_session(cx, |session, cx| session.open_net_diff(&path, cx))))
@@ -647,7 +647,7 @@ impl Render for SessionDockView {
                     .id("side-changes-total")
                     .px(px(4.))
                     .mr(px(-4.))
-                    .rounded(px(4.))
+                    .rounded(ui::metrics::RADIUS)
                     .hover(|style| style.bg(colors.accent))
                     .tooltip(ui::Tooltip::text("Review all changes"))
                     .on_click(|_, window, cx| {
@@ -732,7 +732,7 @@ impl Render for SessionDockView {
                     .flex()
                     .items_center()
                     .gap(px(2.))
-                    .rounded(px(6.))
+                    .rounded(ui::metrics::RADIUS_MD)
                     .hover(|style| style.bg(colors.accent))
                     .child(dot(colors.success))
                     .child(row(None, label, None, Some(Icon::new(IconName::Globe).size(IconSize::XSmall).color(colors.subtle_foreground).into_any_element()), cx).flex_1())

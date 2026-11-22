@@ -120,7 +120,7 @@ impl PickerDelegate for OutlinePickerDelegate {
             .h(px(28.))
             .pl(px(8. + row.depth as f32 * 14.))
             .pr(px(10.))
-            .rounded(px(6.))
+            .rounded(ui::metrics::RADIUS_MD)
             .text_size(typography::TEXT_SM)
             .text_color(text)
             .when(selected, |this| this.bg(colors.primary))

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Reports spacing that is off the scale, and hover states that use the wrong colour.
+"""Reports spacing off the scale, raw corner radii, and hover states using the wrong colour.
 
 Every gap, padding and margin in the app should be one of the scale's twelve steps. This finds
 the ones that are not: a `gap(px(14.))` beside the next panel's `gap(px(12.))` is how two
@@ -34,6 +34,10 @@ CALL = re.compile(rf"\.({SPACING})\(px\((\d+(?:\.\d*)?)\)\)")
 HOVER_BG = re.compile(r"\.hover\((?:move )?\|\w+\| ?\w+\.bg\(((?:colors|theme\.colors)\.\w+)\)")
 HOVER_ALLOWED = {"colors.accent", "theme.colors.accent", "colors.segment_track"}
 
+# A corner belongs to the surface it is on, and the ladder in `metrics` says which. A raw value
+# is a corner nobody chose — `rounded(px(0.))` is a deliberate square and is left alone.
+RADIUS = re.compile(r"\.rounded(?:_[a-z]+)?\(px\((\d+(?:\.\d*)?)\)\)")
+
 ROOTS = ("crates",)
 
 
@@ -67,6 +71,18 @@ def hovers(root: Path) -> dict[Path, list[tuple[int, str]]]:
             for colour in HOVER_BG.findall(line):
                 if colour not in HOVER_ALLOWED:
                     found[source].append((number, colour))
+    return found
+
+
+def radii(root: Path) -> dict[Path, list[tuple[int, float]]]:
+    """Corner radii written as a raw value instead of a step of the ladder."""
+    found: dict[Path, list[tuple[int, float]]] = defaultdict(list)
+    for source in root.rglob("*.rs"):
+        for number, line in enumerate(source.read_text(errors="ignore").splitlines(), start=1):
+            for raw in RADIUS.findall(line):
+                value = float(raw)
+                if value:
+                    found[source].append((number, value))
     return found
 
 
@@ -112,7 +128,19 @@ def main() -> int:
     else:
         print("Every hover background is the hover colour.")
 
-    return 1 if ((total or hover_count) and strict) else 0
+    raw_radii: dict[Path, list[tuple[int, float]]] = {}
+    for root in ROOTS:
+        raw_radii.update(radii(base / root))
+    radius_count = sum(len(hits) for hits in raw_radii.values())
+    if radius_count:
+        print(f"\n{radius_count} corner radi{'i' if radius_count != 1 else 'us'} not on the ladder in `metrics`:")
+        for source in sorted(raw_radii):
+            for number, value in raw_radii[source]:
+                print(f"  {source.relative_to(base)}:{number}  px({value:g}.)")
+    else:
+        print("Every corner is on the radius ladder.")
+
+    return 1 if ((total or hover_count or radius_count) and strict) else 0
 
 
 if __name__ == "__main__":

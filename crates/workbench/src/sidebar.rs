@@ -448,7 +448,7 @@ impl Workbench {
                         .gap(px(4.))
                         .px(px(4.))
                         .py(px(2.))
-                        .rounded(px(4.))
+                        .rounded(metrics::RADIUS)
                         .when(!url.is_empty(), |this| {
                             this.cursor_pointer()
                                 .hover(|style| style.bg(colors.accent))

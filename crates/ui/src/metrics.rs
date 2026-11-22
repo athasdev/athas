@@ -112,9 +112,19 @@ pub const CHROME_HIT_TARGET: Pixels = px(28.);
 pub const CHROME_GAP_TIGHT: Pixels = px(2.);
 pub const CHROME_GAP: Pixels = px(4.);
 pub const CHROME_PADDING_INLINE: Pixels = px(6.);
+/// The radius ladder. A corner belongs to the surface it is on: the smaller the thing, the
+/// tighter the corner, so a key cap and a command palette do not round the same way.
+/// Smallest things: a key cap, a chip inside a row.
+pub const RADIUS_SM: Pixels = px(2.);
+/// The base: buttons, fields, rows and anything else a pointer acts on.
 pub const RADIUS: Pixels = px(4.);
+/// A little softer, for popovers and surfaces that sit over content.
 pub const RADIUS_MD: Pixels = px(6.);
 pub const RADIUS_LG: Pixels = px(8.);
+/// A block of content rather than a control: a message bubble, a grouped panel.
+pub const RADIUS_XL: Pixels = px(12.);
+/// What floats clear of the window: the command palette and the surfaces like it.
+pub const OVERLAY_RADIUS: Pixels = px(16.);
 /// The macOS traffic lights take this much of the top-left row.
 pub const TRAFFIC_LIGHTS_INSET: Pixels = px(84.);
 pub const SIDEBAR_DEFAULT_WIDTH: Pixels = px(220.);

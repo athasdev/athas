@@ -128,7 +128,7 @@ impl SessionView {
                 .gap(px(10.))
                 .px(px(12.))
                 .py(px(8.))
-                .rounded(px(10.))
+                .rounded(ui::metrics::ISLAND_RADIUS)
                 .border_1()
                 .border_color(colors.border)
                 .bg(colors.raised)

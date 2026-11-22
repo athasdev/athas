@@ -94,7 +94,7 @@ impl RenderOnce for Kbd {
                 .h(px(16.))
                 .min_w(px(16.))
                 .px(px(4.))
-                .rounded(px(2.))
+                .rounded(crate::metrics::RADIUS_SM)
                 .bg(accent)
                 .text_size(typography::TEXT_CAPTION)
                 .font_weight(typography::MEDIUM)

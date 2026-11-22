@@ -2963,7 +2963,7 @@ pub(crate) fn toast_stack(window: &Window, workbench: bool, cx: &mut App) -> Opt
                     .right(inset)
                     .top(px(-10. * depth as f32))
                     .h(px(40.))
-                    .rounded(px(12.))
+                    .rounded(metrics::RADIUS_XL)
                     .bg(theme.colors.overlay)
                     .shadow(theme.shadows.popover.clone())
                     .opacity(1. - 0.3 * depth as f32)

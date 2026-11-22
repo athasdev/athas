@@ -343,7 +343,7 @@ impl Editor {
                         .h(px(22.))
                         .mx(px(4.))
                         .px(px(6.))
-                        .rounded(px(4.))
+                        .rounded(ui::metrics::RADIUS)
                         .when(active, |row| row.bg(colors.selected))
                         .when(!active, |row| row.hover(|row| row.bg(colors.accent)))
                         .child(div().flex_none().text_color(colors.subtle_foreground).child((line + 1).to_string()))

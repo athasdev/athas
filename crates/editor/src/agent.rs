@@ -343,7 +343,7 @@ impl Editor {
             .items_center()
             .gap(px(2.))
             .p(px(2.))
-            .rounded(px(6.))
+            .rounded(ui::metrics::RADIUS_MD)
             .bg(colors.overlay)
             .border_1()
             .border_color(colors.border)

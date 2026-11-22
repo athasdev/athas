@@ -60,7 +60,7 @@ impl Render for CellDragPreview {
         div()
             .px(px(8.))
             .py(px(2.))
-            .rounded(px(4.))
+            .rounded(ui::metrics::RADIUS)
             .bg(colors.overlay)
             .border_1()
             .border_color(colors.border)
@@ -443,7 +443,7 @@ impl Editor {
             .gap(px(4.))
             .px(px(4.))
             .py(px(2.))
-            .rounded(px(4.))
+            .rounded(ui::metrics::RADIUS)
             .cursor_grab()
             .text_color(colors.subtle_foreground)
             .hover(|style| style.bg(colors.accent).text_color(colors.foreground))
@@ -488,7 +488,7 @@ impl Editor {
             .child(div().font(mono.clone()).text_size(typography::TEXT_CAPTION).text_color(colors.subtle_foreground).child(cell_type.clone()))
             .child(actions);
 
-        let block = |content: AnyElement| div().rounded(px(6.)).bg(colors.surface).p(px(10.)).overflow_hidden().child(content);
+        let block = |content: AnyElement| div().rounded(ui::metrics::RADIUS_MD).bg(colors.surface).p(px(10.)).overflow_hidden().child(content);
         let body = match input {
             Some(input) if code => div()
                 .capture_key_down(cx.listener(move |editor, event: &KeyDownEvent, _, cx| {
@@ -521,7 +521,7 @@ impl Editor {
             .mb(px(16.))
             .py(px(4.))
             .pr(px(4.))
-            .rounded(px(6.))
+            .rounded(ui::metrics::RADIUS_MD)
             .border_1()
             .border_color(if selected { colors.primary } else { gpui::transparent_black() })
             .when(selected, |this| this.bg(colors.primary_soft))
@@ -572,7 +572,7 @@ impl Editor {
         let colors = cx.theme().colors.clone();
         let pre = |text: String, color| {
             div()
-                .rounded(px(6.))
+                .rounded(ui::metrics::RADIUS_MD)
                 .bg(colors.surface)
                 .p(px(10.))
                 .font(mono.clone())
@@ -592,7 +592,7 @@ impl Editor {
                 };
                 Some(
                     div()
-                        .rounded(px(6.))
+                        .rounded(ui::metrics::RADIUS_MD)
                         .border_1()
                         .border_color(colors.destructive)
                         .bg(colors.surface)
@@ -611,7 +611,7 @@ impl Editor {
                         continue;
                     }
                     if let Some(image) = self.output_image(&data, format) {
-                        return Some(div().rounded(px(6.)).bg(colors.surface).p(px(10.)).child(img(ImageSource::from(image)).max_w_full()).into_any_element());
+                        return Some(div().rounded(ui::metrics::RADIUS_MD).bg(colors.surface).p(px(10.)).child(img(ImageSource::from(image)).max_w_full()).into_any_element());
                     }
                 }
                 if !model::data_text(output, "application/pdf").is_empty() {
@@ -624,13 +624,13 @@ impl Editor {
                 }
                 let markdown = model::data_text(output, "text/markdown");
                 if !markdown.is_empty() {
-                    return Some(div().rounded(px(6.)).bg(colors.surface).p(px(10.)).child(markdown_preview::markdown_element(&markdown, base_dir.to_path_buf(), cx)).into_any_element());
+                    return Some(div().rounded(ui::metrics::RADIUS_MD).bg(colors.surface).p(px(10.)).child(markdown_preview::markdown_element(&markdown, base_dir.to_path_buf(), cx)).into_any_element());
                 }
                 for (code, language) in [(model::data_json(output), "json"), (model::data_text(output, "application/javascript"), "javascript")] {
                     if !code.is_empty() {
                         let runs = markdown_preview::code_runs(Some(language), &code, mono, colors.foreground, cx.theme());
                         return Some(
-                            div().rounded(px(6.)).bg(colors.surface).p(px(10.)).font(mono.clone()).text_size(typography::TEXT_SM).child(StyledText::new(code).with_runs(runs)).into_any_element(),
+                            div().rounded(ui::metrics::RADIUS_MD).bg(colors.surface).p(px(10.)).font(mono.clone()).text_size(typography::TEXT_SM).child(StyledText::new(code).with_runs(runs)).into_any_element(),
                         );
                     }
                 }

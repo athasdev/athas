@@ -223,7 +223,7 @@ impl OnboardingView {
                 .child(
                     div()
                         .size_full()
-                        .rounded_tl(px(6.))
+                        .rounded_tl(metrics::RADIUS_MD)
                         .bg(background)
                         .p(px(6.))
                         .child(div().w(px(28.)).h(px(4.)).rounded_full().bg(foreground.opacity(0.4))),

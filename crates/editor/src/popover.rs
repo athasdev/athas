@@ -135,7 +135,7 @@ impl TextStyle {
                 Block::Code { language, code } => div()
                     .px(px(8.))
                     .py(px(6.))
-                    .rounded(px(6.))
+                    .rounded(ui::metrics::RADIUS_MD)
                     .bg(self.code_background)
                     .child(self.code(language.as_deref(), code, theme))
                     .into_any_element(),
@@ -152,7 +152,7 @@ fn card(theme: &Theme) -> Div {
         .bg(theme.colors.overlay)
         .border_1()
         .border_color(theme.colors.border)
-        .rounded(px(8.))
+        .rounded(ui::metrics::RADIUS_LG)
         .shadow(theme.shadows.popover.clone())
         .text_size(typography::TEXT_SM)
         .text_color(theme.colors.foreground)
@@ -233,7 +233,7 @@ impl Editor {
                 .gap(px(8.))
                 .h(MENU_ROW_HEIGHT)
                 .px(px(8.))
-                .rounded(px(5.))
+                .rounded(ui::metrics::RADIUS_MD)
                 .when(selected, |row| row.bg(colors.selected))
                 .on_mouse_down(MouseButton::Left, cx.listener(move |editor, _, _, cx| {
                     cx.stop_propagation();
@@ -294,7 +294,7 @@ impl Editor {
                 .gap(px(8.))
                 .h(MENU_ROW_HEIGHT)
                 .px(px(8.))
-                .rounded(px(5.))
+                .rounded(ui::metrics::RADIUS_MD)
                 .when(index == menu.selected, |row| row.bg(colors.selected))
                 .on_mouse_down(MouseButton::Left, cx.listener(move |editor, _, window, cx| {
                     cx.stop_propagation();
