@@ -53,7 +53,7 @@ impl Section {
 }
 
 impl GitHubPanel {
-    pub(crate) fn render_header_buttons(&mut self, cx: &mut Context<Self>) -> AnyElement {
+    pub(crate) fn render_header_buttons(&self, cx: &mut Context<Self>) -> AnyElement {
         let menu_open = menus::is_open(&self.open_menu, "github-actions");
         div()
             .flex()
@@ -63,7 +63,7 @@ impl GitHubPanel {
                 Button::icon("github-refresh", IconName::ArrowClockwise)
                     .size(ButtonSize::Small)
                     .plane(Plane::Page)
-                    .tooltip(format!("Refresh {}", self.section.noun()))
+                    .tooltip("Refresh")
                     .disabled(self.is_loading())
                     .on_click(cx.listener(|this, _, _, cx| this.refresh(cx))),
             )
@@ -82,7 +82,7 @@ impl GitHubPanel {
     }
 
     fn actions_menu(&self, cx: &Context<Self>) -> Vec<MenuEntry> {
-        let mut entries = vec![menus::item(format!("Refresh {}", self.section.noun()), cx, |this, _, cx| this.refresh(cx)).icon(IconName::ArrowClockwise).into()];
+        let mut entries = vec![menus::item("Refresh", cx, |this, _, cx| this.refresh(cx)).icon(IconName::ArrowClockwise).into()];
         if let Some(repo) = self.repository() {
             let url = repo.slug.url();
             entries.push(MenuEntry::Separator);
@@ -149,19 +149,80 @@ impl GitHubPanel {
         div().flex().flex_1().min_h_0().items_center().justify_center().child(state).into_any_element()
     }
 
-    /// The panel's header, as every sidebar tool has one: the section in front as a switcher
-    /// listing every section by name and count (an icon-only track was hard to read), and the
-    /// panel's buttons at the end.
-    fn render_tabs(&mut self, _colors: &ThemeColors, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
-        let current = self.section;
-        let tabs = self.sections.iter().fold(ui::SectionTabs::new(), |tabs, &section| {
+    /// The sections as an accordion: each folds open under its row, one under the other, all in
+    /// one scrolling column. An open row shows its filter and create buttons on hover.
+    fn render_accordion(&mut self, colors: &ThemeColors, cx: &mut Context<Self>) -> impl IntoElement {
+        let mut column = div().id("github-list").flex().flex_col().size_full().overflow_y_scroll().track_scroll(&self.list_scroll).gap(px(2.)).pb(px(12.));
+        for section in self.sections.clone() {
+            let open = self.open_sections.contains(&section);
             let count = if section == Section::PullRequests { self.pulls.len() } else { 0 };
-            tabs.tab(
-                ui::SectionTab::new(gpui::ElementId::Name(format!("github-section-{}", section.id()).into()), section.title(), section.icon(), cx.listener(move |panel, _: &ClickEvent, _, cx| panel.show_section(section, cx))).count(count),
-                section == current,
+            let mut row = ui::AccordionRow::new(
+                gpui::ElementId::Name(format!("github-section-{}", section.id()).into()),
+                section.title(),
+                section.icon(),
+                open,
+                cx.listener(move |panel, _: &ClickEvent, _, cx| panel.toggle_section(section, cx)),
             )
+            .count(count);
+            if open {
+                row = row.trailing(self.render_section_buttons(section, cx));
+            }
+            column = column.child(row);
+            if open {
+                let rows = match (&self.repo, section) {
+                    (RepoState::Missing(error), _) => vec![self.render_repo_missing(error.clone(), colors, cx)],
+                    (_, Section::PullRequests) => self.render_pull_requests(colors, cx),
+                    (_, Section::Issues) => self.render_issues(colors, cx),
+                    (_, Section::Actions) => self.render_runs(colors, cx),
+                    (_, Section::Releases) => self.render_releases(colors, cx),
+                    (_, Section::Deployments) => self.render_deployments(colors, cx),
+                };
+                column = column.child(div().flex().flex_col().px(px(8.)).pb(px(4.)).children(rows));
+            }
+        }
+        div()
+            .relative()
+            .flex()
+            .flex_col()
+            .flex_1()
+            .min_h_0()
+            .overflow_hidden()
+            .child(column)
+            .child(ui::Scrollbar::new("github-list-scrollbar", &self.list_scroll))
+    }
+
+    /// A section's filter and create buttons.
+    fn render_section_buttons(&self, section: Section, cx: &mut Context<Self>) -> impl IntoElement {
+        let (label, filtered) = self.filter_label(section);
+        let key = SharedString::from(format!("github-filter-{}", section.id()));
+        let menu_key = key.clone();
+        let create = self.repository().and_then(|_| match section {
+            Section::PullRequests => Some(("New pull request", "github-new", "pull-request")),
+            Section::Issues => Some(("New issue", "github-new", "issue")),
+            Section::Actions => Some(("Run workflow", "github-new", "action")),
+            Section::Releases => Some(("New release", "github-release", "new")),
+            Section::Deployments => None,
         });
-        div().flex().flex_col().flex_none().child(self.render_title_only(cx)).child(tabs)
+        div()
+            .flex()
+            .items_center()
+            .gap(px(2.))
+            .child(
+                Button::icon(key.clone(), IconName::Filter)
+                    .size(ButtonSize::XSmall)
+                    .active(filtered || menus::is_open(&self.open_menu, &key))
+                    .tooltip(format!("Filter: {label}"))
+                    .on_click(cx.listener(move |this, event: &ClickEvent, window, cx| {
+                        let entries = this.filter_menu(section, cx);
+                        menus::show(this, &menu_key, entries, below(event), Anchor::TopRight, window, cx);
+                    })),
+            )
+            .children(create.map(|(label, kind, id)| {
+                Button::icon(SharedString::from(format!("github-create-{}", section.id())), IconName::Plus)
+                    .size(ButtonSize::XSmall)
+                    .tooltip(label)
+                    .on_click(cx.listener(move |_, _, _, cx| cx.emit(crate::GitHubEvent::OpenResource { kind: kind.into(), id: id.into(), title: label.into() })))
+            }))
     }
 
     /// The header before there are sections to switch between (signed out, still checking):
@@ -178,11 +239,11 @@ impl GitHubPanel {
         };
         let accent = colors.accent;
         let tooltip = self.repository().map(|repo| format!("{}\n{}", repo.slug.full_name(), repo.root.display())).unwrap_or_default();
-        div().flex().flex_none().items_center().h(BAR_HEIGHT).px(px(8.)).child(
+        let buttons = self.render_header_buttons(cx);
+        div().flex().flex_none().items_center().gap(px(2.)).h(BAR_HEIGHT).px(px(8.)).child(
             div()
                 .id("github-repo-button")
                 .flex()
-                .flex_1()
                 .min_w_0()
                 .items_center()
                 .gap(px(6.))
@@ -209,6 +270,8 @@ impl GitHubPanel {
                     menus::show(this, "github-repo", entries, below(event), Anchor::TopLeft, window, cx);
                 })),
         )
+        .child(div().flex_1())
+        .child(buttons)
     }
 
     fn repo_menu(&self, cx: &Context<Self>) -> Vec<MenuEntry> {
@@ -248,8 +311,8 @@ impl GitHubPanel {
         list_message(error.title(), Some(hint), Some(action.into_any_element()), colors).into_any_element()
     }
 
-    fn filter_label(&self) -> (&'static str, bool) {
-        match self.section {
+    fn filter_label(&self, section: Section) -> (&'static str, bool) {
+        match section {
             Section::PullRequests => (self.pr_filter.label(), self.pr_filter != PrFilter::default()),
             Section::Issues => (self.issue_filter.label(), self.issue_filter != IssueFilter::default()),
             Section::Actions => (self.run_filter.label(), self.run_filter != RunFilter::default()),
@@ -258,8 +321,8 @@ impl GitHubPanel {
         }
     }
 
-    fn filter_menu(&self, cx: &Context<Self>) -> Vec<MenuEntry> {
-        match self.section {
+    fn filter_menu(&self, section: Section, cx: &Context<Self>) -> Vec<MenuEntry> {
+        match section {
             Section::PullRequests => PrFilter::ALL
                 .map(|filter| menus::item(filter.label(), cx, move |this, _, cx| this.set_pr_filter(filter, cx)).checked(filter == self.pr_filter).into())
                 .into(),
@@ -278,40 +341,8 @@ impl GitHubPanel {
         }
     }
 
-    fn render_toolbar(&self, cx: &mut Context<Self>) -> impl IntoElement {
-        let (label, filtered) = self.filter_label();
-        let create = self.repository().and_then(|_| match self.section {
-            Section::PullRequests => Some(("New pull request", "github-new", "pull-request")),
-            Section::Issues => Some(("New issue", "github-new", "issue")),
-            Section::Actions => Some(("Run workflow", "github-new", "action")),
-            Section::Releases => Some(("New release", "github-release", "new")),
-            Section::Deployments => None,
-        });
-        div()
-            .flex()
-            .flex_none()
-            .items_center()
-            .gap(px(2.))
-            .h(BAR_HEIGHT)
-            .pl(px(12.))
-            .pr(px(8.))
-            .child(div().flex_1().min_w_0().child(self.filter_input.clone()))
-            .child(
-                Button::icon("github-filter", IconName::Filter)
-                    .size(ButtonSize::XSmall)
-                    .active(filtered || menus::is_open(&self.open_menu, "github-filter"))
-                    .tooltip(format!("Filter: {label}"))
-                    .on_click(cx.listener(|this, event: &ClickEvent, window, cx| {
-                        let entries = this.filter_menu(cx);
-                        menus::show(this, "github-filter", entries, below(event), Anchor::TopRight, window, cx);
-                    })),
-            )
-            .children(create.map(|(label, kind, id)| {
-                Button::icon("github-create", IconName::Plus)
-                    .size(ButtonSize::XSmall)
-                    .tooltip(label)
-                    .on_click(cx.listener(move |_, _, _, cx| cx.emit(crate::GitHubEvent::OpenResource { kind: kind.into(), id: id.into(), title: label.into() })))
-            }))
+    fn render_toolbar(&self) -> impl IntoElement {
+        div().flex().flex_none().items_center().h(BAR_HEIGHT).pl(px(12.)).pr(px(8.)).child(div().flex_1().min_w_0().child(self.filter_input.clone()))
     }
 
     fn query(&self, cx: &Context<Self>) -> String {
@@ -319,8 +350,8 @@ impl GitHubPanel {
     }
 
     /// The list's state when it has nothing to show, or `None` when it does.
-    fn list_status<T>(&self, list: &crate::List<T>, shown: usize, colors: &ThemeColors, cx: &mut Context<Self>) -> Option<AnyElement> {
-        let noun = self.section.noun();
+    fn list_status<T>(&self, section: Section, list: &crate::List<T>, shown: usize, colors: &ThemeColors, cx: &mut Context<Self>) -> Option<AnyElement> {
+        let noun = section.noun();
         if let Some(error) = list.error.clone().filter(|_| list.len() == 0) {
             let retry = Button::new("github-list-retry", "Try again")
                 .variant(ButtonVariant::Ghost)
@@ -332,7 +363,7 @@ impl GitHubPanel {
             return Some(list_message(format!("Loading {noun}…"), None, None, colors).into_any_element());
         }
         if list.len() == 0 {
-            let title = match self.section {
+            let title = match section {
                 Section::Actions => "No workflow runs yet".to_string(),
                 _ => format!("No {noun}"),
             };
@@ -351,7 +382,6 @@ impl GitHubPanel {
         row: impl Fn(&Self, &T, &ThemeColors, &mut Context<Self>) -> AnyElement,
     ) -> Vec<AnyElement> {
         let mut children = Vec::new();
-        let mut shown = Vec::new();
         for group in groups {
             let key = format!("{prefix}:{}", group.id);
             let open = forced_open || !self.collapsed.contains(&key);
@@ -363,38 +393,8 @@ impl GitHubPanel {
                 block = block.child(div().flex().flex_col().pb(px(8.)).children(group.items.into_iter().map(|item| row(self, item, colors, cx))));
             }
             children.push(block.into_any_element());
-            shown.push(info);
         }
-        *self.shown_groups.borrow_mut() = shown;
         children
-    }
-
-    /// The list, with the header of the group scrolled past pinned on top.
-    fn render_list(&self, rows: Vec<AnyElement>, stuck: Option<(ShownGroup, gpui::Pixels)>, colors: &ThemeColors, cx: &mut Context<Self>) -> AnyElement {
-        // The pinned group as it is drawn now (opened or closed since the last layout).
-        let pinned = stuck.and_then(|(group, top)| {
-            let group = self.shown_groups.borrow().iter().find(|shown| shown.key == group.key).cloned()?;
-            Some(
-                div()
-                    .absolute()
-                    .left(px(8.))
-                    .right(px(8.))
-                    .top(top)
-                    .bg(colors.surface)
-                    .child(self.render_group_header(&group, "-pinned", colors, cx)),
-            )
-        });
-        div()
-            .relative()
-            .flex()
-            .flex_col()
-            .flex_1()
-            .min_h_0()
-            .overflow_hidden()
-            .child(div().id("github-list").flex().flex_col().size_full().overflow_y_scroll().track_scroll(&self.list_scroll).px(px(8.)).pb(px(12.)).children(rows))
-            .children(pinned)
-            .child(ui::Scrollbar::new("github-list-scrollbar", &self.list_scroll))
-            .into_any_element()
     }
 
     fn render_group_header(&self, group: &ShownGroup, id_suffix: &str, colors: &ThemeColors, cx: &mut Context<Self>) -> gpui::Stateful<gpui::Div> {
@@ -405,30 +405,11 @@ impl GitHubPanel {
         })
     }
 
-    /// The group scrolled past, and how far the end of its rows pushes its header up (the
-    /// original's `sticky -top-px` group headers).
-    fn stuck_group(&self) -> Option<(ShownGroup, gpui::Pixels)> {
-        let viewport = self.list_scroll.bounds();
-        let offset = self.list_scroll.offset().y;
-        if offset >= px(0.) {
-            return None;
-        }
-        let groups = self.shown_groups.borrow();
-        groups.iter().enumerate().find_map(|(index, group)| {
-            let bounds = self.list_scroll.bounds_for_item(index)?;
-            let (top, bottom) = (bounds.top() + offset, bounds.bottom() + offset);
-            if top >= viewport.top() || bottom <= viewport.top() {
-                return None;
-            }
-            Some((group.clone(), (bottom - viewport.top() - metrics::LIST_ROW).min(px(0.))))
-        })
-    }
-
     fn render_pull_requests(&self, colors: &ThemeColors, cx: &mut Context<Self>) -> Vec<AnyElement> {
         let query = self.query(cx);
         let items = self.pulls.items.clone().unwrap_or_default();
         let matching: Vec<&PullRequest> = items.iter().filter(|pr| model::pr_matches(pr, &query)).collect();
-        if let Some(status) = self.list_status(&self.pulls, matching.len(), colors, cx) {
+        if let Some(status) = self.list_status(Section::PullRequests, &self.pulls, matching.len(), colors, cx) {
             return vec![status];
         }
         let groups = model::group_pull_requests(&matching, self.pr_filter);
@@ -525,7 +506,7 @@ impl GitHubPanel {
         let query = self.query(cx);
         let items = self.issues.items.clone().unwrap_or_default();
         let matching: Vec<&IssueListItem> = items.iter().filter(|issue| model::issue_matches(issue, &query)).collect();
-        if let Some(status) = self.list_status(&self.issues, matching.len(), colors, cx) {
+        if let Some(status) = self.list_status(Section::Issues, &self.issues, matching.len(), colors, cx) {
             return vec![status];
         }
         let groups = model::group_issues(&matching);
@@ -591,7 +572,7 @@ impl GitHubPanel {
         let query = self.query(cx);
         let items = self.runs.items.clone().unwrap_or_default();
         let matching: Vec<&WorkflowRunListItem> = items.iter().filter(|run| self.run_filter.matches(run) && model::run_matches(run, &query)).collect();
-        if let Some(status) = self.list_status(&self.runs, matching.len(), colors, cx) {
+        if let Some(status) = self.list_status(Section::Actions, &self.runs, matching.len(), colors, cx) {
             return vec![status];
         }
         let groups = model::group_runs_by_day(&matching, Local::now());
@@ -706,7 +687,7 @@ impl GitHubPanel {
         let query = self.query(cx);
         let items = self.releases.items.clone().unwrap_or_default();
         let matching: Vec<&Release> = items.iter().filter(|release| model::release_matches(release, self.release_filter, &query)).collect();
-        if let Some(status) = self.list_status(&self.releases, matching.len(), colors, cx) {
+        if let Some(status) = self.list_status(Section::Releases, &self.releases, matching.len(), colors, cx) {
             return vec![status];
         }
         let now = Utc::now();
@@ -739,7 +720,7 @@ impl GitHubPanel {
         let items = self.deployments.items.clone().unwrap_or_default();
         let matching: Vec<&Deployment> =
             items.iter().filter(|deployment| model::deployment_matches(deployment, self.deployment_filter, delivery_view::deployment_state(deployment).2, &query)).collect();
-        if let Some(status) = self.list_status(&self.deployments, matching.len(), colors, cx) {
+        if let Some(status) = self.list_status(Section::Deployments, &self.deployments, matching.len(), colors, cx) {
             return vec![status];
         }
         let now = Utc::now();
@@ -811,12 +792,10 @@ impl GitHubPanel {
 }
 
 impl Render for GitHubPanel {
-    fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+    fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let colors = cx.theme().colors.clone();
         // As `GitHubPRsView`: the account first, then the tabs and bars over the list, which says
         // when the repository is missing.
-        let stuck = self.stuck_group();
-        self.shown_groups.borrow_mut().clear();
         let body = match (&self.repo, &self.auth) {
             (_, Auth::Checking) | (RepoState::Detecting, Auth::Authenticated(_)) => div()
                 .flex()
@@ -827,23 +806,14 @@ impl Render for GitHubPanel {
                 .child(widgets::fill_message("Checking GitHub account…", None, None, &colors))
                 .into_any_element(),
             (_, Auth::Authenticated(_)) => {
-                let rows = match (&self.repo, self.section) {
-                    (RepoState::Missing(error), _) => vec![self.render_repo_missing(error.clone(), &colors, cx)],
-                    (_, Section::PullRequests) => self.render_pull_requests(&colors, cx),
-                    (_, Section::Issues) => self.render_issues(&colors, cx),
-                    (_, Section::Actions) => self.render_runs(&colors, cx),
-                    (_, Section::Releases) => self.render_releases(&colors, cx),
-                    (_, Section::Deployments) => self.render_deployments(&colors, cx),
-                };
                 div()
                     .flex()
                     .flex_col()
                     .flex_1()
                     .min_h_0()
-                    .child(self.render_tabs(&colors, window, cx))
                     .child(self.render_bar(&colors, cx))
-                    .child(self.render_toolbar(cx))
-                    .child(self.render_list(rows, stuck, &colors, cx))
+                    .child(self.render_toolbar())
+                    .child(self.render_accordion(&colors, cx))
                     .into_any_element()
             }
             _ => div().flex().flex_col().flex_1().min_h_0().child(self.render_title_only(cx)).child(self.render_auth(&colors, cx)).into_any_element(),

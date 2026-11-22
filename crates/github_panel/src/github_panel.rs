@@ -158,7 +158,7 @@ const STALE_AFTER: Duration = Duration::from_secs(60);
 /// Releases come 20 to a page.
 const RELEASE_PAGE: usize = 20;
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub(crate) enum Section {
     PullRequests,
     Issues,
@@ -280,10 +280,10 @@ pub struct GitHubPanel {
     pub(crate) deployments_exhausted: bool,
     pub(crate) deployment_filter: DeploymentFilter,
     pub(crate) collapsed: HashSet<String>,
-    /// The sidebar list's scroll, and the groups it last drew (one child each), for the sticky
-    /// group header.
+    /// The accordion's scroll.
     pub(crate) list_scroll: gpui::ScrollHandle,
-    pub(crate) shown_groups: std::cell::RefCell<Vec<crate::panel_view::ShownGroup>>,
+    /// The sections folded open; the last one opened is `section`.
+    pub(crate) open_sections: HashSet<Section>,
     /// The row last opened, drawn selected.
     pub(crate) selected: Option<(Section, i64)>,
     pub(crate) notice: Option<Notice>,
@@ -314,7 +314,7 @@ impl MenuHost for GitHubPanel {
 impl GitHubPanel {
     pub fn new(root: PathBuf, window: &mut Window, cx: &mut Context<Self>) -> Self {
         let filter_input = cx.new(|cx| {
-            TextInput::new(window, cx).placeholder("Filter pull requests").appearance(InputAppearance::Bare).leading_icon(ui::IconName::Search).clearable()
+            TextInput::new(window, cx).placeholder("Filter").appearance(InputAppearance::Bare).leading_icon(ui::IconName::Search).clearable()
         });
         let subscriptions = vec![
             cx.subscribe(&filter_input, |_, input, event: &TextInputEvent, cx| match event {
@@ -340,14 +340,14 @@ impl GitHubPanel {
                     let runs_active = this.runs.items.as_ref().is_some_and(|runs| {
                         runs.iter().any(|run| model::run_state(run.status.as_deref(), run.conclusion.as_deref()).is_active)
                     });
-                    if window.is_window_active() && this.section == Section::Actions && runs_active {
+                    if window.is_window_active() && this.open_sections.contains(&Section::Actions) && runs_active {
                         this.load_section(Section::Actions, cx);
                     }
                     let deployments_pending = this.deployments.items.as_ref().is_some_and(|items| items.iter().any(|deployment| delivery_view::deployment_state(deployment).2));
                     // Only while one page shows: reloading starts over at page 1 and would drop
                     // the pages the user loaded (and a "Load more" still on its way).
                     let one_page = !this.deployments.loading && this.deployments.items.as_ref().is_some_and(|items| items.len() <= RELEASE_PAGE);
-                    if window.is_window_active() && this.section == Section::Deployments && deployments_pending && one_page {
+                    if window.is_window_active() && this.open_sections.contains(&Section::Deployments) && deployments_pending && one_page {
                         this.load_section(Section::Deployments, cx);
                     }
                 });
@@ -381,7 +381,7 @@ impl GitHubPanel {
             deployment_filter: DeploymentFilter::default(),
             collapsed: HashSet::new(),
             list_scroll: gpui::ScrollHandle::new(),
-            shown_groups: Default::default(),
+            open_sections: HashSet::from([Section::PullRequests]),
             selected: None,
             notice: None,
             notice_epoch: 0,
@@ -466,13 +466,13 @@ impl GitHubPanel {
     }
 
     pub(crate) fn is_loading(&self) -> bool {
-        match self.section {
+        self.open_sections.iter().any(|section| match section {
             Section::PullRequests => self.pulls.loading,
             Section::Issues => self.issues.loading,
             Section::Actions => self.runs.loading,
             Section::Releases => self.releases.loading,
             Section::Deployments => self.deployments.loading,
-        }
+        })
     }
 
     fn detect_repository(&mut self, cx: &mut Context<Self>) {
@@ -605,7 +605,13 @@ impl GitHubPanel {
         match (&self.repo, &self.auth) {
             (RepoState::Missing(_), _) => self.detect_repository(cx),
             (_, Auth::Missing { .. } | Auth::Unavailable(_)) => self.check_auth(true, cx),
-            _ => self.load_section(self.section, cx),
+            _ => {
+                for section in self.sections.clone() {
+                    if self.open_sections.contains(&section) {
+                        self.load_section(section, cx);
+                    }
+                }
+            }
         }
     }
 
@@ -697,15 +703,19 @@ impl GitHubPanel {
         .detach();
     }
 
-    pub(crate) fn show_section(&mut self, section: Section, cx: &mut Context<Self>) {
-        if self.section == section {
+    /// Folds a section open or shut; sections open independently, one under the other.
+    pub(crate) fn toggle_section(&mut self, section: Section, cx: &mut Context<Self>) {
+        if self.open_sections.remove(&section) {
+            cx.notify();
             return;
         }
+        self.open_sections.insert(section);
+        self.show_section(section, cx);
+    }
+
+    pub(crate) fn show_section(&mut self, section: Section, cx: &mut Context<Self>) {
+        self.open_sections.insert(section);
         self.section = section;
-        self.filter_input.update(cx, |input, cx| {
-            input.set_text("", cx);
-            input.set_placeholder(format!("Filter {}", section.noun()), cx);
-        });
         let stale = match section {
             Section::PullRequests => self.pulls.items.is_none(),
             Section::Issues => self.issues.items.is_none(),

@@ -21,24 +21,22 @@ impl Workbench {
         let width = px(self.state.layout.sidebar_width);
         let resizing = matches!(self.drag, Some(Drag::Sidebar { .. }));
         let line = if resizing { cx.theme().colors.primary } else { cx.theme().colors.border_strong };
+        let hairline = cx.theme().colors.border;
         div()
             .relative()
             .flex()
-            .flex_col()
             .flex_none()
             .h_full()
             .w(width)
-            // Inside the shell the sidebar and the centre share a surface; a hairline divides them.
-            .border_r_1()
-            .border_color(cx.theme().colors.border)
-            .child(self.render_sidebar(false, window, cx))
+            .flex_row()
+            .child(div().flex().flex_col().flex_1().min_w_0().h_full().child(self.render_sidebar(false, window, cx)))
+            // Inside the shell the sidebar and the centre share a surface; a hairline divides
+            // them, in a gutter of its own so nothing in the sidebar sits over the grab area.
             .child(
                 div()
                     .id("sidebar-resize")
-                    .absolute()
-                    .top_0()
-                    .bottom_0()
-                    .right_0()
+                    .flex_none()
+                    .h_full()
                     .w(metrics::WORKBENCH_GAP)
                     .flex()
                     .justify_center()
@@ -48,6 +46,7 @@ impl Workbench {
                         div()
                             .w(px(1.))
                             .h_full()
+                            .bg(hairline)
                             .when(resizing, |this| this.bg(line))
                             .group_hover("sidebar-resize", move |style| style.bg(line)),
                     )

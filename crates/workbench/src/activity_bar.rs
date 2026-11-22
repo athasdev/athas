@@ -1,5 +1,5 @@
 use gpui::{Context, IntoElement, ParentElement, Styled, Window, div, prelude::*, px};
-use ui::{Avatar, Button, ButtonSize, Icon, IconName, TooltipExt, metrics};
+use ui::{Avatar, Button, ButtonSize, IconName, TooltipExt, metrics};
 use workspace::SidebarView;
 
 use crate::{ShowNotifications, ToggleAccountMenu, ToggleTerminal, Workbench};
@@ -129,9 +129,10 @@ impl Workbench {
             Some(chrome) => (chrome.account_name)(cx),
             None => account::AccountStore::global(cx).filter(|store| store.read(cx).is_signed_in()).map(|_| account::avatar_name(cx)),
         };
+        let signed_out = signed_in_name.is_none();
         let account_avatar = match signed_in_name {
             Some(name) => Avatar::new(&name).size(px(16.)).image(ui::avatar::account(cx).and_then(|me| me.picture())).into_any_element(),
-            None => Icon::new(IconName::User).size(ui::IconSize::Medium).color(theme::ActiveTheme::theme(&**cx).colors.subtle_foreground).into_any_element(),
+            None => gpui::Empty.into_any_element(),
         };
         let primary = theme::ActiveTheme::theme(&**cx).colors.primary;
         let surface = theme::ActiveTheme::theme(&**cx).colors.surface;
@@ -252,11 +253,10 @@ impl Workbench {
                             })),
                     )
                     .child(
-                        Button::new("account", "")
-                            .icon_only()
+                        (if signed_out { Button::icon("account", IconName::User) } else { Button::new("account", "").icon_only().leading(account_avatar) })
                             .size(ButtonSize::Medium)
                             .variant(ui::ButtonVariant::Chrome)
-                            .leading(account_avatar)
+                            .filled_when_active()
                             .active(self.account_menu.is_some() || self.web_account_menu_open())
                             .tooltip("Account")
                             .tooltip_side(ui::TooltipSide::Right)

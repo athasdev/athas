@@ -7,7 +7,7 @@ use gpui::{
 };
 use theme::ActiveTheme;
 
-use crate::{Icon, IconName, IconSize, Tooltip, TooltipExt, metrics, typography};
+use crate::{Icon, IconName, IconSize, metrics, typography};
 
 type ClickHandler = Rc<dyn Fn(&ClickEvent, &mut Window, &mut App)>;
 type MouseHandler = Rc<dyn Fn(&MouseDownEvent, &mut Window, &mut App)>;
@@ -349,87 +349,58 @@ impl RenderOnce for SectionLabel {
     }
 }
 
-/// One tab of a [`SectionTabs`] row.
-pub struct SectionTab {
+/// One section of a sidebar tool, as a row of an accordion: a chevron, the section's icon and
+/// name, a quiet count, and (while open) the tool's buttons at the end. The open section's
+/// content follows the row.
+#[derive(IntoElement)]
+pub struct AccordionRow {
     id: ElementId,
     label: SharedString,
     icon: IconName,
     count: usize,
+    open: bool,
+    nested: bool,
     on_click: ClickHandler,
+    trailing: Option<AnyElement>,
 }
 
-impl SectionTab {
-    pub fn new(id: impl Into<ElementId>, label: impl Into<SharedString>, icon: IconName, on_click: impl Fn(&ClickEvent, &mut Window, &mut App) + 'static) -> Self {
-        Self { id: id.into(), label: label.into(), icon, count: 0, on_click: Rc::new(on_click) }
+impl AccordionRow {
+    pub fn new(id: impl Into<ElementId>, label: impl Into<SharedString>, icon: IconName, open: bool, on_click: impl Fn(&ClickEvent, &mut Window, &mut App) + 'static) -> Self {
+        Self { id: id.into(), label: label.into(), icon, count: 0, open, nested: false, on_click: Rc::new(on_click), trailing: None }
     }
 
-    /// A quiet count after the label, shown while the tab is the current one.
     pub fn count(mut self, count: usize) -> Self {
         self.count = count;
         self
     }
-}
 
-/// A sidebar tool's sections as one row of tabs, each a click away: the current one is a raised
-/// pill with its icon, name and count; the others are icons whose tooltips name them.
-#[derive(IntoElement)]
-pub struct SectionTabs {
-    tabs: Vec<(SectionTab, bool)>,
-}
-
-impl SectionTabs {
-    pub fn new() -> Self {
-        Self { tabs: Vec::new() }
+    /// A row inside another section's content, set in one step.
+    pub fn nested(mut self, nested: bool) -> Self {
+        self.nested = nested;
+        self
     }
 
-    pub fn tab(mut self, tab: SectionTab, active: bool) -> Self {
-        self.tabs.push((tab, active));
+    /// Shown in place of the count while the pointer is over an open row.
+    pub fn trailing(mut self, element: impl IntoElement) -> Self {
+        self.trailing = Some(element.into_any_element());
         self
     }
 }
 
-impl RenderOnce for SectionTabs {
-    fn render(self, _window: &mut Window, cx: &mut App) -> impl IntoElement {
-        let theme = cx.theme();
-        let colors = &theme.colors;
-        let (rest, bright, hover_bg, knob) = (colors.subtle_foreground, colors.foreground, colors.segment_track, colors.segment_knob);
-        let raised = theme.shadows.raised_inset.clone();
-        div()
-            .flex()
-            .flex_none()
-            .items_center()
-            .gap(metrics::CHROME_GAP_TIGHT)
-            .px(px(8.))
-            .pb(px(4.))
-            .children(self.tabs.into_iter().map(|(tab, active)| {
-                let handler = tab.on_click.clone();
-                let label = tab.label.clone();
-                div()
-                    .id(tab.id)
-                    .flex()
-                    .flex_none()
-                    .items_center()
-                    .justify_center()
-                    .gap(px(6.))
-                    .h(metrics::CHROME_CONTROL)
-                    .min_w(metrics::CHROME_CONTROL)
-                    .when(active, |this| this.px(px(8.)).min_w_0())
-                    .rounded(metrics::RADIUS_MD)
-                    .text_size(typography::TEXT_SM)
-                    .cursor_pointer()
-                    .when(active, |this| this.bg(knob).shadow(raised.clone()).text_color(bright).font_weight(typography::MEDIUM))
-                    .when(!active, |this| this.text_color(rest).hover(move |style| style.bg(hover_bg).text_color(bright)))
-                    .child(Icon::new(tab.icon).size(IconSize::XSmall).color(if active { bright } else { rest }).filled(active))
-                    .when(active, |this| {
-                        this.child(div().min_w_0().truncate().child(tab.label.clone()))
-                            .when(tab.count > 0, |this| this.child(div().text_color(rest).child(tab.count.to_string())))
-                    })
-                    .when(!active, |this| {
-                        let tip = if tab.count > 0 { format!("{label} ({})", tab.count) } else { label.to_string() };
-                        this.anchored_tooltip(move || Tooltip::new(tip.clone()))
-                    })
-                    .on_click(move |event, window, cx| handler(event, window, cx))
-            }))
+impl RenderOnce for AccordionRow {
+    fn render(self, _window: &mut Window, _cx: &mut App) -> impl IntoElement {
+        let (open, count, nested, handler) = (self.open, self.count, self.nested, self.on_click.clone());
+        let mut item = SidebarListItem::new(self.id, self.label)
+            .leading(Icon::new(self.icon).size(IconSize::XSmall).filled(open))
+            .active(open)
+            .on_click(move |event, window, cx| handler(event, window, cx));
+        if count > 0 {
+            item = item.trailing(count.to_string());
+        }
+        if let Some(actions) = self.trailing.filter(|_| open) {
+            item = item.hover_trailing(actions);
+        }
+        div().flex_none().px(px(8.)).when(nested, |this| this.pl(px(16.))).child(item)
     }
 }
 

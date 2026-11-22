@@ -121,31 +121,6 @@ pub enum GitCommand {
     Refresh,
 }
 
-/// The tab and section a remembered panel mode (`gitLastPanelMode`) opens on.
-fn mode_tab(mode: &str) -> Option<(Tab, bool)> {
-    Some(match mode {
-        "changes" | "history" => (Tab::Changes, false),
-        "stashes" => (Tab::Changes, true),
-        "branches" => (Tab::Branches, false),
-        "worktrees" => (Tab::Worktrees, false),
-        "remotes" => (Tab::Remotes, false),
-        "tags" => (Tab::Tags, false),
-        "repositories" => (Tab::Repositories, false),
-        _ => return None,
-    })
-}
-
-fn tab_mode(tab: Tab) -> &'static str {
-    match tab {
-        Tab::Changes => "changes",
-        Tab::Branches => "branches",
-        Tab::Worktrees => "worktrees",
-        Tab::Remotes => "remotes",
-        Tab::Tags => "tags",
-        Tab::Repositories => "repositories",
-    }
-}
-
 #[derive(Clone, Debug, PartialEq)]
 pub enum GitPanelEvent {
     /// Open the file at this path in the centre.
@@ -167,15 +142,11 @@ enum Reload {
     Full,
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+/// The groups of the Source Control sidebar that fold.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 enum Tab {
     Changes,
-    Branches,
-    Worktrees,
-    Remotes,
-    Tags,
-    /// The workspace's repositories, when it holds more than one.
-    Repositories,
+    History,
 }
 
 /// What the two-field form at the top of the Worktrees, Remotes and Tags tabs creates.
@@ -190,14 +161,6 @@ enum DraftKind {
 }
 
 impl DraftKind {
-    fn tab(self) -> Tab {
-        match self {
-            DraftKind::Worktree => Tab::Worktrees,
-            DraftKind::Remote => Tab::Remotes,
-            DraftKind::Tag => Tab::Tags,
-        }
-    }
-
     fn placeholders(self) -> (&'static str, &'static str) {
         match self {
             DraftKind::Worktree => ("Folder for the new worktree", "New branch (empty to detach)"),
@@ -211,7 +174,6 @@ impl DraftKind {
 enum Section {
     Staged,
     Changes,
-    Stashes,
     History,
 }
 
@@ -265,7 +227,6 @@ impl Sections {
         match section {
             Section::Staged => self.staged,
             Section::Changes => self.changes,
-            Section::Stashes => self.stashes,
             Section::History => self.history,
         }
     }
@@ -274,7 +235,6 @@ impl Sections {
         match section {
             Section::Staged => self.staged = open,
             Section::Changes => self.changes = open,
-            Section::Stashes => self.stashes = open,
             Section::History => self.history = open,
         }
     }
@@ -407,7 +367,9 @@ pub struct GitPanel {
     open_commit_totals: Option<CommitTotals>,
     reloading: bool,
     queued_reload: Option<Reload>,
-    tab: Tab,
+    /// The category open in the secondary sidebar.
+    /// The groups unfolded in the sidebar.
+    expanded: HashSet<Tab>,
     sections: Sections,
     /// Folder captions closed in the folder view of Changes and Staged (`staged:dir`, `changes:dir`).
     pub(crate) collapsed_folders: HashSet<String>,
@@ -432,16 +394,11 @@ pub struct GitPanel {
     pending: Vec<(GitCommand, gpui::AnyWindowHandle)>,
     commit_input: Entity<TextArea>,
     filter_input: Entity<TextInput>,
-    branch_filter_input: Entity<TextInput>,
     branch_name_input: Entity<TextInput>,
     draft_first: Entity<TextInput>,
     draft_second: Entity<TextInput>,
-    worktree_filter_input: Entity<TextInput>,
-    repository_filter_input: Entity<TextInput>,
     /// The repositories found in the workspace folder (`discoverWorkspaceRepositories`).
     repositories: Vec<PathBuf>,
-    remote_filter_input: Entity<TextInput>,
-    tag_filter_input: Entity<TextInput>,
     history_filter_input: Entity<TextInput>,
     /// The panel's width at the last paint; the tabs and branch button adapt to it.
     width: std::rc::Rc<std::cell::Cell<Pixels>>,
@@ -479,14 +436,9 @@ impl GitPanel {
     pub fn with_discovery(root: PathBuf, discover: Discover, window: &mut Window, cx: &mut Context<Self>) -> Self {
         let commit_input = cx.new(|cx| TextArea::new(cx).auto_size(1, 8).variant(TextAreaVariant::Ghost).placeholder("Commit message"));
         let filter_input = bare_input("Filter changes", Some(ui::IconName::Search), window, cx);
-        let branch_filter_input = bare_input("Filter branches", Some(ui::IconName::Search), window, cx);
         let branch_name_input = cx.new(|cx| TextInput::new(window, cx).placeholder("feature/name"));
         let draft_first = cx.new(|cx| TextInput::new(window, cx));
         let draft_second = cx.new(|cx| TextInput::new(window, cx));
-        let worktree_filter_input = bare_input("Filter worktrees", Some(ui::IconName::Search), window, cx);
-        let repository_filter_input = bare_input("Filter repositories", Some(ui::IconName::Search), window, cx);
-        let remote_filter_input = bare_input("Filter remotes", Some(ui::IconName::Search), window, cx);
-        let tag_filter_input = bare_input("Filter tags", Some(ui::IconName::Search), window, cx);
         let history_filter_input = bare_input("Search message, author, hash", Some(ui::IconName::Search), window, cx);
 
         let subscriptions = vec![
@@ -496,7 +448,6 @@ impl GitPanel {
                 TextAreaEvent::Cancelled => {}
             }),
             cx.subscribe(&filter_input, Self::on_filter_event),
-            cx.subscribe(&branch_filter_input, Self::on_filter_event),
             cx.subscribe(&branch_name_input, |this, _, event: &TextInputEvent, cx| match event {
                 TextInputEvent::Confirmed => this.create_branch_from_draft(cx),
                 TextInputEvent::Cancelled => {
@@ -519,10 +470,6 @@ impl GitPanel {
                 TextInputEvent::Cancelled => this.cancel_draft(cx),
                 _ => {}
             }),
-            cx.subscribe(&worktree_filter_input, Self::on_filter_event),
-            cx.subscribe(&repository_filter_input, Self::on_filter_event),
-            cx.subscribe(&remote_filter_input, Self::on_filter_event),
-            cx.subscribe(&tag_filter_input, Self::on_filter_event),
             cx.subscribe(&history_filter_input, Self::on_filter_event),
             cx.observe_global::<settings::SettingsStore>(|this, cx| this.apply_settings(cx)),
             cx.observe_global::<workbench_api::OpenTabs>(|this, cx| this.follow_active_tab(cx)),
@@ -553,7 +500,6 @@ impl GitPanel {
         });
 
         let settings = GitSettings::read(cx);
-        let (tab, show_stashes) = settings.remember_mode.then(|| mode_tab(&settings.last_mode)).flatten().unwrap_or((Tab::Changes, false));
         let mut panel = Self {
             root: root.clone(),
             discover,
@@ -573,11 +519,8 @@ impl GitPanel {
             open_commit_totals: None,
             reloading: false,
             queued_reload: None,
-            tab,
-            sections: {
-                let saved = Sections::load();
-                Sections { stashes: show_stashes || saved.stashes, ..saved }
-            },
+            expanded: HashSet::from([Tab::Changes, Tab::History]),
+            sections: Sections::load(),
             collapsed_folders: HashSet::new(),
             commit_shown: false,
             changes_scroll: gpui::ScrollHandle::new(),
@@ -595,15 +538,10 @@ impl GitPanel {
             pending: Vec::new(),
             commit_input,
             filter_input,
-            branch_filter_input,
             branch_name_input,
             draft_first,
             draft_second,
-            worktree_filter_input,
-            repository_filter_input,
             repositories: Vec::new(),
-            remote_filter_input,
-            tag_filter_input,
             history_filter_input,
             width: Default::default(),
             _subscriptions: subscriptions,
@@ -675,7 +613,7 @@ impl GitPanel {
                 self.set_staged(files, false, cx);
             }
             GitCommand::Commit => {
-                self.show_tab(Tab::Changes, cx);
+                self.expanded.insert(Tab::Changes);
                 if self.can_commit(cx) {
                     self.commit(false, false, cx);
                 } else {
@@ -711,19 +649,14 @@ impl GitPanel {
         &self.root
     }
 
-    /// Shows a tab by Athas's name for it (`changes`, `branches`, `worktrees`, `remotes`, `tags`),
-    /// as its `manage-branches` request does. Unknown names are ignored.
+    /// Unfolds a group by name (`changes`, `history`), for headless snapshots. Other names are ignored.
     pub fn open_tab(&mut self, name: &str, cx: &mut Context<Self>) {
-        let tab = match name {
-            "changes" => Tab::Changes,
-            "branches" => Tab::Branches,
-            "worktrees" => Tab::Worktrees,
-            "repositories" => Tab::Repositories,
-            "remotes" => Tab::Remotes,
-            "tags" => Tab::Tags,
+        match name {
+            "changes" => self.expanded.insert(Tab::Changes),
+            "history" => self.expanded.insert(Tab::History),
             _ => return,
         };
-        self.show_tab(tab, cx);
+        cx.notify();
     }
 
     /// The tool's buttons at the end of the sidebar's top row.
@@ -1284,7 +1217,6 @@ impl GitPanel {
 
     /// Opens the Branches tab with the name field, starting from `base` (HEAD when `None`).
     fn start_branch_draft(&mut self, base: Option<String>, window: &mut Window, cx: &mut Context<Self>) {
-        self.tab = Tab::Branches;
         self.branch_draft = Some(BranchDraft { base });
         self.branch_name_input.update(cx, |input, cx| input.set_text("", cx));
         let focus = self.branch_name_input.focus_handle(cx);
@@ -1430,7 +1362,7 @@ impl GitPanel {
 
     /// Shows another repository of the workspace (`selectRepository`).
     pub(crate) fn switch_repository(&mut self, path: PathBuf, cx: &mut Context<Self>) {
-        self.show_tab(Tab::Changes, cx);
+        self.expanded.insert(Tab::Changes);
         self.discover(path, cx);
     }
 
@@ -1663,6 +1595,204 @@ impl GitPanel {
         self.make_searchable("git-compare-branch", "Compare current branch with...", "No matching branches", cx);
     }
 
+    /// The branch menu: switch, start a new one or delete one, then the worktrees and repositories.
+    pub(crate) fn show_branches_menu(&mut self, position: Point<Pixels>, anchor: Anchor, window: &mut Window, cx: &mut Context<Self>) {
+        let current = self.branch().to_string();
+        let mut entries: Vec<MenuEntry> = vec![self.item("New branch…", cx, |this, window, cx| this.start_branch_draft(None, window, cx)).icon(ui::IconName::Plus).into(), MenuEntry::Separator];
+        for branch in &self.branches {
+            let name = branch.clone();
+            let is_current = *branch == current;
+            entries.push(
+                self.item(branch.clone(), cx, move |this, _, cx| this.checkout(name.clone(), cx))
+                    .icon(ui::IconName::GitBranch)
+                    .checked(is_current)
+                    .disabled(is_current)
+                    .into(),
+            );
+        }
+        let others: Vec<String> = self.branches.iter().filter(|branch| **branch != current).cloned().collect();
+        if !others.is_empty() {
+            let doomed: Vec<MenuEntry> = others
+                .into_iter()
+                .map(|branch| {
+                    let name = branch.clone();
+                    self.item(branch, cx, move |this, window, cx| {
+                        let position = window.mouse_position();
+                        this.confirm_delete_branch(name.clone(), position, window, cx)
+                    })
+                    .icon(ui::IconName::Trash)
+                    .into()
+                })
+                .collect();
+            entries.push(MenuEntry::Separator);
+            entries.push(MenuItem::new("Delete branch").icon(ui::IconName::Trash).submenu(doomed).into());
+        }
+        entries.push(MenuEntry::Separator);
+        entries.push(MenuEntry::Label("Worktrees".into()));
+        let main = self.worktrees.first().map(|worktree| worktree.path.clone());
+        for worktree in &self.worktrees {
+            let name = worktree.path.trim_end_matches('/').rsplit('/').next().unwrap_or(&worktree.path).to_string();
+            let branch = worktree.branch.clone().unwrap_or_else(|| if worktree.is_detached { "detached".into() } else { "no branch".into() });
+            let removable = !worktree.is_current && main.as_ref() != Some(&worktree.path) && !worktree.is_bare;
+            entries.push(
+                MenuItem::new(name)
+                    .icon(if worktree.prunable { ui::IconName::Warning } else { ui::IconName::Nodes })
+                    .trailing_text(branch)
+                    .checked(worktree.is_current)
+                    .submenu(self.worktree_entries(worktree.path.clone(), worktree.prunable, removable, cx))
+                    .into(),
+            );
+        }
+        entries.push(self.item("New worktree…", cx, |this, window, cx| this.start_draft(DraftKind::Worktree, window, cx)).icon(ui::IconName::Plus).into());
+        let repositories = self.repository_paths();
+        if repositories.len() > 1 {
+            entries.push(MenuEntry::Separator);
+            entries.push(MenuEntry::Label("Repositories".into()));
+            for path in repositories {
+                let name = path.file_name().map(|name| name.to_string_lossy().into_owned()).unwrap_or_default();
+                let is_current = self.repo_root().as_deref() == Some(path.as_path());
+                entries.push(
+                    self.item(name, cx, move |this, _, cx| this.switch_repository(path.clone(), cx))
+                        .icon(ui::IconName::FolderOpen)
+                        .checked(is_current)
+                        .disabled(is_current)
+                        .into(),
+                );
+            }
+        }
+        self.show_menu("git-branches", entries, position, anchor, window, cx);
+        self.make_searchable("git-branches", "Switch branch...", "No matching branches", cx);
+    }
+
+    fn worktree_entries(&self, path: String, prunable: bool, removable: bool, cx: &Context<Self>) -> Vec<MenuEntry> {
+        let mut entries: Vec<MenuEntry> = Vec::new();
+        if !prunable {
+            let (open, window_path) = (path.clone(), path.clone());
+            entries.push(self.item("Open", cx, move |_, _, cx| workbench_api::open_project(cx, open.clone())).icon(ui::IconName::FolderOpen).into());
+            entries.push(self.item("Open in New Window", cx, move |_, _, cx| workbench_api::open_project_in_new_window(cx, window_path.clone())).icon(ui::IconName::OpenExternal).into());
+            entries.push(MenuEntry::Separator);
+        }
+        let copy = path.clone();
+        entries.push(self.item("Copy Path", cx, move |this, _, cx| this.copy(copy.clone(), cx)).icon(ui::IconName::Copy).into());
+        if prunable {
+            entries.push(MenuEntry::Separator);
+            entries.push(self.item("Prune Stale Worktrees", cx, |this, _, cx| this.prune_worktrees(cx)).icon(ui::IconName::Broom).into());
+        } else if removable {
+            entries.push(MenuEntry::Separator);
+            entries.push(
+                self.item("Remove Worktree…", cx, move |this, window, cx| {
+                    let position = window.mouse_position();
+                    this.confirm_remove_worktree(path.clone(), position, window, cx)
+                })
+                .icon(ui::IconName::Trash)
+                .destructive()
+                .into(),
+            );
+        }
+        entries
+    }
+
+    pub(crate) fn show_remotes_menu(&mut self, position: Point<Pixels>, anchor: Anchor, window: &mut Window, cx: &mut Context<Self>) {
+        let busy = self.remote_action.is_some();
+        let mut entries: Vec<MenuEntry> = vec![
+            self.item("Add remote…", cx, |this, window, cx| this.start_draft(DraftKind::Remote, window, cx)).icon(ui::IconName::Plus).into(),
+            self.item("Fetch all", cx, |this, _, cx| this.fetch_remote(None, cx)).icon(ui::IconName::ArrowsClockwise).disabled(busy || self.remotes.is_empty()).into(),
+        ];
+        if !self.remotes.is_empty() {
+            entries.push(MenuEntry::Separator);
+        }
+        for remote in &self.remotes {
+            let (name, url) = (remote.name.clone(), remote.url.clone());
+            let (fetch, copy_url, copy_name, doomed) = (name.clone(), url.clone(), name.clone(), name.clone());
+            let submenu: Vec<MenuEntry> = vec![
+                self.item(format!("Fetch {name}"), cx, move |this, _, cx| this.fetch_remote(Some(fetch.clone()), cx)).icon(ui::IconName::ArrowsClockwise).into(),
+                MenuEntry::Separator,
+                self.item("Copy URL", cx, move |this, _, cx| this.copy(copy_url.clone(), cx)).icon(ui::IconName::Copy).into(),
+                self.item("Copy Name", cx, move |this, _, cx| this.copy(copy_name.clone(), cx)).icon(ui::IconName::Copy).into(),
+                MenuEntry::Separator,
+                self.item("Remove Remote…", cx, move |this, window, cx| {
+                    let position = window.mouse_position();
+                    this.confirm_remove_remote(doomed.clone(), position, window, cx)
+                })
+                .icon(ui::IconName::Trash)
+                .destructive()
+                .into(),
+            ];
+            entries.push(MenuItem::new(name).icon(ui::IconName::Globe).trailing_text(url).submenu(submenu).into());
+        }
+        self.show_menu("git-remotes", entries, position, anchor, window, cx);
+        self.make_searchable("git-remotes", "Search remotes...", "No matching remotes", cx);
+    }
+
+    pub(crate) fn show_tags_menu(&mut self, position: Point<Pixels>, anchor: Anchor, window: &mut Window, cx: &mut Context<Self>) {
+        let now = view::now_seconds();
+        let mut entries: Vec<MenuEntry> = vec![self.item("New tag…", cx, |this, window, cx| this.start_draft(DraftKind::Tag, window, cx)).icon(ui::IconName::Plus).into()];
+        if !self.tags.is_empty() {
+            entries.push(MenuEntry::Separator);
+        }
+        for (index, tag) in self.tags.iter().enumerate() {
+            let previous = self.tags.get(index + 1);
+            let mut item = MenuItem::new(tag.name.clone()).icon(ui::IconName::Tag).submenu(self.tag_menu(tag, previous, cx));
+            if !tag.date.is_empty() {
+                item = item.trailing_text(model::relative_date(&tag.date, now));
+            }
+            entries.push(item.into());
+        }
+        self.show_menu("git-tags", entries, position, anchor, window, cx);
+        self.make_searchable("git-tags", "Search tags...", "No matching tags", cx);
+    }
+
+    pub(crate) fn show_stashes_menu(&mut self, position: Point<Pixels>, anchor: Anchor, window: &mut Window, cx: &mut Context<Self>) {
+        let now = view::now_seconds();
+        let mut entries: Vec<MenuEntry> = vec![
+            self.item("Stash changes", cx, |this, _, cx| this.stash(String::new(), None, cx)).icon(ui::IconName::Plus).disabled(self.file_count() == 0).into(),
+        ];
+        if !self.stashes.is_empty() {
+            entries.push(MenuEntry::Separator);
+        }
+        for stash in &self.stashes {
+            let index = stash.index;
+            let submenu: Vec<MenuEntry> = vec![
+                self.item("Show Changes", cx, move |this, _, cx| this.open_stash(index, cx)).icon(ui::IconName::GitDiff).into(),
+                MenuEntry::Separator,
+                self.item("Apply", cx, move |this, _, cx| this.stash_action(StashAction::Apply, index, cx)).icon(ui::IconName::Archive).into(),
+                self.item("Pop", cx, move |this, _, cx| this.stash_action(StashAction::Pop, index, cx)).icon(ui::IconName::ArrowUp).into(),
+                MenuEntry::Separator,
+                self.item("Drop", cx, move |this, _, cx| this.stash_action(StashAction::Drop, index, cx)).icon(ui::IconName::Trash).destructive().into(),
+            ];
+            entries.push(
+                MenuItem::new(model::stash_title(&stash.message))
+                    .icon(ui::IconName::Stack)
+                    .trailing_text(model::relative_date(&stash.date, now))
+                    .submenu(submenu)
+                    .into(),
+            );
+        }
+        self.show_menu("git-stashes", entries, position, anchor, window, cx);
+        self.make_searchable("git-stashes", "Search stashes...", "No stashes", cx);
+    }
+
+    /// Every loaded commit, to search and open; "View more" under the recent ones.
+    pub(crate) fn show_history_menu(&mut self, position: Point<Pixels>, anchor: Anchor, window: &mut Window, cx: &mut Context<Self>) {
+        let mut entries: Vec<MenuEntry> = Vec::new();
+        for commit in &self.commits {
+            let open = commit.clone();
+            entries.push(
+                self.item(commit.summary.clone(), cx, move |this, _, cx| this.open_commit(&open, cx))
+                    .icon(ui::IconName::History)
+                    .trailing_text(model::short_hash(&commit.hash).to_string())
+                    .keywords(format!("{} {}", commit.hash, commit.author))
+                    .into(),
+            );
+        }
+        if self.has_more_commits {
+            entries.push(MenuEntry::Separator);
+            entries.push(self.item("Load older commits", cx, |this, _, cx| this.load_more_commits(cx)).icon(ui::IconName::ArrowDown).into());
+        }
+        self.show_menu("git-history", entries, position, anchor, window, cx);
+        self.make_searchable("git-history", "Search commits...", "No matching commits", cx);
+    }
+
     /// The Changes toolbar's Compare menu.
     fn compare_menu(&self, cx: &Context<Self>) -> Vec<MenuEntry> {
         let has_unstaged = !self.groups.unstaged.is_empty();
@@ -1701,9 +1831,6 @@ impl GitPanel {
         if cx.has_global::<settings::SettingsStore>() {
             settings::update(cx, |settings| settings.hidden_git_sidebar_items = hidden);
         }
-        if !visible && ((item == "remotes" && self.tab == Tab::Remotes) || (item == "tags" && self.tab == Tab::Tags)) {
-            self.tab = Tab::Changes;
-        }
         cx.notify();
     }
 
@@ -1733,7 +1860,6 @@ impl GitPanel {
     // Worktrees, remotes and tags.
 
     fn start_draft(&mut self, kind: DraftKind, window: &mut Window, cx: &mut Context<Self>) {
-        self.tab = kind.tab();
         self.draft = Some(kind);
         let (first, second) = kind.placeholders();
         let first_text = match kind {
@@ -1926,31 +2052,10 @@ impl GitPanel {
         cx.notify();
     }
 
-    fn reveal_stashes(&mut self, cx: &mut Context<Self>) {
-        self.tab = Tab::Changes;
-        self.sections.stashes = true;
-        self.sections.save();
-        self.remember_mode("stashes", cx);
-        cx.notify();
-    }
-
-    /// Keeps the mode for the next panel when `rememberLastGitPanelMode` is on.
-    fn remember_mode(&mut self, mode: &str, cx: &mut Context<Self>) {
-        if !self.settings.remember_mode || self.settings.last_mode == mode || !cx.has_global::<settings::SettingsStore>() {
-            return;
-        }
-        self.settings.last_mode = mode.to_string();
-        settings::update(cx, |settings| settings.git_last_panel_mode = mode.to_string());
-    }
-
-    fn show_tab(&mut self, tab: Tab, cx: &mut Context<Self>) {
-        self.tab = tab;
-        self.remember_mode(tab_mode(tab), cx);
-        if self.draft.is_some_and(|draft| draft.tab() != tab) {
-            self.draft = None;
-        }
-        if tab != Tab::Changes {
-            self.reload(Reload::Full, cx);
+    /// A group's row in the sidebar: folds or unfolds it.
+    fn toggle_tab(&mut self, tab: Tab, cx: &mut Context<Self>) {
+        if !self.expanded.remove(&tab) {
+            self.expanded.insert(tab);
         }
         cx.notify();
     }
@@ -2291,7 +2396,13 @@ impl GitPanel {
         let busy = self.remote_action.is_some();
         vec![
             self.item("Select repository…", cx, |this, _, cx| this.select_repository(cx)).icon(ui::IconName::FolderOpen).into(),
-            self.item("Manage branches", cx, |this, _, cx| this.show_tab(Tab::Branches, cx)).icon(ui::IconName::GitBranch).into(),
+            self.item("Switch branch…", cx, |this, window, cx| {
+                let position = window.mouse_position();
+                this.open_menu = None;
+                this.show_branches_menu(position, Anchor::TopRight, window, cx)
+            })
+            .icon(ui::IconName::GitBranch)
+            .into(),
             self.item("Show branch diff", cx, |this, window, cx| {
                 let position = window.mouse_position();
                 this.open_menu = None;
@@ -2313,9 +2424,27 @@ impl GitPanel {
                 .disabled(busy)
                 .into(),
             MenuEntry::Separator,
-            self.item("Manage remotes", cx, |this, _, cx| this.show_tab(Tab::Remotes, cx)).icon(ui::IconName::HardDrives).into(),
-            self.item("Manage tags", cx, |this, _, cx| this.show_tab(Tab::Tags, cx)).icon(ui::IconName::Tag).into(),
-            self.item("View stashes", cx, |this, _, cx| this.reveal_stashes(cx)).icon(ui::IconName::Archive).into(),
+            self.item("Remotes…", cx, |this, window, cx| {
+                let position = window.mouse_position();
+                this.open_menu = None;
+                this.show_remotes_menu(position, Anchor::TopRight, window, cx)
+            })
+            .icon(ui::IconName::HardDrives)
+            .into(),
+            self.item("Tags…", cx, |this, window, cx| {
+                let position = window.mouse_position();
+                this.open_menu = None;
+                this.show_tags_menu(position, Anchor::TopRight, window, cx)
+            })
+            .icon(ui::IconName::Tag)
+            .into(),
+            self.item("Stashes…", cx, |this, window, cx| {
+                let position = window.mouse_position();
+                this.open_menu = None;
+                this.show_stashes_menu(position, Anchor::TopRight, window, cx)
+            })
+            .icon(ui::IconName::Archive)
+            .into(),
             MenuEntry::Separator,
             self.visibility_menu(cx).into(),
             refresh.into(),
