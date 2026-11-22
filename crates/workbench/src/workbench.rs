@@ -2634,7 +2634,7 @@ impl Render for Workbench {
             .px(metrics::WORKBENCH_GAP)
             .pb(metrics::WORKBENCH_GAP)
             .gap(metrics::WORKBENCH_GAP)
-            .when(sidebar_column || (narrow && !pane_fullscreen), |this| this.child(self.render_activity_bar(window, cx)))
+            .when(!pane_fullscreen, |this| this.child(self.render_activity_bar(window, cx)))
             .child(shell);
 
         let window_tab_row = (!window_tabs.is_empty()).then(|| self.render_window_tabs(window_tabs, window, cx));
