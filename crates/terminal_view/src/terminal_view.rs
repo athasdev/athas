@@ -1566,6 +1566,7 @@ impl TerminalPanel {
 
         let progress = tab.view.read(cx).terminal.progress;
         let show_icons = terminal_settings(cx).show_tab_icons;
+        let close_visibility = terminal_settings(cx).tab_close_button_visibility.clone();
         let leading = leading_indicator(id, progress, tab.last_command.filter(|_| !active), show_icons, &colors);
         let split = self.layouts.is_split(id);
         let pinned = tab.pinned;
@@ -1613,6 +1614,7 @@ impl TerminalPanel {
                     })
                     .pinned(pinned)
                     .active(active)
+                    .show_close(pinned || close_visibility == "always" || (close_visibility == "active" && active))
                     .on_click(cx.listener(move |this, _, window, cx| {
                         if this.active == Some(id) {
                             window.focus(&this.tabs_focus, cx);
@@ -1656,7 +1658,7 @@ impl TerminalPanel {
                 .flex_none()
                 .h_full()
                 .items_center()
-                .gap(metrics::CHROME_GAP_TIGHT)
+                .gap(metrics::CHROME_GAP)
                 .pr(px(2.))
                 .children(pinned.into_iter().map(|id| self.render_tab(id, tabs_focused, cx)))
         });
@@ -1670,7 +1672,7 @@ impl TerminalPanel {
             .min_w_0()
             .h_full()
             .items_center()
-            .gap(metrics::CHROME_GAP_TIGHT)
+            .gap(metrics::CHROME_GAP)
             .on_mouse_down(
                 MouseButton::Right,
                 cx.listener(|this, event: &MouseDownEvent, window, cx| this.deploy_toolbar_menu(event.position, window, cx)),
@@ -1684,7 +1686,7 @@ impl TerminalPanel {
                     .min_w_0()
                     .h_full()
                     .items_center()
-                    .gap(metrics::CHROME_GAP_TIGHT)
+                    .gap(metrics::CHROME_GAP)
                     .overflow_x_scroll()
                     .children(regular.into_iter().map(|id| self.render_tab(id, tabs_focused, cx).into_any_element()))
                     .children(self.failed.as_ref().map(|failed| self.render_failed_tab(failed, cx))),
