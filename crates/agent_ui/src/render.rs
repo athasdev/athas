@@ -2589,7 +2589,7 @@ impl SessionView {
                 .flex()
                 .items_center()
                 .gap(px(8.))
-                .h(px(28.))
+                .h(ui::metrics::LIST_ROW)
                 .px(px(8.))
                 .rounded(metrics::RADIUS_MD)
                 .when(selected, |this| this.bg(colors.selected))

@@ -76,7 +76,7 @@ impl Render for SecretInput {
             .on_click(cx.listener(|this, _, window, cx| window.focus(&this.focus_handle, cx)))
             .flex()
             .items_center()
-            .h(px(28.))
+            .h(ui::metrics::LIST_ROW)
             .px(px(12.))
             .rounded_full()
             .bg(theme.colors.raised)

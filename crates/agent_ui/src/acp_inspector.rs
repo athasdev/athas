@@ -229,7 +229,7 @@ impl AcpInspectorView {
                     .flex()
                     .items_center()
                     .gap(px(8.))
-                    .h(px(30.))
+                    .h(ui::metrics::LIST_ROW)
                     .px(px(12.))
                     .text_size(typography::TEXT_SM)
                     .when(open, |row| row.bg(colors.selected))

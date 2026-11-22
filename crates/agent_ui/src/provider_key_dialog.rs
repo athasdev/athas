@@ -266,7 +266,7 @@ impl ProviderKeyDialog {
                     .flex()
                     .items_center()
                     .gap(px(8.))
-                    .h(px(28.))
+                    .h(ui::metrics::LIST_ROW)
                     .px(px(8.))
                     .rounded(ui::metrics::RADIUS_MD)
                     .text_size(typography::TEXT_SM)

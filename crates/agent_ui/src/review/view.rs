@@ -226,7 +226,7 @@ impl ReviewView {
                     .flex()
                     .items_center()
                     .gap(px(4.))
-                    .h(px(30.))
+                    .h(ui::metrics::LIST_ROW)
                     .px(px(8.))
                     .bg(colors.raised)
                     .border_b_1()

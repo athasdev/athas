@@ -486,7 +486,7 @@ impl Select {
             .items_center()
             .justify_between()
             .gap(px(6.))
-            .h(px(28.))
+            .h(crate::metrics::LIST_ROW)
             .min_w_0()
             .max_w_full()
             .rounded_full()

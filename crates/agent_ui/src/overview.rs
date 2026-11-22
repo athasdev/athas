@@ -906,7 +906,7 @@ impl SessionView {
                     .flex()
                     .items_center()
                     .gap(px(8.))
-                    .h(px(28.))
+                    .h(ui::metrics::LIST_ROW)
                     .px(px(8.))
                     .rounded(metrics::RADIUS_MD)
                     .when(active, |this| this.bg(colors.segment_knob).shadow(theme.shadows.raised_inset.clone()))
