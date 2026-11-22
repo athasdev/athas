@@ -8,6 +8,10 @@
 //!
 //! `ATHAS_AGENT_FIXTURE` sets the session's transcript (see `agent_ui::SessionView`),
 //! `ATHAS_SNAPSHOT_COMPOSER_MENU` (`effort` or `preferences`) opens a composer menu,
+//! `ATHAS_SNAPSHOT_SCROLL=x,y:dy[:times]` turns the wheel over a point (negative `dy` scrolls
+//! down);
+//! `ATHAS_SNAPSHOT_DROP=x,y:/path[:/path]` drops files on the window at that point, as the
+//! desktop would, so drop targets can be tried headlessly;
 //! `ATHAS_SNAPSHOT_PROJECT` its project folder, and `ATHAS_HISTORY_DIR` the folder of saved
 //! sessions the history lists; `ATHAS_SNAPSHOT_AGENT_SESSIONS` fills its Agent sessions with a
 //! page of stand-ins (`ATHAS_SNAPSHOT_AGENT_SESSIONS_ERROR` adds the line of an agent that could not list).
@@ -40,7 +44,7 @@ struct Root {
 
 impl Render for Root {
     fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
-        let gap = ui::metrics::WORKBENCH_GAP;
+        let gap = ui::metrics::workbench_gap();
         let centre = if self.page {
             div()
                 .size_full()
@@ -60,7 +64,7 @@ impl Render for Root {
             .gap(gap)
             .bg(cx.theme().colors.surface)
             .child(ui::island(cx).flex_1().h_full().child(centre))
-            .children(self.dock.clone().map(|dock| ui::island(cx).flex_none().h_full().w(ui::metrics::SESSION_BOXES_WIDTH).child(dock)))
+            .children(self.dock.clone().map(|dock| ui::island(cx).flex_none().h_full().w(ui::metrics::session_boxes_width()).child(dock)))
     }
 }
 
@@ -406,6 +410,53 @@ fn main() -> Result<()> {
         cx.update_window(window.into(), |_, window, _| window.refresh())?;
         cx.run_until_parked();
         std::thread::sleep(std::time::Duration::from_millis(80));
+    }
+    // `ATHAS_SNAPSHOT_SCROLL=x,y:dy[:times]` turns the wheel over a point, so a list can be
+    // scrolled without a mouse (negative `dy` scrolls down, as the wheel reports it).
+    if let Ok(scroll) = std::env::var("ATHAS_SNAPSHOT_SCROLL")
+        && let Some((at, rest)) = scroll.split_once(':')
+        && let Some((x, y)) = at.split_once(',')
+    {
+        let (delta, times) = match rest.split_once(':') {
+            Some((delta, times)) => (delta.parse().unwrap_or(-120.), times.parse().unwrap_or(1)),
+            None => (rest.parse().unwrap_or(-120.), 1usize),
+        };
+        let position = gpui::point(px(x.trim().parse().unwrap_or(width / 2.)), px(y.trim().parse().unwrap_or(height / 2.)));
+        for _ in 0..times {
+            cx.update_window(window.into(), |_, window, cx| {
+                window.dispatch_event(
+                    gpui::PlatformInput::Scroll(gpui::ScrollEvent {
+                        position,
+                        delta: gpui::ScrollDelta::Pixels(gpui::point(px(0.), px(delta))),
+                        modifiers: gpui::Modifiers::default(),
+                        touch_phase: gpui::TouchPhase::Moved,
+                        source: gpui::ScrollSource::Pointer,
+                    }),
+                    cx,
+                );
+            })?;
+            cx.update_window(window.into(), |_, window, _| window.refresh())?;
+            cx.run_until_parked();
+            std::thread::sleep(std::time::Duration::from_millis(40));
+        }
+    }
+    // `ATHAS_SNAPSHOT_DROP=x,y:/path[:/path]` drops files on the window as the desktop would, so
+    // drop targets can be tried without a mouse.
+    if let Ok(drop) = std::env::var("ATHAS_SNAPSHOT_DROP")
+        && let Some((at, paths)) = drop.split_once(':')
+        && let Some((x, y)) = at.split_once(',')
+    {
+        let position = gpui::point(px(x.trim().parse().unwrap_or(width / 2.)), px(y.trim().parse().unwrap_or(height - 60.)));
+        let paths = gpui::ExternalPaths(paths.split(':').map(PathBuf::from).collect());
+        cx.update_window(window.into(), |_, window, cx| {
+            window.dispatch_event(gpui::PlatformInput::FileDrop(gpui::FileDropEvent::Entered { position, paths }), cx);
+            window.dispatch_event(gpui::PlatformInput::FileDrop(gpui::FileDropEvent::Submit { position }), cx);
+        })?;
+        for _ in 0..6 {
+            cx.update_window(window.into(), |_, window, _| window.refresh())?;
+            cx.run_until_parked();
+            std::thread::sleep(std::time::Duration::from_millis(60));
+        }
     }
     let image = cx.capture_screenshot(window.into()).context("capturing the window")?;
     image.save(&out).with_context(|| format!("writing {out}"))?;

@@ -10,7 +10,9 @@
 //! pinned editor tab), `sessions-more` (a project with more sessions than its list shows) and
 //! `session-rename` (a session row being renamed), `session-placeholder` (session `s2` in its own window, its tab
 //! holding the stand-in), `docker-palette` (the command palette's Docker page over
-//! `ATHAS_SNAPSHOT_PROJECT`), `detached-pr` / `detached-issue` (a GitHub page in its own window, from recorded data), `bottom-buffers` (the last tab moved into the
+//! `ATHAS_SNAPSHOT_PROJECT`), `detached-pr` / `detached-issue` (a GitHub page in its own window, from recorded data),
+//! `github:<page>` (one recorded GitHub page filling the window: `github:run`, `github:run:step`,
+//! `github:run:step-only`, `github:run:nowrap`, `github:pr`, `github:issue`), `bottom-buffers` (the last tab moved into the
 //! bottom pane) and `bottom-debugger` (Run and Debug in the bottom pane).
 //! Environment:
 //! `ATHAS_SNAPSHOT_SCROLLBARS=1` (every overlay scrollbar's thumb shown, as if hovered),
@@ -171,6 +173,34 @@ fn main() -> Result<()> {
         }
         Ok(())
     })?;
+
+    // `github:<page>` (`github:run`, `github:run:wrap`, `github:pr`): one recorded GitHub page
+    // filling the window, drawn without touching GitHub.
+    if let Some(page) = scene.strip_prefix("github:") {
+        let root: std::path::PathBuf = std::env::var("ATHAS_SNAPSHOT_PROJECT").unwrap_or_else(|_| "/tmp/athas-snapshot-repo".into()).into();
+        let page = page.to_string();
+        let held: Rc<std::cell::RefCell<Option<github_panel::snapshot::Settle>>> = Rc::default();
+        let hold = held.clone();
+        let window = cx.open_window(size(px(width), px(height)), move |window, cx| {
+            let (view, settle) = github_panel::snapshot::scene(&page, root, window, cx).expect("github scene");
+            *hold.borrow_mut() = Some(settle);
+            cx.new(|_| SeedHost(view))
+        })?;
+        cx.allow_parking();
+        cx.run_until_parked();
+        if let Some(settle) = held.borrow_mut().take() {
+            cx.update_window(window.into(), |_, window, cx| settle(window, cx))?;
+        }
+        for _ in 0..6 {
+            cx.update_window(window.into(), |_, window, _| window.refresh())?;
+            cx.run_until_parked();
+            std::thread::sleep(std::time::Duration::from_millis(50));
+        }
+        let image = cx.capture_screenshot(window.into()).context("capturing the window")?;
+        image.save(&out).with_context(|| format!("writing {out}"))?;
+        println!("{out} {}x{}", image.width(), image.height());
+        return Ok(());
+    }
 
     // `detached-terminal`, `detached-settings`, `detached-extensions`, `detached-session`: a
     // single-view window instead of the workbench.

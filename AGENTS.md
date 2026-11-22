@@ -11,7 +11,9 @@ Athas is a native Rust app built on GPUI (desktop + wasm). Work happens on the `
 Working notes live in `.notes/`, untracked (excluded in `.git/info/exclude`): remaining work and
 test findings (`REMAINING.md`, `BUGS.md`, `BUGHUNT.md`), the task log (`WORKLOG.md`), port status
 (`PORTING.md`, regenerate with `python3 .notes/scripts/porting.py`), the file-by-file audits
-(`audits/`) and `visual-parity.md`.
+(`audits/`) and `visual-parity.md`. `.notes/scripts/disk.sh` reports and sweeps the build caches:
+`target/` grows by GBs per build and cargo never collects the dead artifacts, so sweep instead of
+`cargo clean` (a sweep keeps the newest artifacts; a clean costs a cold rebuild).
 
 ## Iteration loop (the user tests the running app)
 
