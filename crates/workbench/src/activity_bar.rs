@@ -195,6 +195,7 @@ impl Workbench {
                             .tooltip("Run")
                             .tooltip_side(ui::TooltipSide::Right)
                             .active(self.menu_is_open("run-actions"))
+                            .filled_when_active()
                             .on_click(cx.listener(|this, event: &gpui::ClickEvent, window, cx| {
                                 this.show_run_dropdown(event.position(), window, cx);
                             })),
