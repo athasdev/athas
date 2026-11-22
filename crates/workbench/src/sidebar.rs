@@ -235,7 +235,7 @@ impl Workbench {
         };
         let mut cloud = self.cloud_sidebar_groups(cx);
 
-        let mut content = div().flex().flex_col().gap(px(12.)).px(metrics::CHROME_PADDING_INLINE).py(px(8.));
+        let mut content = div().flex().flex_col().gap(px(12.)).px(px(8.)).pb(px(8.));
 
         if !lists.pinned.is_empty() {
             content = content.child(
