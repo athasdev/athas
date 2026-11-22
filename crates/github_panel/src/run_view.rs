@@ -22,11 +22,18 @@ use crate::{
     menus::{self, MenuHost, below},
     model::{self, Tone},
     store,
-    widgets::{Summary, badge, fill_message, meta_chip, rail, run_status_icon, tone_color, user_chip},
+    widgets::{badge, fill_message, meta_chip, run_status_icon, tone_color, user_chip},
 };
 
 /// How often a running workflow and its log are re-read.
 const ACTIVE_POLL_TICKS: usize = 15;
+
+/// The header's side padding: the job card's margin, padding and row padding add up to the same
+/// left edge, so the run's icon sits above its jobs' icons.
+const HEADER_X: gpui::Pixels = px(20.);
+
+/// The log's line-number column.
+const LOG_GUTTER: gpui::Pixels = px(52.);
 
 pub struct RunView {
     root: PathBuf,
@@ -41,8 +48,13 @@ pub struct RunView {
     log_errors: HashMap<i64, SharedString>,
     loading_log: Option<i64>,
     timestamps: bool,
-    /// Indices into the selected job's log that pass the step and the filter.
+    /// Indices into the selected job's log that pass the scope and the filter.
     visible: Arc<Vec<usize>>,
+    /// The lines the selected step wrote, when its `##[group]` marker says.
+    step_range: Option<Range<usize>>,
+    /// Narrow the log to the selected step. Off: the whole job's log shows and the step only
+    /// says where to look.
+    step_only: bool,
     highlight: Option<usize>,
     /// Error and warning lines among the visible ones, and the one Next/Previous problem landed on.
     problems: Arc<Vec<usize>>,
@@ -130,11 +142,13 @@ impl RunView {
             loading_log: None,
             timestamps: false,
             visible: Arc::default(),
+            step_range: None,
+            step_only: false,
             highlight: None,
             problems: Arc::default(),
             problem_counts: (0, 0),
             active_problem: None,
-            wrap: false,
+            wrap: true,
             collapsed_groups: Default::default(),
             wrap_list: ListState::new(0, ListAlignment::Top, px(800.)),
             busy: None,
@@ -234,31 +248,42 @@ impl RunView {
         );
     }
 
-    /// Works out which log lines show, and the line a failed step opens on.
+    /// Works out which log lines show. The whole job's log shows by default; a step narrows it
+    /// only under Step only, so picking a step never hides the rest of the log.
     fn update_visible(&mut self, cx: &mut Context<Self>) {
         let query = self.log_filter.read(cx).text().trim().to_lowercase();
-        let Some(job) = self.selected_job() else {
+        let Some(lines) = self.job.and_then(|id| self.logs.get(&id)).cloned() else {
+            self.step_range = None;
             self.set_visible(Vec::new(), None);
             return;
         };
-        let Some(lines) = self.job.and_then(|id| self.logs.get(&id)).cloned() else {
+        let Some(job) = self.selected_job() else {
+            self.step_range = None;
             self.set_visible(Vec::new(), None);
             return;
         };
         let ranges = logs::step_ranges(&lines, &job.steps);
-        let range = self.step.and_then(|step| ranges.get(step).cloned().flatten()).unwrap_or(0..lines.len());
-        let slice = &lines[range.start.min(lines.len())..range.end.min(lines.len())];
+        let step_range = self.step.and_then(|step| ranges.get(step).cloned().flatten());
         let subject_failed = match self.step.and_then(|step| job.steps.get(step)) {
             Some(step) => model::run_state(step.status.as_deref(), step.conclusion.as_deref()).is_failed,
             None => job_state(job).is_failed,
         };
-        let highlight = (query.is_empty() && subject_failed).then(|| logs::first_problem(slice).map(|offset| slice[offset].index)).flatten();
+        let clamp = |range: Range<usize>| range.start.min(lines.len())..range.end.min(lines.len());
+        let scope = clamp(match (self.step_only, &step_range) {
+            (true, Some(range)) => range.clone(),
+            _ => 0..lines.len(),
+        });
+        let slice = &lines[scope.clone()];
+        // A failed step opens on its own first problem, even while the whole job's log shows.
+        let problem_slice = &lines[clamp(step_range.clone().filter(|_| subject_failed).unwrap_or(scope))];
+        let highlight = (query.is_empty() && subject_failed).then(|| logs::first_problem(problem_slice).map(|offset| problem_slice[offset].index)).flatten();
         let matching: Vec<usize> = slice.iter().filter(|line| logs::line_matches(line, &query)).map(|line| line.index).collect();
         let visible = logs::fold(&lines, &matching, &self.collapsed_groups);
         let problem = |level| visible.iter().filter(|index| lines.get(**index).is_some_and(|line| line.level == Some(level))).count();
         self.problem_counts = (problem(LogLevel::Error), problem(LogLevel::Warning));
         self.problems = Arc::new(visible.iter().copied().filter(|index| lines.get(*index).is_some_and(|line| matches!(line.level, Some(LogLevel::Error | LogLevel::Warning)))).collect());
         let changed = highlight != self.highlight;
+        self.step_range = step_range;
         self.set_visible(visible, highlight);
         // Jump to the first problem when it changes, not on every reload.
         if changed && self.active_problem.is_none() && let Some(line) = highlight {
@@ -302,9 +327,16 @@ impl RunView {
             self.collapsed_groups.clear();
         }
         self.active_problem = None;
-        self.log_scroll.scroll_to_item(0, ScrollStrategy::Top);
         self.load_log(job_id, false, cx);
         self.update_visible(cx);
+        // Land where the step starts, or on the problem it failed with.
+        match self.highlight.or_else(|| self.step_range.as_ref().map(|range| range.start)) {
+            Some(line) => self.reveal_line(line),
+            None => {
+                self.log_scroll.scroll_to_item(0, ScrollStrategy::Top);
+                self.wrap_list.scroll_to(ListOffset { item_ix: 0, offset_in_item: px(0.) });
+            }
+        }
         cx.notify();
     }
 
@@ -395,14 +427,23 @@ impl RunView {
         let has_rows = !self.visible.is_empty();
         let has_lines = self.job.and_then(|id| self.logs.get(&id)).is_some_and(|lines| !lines.is_empty());
         vec![
+            crate::menus::item(if self.timestamps { "Hide timestamps" } else { "Show timestamps" }, cx, |this, _, cx| {
+                this.timestamps = !this.timestamps;
+                cx.notify();
+            })
+            .icon(IconName::Clock)
+            .into(),
+            MenuEntry::Separator,
             crate::menus::item("Collapse all groups", cx, |this, _, cx| this.set_all_groups(true, cx)).disabled(!foldable).into(),
             crate::menus::item("Expand all groups", cx, |this, _, cx| this.set_all_groups(false, cx)).disabled(!foldable).into(),
-            crate::menus::item("Find in logs", cx, |this, window, cx| {
+            crate::menus::item("Find in log", cx, |this, window, cx| {
                 let focus = this.log_filter.focus_handle(cx);
                 window.focus(&focus, cx);
             })
             .disabled(!has_rows)
             .into(),
+            MenuEntry::Separator,
+            crate::menus::item("Copy log", cx, |this, _, cx| this.copy_logs(cx)).icon(IconName::Copy).disabled(!has_rows).into(),
             crate::menus::item("Export log", cx, |this, _, cx| this.export_logs(cx)).icon(IconName::Download).disabled(!has_lines).into(),
         ]
     }
@@ -412,17 +453,16 @@ impl RunView {
         Some(logs::format_text(self.visible.iter().filter_map(|index| lines.get(*index)), self.timestamps))
     }
 
-    fn render_summary(&self, details: &WorkflowRunDetails, colors: &ThemeColors, cx: &mut Context<Self>) -> AnyElement {
+    /// The run's state, title and meta, kept on the same left edge as the job list below it;
+    /// how far the jobs have got is the bar along the bottom.
+    fn render_header(&self, details: &WorkflowRunDetails, colors: &ThemeColors, cx: &mut Context<Self>) -> AnyElement {
         let now = Utc::now();
         let state = model::run_state(details.status.as_deref(), details.conclusion.as_deref());
         let title = model::run_title(details.display_title.as_deref(), details.name.as_deref(), details.workflow_name.as_deref(), details.database_id);
         let repository_url = crate::pr_view::repository_url(&details.url);
-        let mut badges = vec![badge(state.label.clone(), state.tone, colors).into_any_element()];
-        if let Some(attempt) = details.run_attempt.filter(|attempt| *attempt > 1) {
-            badges.push(badge(format!("Attempt {attempt}"), Tone::Warning, colors).into_any_element());
-        }
         let started = details.run_started_at.as_deref().or(details.created_at.as_deref());
         let duration = model::elapsed(started, details.updated_at.as_deref(), state.is_active, now);
+
         let mut meta: Vec<AnyElement> = Vec::new();
         if let Some(workflow) = &details.workflow_name {
             let url = format!("{repository_url}/actions?query={}", url_encode(&format!("workflow:\"{workflow}\"")));
@@ -456,11 +496,41 @@ impl RunView {
         if let Some(duration) = duration {
             meta.push(div().when(state.is_active, |this| this.text_color(colors.primary)).child(duration).into_any_element());
         }
+        if let Some(message) = details
+            .head_commit_message
+            .as_deref()
+            .map(|message| message.lines().next().unwrap_or_default().to_string())
+            .filter(|message| *message != title && !message.is_empty())
+        {
+            meta.push(div().min_w_0().max_w(px(360.)).truncate().child(message).into_any_element());
+        }
+
+        // How the jobs went closes the meta line, and draws the bar under the header.
+        let jobs = model::summarize_jobs(&details.jobs);
+        let fill = if jobs.failed > 0 {
+            colors.destructive
+        } else if state.phase == model::Phase::Success {
+            colors.success
+        } else if state.is_active {
+            colors.primary
+        } else {
+            colors.subtle_foreground
+        };
+        if jobs.total > 0 {
+            let label = if jobs.failed > 0 {
+                format!("{} of {} jobs failed", jobs.failed, jobs.total)
+            } else if state.is_active {
+                format!("{} of {} jobs finished", jobs.completed, jobs.total)
+            } else {
+                format!("{} of {} jobs passed", jobs.succeeded, jobs.total)
+            };
+            meta.push(div().flex_none().text_color(fill).child(label).into_any_element());
+        }
 
         let mut actions: Vec<AnyElement> = Vec::new();
         let working = self.busy.is_some();
         if self.loading {
-            actions.push(crate::widgets::caption("Refreshing…", colors).mr(px(4.)).into_any_element());
+            actions.push(crate::widgets::caption("Refreshing…", colors).mr(px(2.)).into_any_element());
         }
         if state.is_active {
             actions.push(
@@ -511,7 +581,7 @@ impl RunView {
             Button::icon("run-actions", IconName::Dots)
                 .size(ButtonSize::Small)
                 .active(menus::is_open(&self.open_menu, "run-actions"))
-                .tooltip("Action run actions")
+                .tooltip("Run actions")
                 .on_click(cx.listener(|this, event: &ClickEvent, window, cx| {
                     let Some(details) = this.details.clone() else { return };
                     let mut entries: Vec<MenuEntry> = vec![
@@ -533,70 +603,81 @@ impl RunView {
                 .into_any_element(),
         );
 
-        let summary = model::summarize_jobs(&details.jobs);
-        let aside = (summary.total > 0).then(|| {
-            let label = if summary.failed > 0 {
-                format!("{} of {} jobs failed", summary.failed, summary.total)
-            } else if state.is_active {
-                format!("{} of {} jobs finished", summary.completed, summary.total)
-            } else {
-                format!("{} of {} jobs passed", summary.succeeded, summary.total)
-            };
-            let fill = if summary.failed > 0 {
-                colors.destructive
-            } else if state.phase == model::Phase::Success {
-                colors.success
-            } else if state.is_active {
-                colors.primary
-            } else {
-                colors.subtle_foreground
-            };
-            let fraction = summary.completed as f32 / summary.total as f32;
-            let count = |count: usize, label: &str, color: Hsla| (count > 0).then(|| div().text_color(color).child(format!("{count} {label}")));
-            div()
-                .flex()
-                .flex_col()
-                .gap(px(6.))
-                .child(
-                    div()
-                        .flex()
-                        .items_center()
-                        .justify_between()
-                        .gap(px(8.))
-                        .text_size(typography::TEXT_SM)
-                        .text_color(colors.subtle_foreground)
-                        .child(div().min_w_0().truncate().child(label))
-                        .child(
-                            div()
-                                .flex()
-                                .flex_none()
-                                .gap(px(8.))
-                                .children(count(summary.failed, "failed", colors.destructive))
-                                .children(count(summary.running, "running", colors.primary))
-                                .children(count(summary.queued, "queued", colors.warning))
-                                .children(count(summary.succeeded, "passed", colors.success)),
-                        ),
-                )
-                .child(div().h(px(4.)).w_full().rounded_full().bg(colors.segment_track).child(div().h_full().w(relative(fraction)).rounded_full().bg(fill)))
-                .into_any_element()
+        let bar = (jobs.total > 0).then(|| {
+            let fraction = jobs.completed as f32 / jobs.total as f32;
+            div().h(px(2.)).w_full().flex_none().bg(colors.segment_track).child(div().h_full().w(relative(fraction)).bg(fill)).into_any_element()
         });
-        let icon = run_status_icon(&state, IconSize::Custom(px(20.)), colors);
-        let description = details
-            .head_commit_message
-            .as_deref()
-            .map(|message| message.lines().next().unwrap_or_default().to_string())
-            .filter(|message| *message != title && !message.is_empty())
-            .map(SharedString::from);
-        Summary { icon: icon.into_any_element(), title: crate::widgets::title_text(title), badges, description, meta, actions, aside }.render(colors).into_any_element()
+        div()
+            .flex()
+            .flex_col()
+            .flex_none()
+            .bg(colors.background)
+            .child(
+                div()
+                    .flex()
+                    .flex_col()
+                    .gap(px(4.))
+                    .px(HEADER_X)
+                    .pt(px(12.))
+                    .pb(px(10.))
+                    .child(
+                        div()
+                            .flex()
+                            .items_center()
+                            .gap(px(6.))
+                            .min_w_0()
+                            .child(run_status_icon(&state, IconSize::Small, colors))
+                            .child(
+                                div()
+                                    .flex_shrink(1.)
+                                    .min_w_0()
+                                    .truncate()
+                                    .text_size(typography::TEXT_BASE)
+                                    .font_weight(typography::SEMIBOLD)
+                                    .text_color(colors.foreground)
+                                    .child(title),
+                            )
+                            .child(badge(state.label.clone(), state.tone, colors))
+                            .children(details.run_attempt.filter(|attempt| *attempt > 1).map(|attempt| badge(format!("Attempt {attempt}"), Tone::Warning, colors)))
+                            .child(div().flex_1())
+                            .child(div().flex().flex_none().items_center().gap(px(2.)).children(actions)),
+                    )
+                    .child(
+                        div()
+                            .flex()
+                            .flex_wrap()
+                            .items_center()
+                            .pl(px(20.))
+                            .gap_x(px(10.))
+                            .gap_y(px(2.))
+                            .text_size(typography::TEXT_SM)
+                            .text_color(colors.subtle_foreground)
+                            .children(meta),
+                    ),
+            )
+            .child(bar.unwrap_or_else(|| div().h(px(1.)).w_full().flex_none().bg(colors.divider).into_any_element()))
+            .into_any_element()
     }
 
     fn render_jobs(&self, details: &WorkflowRunDetails, colors: &ThemeColors, window: &mut Window, cx: &mut Context<Self>) -> AnyElement {
         let now = Utc::now();
-        let mut list = div().id("run-jobs").flex().flex_col().gap(px(2.)).w(px(288.)).flex_none().min_h_0().overflow_y_scroll().bg(colors.surface).p(px(8.));
+        let mut list = div()
+            .id("run-jobs")
+            .flex()
+            .flex_col()
+            .gap(px(1.))
+            .w(px(268.))
+            .flex_none()
+            .min_h_0()
+            .overflow_y_scroll()
+            .m(px(8.))
+            .p(px(4.))
+            .rounded(metrics::RADIUS_LG)
+            .bg(colors.surface);
         if details.jobs.is_empty() {
             return list.child(crate::widgets::list_message("No jobs reported for this run yet", None, None, colors)).scrollbar(window, cx).into_any_element();
         }
-        let hover = colors.foreground;
+        let (hover, hover_bg) = (colors.foreground, colors.accent);
         for (job_index, job) in details.jobs.iter().enumerate() {
             let state = job_state(job);
             let selected = job.id.is_some() && job.id == self.job;
@@ -608,14 +689,14 @@ impl RunView {
                     .flex()
                     .items_center()
                     .gap(px(8.))
-                    .h(metrics::LIST_ROW)
+                    .h(px(30.))
                     .px(px(8.))
                     .rounded(metrics::RADIUS_MD)
                     .text_size(typography::TEXT_SM)
                     .text_color(if selected { colors.foreground } else { colors.muted_foreground })
-                    .when(selected, |this| this.bg(colors.selected).font_weight(typography::MEDIUM))
-                    .hover(move |style| style.text_color(hover))
-                    .child(Icon::new(if selected { IconName::ChevronDown } else { IconName::ChevronRight }).size(IconSize::XSmall).color(colors.subtle_foreground))
+                    // The open job is only the heading: the step under it carries the selection.
+                    .when(selected, |this| this.bg(if self.step.is_some() { colors.selected } else { colors.selected_emphasized }).font_weight(typography::MEDIUM))
+                    .when(!selected, |this| this.hover(move |style| style.bg(hover_bg).text_color(hover)))
                     .child(run_status_icon(&state, IconSize::Small, colors))
                     .child(div().flex_1().min_w_0().truncate().child(job.name.clone()))
                     .child(
@@ -636,9 +717,10 @@ impl RunView {
             if !selected {
                 continue;
             }
-            let mut steps = div().flex().flex_col().gap(px(1.)).my(px(4.)).ml(px(12.)).pl(px(6.)).border_l_1().border_color(colors.divider);
+            // The steps sit under their job, indented by the status icon's column.
+            let mut steps = div().flex().flex_col().gap(px(1.)).py(px(2.)).pl(px(20.));
             if job.steps.is_empty() {
-                steps = steps.child(div().px(px(8.)).py(px(6.)).text_size(typography::TEXT_SM).text_color(colors.subtle_foreground).child("No steps reported yet"));
+                steps = steps.child(div().px(px(8.)).py(px(4.)).text_size(typography::TEXT_SM).text_color(colors.subtle_foreground).child("No steps reported yet"));
             }
             for (step_index, step) in job.steps.iter().enumerate() {
                 let state = model::run_state(step.status.as_deref(), step.conclusion.as_deref());
@@ -650,14 +732,13 @@ impl RunView {
                         .flex()
                         .items_center()
                         .gap(px(8.))
-                        .h(px(26.))
+                        .h(px(28.))
                         .px(px(8.))
                         .rounded(metrics::RADIUS_MD)
                         .text_size(typography::TEXT_SM)
                         .text_color(if active { colors.foreground } else { colors.muted_foreground })
-                        .when(active, |this| this.bg(colors.selected))
-                        .hover(move |style| style.text_color(hover))
-                        .child(div().w(px(16.)).flex_none().text_right().text_size(typography::TEXT_CAPTION).text_color(colors.subtle_foreground).child(step.number.unwrap_or(step_index as i64 + 1).to_string()))
+                        .when(active, |this| this.bg(colors.selected_emphasized))
+                        .when(!active, |this| this.hover(move |style| style.bg(hover_bg).text_color(hover)))
                         .child(run_status_icon(&state, IconSize::XSmall, colors))
                         .child(div().flex_1().min_w_0().truncate().child(step.name.clone()))
                         .children(duration.map(|duration| div().flex_none().text_size(typography::TEXT_CAPTION).text_color(colors.subtle_foreground).child(duration)))
@@ -678,39 +759,63 @@ impl RunView {
     fn render_log(&self, colors: &ThemeColors, cx: &mut Context<Self>) -> AnyElement {
         let job = self.selected_job();
         let step = job.and_then(|job| self.step.and_then(|step| job.steps.get(step)));
-        let title = match (job, step) {
-            (Some(job), Some(step)) => format!("{} / {}", job.name, step.name),
-            (Some(job), None) => job.name.clone(),
-            _ => "Log".to_string(),
-        };
+        let step_name = step.map(|step| step.name.clone());
         let job_url = job.and_then(|job| job.url.clone());
-        let has_lines = self.job.and_then(|id| self.logs.get(&id)).is_some_and(|lines| !lines.is_empty());
+        let (errors, warnings) = self.problem_counts;
+
+        // Which log this is: the job, then the step that says where to look in it.
+        let crumb = div()
+            .flex()
+            .flex_1()
+            .items_center()
+            .gap(px(4.))
+            .min_w_0()
+            .text_size(typography::TEXT_SM)
+            .child(match job {
+                Some(job) => div()
+                    .min_w_0()
+                    .truncate()
+                    .font_weight(typography::MEDIUM)
+                    .text_color(if step_name.is_some() { colors.muted_foreground } else { colors.foreground })
+                    .child(job.name.clone()),
+                None => div().text_color(colors.subtle_foreground).child("Log"),
+            })
+            .children(step_name.clone().map(|name| {
+                div()
+                    .flex()
+                    .items_center()
+                    .gap(px(4.))
+                    .min_w_0()
+                    .child(Icon::new(IconName::ChevronRight).size(IconSize::XSmall).color(colors.subtle_foreground))
+                    .child(div().min_w_0().truncate().font_weight(typography::MEDIUM).text_color(colors.foreground).child(name))
+            }));
+
         let toolbar = div()
             .flex()
             .flex_none()
             .items_center()
             .gap(px(4.))
-            .h(px(40.))
-            .px(px(12.))
+            .h(px(32.))
+            .px(px(8.))
             .border_b_1()
             .border_color(colors.divider)
-            .child(div().flex_1().min_w_0().truncate().text_size(typography::TEXT_SM).font_weight(typography::MEDIUM).child(title))
-            .when(self.problem_counts.0 + self.problem_counts.1 > 0, |this| {
-                let (errors, warnings) = self.problem_counts;
+            .child(crumb)
+            .when(errors + warnings > 0, |this| {
                 let tone = if errors > 0 { colors.destructive } else { colors.warning };
                 this.child(
                     div()
                         .flex()
+                        .flex_none()
                         .items_center()
                         .gap(px(2.))
-                        .mr(px(4.))
                         .child(Button::icon("run-log-prev-problem", IconName::ArrowUp).size(ButtonSize::Small).tooltip("Previous problem").on_click(cx.listener(|this, _, _, cx| this.jump_to_problem(false, cx))))
                         .child(
                             div()
                                 .id("run-log-problems")
-                                .px(px(6.))
-                                .py(px(2.))
+                                .px(px(4.))
+                                .py(px(1.))
                                 .rounded(metrics::RADIUS)
+                                .whitespace_nowrap()
                                 .text_size(typography::TEXT_CAPTION)
                                 .text_color(tone)
                                 .hover(|this| this.bg(colors.accent))
@@ -720,22 +825,27 @@ impl RunView {
                         .child(Button::icon("run-log-next-problem", IconName::ArrowDown).size(ButtonSize::Small).tooltip("Next problem").on_click(cx.listener(|this, _, _, cx| this.jump_to_problem(true, cx)))),
                 )
             })
-            .child(div().w(px(200.)).flex_none().child(self.log_filter.clone()))
-            .child(
-                Button::icon("run-log-timestamps", IconName::Clock)
+            .child(div().w(px(168.)).flex_none().child(self.log_filter.clone()))
+            .children(step_name.map(|_| {
+                Button::icon("run-log-step-only", IconName::Filter)
                     .size(ButtonSize::Small)
-                    .active(self.timestamps)
-                    .tooltip(if self.timestamps { "Hide timestamps" } else { "Show timestamps" })
+                    .active(self.step_only)
+                    .tooltip(if self.step_only { "Show the whole job's log" } else { "Show this step only" })
                     .on_click(cx.listener(|this, _, _, cx| {
-                        this.timestamps = !this.timestamps;
+                        this.step_only = !this.step_only;
+                        this.active_problem = None;
+                        this.update_visible(cx);
+                        if let Some(line) = this.highlight.or_else(|| this.step_range.as_ref().map(|range| range.start)) {
+                            this.reveal_line(line);
+                        }
                         cx.notify();
-                    })),
-            )
+                    }))
+            }))
             .child(
                 Button::icon("run-log-wrap", IconName::TextAlignJustify)
                     .size(ButtonSize::Small)
                     .active(self.wrap)
-                    .tooltip(if self.wrap { "Disable line wrap" } else { "Wrap long lines" })
+                    .tooltip(if self.wrap { "Stop wrapping long lines" } else { "Wrap long lines" })
                     .on_click(cx.listener(|this, _, _, cx| {
                         this.wrap = !this.wrap;
                         if let Some(line) = this.active_problem.or(this.highlight) {
@@ -745,16 +855,9 @@ impl RunView {
                     })),
             )
             .child(
-                Button::icon("run-log-copy", IconName::Copy)
-                    .size(ButtonSize::Small)
-                    .tooltip("Copy logs")
-                    .disabled(!has_lines)
-                    .on_click(cx.listener(|this, _, _, cx| this.copy_logs(cx))),
-            )
-            .child(
                 Button::icon("run-log-refresh", IconName::ArrowClockwise)
                     .size(ButtonSize::Small)
-                    .tooltip("Refresh logs")
+                    .tooltip("Refresh log")
                     .disabled(!job.is_some_and(model::job_has_logs) || self.loading_log.is_some())
                     .on_click(cx.listener(|this, _, _, cx| {
                         if let Some(job) = this.job {
@@ -766,9 +869,9 @@ impl RunView {
             .child(
                 Button::icon("run-log-more", IconName::Dots)
                     .size(ButtonSize::Small)
-                    .tooltip("More log actions")
+                    .tooltip("Log actions")
                     .active(crate::menus::is_open(&self.open_menu, "run-log-more"))
-                    .on_click(cx.listener(|this, event: &gpui::ClickEvent, window, cx| {
+                    .on_click(cx.listener(move |this, event: &gpui::ClickEvent, window, cx| {
                         let entries = this.log_menu(cx);
                         let position = event.position();
                         crate::menus::show(this, "run-log-more", entries, gpui::point(position.x, position.y + px(8.)), gpui::Anchor::TopRight, window, cx);
@@ -779,22 +882,57 @@ impl RunView {
             None => fill_message("Select a job to see its log", None, None, colors).into_any_element(),
             Some(job) if !model::job_has_logs(job) => {
                 let state = job_state(job);
-                fill_message(format!("{} — logs appear once the job starts", state.label), None, None, colors).into_any_element()
+                fill_message(format!("{} — the log starts with the job", state.label), None, None, colors).into_any_element()
             }
             Some(job) => {
                 let id = job.id.unwrap_or_default();
+                let loading = self.loading_log == Some(id);
+                let retry = |cx: &mut Context<Self>| {
+                    Button::new("run-log-retry", "Retry").size(ButtonSize::Small).on_click(cx.listener(move |this, _, _, cx| this.load_log(id, true, cx))).into_any_element()
+                };
                 match (self.logs.get(&id), self.log_errors.get(&id)) {
+                    // GitHub publishes a running job's log late and asking too early answers 404.
+                    // The poll keeps asking, so this is a wait, not a failure.
+                    (None, Some(error)) if job_state(job).is_active => {
+                        fill_message("Waiting for GitHub to publish the log…", Some(error.clone()), Some(retry(cx)), colors).into_any_element()
+                    }
                     (None, Some(error)) => fill_message(
                         error.clone(),
                         None,
-                        Some(Button::new("run-log-retry", "Retry").size(ButtonSize::Small).on_click(cx.listener(move |this, _, _, cx| this.load_log(id, true, cx))).into_any_element()),
+                        Some(retry(cx)),
                         colors,
                     )
                     .into_any_element(),
-                    (None, None) => fill_message("Loading log…", None, None, colors).into_any_element(),
+                    (None, None) if loading => fill_message("Loading log…", None, None, colors).into_any_element(),
+                    // Nothing asked for it, or the request was dropped: say so and offer the fetch
+                    // again, rather than sitting on "Loading…" for ever.
+                    (None, None) => fill_message(
+                        "The log has not been fetched",
+                        None,
+                        Some(Button::new("run-log-load", "Load log").size(ButtonSize::Small).on_click(cx.listener(move |this, _, _, cx| this.load_log(id, true, cx))).into_any_element()),
+                        colors,
+                    )
+                    .into_any_element(),
                     (Some(_), _) if self.visible.is_empty() => {
-                        let empty = if self.log_filter.read(cx).text().trim().is_empty() { "This step wrote no output" } else { "No matching lines" };
-                        fill_message(empty, None, None, colors).into_any_element()
+                        let filtering = !self.log_filter.read(cx).text().trim().is_empty();
+                        let (empty, action) = match (filtering, self.step_only) {
+                            (true, _) => ("No matching lines", None),
+                            (false, true) => (
+                                "This step wrote no output",
+                                Some(
+                                    Button::new("run-log-whole-job", "Show the whole job's log")
+                                        .size(ButtonSize::Small)
+                                        .on_click(cx.listener(|this, _, _, cx| {
+                                            this.step_only = false;
+                                            this.update_visible(cx);
+                                            cx.notify();
+                                        }))
+                                        .into_any_element(),
+                                ),
+                            ),
+                            (false, false) => ("This job wrote no output", None),
+                        };
+                        fill_message(empty, None, action, colors).into_any_element()
                     }
                     (Some(_), _) if self.wrap => ui::with_scrollbar(
                         list(self.wrap_list.clone(), cx.processor(|this, row: usize, _window, cx| this.render_log_rows(row..row + 1, cx).pop().unwrap_or_else(|| div().into_any_element())))
@@ -821,50 +959,68 @@ impl RunView {
         div().flex().flex_col().flex_1().min_w_0().min_h_0().child(toolbar).child(body).into_any_element()
     }
 
+    /// One log line: the line number, the fold arrow's column (kept whether or not the line folds,
+    /// so every line's text starts at the same place), the timestamp, then the text itself.
     fn render_log_rows(&mut self, range: Range<usize>, cx: &mut Context<Self>) -> Vec<AnyElement> {
         let colors = cx.theme().colors.clone();
         let Some(lines) = self.job.and_then(|id| self.logs.get(&id)).cloned() else { return Vec::new() };
         let visible = self.visible.clone();
         let wrap = self.wrap;
+        let step_range = self.step_range.clone();
         visible[range.start.min(visible.len())..range.end.min(visible.len())]
             .iter()
             .filter_map(|index| lines.get(*index))
             .map(|line| {
                 let highlighted = self.active_problem.or(self.highlight) == Some(line.index);
-                let (bg, level_color) = match line.level {
-                    Some(LogLevel::Error) => (Some(colors.destructive_soft), Some(colors.destructive)),
-                    Some(LogLevel::Warning) => (Some(colors.warning_soft), Some(colors.warning)),
-                    Some(LogLevel::Notice) => (None, Some(colors.info)),
-                    Some(LogLevel::Command) => (None, Some(colors.primary)),
-                    Some(LogLevel::Debug) => (None, Some(colors.subtle_foreground)),
-                    Some(LogLevel::Group) => (None, Some(colors.foreground)),
-                    Some(LogLevel::EndGroup) | None => (None, None),
+                let (bg, accent, level_color) = match line.level {
+                    Some(LogLevel::Error) => (Some(colors.destructive_soft), Some(colors.destructive), Some(colors.destructive)),
+                    Some(LogLevel::Warning) => (Some(colors.warning_soft), Some(colors.warning), Some(colors.warning)),
+                    Some(LogLevel::Notice) => (None, None, Some(colors.info)),
+                    Some(LogLevel::Command) => (None, None, Some(colors.primary)),
+                    Some(LogLevel::Debug) => (None, None, Some(colors.subtle_foreground)),
+                    Some(LogLevel::Group) => (Some(colors.surface), None, Some(colors.foreground)),
+                    Some(LogLevel::EndGroup) | None => (None, None, None),
                 };
+                // The selected step's lines keep a brighter gutter while the whole job's log shows.
+                let in_step = step_range.as_ref().is_some_and(|range| range.contains(&line.index));
+                let group = line.level == Some(LogLevel::Group);
+                let collapsed = self.collapsed_groups.contains(&line.index);
+                let index = line.index;
                 div()
                     .flex()
-                    .map(|this| if wrap { this.items_start().min_h(px(20.)).py(px(1.)).w_full() } else { this.items_center().h(px(20.)).min_w_full().whitespace_nowrap() })
+                    .map(|this| if wrap { this.items_start().w_full() } else { this.items_center().min_w_full().whitespace_nowrap() })
+                    .py(px(2.))
                     .pr(px(16.))
+                    .border_l_2()
+                    .border_color(accent.unwrap_or_else(gpui::transparent_black))
                     .font_family(typography::MONO_FONT)
                     .text_size(typography::TEXT_SM)
+                    .line_height(px(19.))
                     .when_some(bg, |this, bg| this.bg(bg))
                     .when(highlighted, |this| this.bg(colors.destructive.opacity(0.2)))
-                    .child(div().w(px(52.)).flex_none().pr(px(12.)).text_right().text_color(colors.subtle_foreground).child((line.index + 1).to_string()))
-                    .when(self.timestamps, |this| {
-                        this.child(div().flex_none().pr(px(10.)).text_color(colors.subtle_foreground).child(line.timestamp.as_deref().map(short_timestamp).unwrap_or_default()))
+                    .child(
+                        div()
+                            .w(LOG_GUTTER)
+                            .flex_none()
+                            .pr(px(10.))
+                            .text_right()
+                            .text_color(if in_step { colors.muted_foreground } else { colors.subtle_foreground })
+                            .child((line.index + 1).to_string()),
+                    )
+                    .child(match group {
+                        true => div()
+                            .id(("run-log-fold", index))
+                            .w(px(16.))
+                            .flex_none()
+                            .flex()
+                            .items_center()
+                            .child(Icon::new(if collapsed { IconName::ChevronRight } else { IconName::ChevronDown }).size(IconSize::XSmall).color(colors.subtle_foreground))
+                            .on_click(cx.listener(move |this, _, _, cx| this.toggle_group(index, cx)))
+                            .into_any_element(),
+                        false => div().w(px(16.)).flex_none().into_any_element(),
                     })
-                    .when(line.level == Some(LogLevel::Group), |this| {
-                        let index = line.index;
-                        let collapsed = self.collapsed_groups.contains(&index);
-                        this.child(
-                            div()
-                                .id(("run-log-fold", index))
-                                .flex()
-                                .flex_none()
-                                .items_center()
-                                .pr(px(4.))
-                                .child(Icon::new(if collapsed { IconName::ChevronRight } else { IconName::ChevronDown }).size(IconSize::XSmall).color(colors.subtle_foreground))
-                                .on_click(cx.listener(move |this, _, _, cx| this.toggle_group(index, cx))),
-                        )
+                    .when(self.timestamps, |this| {
+                        this.child(div().w(px(62.)).flex_none().pr(px(8.)).text_color(colors.subtle_foreground).child(line.timestamp.as_deref().map(short_timestamp).unwrap_or_default()))
                     })
                     .child(div().when(wrap, |this| this.flex_1().min_w_0()).child(log_text(line, level_color, &colors)))
                     .into_any_element()
@@ -880,8 +1036,9 @@ impl RunView {
             self.log_errors.remove(&job);
             self.logs.insert(job, Arc::new(logs::parse(log)));
         }
-        self.step = None;
-        self.wrap = state.contains("wrap");
+        self.step = state.contains("step").then_some(0);
+        self.step_only = state.contains("step-only");
+        self.wrap = !state.contains("nowrap");
         self.update_visible(cx);
         if state.contains("next") {
             self.jump_to_problem(true, cx);
@@ -1004,8 +1161,10 @@ impl Render for RunView {
             return container.child(body);
         };
         container
-            .child(div().flex_none().pt(px(20.)).pb(px(16.)).border_b_1().border_color(colors.divider).child(rail(self.render_summary(&details, &colors, cx))))
-            .when_some(self.error.clone(), |this, error| this.child(rail(div().py(px(6.)).text_size(typography::TEXT_SM).text_color(colors.destructive).child(error))))
+            .child(self.render_header(&details, &colors, cx))
+            .when_some(self.error.clone(), |this, error| {
+                this.child(div().flex_none().px(HEADER_X).py(px(6.)).text_size(typography::TEXT_SM).text_color(colors.destructive).child(error))
+            })
             .child(div().flex().flex_1().min_h_0().child(self.render_jobs(&details, &colors, window, cx)).child(self.render_log(&colors, cx)))
             .children(self.render_notice(&colors, cx))
             .children(self.open_menu.as_ref().map(|menu| menu.render()))
