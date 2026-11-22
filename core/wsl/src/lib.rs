@@ -18,6 +18,11 @@ const WSL_LEGACY_SERVER: &str = "wsl$";
 const WSLENV: &str = "WSLENV";
 const GIT_PROBE_RETRY_INTERVAL: Duration = Duration::from_secs(60);
 const HOST_WSL_TIMEOUT: Duration = Duration::from_secs(5);
+/// How long the list of distributions is reused before `wsl.exe` is asked again.
+const DISTRIBUTION_LIST_INTERVAL: Duration = Duration::from_secs(30);
+/// How long a failure is remembered. Where WSL is not installed the `wsl.exe` stub in System32
+/// takes a minute to fail, and the callers list shells while drawing (#788).
+const DISTRIBUTION_FAILURE_INTERVAL: Duration = Duration::from_secs(600);
 #[cfg(windows)]
 const CREATE_NO_WINDOW: u32 = 0x0800_0000;
 
@@ -378,11 +383,41 @@ pub fn wsl_path_to_windows_unc(distro: &str, linux_path: &str, flavor: WslUncFla
    path
 }
 
+fn distribution_list_cache() -> &'static Mutex<Option<(Result<Vec<WslDistribution>, String>, Instant)>> {
+   static CACHE: OnceLock<Mutex<Option<(Result<Vec<WslDistribution>, String>, Instant)>>> =
+      OnceLock::new();
+   CACHE.get_or_init(|| Mutex::new(None))
+}
+
+/// The distributions installed on this machine. The answer is shared for a while, and a failure
+/// for longer, so a slow or broken `wsl.exe` costs one wait instead of one per caller.
 pub fn list_distributions() -> Result<Vec<WslDistribution>, String> {
    if !cfg!(target_os = "windows") {
       return Ok(Vec::new());
    }
 
+   if let Some((listed, listed_at)) = distribution_list_cache()
+      .lock()
+      .ok()
+      .and_then(|cache| cache.clone())
+      && listed_at.elapsed()
+         < if listed.is_ok() {
+            DISTRIBUTION_LIST_INTERVAL
+         } else {
+            DISTRIBUTION_FAILURE_INTERVAL
+         }
+   {
+      return listed;
+   }
+
+   let listed = list_distributions_uncached();
+   if let Ok(mut cache) = distribution_list_cache().lock() {
+      *cache = Some((listed.clone(), Instant::now()));
+   }
+   listed
+}
+
+fn list_distributions_uncached() -> Result<Vec<WslDistribution>, String> {
    let output = run_host_wsl(&["--list", "--verbose"])?;
    if !output.status_success {
       return Err(format_wsl_error(
