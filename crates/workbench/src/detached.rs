@@ -241,6 +241,9 @@ pub struct DetachedWindow {
     content: DetachedContent,
     view: AnyView,
     focus: FocusHandle,
+    /// The window's own focus, on the root that carries the `App` key context. Its view may stop
+    /// being drawn; this one always is, so the window keeps answering the global shortcuts.
+    root_focus: FocusHandle,
     platform: Platform,
     should_move_window: bool,
     _subscriptions: Vec<Subscription>,
@@ -340,7 +343,12 @@ impl DetachedWindow {
             window.set_background_appearance(Self::background(&this.content, cx));
             cx.notify();
         }));
-        Self { content, view, focus, platform: Platform::current(), should_move_window: false, _subscriptions: subscriptions }
+        let root_focus = cx.focus_handle();
+        // The view holding the keyboard may stop being drawn; with nothing focused the window
+        // answers no shortcut, so the root takes it back.
+        let root = root_focus.clone();
+        subscriptions.push(cx.on_focus_lost(window, move |_, window, cx| window.focus(&root, cx)));
+        Self { content, view, focus, root_focus, platform: Platform::current(), should_move_window: false, _subscriptions: subscriptions }
     }
 
     pub fn content(&self) -> &DetachedContent {
@@ -473,7 +481,8 @@ impl Render for DetachedWindow {
         };
         div()
             .id("detached-window")
-            .key_context("DetachedWindow")
+            .key_context(keymap::when::DETACHED_CONTEXT)
+            .track_focus(&self.root_focus)
             .size_full()
             .flex()
             .flex_col()

@@ -234,6 +234,8 @@ fn gpui_name(name: &str) -> String {
         "vimInsertMode" => "vim_insert".into(),
         "vimVisualMode" => "vim_visual".into(),
         "isRecordingKeybinding" => "KeybindingRecorder".into(),
+        // A single-view window (settings, extensions, a detached session), not the workbench.
+        "detachedWindow" => "DetachedWindow".into(),
         other => other.chars().map(|c| if c.is_ascii_alphanumeric() || c == '_' { c } else { '_' }).collect(),
     }
 }
@@ -268,14 +270,25 @@ fn to_gpui(node: &When) -> Option<String> {
     })
 }
 
+/// The key context every window root carries, workbench or detached: what a binding that holds
+/// anywhere (no clause, `!terminalFocus`) is bound in, so the global keys work in a settings or
+/// an extensions window too.
+pub const ROOT_CONTEXT: &str = "App";
+
+/// The workbench window's root context: the shared root, and the name `when` clauses use.
+pub const WORKBENCH_CONTEXT: &str = "App Workbench";
+
+/// A single-view window's root context (settings, extensions, a detached session).
+pub const DETACHED_CONTEXT: &str = "App DetachedWindow";
+
 /// The GPUI key context predicate a binding with this clause is bound in. A clause that holds
-/// outside every surface (no clause, `!terminalFocus`) is kept to the workbench.
+/// outside every surface (no clause, `!terminalFocus`) is kept to the window's root.
 pub fn to_context_predicate(clause: Option<&str>) -> String {
     let node = clause.map_or(When::True, parse);
     let anywhere = node.evaluate(&HashMap::new());
     match to_gpui(&node) {
-        None => "Workbench".into(),
-        Some(predicate) if anywhere => format!("Workbench && ({predicate})"),
+        None => ROOT_CONTEXT.into(),
+        Some(predicate) if anywhere => format!("{ROOT_CONTEXT} && ({predicate})"),
         Some(predicate) => predicate,
     }
 }
@@ -317,11 +330,18 @@ mod tests {
     }
 
     #[test]
+    fn every_window_root_carries_the_shared_context() {
+        for context in [WORKBENCH_CONTEXT, DETACHED_CONTEXT] {
+            assert!(gpui::KeyContext::parse(context).unwrap().contains(ROOT_CONTEXT), "{context}");
+        }
+    }
+
+    #[test]
     fn clauses_become_gpui_predicates() {
         let parsed = |clause: Option<&str>| to_context_predicate(clause);
-        assert_eq!(parsed(None), "Workbench");
+        assert_eq!(parsed(None), "App");
         assert_eq!(parsed(Some("editorFocus")), "Editor");
-        assert_eq!(parsed(Some("!terminalFocus")), "Workbench && (!Terminal)");
+        assert_eq!(parsed(Some("!terminalFocus")), "App && (!Terminal)");
         assert_eq!(parsed(Some("editorFocus && agentEditHunks")), "(Editor) && (agent_hunk)");
         assert_eq!(parsed(Some("editorFocus && vimMode == false")), "(Editor) && (!vim)");
         assert_eq!(parsed(Some("terminalFocus || browserFocus")), "(Terminal) || (Browser)");
@@ -349,8 +369,8 @@ mod tests {
             let predicate = KeyBindingContextPredicate::parse(&to_context_predicate(Some(clause))).unwrap();
             predicate.depth_of(contexts).is_some()
         };
-        let editor = stack(&["Workbench", "EditorPane", "Editor agent_hunk"]);
-        let terminal = stack(&["Workbench", "TerminalPanel", "Terminal"]);
+        let editor = stack(&["App Workbench", "EditorPane", "Editor agent_hunk"]);
+        let terminal = stack(&["App Workbench", "TerminalPanel", "Terminal"]);
         assert!(holds("editorFocus && agentEditHunks", &editor));
         assert!(!holds("editorFocus && agentEditHunks", &terminal));
         assert!(holds("!terminalFocus", &editor));

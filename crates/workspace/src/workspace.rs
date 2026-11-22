@@ -91,6 +91,15 @@ pub struct Session {
     pub branch: Option<String>,
 }
 
+impl Session {
+    /// Whether the session was never used: started, never written in, and still carrying the
+    /// title it was made with. Pressing New session and then doing something else leaves one of
+    /// these; they are not worth keeping in the history.
+    pub fn is_unused(&self) -> bool {
+        self.message_count == 0 && self.title.trim() == NEW_SESSION_TITLE && !self.pinned && self.archived_at.is_none() && self.status == SessionStatus::Idle
+    }
+}
+
 /// What the activity bar picks for the sidebar.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
@@ -879,7 +888,26 @@ impl WorkspaceState {
     pub fn from_json(json: &str) -> anyhow::Result<Self> {
         let mut state: Self = serde_json::from_str(json)?;
         state.merge_session_tabs();
+        state.drop_unused_sessions();
         Ok(state)
+    }
+
+    /// Forgets the sessions that were never used and have no tab left open, so the history keeps
+    /// the conversations and not the times New session was pressed.
+    fn drop_unused_sessions(&mut self) {
+        let open: Vec<SessionId> = self
+            .every_panes()
+            .flat_map(|panes| panes.all_tabs())
+            .filter_map(|tab| match tab {
+                TabItem::Session { id } => Some(id.clone()),
+                _ => None,
+            })
+            .collect();
+        let stale: Vec<SessionId> =
+            self.sessions.iter().filter(|session| session.is_unused() && !open.contains(&session.id)).map(|session| session.id.clone()).collect();
+        for id in stale {
+            self.delete_session(&id);
+        }
     }
 
     pub fn to_json(&self) -> anyhow::Result<String> {
@@ -1155,14 +1183,22 @@ impl WorkspaceState {
         }
     }
 
-    /// Starts a session in `project`, or a chat of no project, and puts it in front.
+    /// Starts a session in `project`, or a chat of no project, and puts it in front. A session
+    /// of the same project and agent that was never used is opened again instead of a second one
+    /// being made, so asking for a new session twice over does not fill the history.
     pub fn new_session(&mut self, project: Option<ProjectId>, agent: &str) -> SessionId {
+        if let Some(unused) =
+            self.sessions.iter().find(|session| session.is_unused() && session.project == project && session.agent == agent).map(|session| session.id.clone())
+        {
+            self.open_session(&unused);
+            return unused;
+        }
         let id = SessionId(self.next_id("session"));
         let now = now_ms();
         let workspace_path = project.as_ref().and_then(|id| self.project(id)).map(|p| p.path.clone());
         self.sessions.push(Session {
             id: id.clone(),
-            title: "New session".to_string(),
+            title: NEW_SESSION_TITLE.to_string(),
             project,
             workspace_path,
             agent: agent.to_string(),
@@ -2174,6 +2210,43 @@ mod tests {
         third.share_closed_project_tabs(file);
         third.open_project("/tmp/old");
         assert!(third.open_file_paths().is_empty());
+    }
+
+    #[test]
+    fn asking_for_a_new_session_twice_keeps_one() {
+        let mut state = WorkspaceState::default();
+        let project = state.open_project("/code/athas");
+        let first = state.new_session(Some(project.clone()), "claude-code");
+        let again = state.new_session(Some(project.clone()), "claude-code");
+        assert_eq!(first, again, "an unused session is opened again, not duplicated");
+        assert_eq!(state.sessions.len(), 1);
+        // Another agent, another project and a session with a message of its own each get one.
+        state.new_session(Some(project.clone()), "codex");
+        state.new_session(None, "claude-code");
+        state.touch_session(&first, now_ms());
+        let after_use = state.new_session(Some(project), "claude-code");
+        assert_ne!(after_use, first);
+        assert_eq!(state.sessions.len(), 4);
+    }
+
+    #[test]
+    fn a_reloaded_workspace_forgets_the_sessions_never_used() {
+        let mut state = WorkspaceState::default();
+        let project = state.open_project("/code/athas");
+        let kept = state.new_session(Some(project.clone()), "claude-code");
+        state.touch_session(&kept, now_ms());
+        let titled = state.new_session(Some(project.clone()), "codex");
+        state.rename_session(&titled, "Claude Agent session");
+        let open = state.new_session(Some(project.clone()), "gemini");
+        // One that was never used and whose tab is gone: the kind that filled the history.
+        let dropped = state.new_session(None, "claude-code");
+        state.leave_session(&dropped);
+        state.tab_sets.remove(&Owner::Session(dropped.clone()).key());
+
+        let reloaded = WorkspaceState::from_json(&state.to_json().unwrap()).unwrap();
+        let ids: Vec<&SessionId> = reloaded.sessions.iter().map(|session| &session.id).collect();
+        assert!(ids.contains(&&kept) && ids.contains(&&titled) && ids.contains(&&open));
+        assert!(!ids.contains(&&dropped), "an unused session with no tab is forgotten");
     }
 
     #[test]

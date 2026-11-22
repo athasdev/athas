@@ -110,7 +110,7 @@ impl Workbench {
                                     .on_click(cx.listener(|this, _, window, cx| {
                                         this.bottom_full_screen = false;
                                         this.update_state(cx, |state| state.layout.bottom_pane_visible = false);
-                                        window.focus(&this.focus_handle, cx);
+                                        this.restore_focus(window, cx);
                                     })),
                             ),
                     );

@@ -335,7 +335,10 @@ impl Workbench {
                 {
                     editor.update(cx, |editor, cx| editor.restore_view_state(saved.cursor, saved.scroll, cx));
                 }
+                // A view built for the group in front takes the keyboard, unless an overlay
+                // holds it: a modal or a menu drawn over the workbench keeps what it was given.
                 if Some(group.id) == focused_group
+                    && !self.overlay_has_focus()
                     && let Some(focus) = &view.focus
                 {
                     window.focus(focus, cx);
@@ -931,6 +934,8 @@ mod release_tests {
     fn closing_a_session_tab_releases_its_tools() {
         let mut state = workspace::WorkspaceState::default();
         let first = state.new_session(None, "claude-code");
+        // A session nobody wrote in is opened again instead of a second one being made.
+        state.touch_session(&first, workspace::now_ms());
         let second = state.new_session(None, "claude-code");
         state.open_session(&first);
         assert!(shown_sessions(&state).contains(&first.0));

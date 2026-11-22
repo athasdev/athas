@@ -61,7 +61,7 @@
      "key": "cmd+s",
      "command": "file.save",
      "source": "preset",
-     "when": "editorFocus"
+     "when": "editorFocus || findWidgetVisible"
     },
     {
      "key": "cmd+shift+s",
@@ -407,7 +407,7 @@
      "key": "cmd+f",
      "command": "workbench.showFind",
      "source": "preset",
-     "when": "editorFocus"
+     "when": "editorFocus || findWidgetVisible"
     },
     {
      "key": "cmd+alt+f",
@@ -418,13 +418,13 @@
      "key": "cmd+g",
      "command": "editor.findNext",
      "source": "preset",
-     "when": "editorFocus"
+     "when": "editorFocus || findWidgetVisible"
     },
     {
      "key": "cmd+shift+g",
      "command": "editor.findPrevious",
      "source": "preset",
-     "when": "editorFocus"
+     "when": "editorFocus || findWidgetVisible"
     },
     {
      "key": "cmd+e",
@@ -473,7 +473,7 @@
      "source": "preset"
     },
     {
-     "key": "cmd+shift+space",
+     "key": "cmd+alt+n",
      "command": "workbench.agentLauncher",
      "source": "preset"
     },
@@ -670,11 +670,6 @@
      "source": "preset"
     },
     {
-     "key": "cmd+shift+m",
-     "command": "workbench.toggleMinimap",
-     "source": "preset"
-    },
-    {
      "key": "cmd+alt+z",
      "command": "editor.toggleWordWrap",
      "source": "preset",
@@ -778,7 +773,7 @@
      "key": "cmd+s",
      "command": "file.save",
      "source": "preset",
-     "when": "editorFocus"
+     "when": "editorFocus || findWidgetVisible"
     },
     {
      "key": "cmd+shift+s",
@@ -1119,7 +1114,7 @@
      "key": "cmd+f",
      "command": "workbench.showFind",
      "source": "preset",
-     "when": "editorFocus"
+     "when": "editorFocus || findWidgetVisible"
     },
     {
      "key": "ctrl+h",
@@ -1131,13 +1126,13 @@
      "key": "cmd+g",
      "command": "editor.findNext",
      "source": "preset",
-     "when": "editorFocus"
+     "when": "editorFocus || findWidgetVisible"
     },
     {
      "key": "cmd+shift+g",
      "command": "editor.findPrevious",
      "source": "preset",
-     "when": "editorFocus"
+     "when": "editorFocus || findWidgetVisible"
     },
     {
      "key": "cmd+e",
@@ -1186,7 +1181,7 @@
      "source": "preset"
     },
     {
-     "key": "cmd+shift+space",
+     "key": "cmd+alt+n",
      "command": "workbench.agentLauncher",
      "source": "preset"
     },
@@ -1381,11 +1376,6 @@
      "source": "preset"
     },
     {
-     "key": "cmd+shift+m",
-     "command": "workbench.toggleMinimap",
-     "source": "preset"
-    },
-    {
      "key": "cmd+alt+z",
      "command": "editor.toggleWordWrap",
      "source": "preset",
@@ -1492,7 +1482,7 @@
      "key": "cmd+s",
      "command": "file.save",
      "source": "preset",
-     "when": "editorFocus"
+     "when": "editorFocus || findWidgetVisible"
     },
     {
      "key": "cmd+shift+s",
@@ -1838,7 +1828,7 @@
      "key": "cmd+f",
      "command": "workbench.showFind",
      "source": "preset",
-     "when": "editorFocus"
+     "when": "editorFocus || findWidgetVisible"
     },
     {
      "key": "ctrl+h",
@@ -1850,13 +1840,13 @@
      "key": "cmd+g",
      "command": "editor.findNext",
      "source": "preset",
-     "when": "editorFocus"
+     "when": "editorFocus || findWidgetVisible"
     },
     {
      "key": "cmd+shift+g",
      "command": "editor.findPrevious",
      "source": "preset",
-     "when": "editorFocus"
+     "when": "editorFocus || findWidgetVisible"
     },
     {
      "key": "cmd+e",
@@ -1905,7 +1895,7 @@
      "source": "preset"
     },
     {
-     "key": "cmd+shift+space",
+     "key": "cmd+alt+n",
      "command": "workbench.agentLauncher",
      "source": "preset"
     },
@@ -2102,11 +2092,6 @@
      "source": "preset"
     },
     {
-     "key": "cmd+shift+m",
-     "command": "workbench.toggleMinimap",
-     "source": "preset"
-    },
-    {
      "key": "cmd+alt+z",
      "command": "editor.toggleWordWrap",
      "source": "preset",
@@ -2215,7 +2200,7 @@
      "key": "cmd+s",
      "command": "file.save",
      "source": "preset",
-     "when": "editorFocus"
+     "when": "editorFocus || findWidgetVisible"
     },
     {
      "key": "cmd+shift+s",
@@ -2561,7 +2546,7 @@
      "key": "cmd+f",
      "command": "workbench.showFind",
      "source": "preset",
-     "when": "editorFocus"
+     "when": "editorFocus || findWidgetVisible"
     },
     {
      "key": "ctrl+h",
@@ -2573,13 +2558,13 @@
      "key": "cmd+g",
      "command": "editor.findNext",
      "source": "preset",
-     "when": "editorFocus"
+     "when": "editorFocus || findWidgetVisible"
     },
     {
      "key": "cmd+shift+g",
      "command": "editor.findPrevious",
      "source": "preset",
-     "when": "editorFocus"
+     "when": "editorFocus || findWidgetVisible"
     },
     {
      "key": "cmd+e",
@@ -2628,7 +2613,7 @@
      "source": "preset"
     },
     {
-     "key": "cmd+shift+space",
+     "key": "cmd+alt+n",
      "command": "workbench.agentLauncher",
      "source": "preset"
     },
@@ -2825,11 +2810,6 @@
      "source": "preset"
     },
     {
-     "key": "cmd+shift+m",
-     "command": "workbench.toggleMinimap",
-     "source": "preset"
-    },
-    {
      "key": "cmd+alt+z",
      "command": "editor.toggleWordWrap",
      "source": "preset",
@@ -2933,7 +2913,7 @@
      "key": "cmd+s",
      "command": "file.save",
      "source": "preset",
-     "when": "editorFocus"
+     "when": "editorFocus || findWidgetVisible"
     },
     {
      "key": "cmd+shift+s",
@@ -3279,7 +3259,7 @@
      "key": "cmd+f",
      "command": "workbench.showFind",
      "source": "preset",
-     "when": "editorFocus"
+     "when": "editorFocus || findWidgetVisible"
     },
     {
      "key": "cmd+alt+f",
@@ -3290,13 +3270,13 @@
      "key": "cmd+g",
      "command": "editor.findNext",
      "source": "preset",
-     "when": "editorFocus"
+     "when": "editorFocus || findWidgetVisible"
     },
     {
      "key": "cmd+shift+g",
      "command": "editor.findPrevious",
      "source": "preset",
-     "when": "editorFocus"
+     "when": "editorFocus || findWidgetVisible"
     },
     {
      "key": "cmd+e",
@@ -3345,7 +3325,7 @@
      "source": "preset"
     },
     {
-     "key": "cmd+shift+space",
+     "key": "cmd+alt+n",
      "command": "workbench.agentLauncher",
      "source": "preset"
     },
@@ -3539,11 +3519,6 @@
     {
      "key": "cmd+shift+p",
      "command": "workbench.commandPalette",
-     "source": "preset"
-    },
-    {
-     "key": "cmd+shift+m",
-     "command": "workbench.toggleMinimap",
      "source": "preset"
     },
     {
@@ -4011,13 +3986,13 @@
      "key": "cmd+g",
      "command": "editor.findNext",
      "source": "preset",
-     "when": "editorFocus"
+     "when": "editorFocus || findWidgetVisible"
     },
     {
      "key": "cmd+shift+g",
      "command": "editor.findPrevious",
      "source": "preset",
-     "when": "editorFocus"
+     "when": "editorFocus || findWidgetVisible"
     },
     {
      "key": "cmd+e",
@@ -4066,7 +4041,7 @@
      "source": "preset"
     },
     {
-     "key": "cmd+shift+space",
+     "key": "cmd+alt+n",
      "command": "workbench.agentLauncher",
      "source": "preset"
     },
@@ -4263,11 +4238,6 @@
      "source": "preset"
     },
     {
-     "key": "cmd+shift+m",
-     "command": "workbench.toggleMinimap",
-     "source": "preset"
-    },
-    {
      "key": "cmd+alt+z",
      "command": "editor.toggleWordWrap",
      "source": "preset",
@@ -4371,7 +4341,7 @@
      "key": "cmd+s",
      "command": "file.save",
      "source": "preset",
-     "when": "editorFocus"
+     "when": "editorFocus || findWidgetVisible"
     },
     {
      "key": "cmd+shift+s",
@@ -4717,7 +4687,7 @@
      "key": "cmd+f",
      "command": "workbench.showFind",
      "source": "preset",
-     "when": "editorFocus"
+     "when": "editorFocus || findWidgetVisible"
     },
     {
      "key": "ctrl+h",
@@ -4729,13 +4699,13 @@
      "key": "cmd+g",
      "command": "editor.findNext",
      "source": "preset",
-     "when": "editorFocus"
+     "when": "editorFocus || findWidgetVisible"
     },
     {
      "key": "cmd+shift+g",
      "command": "editor.findPrevious",
      "source": "preset",
-     "when": "editorFocus"
+     "when": "editorFocus || findWidgetVisible"
     },
     {
      "key": "cmd+e",
@@ -4784,7 +4754,7 @@
      "source": "preset"
     },
     {
-     "key": "cmd+shift+space",
+     "key": "cmd+alt+n",
      "command": "workbench.agentLauncher",
      "source": "preset"
     },
@@ -4978,11 +4948,6 @@
     {
      "key": "cmd+shift+p",
      "command": "workbench.commandPalette",
-     "source": "preset"
-    },
-    {
-     "key": "cmd+shift+m",
-     "command": "workbench.toggleMinimap",
      "source": "preset"
     },
     {

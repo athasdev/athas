@@ -307,9 +307,11 @@ pub fn init(cx: &mut App) {
 /// Binds every key again: the shared controls' keys, then the commands' keys in effect for the
 /// keybinding preset and the user's own bindings.
 pub fn reload_keymap(cx: &mut App) {
-    cx.clear_key_bindings();
+    // Registering a crate's binder binds its keys straight away, so register before clearing:
+    // `rebind_all` is then the only pass that binds, and no key ends up bound twice.
     ui::init(cx);
     palette::init(cx);
+    cx.clear_key_bindings();
     ui::rebind_all(cx);
     let preset = cx
         .try_global::<settings::SettingsStore>()
@@ -424,6 +426,11 @@ pub struct Workbench {
     /// Held by the sidebar while it, or a view in it, has focus: its active row then reads
     /// `selected-emphasized` (`group-focus-within/sidebar-panel`).
     pub(crate) sidebar_focus: FocusHandle,
+    /// Where the keyboard was before an overlay (a modal, the account menu, the Inbox) took it,
+    /// so closing the overlay hands it back there instead of to the workbench itself.
+    focus_before_overlay: Option<FocusHandle>,
+    /// Puts the keyboard back in a surface when the view holding it stops being drawn.
+    _focus_lost: Subscription,
     platform: Platform,
     open_menu: Option<OpenMenu>,
     drag: Option<Drag>,
@@ -760,6 +767,11 @@ impl Workbench {
             tree_git_status: None,
             session_rename: None,
             expanded_session_lists: Default::default(),
+            focus_before_overlay: None,
+            // Every key is bound in a surface's key context, so a window with nothing focused
+            // answers no shortcut at all. When the view holding the keyboard stops being drawn
+            // (a tab closes, a panel goes away), take it back right here.
+            _focus_lost: cx.on_focus_lost(window, |this, window, cx| this.restore_focus(window, cx)),
         };
         this.sync_continuous_projects(cx);
         this.publish_projects(cx);
@@ -1436,7 +1448,7 @@ impl Workbench {
                 window.focus(&terminal.focus_handle(cx), cx);
             }
         } else {
-            window.focus(&self.focus_handle, cx);
+            self.restore_focus(window, cx);
         }
     }
 
@@ -1639,9 +1651,10 @@ impl Workbench {
                 return;
             }
             this.modal = None;
-            window.focus(&this.focus_handle, cx);
+            this.restore_focus(window, cx);
             cx.notify();
         });
+        self.remember_focus(window, cx);
         window.focus(&view.focus_handle(cx), cx);
         self.modal = Some((view.into(), subscription));
         cx.notify();
@@ -1671,15 +1684,46 @@ impl Workbench {
     /// The view that had focus may no longer be drawn, and keys pressed with focus on a view
     /// that is gone reach no handler at all.
     pub(crate) fn focus_front_tab(&mut self, window: &mut Window, cx: &mut Context<Self>) {
-        let handle = (!self.state.bottom_focused)
-            .then(|| {
-                let group = self.state.centre_panes()?.active;
-                let item = self.state.focused_tabs()?.active_item()?;
-                self.centre_views.get(&crate::centre_views::view_key(group, item))?.focus.clone()
-            })
-            .flatten()
-            .unwrap_or_else(|| self.focus_handle.clone());
+        let handle = self.front_tab_focus().unwrap_or_else(|| self.focus_handle.clone());
         window.focus(&handle, cx);
+    }
+
+    /// The view of the tab in front of the focused group: the bottom pane's groups while they
+    /// hold the keyboard, else the centre's.
+    fn front_tab_focus(&self) -> Option<FocusHandle> {
+        let group = self.state.focused_panes()?.active;
+        let item = self.state.focused_tabs()?.active_item()?;
+        self.centre_views.get(&crate::centre_views::view_key(group, item))?.focus.clone()
+    }
+
+    /// Puts the keyboard back in a surface after an overlay closes or the view holding it goes
+    /// away: where it was before the overlay opened, else the tab in front.
+    ///
+    /// Shortcuts are bound in the key context of the surface they belong to, so focus left on the
+    /// workbench itself answers only the handful of bindings with no `when` clause. Everything
+    /// that closes an overlay or a pane hands the keyboard back through here.
+    pub(crate) fn restore_focus(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        // A remembered handle whose view is gone leaves the window with nothing focused, which
+        // calls this again with nothing remembered: the tab in front then takes the keyboard.
+        match self.focus_before_overlay.take() {
+            Some(handle) => window.focus(&handle, cx),
+            None => self.focus_front_tab(window, cx),
+        }
+    }
+
+    /// Whether an overlay over the workbench holds the keyboard: a modal, a menu, the account
+    /// menu or the Inbox. Views built underneath must not take it from them.
+    pub(crate) fn overlay_has_focus(&self) -> bool {
+        self.modal.is_some() || self.open_menu.is_some() || self.account_menu.is_some() || self.inbox.is_some()
+    }
+
+    /// Remembers where the keyboard is before an overlay takes it, unless an overlay already has
+    /// it (one dialog handing over to another keeps the surface the first one left).
+    fn remember_focus(&mut self, window: &mut Window, cx: &App) {
+        if self.focus_before_overlay.is_some() || self.focus_handle.is_focused(window) {
+            return;
+        }
+        self.focus_before_overlay = window.focused(cx);
     }
 
     fn cycle_tab(&mut self, step: isize, window: &mut Window, cx: &mut Context<Self>) {
@@ -1727,6 +1771,7 @@ impl Workbench {
         }
         let panel = cx.new(notifications::InboxPanel::new);
         let subscription = cx.subscribe_in(&panel, window, |this, _, _: &gpui::DismissEvent, window, cx| this.close_inbox(window, cx));
+        self.remember_focus(window, cx);
         window.focus(&panel.focus_handle(cx), cx);
         self.inbox = Some((panel, subscription));
         cx.notify();
@@ -1736,7 +1781,7 @@ impl Workbench {
         if let Some((panel, _)) = self.inbox.take()
             && panel.focus_handle(cx).contains_focused(window, cx)
         {
-            window.focus(&self.focus_handle, cx);
+            self.restore_focus(window, cx);
         }
         cx.notify();
     }
@@ -2162,7 +2207,7 @@ impl Workbench {
                 this.account_menu_pressed = Some((window.mouse_position(), web_time::Instant::now()));
             }
             this.account_menu = None;
-            window.focus(&this.focus_handle, cx);
+            this.restore_focus(window, cx);
             cx.notify();
         });
         let events = cx.subscribe_in(&menu, window, |this, _, event: &account::AccountMenuEvent, window, cx| {
@@ -2173,6 +2218,7 @@ impl Workbench {
             }
             cx.notify();
         });
+        self.remember_focus(window, cx);
         window.focus(&menu.focus_handle(cx), cx);
         self.account_menu = Some((menu, vec![dismiss, events]));
         cx.notify();
@@ -2205,7 +2251,7 @@ impl Workbench {
         if toggle && self.state.layout.bottom_pane_visible && self.state.layout.bottom_tab == workspace::BottomTab::Debugger {
             self.bottom_full_screen = false;
             self.update_state(cx, |state| state.layout.bottom_pane_visible = false);
-            window.focus(&self.focus_handle, cx);
+            self.restore_focus(window, cx);
             return;
         }
         let Some(debugger) = self.ensure_debugger(window, cx) else {
@@ -2677,7 +2723,9 @@ impl Render for Workbench {
         let root = div()
             .id("workbench")
             .group("workbench")
-            .key_context("Workbench")
+            // `App` is on every window root, workbench or detached, so a binding that holds
+            // anywhere reaches this window too; `Workbench` is what `when` clauses name.
+            .key_context(keymap::when::WORKBENCH_CONTEXT)
             .track_focus(&self.focus_handle)
             .map(|this| more_commands::handlers(this, cx))
             .map(|this| agent_commands::handlers(this, cx))
@@ -2884,7 +2932,7 @@ impl Render for Workbench {
                             MouseButton::Left,
                             cx.listener(|this, _, window, cx| {
                                 this.modal = None;
-                                window.focus(&this.focus_handle, cx);
+                                this.restore_focus(window, cx);
                                 cx.notify();
                             }),
                         )

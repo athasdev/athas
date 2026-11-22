@@ -160,7 +160,7 @@ fn menus() -> Vec<(&'static str, ui::IconName, Vec<Option<Item>>)> {
             "Agent",
             IconName::Sparkle,
             vec![
-                command("New Agent", "workbench.agentLauncher", Some("mod+shift+space")),
+                command("New Agent", "workbench.agentLauncher", Some("mod+alt+n")),
                 command("Inline Edit", "editor.inlineEdit", Some("mod+i")),
             ],
         ),

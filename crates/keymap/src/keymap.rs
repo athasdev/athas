@@ -3,6 +3,8 @@
 //! bindings, resolved the same way, then bound to the GPUI actions that implement the commands.
 
 mod legacy_ids;
+#[cfg(test)]
+mod resolution;
 mod vscode_import;
 pub mod when;
 

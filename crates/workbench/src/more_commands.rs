@@ -188,9 +188,10 @@ impl Workbench {
         let Some(target) = panes.adjacent_group(panes.active, direction) else { return false };
         self.update_state(cx, |state| state.focus_group(target));
         let view = self.state.focused_panes().and_then(|panes| panes.group(target)).and_then(|group| group.tabs.active_item()).map(|item| centre_views::view_key(target, item));
-        match view.and_then(|key| self.centre_views.get(&key)).and_then(|view| view.focus.clone()) {
-            Some(focus) => window.focus(&focus, cx),
-            None => window.focus(&self.focus_handle, cx),
+        // A group with nothing to show keeps the keyboard where it is: moving it to the workbench
+        // itself would leave every surface's shortcut unbound.
+        if let Some(focus) = view.and_then(|key| self.centre_views.get(&key)).and_then(|view| view.focus.clone()) {
+            window.focus(&focus, cx);
         }
         true
     }
