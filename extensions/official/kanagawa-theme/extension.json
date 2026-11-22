@@ -1,0 +1,84 @@
+{
+  "$schema": "https://athas.dev/schemas/extension.json",
+  "id": "athas.theme.kanagawa",
+  "name": "kanagawa",
+  "displayName": "Kanagawa",
+  "description": "Dark colours inspired by Katsushika Hokusai's The Great Wave off Kanagawa. Ported from Kanagawa by rebelot, MIT.",
+  "version": "1.0.0",
+  "publisher": "Athas",
+  "categories": [
+    "Theme"
+  ],
+  "activationEvents": [
+    "onTheme:kanagawa-wave"
+  ],
+  "themes": [
+    {
+      "id": "kanagawa-wave",
+      "name": "Kanagawa Wave",
+      "description": "The original dark variant, ink and wave blue.",
+      "appearance": "dark",
+      "colors": {
+        "background": "#1f1f28",
+        "surface": "#2a2a37",
+        "foreground": "#dcd7ba",
+        "muted-foreground": "#c8c093",
+        "subtle-foreground": "#727169",
+        "border": "#363646",
+        "accent": "#2a2a37",
+        "selected": "#2d4f67",
+        "primary": "#7e9cd8",
+        "destructive": "#ff5d62",
+        "warning": "#ff9e3b",
+        "success": "#98bb6c",
+        "info": "#7fb4ca",
+        "cursor": "#c8c093",
+        "line-highlight": "#223249",
+        "selection": "#2d4f67",
+        "git-added": "#76946a",
+        "git-modified": "#dca561",
+        "git-deleted": "#c34043",
+        "terminal-black": "#090618",
+        "terminal-red": "#c34043",
+        "terminal-green": "#76946a",
+        "terminal-yellow": "#c0a36e",
+        "terminal-blue": "#7e9cd8",
+        "terminal-magenta": "#957fb8",
+        "terminal-cyan": "#6a9589",
+        "terminal-white": "#c8c093",
+        "terminal-bright-black": "#727169",
+        "terminal-bright-red": "#e82424",
+        "terminal-bright-green": "#98bb6c",
+        "terminal-bright-yellow": "#e6c384",
+        "terminal-bright-blue": "#7fb4ca",
+        "terminal-bright-magenta": "#938aa9",
+        "terminal-bright-cyan": "#7aa89f",
+        "terminal-bright-white": "#dcd7ba"
+      },
+      "syntax": {
+        "attribute": "#7fb4ca",
+        "boolean": "#ffa066",
+        "comment": "#727169",
+        "constant": "#ffa066",
+        "function": "#7e9cd8",
+        "keyword": "#957fb8",
+        "null": "#ffa066",
+        "number": "#d27e99",
+        "operator": "#c0a36e",
+        "property": "#e6c384",
+        "punctuation": "#9cabca",
+        "regex": "#ff5d62",
+        "string": "#98bb6c",
+        "tag": "#e46876",
+        "type": "#7aa89f",
+        "variable": "#dcd7ba"
+      }
+    }
+  ],
+  "icon": "icon.svg",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/athasdev/athas"
+  }
+}

@@ -234,9 +234,33 @@ mod tests {
         assert!(theme.manifest.package_for("darwin-arm64").is_some());
     }
 
+    /// Every theme a theme extension carries loads: the registry reads the same file the
+    /// extension hands it on install. The theme extensions are published, not bundled, so the
+    /// source folders are what is checked.
+    #[test]
+    fn every_official_theme_loads() {
+        let official = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../extensions/official");
+        let Ok(folders) = std::fs::read_dir(&official) else { return };
+        let mut themes = 0;
+        for folder in folders.flatten() {
+            let path = folder.path().join("extension.json");
+            let Ok(json) = std::fs::read_to_string(&path) else { continue };
+            let manifest = ExtensionManifest::from_json(&json).unwrap_or_else(|error| panic!("{}: {error:#}", path.display()));
+            let Some(file) = manifest.theme_file_json() else { continue };
+            let mut registry = theme::ThemeRegistry::default();
+            registry
+                .load_json(&file, theme::ThemeOptions::default())
+                .unwrap_or_else(|error| panic!("{}: {error:#}", path.display()));
+            themes += registry.themes().len();
+        }
+        assert_eq!(themes, 14, "the themes of the official theme extensions");
+    }
+
+    /// The source manifests, not the generated copy. There are more of them than the bundled
+    /// catalog holds: the theme extensions ported from other projects are published to the
+    /// extension registry rather than built into the app.
     #[test]
     fn every_official_manifest_matches_the_schema_on_disk() {
-        // The source manifests, not the generated copy, when the Athas checkout is next to this one.
         let official = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../extensions/official");
         let Ok(folders) = std::fs::read_dir(&official) else { return };
         let mut count = 0;
@@ -246,7 +270,7 @@ mod tests {
             ExtensionManifest::from_json(&json).unwrap_or_else(|error| panic!("{}: {error:#}", path.display()));
             count += 1;
         }
-        assert_eq!(count, 84);
+        assert_eq!(count, 90);
     }
 
     #[test]
