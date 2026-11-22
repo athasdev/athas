@@ -1727,21 +1727,42 @@ impl Render for SettingsView {
                         .into_any_element(),
                 ]
             } else {
-                results
-                    .into_iter()
-                    .map(|(index, def)| {
-                        let description = match def.section {
-                            Some(section) => format!("{} / {section}", page_title(def.tab)),
-                            None => page_title(def.tab).to_string(),
-                        };
+                // Grouped under where they live, strongest group first. A row used to carry its
+                // own breadcrumb, so "Appearance / Theme" was written six times over and the list
+                // read as one wall of two-line rows.
+                let mut groups: Vec<(String, Vec<(usize, &'static SettingDef)>)> = Vec::new();
+                for (index, def) in results {
+                    let place = match def.section {
+                        Some(section) => format!("{} / {section}", page_title(def.tab)),
+                        None => page_title(def.tab).to_string(),
+                    };
+                    match groups.iter_mut().find(|(name, _)| *name == place) {
+                        Some((_, rows)) => rows.push((index, def)),
+                        None => groups.push((place, vec![(index, def)])),
+                    }
+                }
+                let mut rows: Vec<AnyElement> = Vec::new();
+                for (position, (place, found)) in groups.into_iter().enumerate() {
+                    rows.push(
+                        div()
+                            .flex_none()
+                            .px(px(6.))
+                            .pt(px(if position == 0 { 2. } else { 10. }))
+                            .pb(px(2.))
+                            .text_size(typography::TEXT_CAPTION)
+                            .text_color(colors.subtle_foreground)
+                            .child(place)
+                            .into_any_element(),
+                    );
+                    rows.extend(found.into_iter().map(|(index, def)| {
                         SidebarListItem::new(("settings-result", index), def.label)
                             .in_content()
-                            .description(description)
                             .active(self.flash == Some(index))
                             .on_click(cx.listener(move |this, _, _, cx| this.open_result(index, cx)))
                             .into_any_element()
-                    })
-                    .collect()
+                    }));
+                }
+                rows
             }
         } else {
             pages
