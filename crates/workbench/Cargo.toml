@@ -63,3 +63,7 @@ athas_version_control = { package = "athas-version-control", path = "../../core/
 # On the web the Docker view runs on the workspace server (`relay`).
 [target.'cfg(target_family = "wasm")'.dependencies]
 docker_view = { path = "../docker_view" }
+
+[dev-dependencies]
+gpui = { workspace = true, features = ["test-support"] }
+gpui_platform = { workspace = true, features = ["test-support"] }

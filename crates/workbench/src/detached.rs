@@ -16,7 +16,7 @@ use gpui::{
 use theme::ActiveTheme;
 use ui::{Icon, IconName, IconSize, metrics, typography};
 
-use crate::{CloseWindow, MinimizeWindow, Platform, Quit, ToggleFullscreen, ZoomWindow};
+use crate::{CloseTab, CloseWindow, MinimizeWindow, Platform, Quit, ToggleFullscreen, ZoomWindow};
 
 actions!(
     workbench,
@@ -492,10 +492,18 @@ impl Render for DetachedWindow {
             .text_size(typography::ui(cx).base())
             .text_color(colors.foreground)
             .on_action(|_: &CloseWindow, window, _| window.remove_window())
+            // The macOS menu bar answers Cmd-W before the window does, and File > Close Tab is
+            // what it runs. A window with one view has no tabs, so closing the tab closes it.
+            .on_action(|_: &CloseTab, window, _| window.remove_window())
             .on_action(|_: &MinimizeWindow, window, _| window.minimize_window())
             .on_action(|_: &ZoomWindow, window, _| window.zoom_window())
             .on_action(|_: &ToggleFullscreen, window, _| window.toggle_fullscreen())
             .on_action(|_: &Quit, _, cx| quit_through_workbench(cx))
+            .map(|this| {
+                workbench_commands(cx).into_iter().fold(this, |this, action| {
+                    this.on_boxed_action(&*action, |action, _, cx| run_in_workbench(action, cx))
+                })
+            })
             .relative()
             .when(!overlay, |this| this.child(self.render_title_bar(window.is_maximized(), cx)))
             .child(body)
@@ -581,6 +589,61 @@ impl Render for NothingToShow {
 
 /// Quitting from a detached window goes through a workbench window, so it can ask about unsaved
 /// work first.
+/// The workbench window a single-view window hands its app-level keys to: the one in front,
+/// else any open one.
+fn front_workbench(cx: &App) -> Option<gpui::AnyWindowHandle> {
+    let front = crate::front_window(cx);
+    let workbenches: Vec<_> = cx.windows().into_iter().filter(|handle| handle.downcast::<crate::Workbench>().is_some()).collect();
+    workbenches.iter().find(|handle| Some(handle.window_id()) == front).or(workbenches.first()).copied()
+}
+
+/// Commands that belong to the workbench, not to the view in this window. A settings or
+/// extensions window has no tabs, sidebar or project, so Cmd-P, Shift-Cmd-N and the rest would
+/// answer nothing at all; they run in the workbench window instead, as the Mac expects a utility
+/// window's menu keys to.
+fn workbench_commands(cx: &App) -> Vec<Box<dyn gpui::Action>> {
+    let registry = cx.try_global::<keymap::CommandRegistry>();
+    let mut actions: Vec<Box<dyn gpui::Action>> = Vec::new();
+    for binding in keymap::default_bindings().iter().filter(|binding| binding.when.is_none()) {
+        let Some(action) = registry.and_then(|registry| registry.action(&binding.command)) else { continue };
+        // The window answers these itself; handing them on as well would close it and then act
+        // on the workbench too.
+        if OWN_ACTIONS.contains(&action.name()) {
+            continue;
+        }
+        if actions.iter().any(|other| other.name() == action.name()) {
+            continue;
+        }
+        actions.push(action);
+    }
+    actions
+}
+
+/// What a single-view window does for itself, whatever the keymap calls the command.
+const OWN_ACTIONS: &[&str] = &[
+    "workbench::CloseWindow",
+    "workbench::CloseTab",
+    "workbench::MinimizeWindow",
+    "workbench::ZoomWindow",
+    "workbench::ToggleFullscreen",
+    "workbench::Quit",
+];
+
+/// Sends `action` to the workbench window, which has the tabs, the sidebar and the project it
+/// needs. Nothing happens when no workbench window is open.
+fn run_in_workbench(action: &dyn gpui::Action, cx: &mut App) {
+    let Some(handle) = front_workbench(cx) else { return };
+    let action = action.boxed_clone();
+    cx.defer(move |cx| {
+        handle
+            .update(cx, |_, window, cx| {
+                window.activate_window();
+                window.dispatch_action(action, cx)
+            })
+            .ok();
+    });
+}
+
 fn quit_through_workbench(cx: &mut App) {
     let front = crate::front_window(cx);
     let workbenches: Vec<_> = cx.windows().into_iter().filter(|handle| handle.downcast::<crate::Workbench>().is_some()).collect();

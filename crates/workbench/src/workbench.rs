@@ -1451,7 +1451,12 @@ impl Workbench {
         }
     }
 
-    fn new_session(&mut self, _: &NewSession, _: &mut Window, cx: &mut Context<Self>) {
+    fn new_session(&mut self, _: &NewSession, window: &mut Window, cx: &mut Context<Self>) {
+        // Cmd-T and Cmd-N in a terminal open another terminal (`terminal.new`).
+        if self.focused_terminal(window, cx).is_some() {
+            window.dispatch_action(Box::new(terminal_view::NewTerminal), cx);
+            return;
+        }
         self.start_session(self.state.active_project.clone(), cx);
     }
 
@@ -1623,6 +1628,11 @@ impl Workbench {
     }
 
     fn close_tab(&mut self, _: &CloseTab, window: &mut Window, cx: &mut Context<Self>) {
+        // Cmd-W in a terminal closes that terminal (`terminal.close`), not the tab behind it.
+        if self.focused_terminal(window, cx).is_some() {
+            window.dispatch_action(Box::new(terminal_view::CloseTerminal), cx);
+            return;
+        }
         if let Some(index) = self.state.focused_tabs().and_then(|tabs| tabs.active) {
             self.close_tabs_guarded(move |state| state.close_tab(index), window, cx);
         }
@@ -1659,17 +1669,25 @@ impl Workbench {
         cx.notify();
     }
 
+    /// The terminal panel holding the keyboard, if one is.
+    ///
+    /// The macOS menu bar claims a key equivalent for every action it lists, and AppKit answers
+    /// that key before the window sees it. So Cmd-W reaches File > Close Tab wherever the
+    /// keyboard is, and the keymap's `terminalFocus` binding beside it never runs. The actions
+    /// the menu takes over route through here instead, and do what the focused surface means.
+    pub(crate) fn focused_terminal(&self, window: &Window, cx: &App) -> Option<Entity<terminal_view::TerminalPanel>> {
+        self.terminal
+            .iter()
+            .map(|(terminal, _)| terminal.clone())
+            .chain(self.session_panes.values().filter_map(|panes| panes.terminal_panel()))
+            .find(|terminal| terminal.focus_handle(cx).contains_focused(window, cx))
+    }
+
     /// Switch to Tab 1–9: the tab at that place in the group in front.
     /// Cmd-1…9: the terminal's own tabs while a terminal has focus (`terminal:activate-tab`),
     /// else the focused group's tabs.
     fn switch_to_tab(&mut self, index: usize, window: &mut Window, cx: &mut Context<Self>) {
-        let focused_terminal = self
-            .terminal
-            .iter()
-            .map(|(terminal, _)| terminal.clone())
-            .chain(self.session_panes.values().filter_map(|panes| panes.terminal_panel()))
-            .find(|terminal| terminal.focus_handle(cx).contains_focused(window, cx));
-        if let Some(terminal) = focused_terminal {
+        if let Some(terminal) = self.focused_terminal(window, cx) {
             terminal.update(cx, |terminal, cx| terminal.activate_index(index, window, cx));
             return;
         }
@@ -1735,6 +1753,13 @@ impl Workbench {
     }
 
     fn cycle_tab(&mut self, step: isize, window: &mut Window, cx: &mut Context<Self>) {
+        // Cmd-Alt-Left/Right in a terminal move between its panes (`terminal.focusNextPane`).
+        if self.focused_terminal(window, cx).is_some() {
+            let action: Box<dyn gpui::Action> =
+                if step > 0 { Box::new(terminal_view::FocusNextPane) } else { Box::new(terminal_view::FocusPreviousPane) };
+            window.dispatch_action(action, cx);
+            return;
+        }
         let Some(tabs) = self.state.focused_tabs() else { return };
         let count = tabs.tabs.len() as isize;
         if count == 0 {
