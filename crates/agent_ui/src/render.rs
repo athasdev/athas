@@ -124,17 +124,6 @@ impl Render for SessionView {
                 )
                 .into_any_element()
         };
-        // A started session shows its pages above it: the chat, its overview and its issues.
-        let tabs = (!empty).then(|| {
-            let changes = crate::summary::changes(&self.transcript).files.len();
-            self.render_page_tabs(changes, crate::overview::linked_issues(&self.transcript).len(), cx)
-        });
-        let body = match self.page {
-            crate::overview::SessionPage::Overview if !empty => self.render_overview(cx),
-            crate::overview::SessionPage::Changes if !empty => self.render_changes(cx),
-            crate::overview::SessionPage::Issues if !empty => self.render_issues(cx),
-            _ => body,
-        };
         let body = self.with_side_column(body, window, cx);
         div()
             .id("agent-session")
@@ -166,7 +155,6 @@ impl Render for SessionView {
             .font_family(typography::UI_FONT)
             .text_size(typography::TEXT_BASE)
             .text_color(colors.foreground)
-            .children(tabs)
             .child(body)
             .children(self.render_effort_popover(cx))
             .children(self.open_menu.as_ref().map(|menu| menu.render()))
@@ -1345,7 +1333,7 @@ impl SessionView {
         let hidden = numbered.len() - shown;
         let display = display_path(path, self.info.cwd.as_deref());
         let open = path.clone();
-        let show_path = path.clone();
+
         // Highlighted as one text so tokens that depend on earlier lines stay right.
         let language = path.extension().map(|extension| extension.to_string_lossy().into_owned());
         let code = numbered[..shown].iter().map(|row| if let NumberedRow::Line { text, .. } = row { text.as_str() } else { "" }).collect::<Vec<_>>().join("\n");
@@ -1425,7 +1413,7 @@ impl SessionView {
                         .text_size(typography::TEXT_SM)
                         .text_color(colors.primary)
                         .hover(|style| style.underline())
-                        .on_click(cx.listener(move |this, _: &ClickEvent, _, cx| this.show_change(show_path.clone(), cx)))
+                        .on_click(cx.listener(move |this, _: &ClickEvent, _, cx| this.open_review(cx)))
                         .child(format!("Show all {} lines", numbered.len())),
                 )
             })

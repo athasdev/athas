@@ -68,8 +68,16 @@ pub struct AccountMenu {
     focus_handle: FocusHandle,
     /// The item the arrows or the pointer are on, counted over every section.
     highlighted: Option<usize>,
+    dismissed_by_press: bool,
     _observe: Option<Subscription>,
     _linked: Subscription,
+}
+
+impl AccountMenu {
+    /// Whether a press outside the menu closed it, rather than a pick or Escape.
+    pub fn dismissed_by_press(&self) -> bool {
+        self.dismissed_by_press
+    }
 }
 
 impl EventEmitter<DismissEvent> for AccountMenu {}
@@ -101,7 +109,7 @@ impl AccountMenu {
         // Opening the menu checks the linked GitHub account again.
         let linked = cx.observe_global::<crate::linked_accounts::LinkedGitHub>(|_, cx| cx.notify());
         crate::linked_accounts::refresh_github(cx);
-        Self { store, focus_handle, highlighted: None, _observe: observe, _linked: linked }
+        Self { store, focus_handle, highlighted: None, dismissed_by_press: false, _observe: observe, _linked: linked }
     }
 
     /// Arrow keys, Home and End move between items (wrapping, as Base UI menus do); Enter or
@@ -359,7 +367,10 @@ impl Render for AccountMenu {
             .id("account-menu")
             .track_focus(&self.focus_handle)
             .on_key_down(cx.listener(Self::key_down))
-            .on_mouse_down_out(cx.listener(|_, _, _, cx| cx.emit(DismissEvent)))
+            .on_mouse_down_out(cx.listener(|this, _, _, cx| {
+                this.dismissed_by_press = true;
+                cx.emit(DismissEvent);
+            }))
             .flex()
             .flex_col()
             .w(px(288.))

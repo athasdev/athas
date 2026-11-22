@@ -12,6 +12,7 @@ path = "src/workbench.rs"
 gpui.workspace = true
 anyhow.workspace = true
 serde_json.workspace = true
+web-time = "1"
 theme = { path = "../theme" }
 ui = { path = "../ui" }
 workspace = { path = "../workspace" }

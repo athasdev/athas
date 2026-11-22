@@ -11058,6 +11058,7 @@ dependencies = [
  "theme",
  "ui",
  "viewer",
+ "web-time",
  "workbench_api",
  "workspace",
  "wsl",

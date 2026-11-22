@@ -7,7 +7,7 @@ use gpui::{
 use gpui::prelude::*;
 use theme::ActiveTheme;
 
-use crate::{Icon, IconName, IconSize, Tooltip, TooltipExt, typography};
+use crate::{Icon, IconName, IconSize, Tooltip, TooltipExt, metrics, typography};
 
 /// How a button is filled.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -25,6 +25,10 @@ pub enum ButtonVariant {
     Ghost,
     /// A view switch in a header: no fill, the active one reads by tone.
     Tab,
+    /// A trigger in the window chrome — the activity rail, the title strip — where there is no
+    /// surface behind it. Shaped and filled like the rows it sits beside, so a chrome control and
+    /// a sidebar row read as one family instead of a pill over a list.
+    Chrome,
 }
 
 /// Colour of the label, for status-bearing actions.
@@ -324,7 +328,19 @@ impl RenderOnce for Button {
         let colors = &cx.theme().colors;
         let muted = colors.muted_foreground;
         let shadows = &cx.theme().shadows;
-        let spec = self.size.spec();
+        let chrome = self.variant == ButtonVariant::Chrome;
+        let mut spec = self.size.spec();
+        // The quiet families — toolbar and pane-header icons (`Ghost`), window chrome (`Chrome`) —
+        // take the list row's corner rather than a pill's, so an icon trigger and the row beside it
+        // read as one family. Filled buttons (`Accent`, `Default`, `Outline`) stay pills.
+        if matches!(self.variant, ButtonVariant::Ghost | ButtonVariant::Chrome) {
+            spec.radius = Some(metrics::RADIUS_MD);
+        }
+        if chrome {
+            // Chrome is measured like the row too: its inline padding and gap.
+            spec.padding = f32::from(metrics::CHROME_PADDING_INLINE);
+            spec.gap = f32::from(metrics::CHROME_PADDING_INLINE);
+        }
         let transparent = gpui::transparent_black();
 
         // (fill, text, hover fill, hover text)
@@ -342,6 +358,7 @@ impl RenderOnce for Button {
             // while active (the sidebar toggle, the project switcher, the rail).
             ButtonVariant::Ghost => (transparent, colors.subtle_foreground, colors.segment_track, colors.foreground),
             ButtonVariant::Tab => (transparent, colors.subtle_foreground, transparent, colors.foreground),
+            ButtonVariant::Chrome => (transparent, colors.subtle_foreground, colors.accent, colors.foreground),
         };
         let mut shadow = (self.variant == ButtonVariant::Outline).then(|| shadows.raised.clone());
 
@@ -357,6 +374,12 @@ impl RenderOnce for Button {
                     hover_bg = bg;
                 }
                 ButtonVariant::Tab => fg = colors.foreground,
+                // The selected row's fill, with no knob or shadow: see `ButtonVariant::Chrome`.
+                ButtonVariant::Chrome => {
+                    fg = colors.foreground;
+                    bg = colors.selected;
+                    hover_bg = bg;
+                }
                 ButtonVariant::Destructive => {}
             }
         }
@@ -376,7 +399,7 @@ impl RenderOnce for Button {
                 hover_bg = colors.destructive_soft;
             }
         }
-        if self.active && self.variant == ButtonVariant::Ghost {
+        if self.active && matches!(self.variant, ButtonVariant::Ghost | ButtonVariant::Chrome) {
             hover_fg = fg;
         }
 

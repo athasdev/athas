@@ -1,5 +1,5 @@
 use gpui::{Context, IntoElement, ParentElement, Styled, Window, div, prelude::*, px};
-use ui::{Avatar, Button, ButtonSize, IconName, Plane, TooltipExt, metrics};
+use ui::{Avatar, Button, ButtonSize, IconName, TooltipExt, metrics};
 use workspace::SidebarView;
 
 use crate::{ShowNotifications, ToggleAccountMenu, ToggleTerminal, Workbench};
@@ -45,9 +45,10 @@ impl Workbench {
         );
         Some(
             Button::icon("diagnostics-activity", IconName::Warning)
-                .size(ButtonSize::Large)
-                .plane(Plane::Content)
+                .size(ButtonSize::Medium)
+                .variant(ui::ButtonVariant::Chrome)
                 .tone(tone)
+                .filled_when_active()
                 .active(active)
                 .tooltip(tooltip)
                 .tooltip_side(ui::TooltipSide::Right)
@@ -84,7 +85,7 @@ impl Workbench {
             let verb = if status.download_only { "Download" } else { "Install" };
             return Some(
                 Button::icon("app-update", IconName::Download)
-                    .size(ButtonSize::Large)
+                    .size(ButtonSize::Medium)
                     .variant(ui::ButtonVariant::Accent)
                     .tooltip(tooltip)
                     .tooltip_side(ui::TooltipSide::Right)
@@ -105,8 +106,8 @@ impl Workbench {
         let unread = *self.whats_new_unread.get_or_insert_with(|| onboarding::whats_new::WhatsNewStore::default_location().is_unread(env!("CARGO_PKG_VERSION")));
         unread.then(|| {
             Button::icon("whats-new", IconName::FileText)
-                .size(ButtonSize::Large)
-                .plane(Plane::Content)
+                .size(ButtonSize::Medium)
+                .variant(ui::ButtonVariant::Chrome)
                 .tooltip("What's new in Athas")
                 .tooltip_side(ui::TooltipSide::Right)
                 .on_click(|_, window, cx| run_command("help.showWhatsNew", window, cx))
@@ -132,14 +133,11 @@ impl Workbench {
                 SidebarView::Agents => Button::icon("activity-agents", IconName::ChatBubbleText),
                 SidebarView::Files => Button::icon("activity-files", IconName::Files),
                 SidebarView::Git => Button::icon("activity-git", IconName::GitBranch),
-                SidebarView::GitHub => Button::new("activity-github", "")
-                    .variant(ui::ButtonVariant::Ghost)
-                    .icon_path("icons/github.svg")
-                    .icon_only(),
+                SidebarView::GitHub => Button::new("activity-github", "").icon_path("icons/github.svg").icon_only(),
             };
             button
-                .size(ButtonSize::Large)
-                .plane(Plane::Content)
+                .size(ButtonSize::Medium)
+                .variant(ui::ButtonVariant::Chrome)
                 .filled_when_active()
                 .active(active_view == Some(view))
                 .tooltip(view.title())
@@ -149,8 +147,6 @@ impl Workbench {
         let extension_items = self.extension_activity_items(shown, cx);
         let update_control = self.render_update_control(cx);
 
-        let top_spacer = self.drag_region(div().id("activity-bar-top").h(metrics::PANE_HEADER).w_full().flex_none(), cx);
-
         div()
             .flex()
             .flex_col()
@@ -159,7 +155,6 @@ impl Workbench {
             .h_full()
             .w(metrics::RAIL_CONTROL)
             .overflow_hidden()
-            .when(!narrow, |this| this.child(top_spacer))
             .child(
                 div()
                     .flex()
@@ -167,8 +162,8 @@ impl Workbench {
                     .flex_1()
                     .min_h_0()
                     .items_center()
-                    .gap(px(4.))
-                    .pt(px(4.))
+                    .gap(metrics::CHROME_GAP_TIGHT)
+                    .pt(metrics::CHROME_GAP_TIGHT)
                     .child(item(SidebarView::Agents, cx))
                     .children(tools.into_iter().map(|view| item(view, cx)))
                     .children(extension_items),
@@ -179,15 +174,15 @@ impl Workbench {
                     .flex_col()
                     .flex_none()
                     .items_center()
-                    .gap(px(4.))
-                    .pt(px(4.))
-                    .pb(px(8.))
+                    .gap(metrics::CHROME_GAP_TIGHT)
+                    .pt(metrics::CHROME_GAP_TIGHT)
+                    .pb(metrics::WORKBENCH_GAP)
                     .children(update_control)
                     .children(self.render_diagnostics_control(cx))
                     .child(
                         Button::icon("run-actions", IconName::Play)
-                            .size(ButtonSize::Large)
-                            .plane(Plane::Content)
+                            .size(ButtonSize::Medium)
+                            .variant(ui::ButtonVariant::Chrome)
                             .tooltip("Run")
                             .tooltip_side(ui::TooltipSide::Right)
                             .active(self.menu_is_open("run-actions"))
@@ -197,8 +192,9 @@ impl Workbench {
                     )
                     .child(
                         Button::icon("toggle-terminal", IconName::TerminalWindow)
-                            .size(ButtonSize::Large)
-                            .plane(Plane::Content)
+                            .size(ButtonSize::Medium)
+                            .variant(ui::ButtonVariant::Chrome)
+                            .filled_when_active()
                             .active(terminal_open)
                             .tooltip(if terminal_open { "Hide Terminal" } else { "Show Terminal" })
                             .tooltip_side(ui::TooltipSide::Right)
@@ -210,9 +206,10 @@ impl Workbench {
                             .relative()
                             .child(
                                 Button::icon("notifications", IconName::Bell)
-                                    .size(ButtonSize::Large)
-                                    .plane(Plane::Content)
+                                    .size(ButtonSize::Medium)
+                                    .variant(ui::ButtonVariant::Chrome)
                                     .tooltip("Inbox")
+                                    .filled_when_active()
                                     .active(self.inbox.is_some())
                                     .tooltip_side(ui::TooltipSide::Right)
                                     .on_click(|_, window, cx| window.dispatch_action(Box::new(ShowNotifications), cx)),
@@ -233,10 +230,9 @@ impl Workbench {
                     )
                     .child(
                         Button::new("account", "")
-                            .variant(ui::ButtonVariant::Ghost)
                             .icon_only()
-                            .size(ButtonSize::Large)
-                            .plane(Plane::Content)
+                            .size(ButtonSize::Medium)
+                            .variant(ui::ButtonVariant::Chrome)
                             .leading(
                                 Avatar::new(&crate::web_chrome::web_chrome(cx).and_then(|chrome| (chrome.account_name)(cx)).unwrap_or_else(|| account::avatar_name(cx)))
                                     .size(px(16.))

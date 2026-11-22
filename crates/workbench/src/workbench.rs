@@ -494,6 +494,9 @@ pub struct Workbench {
     /// agent last touched it (Unix ms, 0 when unknown).
     pub(crate) pending_imports: std::collections::HashMap<String, (String, u64)>,
     account_menu: Option<(Entity<account::AccountMenu>, Vec<Subscription>)>,
+    /// Where and when a press outside closed the account menu: the press on its trigger closes it
+    /// first, and the click after it must not open it again.
+    account_menu_pressed: Option<(Point<Pixels>, web_time::Instant)>,
     /// The Inbox beside the sidebar, while it is open (the bell in the activity bar).
     pub(crate) inbox: Option<(Entity<notifications::InboxPanel>, Subscription)>,
     /// What the next team session tab opens to do: a review or a hand-off.
@@ -609,6 +612,8 @@ impl Workbench {
             cx.notify();
         })
         .detach();
+        // Entering or leaving full screen moves the traffic lights, so the title row must re-lay out.
+        cx.observe_window_bounds(window, |_, _, cx| cx.notify()).detach();
         cx.observe_window_appearance(window, |this, window, cx| {
             if !this.follow_system_appearance {
                 return;
@@ -731,6 +736,7 @@ impl Workbench {
             pending_selections: Default::default(),
             pending_imports: Default::default(),
             account_menu: None,
+            account_menu_pressed: None,
             inbox: None,
             pending_team_send: None,
             pending_history_agent: None,
@@ -2093,8 +2099,18 @@ impl Workbench {
             cx.notify();
             return;
         }
+        let reopened = self.account_menu_pressed.take().is_some_and(|(position, at)| {
+            let moved = window.mouse_position() - position;
+            at.elapsed() < std::time::Duration::from_millis(1500) && moved.x.abs() < px(12.) && moved.y.abs() < px(12.)
+        });
+        if reopened {
+            return;
+        }
         let menu = cx.new(|cx| account::AccountMenu::new(window, cx));
-        let dismiss = cx.subscribe_in(&menu, window, |this, _, _: &DismissEvent, window, cx| {
+        let dismiss = cx.subscribe_in(&menu, window, |this, menu, _: &DismissEvent, window, cx| {
+            if menu.read(cx).dismissed_by_press() {
+                this.account_menu_pressed = Some((window.mouse_position(), web_time::Instant::now()));
+            }
             this.account_menu = None;
             window.focus(&this.focus_handle, cx);
             cx.notify();
@@ -2572,11 +2588,15 @@ impl Render for Workbench {
         let traffic_lights = self.platform.has_traffic_lights() && !window.is_fullscreen() && window_tabs.is_empty();
         let dragging = self.drag.is_some();
 
-        // A narrow window gives the window controls a title row of their own, since the activity
-        // bar stays beside the centre and they would straddle the two.
-        let title_row = narrow.then(|| {
-            self.drag_region(div().id("title-row").h(metrics::PANE_HEADER).w_full().flex_none(), cx)
-        });
+        // The window chrome frames the workbench: a title strip the whole way across, then the
+        // activity bar beside the shell. The window controls live in the strip, so no pane has to
+        // keep a row clear for them.
+        let title_row = self.drag_region(div().id("title-row").h(metrics::PANE_HEADER).w_full().flex_none(), cx);
+        // The sidebar and the centre are one panel inside that frame, split by a hairline.
+        let shell = ui::shell(cx)
+            .when(sidebar_column, |this| this.child(self.render_sidebar_column(window, cx)))
+            .when(!narrow && !pane_fullscreen, |this| this.children(self.render_inbox_column(cx)))
+            .child(self.render_centre(sidebar_column || (narrow && !pane_fullscreen), traffic_lights, window, cx));
         let body = div()
             .relative()
             .flex()
@@ -2584,12 +2604,11 @@ impl Render for Workbench {
             .flex_1()
             .min_h_0()
             .overflow_hidden()
-            .p(metrics::WORKBENCH_GAP)
-            .when(narrow, |this| this.pt_0())
+            .px(metrics::WORKBENCH_GAP)
+            .pb(metrics::WORKBENCH_GAP)
+            .gap(metrics::WORKBENCH_GAP)
             .when(sidebar_column || (narrow && !pane_fullscreen), |this| this.child(self.render_activity_bar(window, cx)))
-            .when(sidebar_column, |this| this.child(self.render_sidebar_column(window, cx)))
-            .when(!narrow && !pane_fullscreen, |this| this.children(self.render_inbox_column(cx)))
-            .child(self.render_centre(sidebar_column || (narrow && !pane_fullscreen), traffic_lights, window, cx));
+            .child(shell);
 
         let window_tab_row = (!window_tabs.is_empty()).then(|| self.render_window_tabs(window_tabs, window, cx));
         let content = div()
@@ -2598,7 +2617,7 @@ impl Render for Workbench {
             .flex_col()
             .flex_1()
             .min_h_0()
-            .children(title_row)
+            .child(title_row)
             .child(body)
             .children(self.render_sidebar_overlay(narrow, window, cx))
             .children(self.render_inbox_overlay(narrow, cx))

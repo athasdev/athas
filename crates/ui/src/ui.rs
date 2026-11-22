@@ -66,7 +66,7 @@ pub use menu::{CloseSubmenu, Menu, MenuEntry, MenuItem, MenuItemTone, MenuQueryS
 pub use message::{Attachment, AttachmentState, Message, ResourceSection, ResourceSummary, message_action};
 pub use number_input::{NumberInput, NumberInputEvent};
 pub use occlusion::occluder;
-pub use pane::{PaneTitle, island, pane_actions, pane_header};
+pub use pane::{PaneTitle, framed_pane, island, pane_actions, pane_header, shell};
 pub use popover::{Popover, PopoverHeader, anchored_overlay};
 pub use progress::{Progress, ProgressCircle, ProgressTone, ToggleGroup, ToggleOption};
 pub use questionnaire::{Questionnaire, QuestionnaireChoice, QuestionnaireEvent, QuestionnaireQuestion};

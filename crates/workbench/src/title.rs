@@ -4,7 +4,7 @@ use gpui::{
     point, prelude::*, px,
 };
 use theme::ActiveTheme;
-use ui::{Button, ButtonSize, Icon, IconName, IconSize, Plane, metrics};
+use ui::{Button, ButtonSize, Icon, IconName, IconSize, metrics};
 
 use crate::{Platform, ShowGlobalSearch, ToggleSidebar, Workbench, bounds_right};
 
@@ -26,7 +26,8 @@ impl Workbench {
         let inset = if traffic_lights {
             metrics::TRAFFIC_LIGHTS_INSET
         } else {
-            metrics::WORKBENCH_GAP + metrics::CHROME_PADDING_INLINE
+            // Lines the first button up with the activity rail below it.
+            metrics::WORKBENCH_GAP
         };
         let active = self.state.active_project().cloned();
         let leading_end = self.title_leading_end.clone();
@@ -44,13 +45,12 @@ impl Workbench {
             "project-switcher",
             active.as_ref().map_or("Open project".to_string(), |project| project.name.clone()),
         )
-        .variant(ui::ButtonVariant::Ghost)
-        .size(ButtonSize::Large)
-        .plane(Plane::Content)
+        .variant(ui::ButtonVariant::Chrome)
+        .size(ButtonSize::Medium)
         .shrinkable()
         .active(switcher_open)
         .leading(match &active {
-            Some(project) => crate::project_icon::project_glyph(Some(&project.path), project.custom_icon.as_deref(), IconSize::Medium.pixels(), muted),
+            Some(project) => crate::project_icon::project_glyph(Some(&project.path), project.custom_icon.as_deref(), IconSize::Small.pixels(), muted),
             None => Icon::new(IconName::FolderOpen).color(muted).into_any_element(),
         })
         .tooltip("Switch Project")
@@ -82,7 +82,8 @@ impl Workbench {
         let row = div()
             .id("title-leading")
             .absolute()
-            .top(if narrow { px(0.) } else { metrics::WORKBENCH_GAP })
+            // Fills the title strip, so its controls centre on the traffic lights.
+            .top_0()
             .left_0()
             .h(metrics::PANE_HEADER)
             .pl(inset)
@@ -90,12 +91,13 @@ impl Workbench {
             .max_w(max_width)
             .flex()
             .items_center()
-            .gap(if platform == Platform::Mac { px(2.) } else { px(4.) })
+            .gap(if platform == Platform::Mac { metrics::CHROME_GAP_TIGHT } else { metrics::CHROME_GAP })
             .children(self.render_window_menu_button(cx))
             .child(
                 Button::icon("toggle-sidebar", IconName::Sidebar)
-                    .size(ButtonSize::Large)
-                    .plane(Plane::Content)
+                    .size(ButtonSize::Medium)
+                    .variant(ui::ButtonVariant::Chrome)
+                    .filled_when_active()
                     .active(sidebar_visible)
                     .tooltip(if sidebar_visible { "Hide Sidebar" } else { "Show Sidebar" })
                     .shortcut(platform.shortcut("⌘B", "Ctrl+B"))
@@ -103,8 +105,8 @@ impl Workbench {
             )
             .child(
                 Button::icon("global-search", IconName::Search)
-                    .size(ButtonSize::Large)
-                    .plane(Plane::Content)
+                    .size(ButtonSize::Medium)
+                    .variant(ui::ButtonVariant::Chrome)
                     .tooltip("Search")
                     .shortcut(platform.shortcut("⇧⌘F", "Ctrl+Shift+F"))
                     .on_click(|_, window, cx| window.dispatch_action(Box::new(ShowGlobalSearch), cx)),

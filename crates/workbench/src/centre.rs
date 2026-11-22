@@ -1,7 +1,7 @@
 use gpui::{AnyElement, App, Context, DragMoveEvent, IntoElement, MouseButton, ParentElement, SharedString, Styled, StyledImage, Window, canvas, div, prelude::*, px, relative};
 use theme::ActiveTheme;
 use ui::{
-    Button, ButtonSize, ButtonVariant, EmptyState, Icon, IconName, IconSize, Tab, island, metrics,
+    Button, ButtonSize, ButtonVariant, EmptyState, Icon, IconName, IconSize, Tab, framed_pane, metrics,
     pane_actions, pane_header,
 };
 use workspace::{DropZone, PaneNode, Panes, SplitAxis, TabItem, project_name};
@@ -122,16 +122,14 @@ impl Workbench {
                                     })),
                             ),
                     );
-                island(cx)
+                framed_pane()
                     .relative()
                     .flex_1()
-                    .flex()
-                    .flex_col()
                     .child(div().flex().flex_col().flex_1().min_h_0().children(self.debugger.as_ref().map(|(debugger, _)| debugger.clone())))
                     .child(header)
                     .into_any_element()
             }
-            _ => island(cx).flex_1().children(self.terminal.as_ref().map(|(terminal, _)| terminal.clone())).into_any_element(),
+            _ => framed_pane().flex_1().children(self.terminal.as_ref().map(|(terminal, _)| terminal.clone())).into_any_element(),
         }
     }
 
@@ -168,6 +166,7 @@ impl Workbench {
                 // Primary while dragged; hovered or focused (it takes focus for the arrow keys) it
                 // shows the strong border, so a finished drag does not leave it lit.
                 let line = if resizing { cx.theme().colors.primary } else { cx.theme().colors.border_strong };
+                let divider = cx.theme().colors.border;
                 let handle = div()
                     .id(("split-handle", split_id as usize))
                     .track_focus(&focus.tab_stop(true))
@@ -196,7 +195,7 @@ impl Workbench {
                         div()
                             .when(horizontal, |this| this.w(px(1.)).h_full())
                             .when(!horizontal, |this| this.h(px(1.)).w_full())
-                            .when(resizing || focused, |this| this.bg(line))
+                            .bg(if resizing || focused { line } else { divider })
                             .group_hover("split-handle", move |style| style.bg(line)),
                     )
                     .on_mouse_down(
@@ -266,15 +265,7 @@ impl Workbench {
         let platform = self.platform;
         let split = layout.panes.groups.len() > 1;
         // While the sidebar is hidden, the title controls float over the top-left header.
-        let leading_space = if layout.sidebar_column || group_id != layout.leading {
-            px(0.)
-        } else {
-            (self.title_leading_end.get() - metrics::WORKBENCH_GAP * 2.).max(if layout.traffic_lights {
-                metrics::TRAFFIC_LIGHTS_INSET
-            } else {
-                px(0.)
-            })
-        };
+        let leading_space = px(0.);
         let trailing = group_id == layout.trailing;
         let trailing_space = if trailing && matches!(platform, crate::Platform::Windows | crate::Platform::Linux) {
             px(116.)
@@ -615,7 +606,7 @@ impl Workbench {
             };
             div().absolute().inset_0().child(fill)
         });
-        island(cx)
+        framed_pane()
             .flex_1()
             .size_full()
             .when(split && group_id != layout.panes.active, |this| this.opacity(0.98))
@@ -1069,6 +1060,10 @@ impl Workbench {
             .flex_none()
             .h(height)
             .pt(metrics::WORKBENCH_GAP)
+            // Inside the shell the bottom pane has no edge of its own; a hairline marks where the
+            // centre ends, as the sidebar's divider does.
+            .border_t_1()
+            .border_color(cx.theme().colors.border)
             .child(
                 div()
                     .id("bottom-resize")

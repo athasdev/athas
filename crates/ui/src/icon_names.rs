@@ -373,6 +373,7 @@ impl IconName {
     pub fn filled_path(self) -> Option<&'static str> {
         match self {
             IconName::Bug => Some("icons/bug_filled.svg"),
+            IconName::ChatBubbleText => Some("icons/chat_bubble_text_filled.svg"),
             IconName::Database => Some("icons/database_filled.svg"),
             IconName::Dots => Some("icons/dots_filled.svg"),
             IconName::Extensions => Some("icons/extensions_filled.svg"),

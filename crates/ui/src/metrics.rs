@@ -106,8 +106,9 @@ pub const ISLAND_RADIUS: Pixels = px(10.);
 /// Where a pane's first item starts from its island's edge.
 pub const PANE_INSET: Pixels = px(12.);
 pub const CHROME_CONTROL: Pixels = px(24.);
-/// The activity bar's controls, and the bar's width.
-pub const RAIL_CONTROL: Pixels = px(32.);
+/// The activity bar's controls, and the bar's width: one trigger wide, no slack around it, so a
+/// rail icon measures the same as the list row beside it.
+pub const RAIL_CONTROL: Pixels = px(28.);
 pub const CHROME_HIT_TARGET: Pixels = px(28.);
 pub const CHROME_GAP_TIGHT: Pixels = px(2.);
 pub const CHROME_GAP: Pixels = px(4.);
@@ -125,8 +126,10 @@ pub const RADIUS_LG: Pixels = px(8.);
 pub const RADIUS_XL: Pixels = px(12.);
 /// What floats clear of the window: the command palette and the surfaces like it.
 pub const OVERLAY_RADIUS: Pixels = px(16.);
-/// The macOS traffic lights take this much of the top-left row.
-pub const TRAFFIC_LIGHTS_INSET: Pixels = px(84.);
+/// The macOS traffic lights take this much of the top-left row. AppKit places them from
+/// `options`' x 16 and spaces them itself: the three 14px buttons centre at 23, 46 and 69, so the
+/// last ends at 76. One inline padding after that keeps the first trigger clear of them.
+pub const TRAFFIC_LIGHTS_INSET: Pixels = px(82.);
 pub const SIDEBAR_DEFAULT_WIDTH: Pixels = px(220.);
 pub const SIDEBAR_MIN_WIDTH: Pixels = px(140.);
 /// The column of session boxes the dock shows while no tool pane is open.

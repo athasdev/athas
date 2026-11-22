@@ -28,8 +28,10 @@ impl Workbench {
             .flex_none()
             .h_full()
             .w(width)
-            .pr(metrics::WORKBENCH_GAP)
-            .child(self.render_sidebar(true, window, cx))
+            // Inside the shell the sidebar and the centre share a surface; a hairline divides them.
+            .border_r_1()
+            .border_color(cx.theme().colors.border)
+            .child(self.render_sidebar(false, window, cx))
             .child(
                 div()
                     .id("sidebar-resize")
@@ -176,6 +178,9 @@ impl Workbench {
             .size_full()
             .min_h_0()
             .min_w_0()
+            // The window chrome has a strip of its own now, so the sidebar opens at the shell's
+            // edge; it keeps the gap off the border itself.
+            .when(!title_row, |this| this.pt(metrics::WORKBENCH_GAP))
             .children(header)
             .children(toolbar)
             .child(body)

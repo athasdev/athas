@@ -117,8 +117,8 @@ fn options(bounds: WindowBounds, display: Option<gpui::DisplayId>) -> WindowOpti
         titlebar: Some(TitlebarOptions {
             title: Some("Athas".into()),
             appears_transparent: true,
-            // The traffic lights sit in the workbench's top row, in line with its controls.
-            traffic_light_position: Some(point(px(16.), px(19.))),
+            // Centred on the title strip's row (`PANE_HEADER`, 40): a 14px button centres at 20.
+            traffic_light_position: Some(point(px(16.), px(13.))),
         }),
         // The workbench moves the window itself (`drag_region`); without this AppKit drags the
         // window from anywhere in the top ~28px, so dragging a tab there moved the window.

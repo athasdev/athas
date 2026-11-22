@@ -21,6 +21,31 @@ pub fn island(cx: &App) -> Div {
         .shadow(shadow)
 }
 
+/// The workbench's inner frame: the sidebar and the centre share one surface inside the window
+/// chrome, as a single rounded panel with a hairline border. The window around it (the activity
+/// bar, the title strip) stays on `colors.window`.
+pub fn shell(cx: &App) -> Div {
+    let theme = cx.theme();
+    let shadow = theme.shadows.raised.iter().filter(|shadow| !shadow.inset).cloned().collect::<Vec<_>>();
+    div()
+        .flex()
+        .flex_row()
+        .flex_1()
+        .min_h_0()
+        .min_w_0()
+        .overflow_hidden()
+        .rounded(metrics::ISLAND_RADIUS)
+        .border_1()
+        .border_color(theme.colors.border)
+        .bg(theme.colors.background)
+        .shadow(shadow)
+}
+
+/// A pane inside [`shell`]: the shell draws the surface, so the pane only lays its content out.
+pub fn framed_pane() -> Div {
+    div().flex().flex_col().min_h_0().min_w_0().overflow_hidden()
+}
+
 /// The header row every pane opens with: its title or tabs on the left, then its actions.
 pub fn pane_header(cx: &App) -> Div {
     div()
