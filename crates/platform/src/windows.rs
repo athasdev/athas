@@ -117,8 +117,11 @@ fn options(bounds: WindowBounds, display: Option<gpui::DisplayId>) -> WindowOpti
         titlebar: Some(TitlebarOptions {
             title: Some("Athas".into()),
             appears_transparent: true,
-            // Centred on the title strip's row (`PANE_HEADER`, 40): a 14px button centres at 20.
-            traffic_light_position: Some(point(px(16.), px(13.))),
+            // The left inset every other Mac app has: AppKit's own close button sits at x 9, and
+            // GPUI keeps the live size and spacing from there. The y centres the row on the title
+            // strip (`PANE_HEADER`, 40): GPUI makes the container `14 + 2y` tall, so 13 puts the
+            // 14px buttons' centre at 20.
+            traffic_light_position: Some(point(px(9.), px(13.))),
         }),
         // The workbench moves the window itself (`drag_region`); without this AppKit drags the
         // window from anywhere in the top ~28px, so dragging a tab there moved the window.
@@ -244,7 +247,7 @@ pub(crate) fn open_detached(content: workbench::DetachedContent, cx: &mut App) -
         titlebar.title = Some(content.window_title().into());
         // Settings draws no title bar of its own: the lights sit centred in the space its
         // sidebar leaves at the top.
-        titlebar.traffic_light_position = content.overlays_title_bar().then(|| point(px(16.), px(20.)));
+        titlebar.traffic_light_position = content.overlays_title_bar().then(|| point(px(9.), px(20.)));
     }
     match cx.open_window(options, move |window, cx| cx.new(|cx| workbench::DetachedWindow::new(content, window, cx))) {
         Ok(handle) => Some(handle.into()),

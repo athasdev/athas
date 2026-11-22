@@ -128,10 +128,44 @@ pub fn radius_lg() -> Pixels { scale::px(8.) }
 pub fn radius_xl() -> Pixels { scale::px(12.) }
 /// What floats clear of the window: the command palette and the surfaces like it.
 pub fn overlay_radius() -> Pixels { scale::px(16.) }
-/// The macOS traffic lights take this much of the top-left row. AppKit places them from
-/// `options`' x 16 and spaces them itself: the three 14px buttons centre at 23, 46 and 69, so the
-/// last ends at 76. One inline padding after that keeps the first trigger clear of them.
-pub fn traffic_lights_inset() -> Pixels { scale::px(82.) }
+/// Where the macOS window buttons end. AppKit draws them at its own size whatever the window is
+/// zoomed to: from `traffic_light_position`'s x 9, three 14px buttons 9 apart, so the last ends
+/// at 69. Measure it again with `cargo run -p ui --example traffic_lights`.
+pub const TRAFFIC_LIGHTS_END: f32 = 69.;
+
+/// What the first thing in the title row clears: the window buttons, which hold their size at
+/// every zoom, and one inline padding, which does not.
+pub fn traffic_lights_inset() -> Pixels { gpui::px(TRAFFIC_LIGHTS_END) + chrome_padding_inline() }
+
+#[cfg(test)]
+mod traffic_lights {
+    use super::*;
+
+    /// What `cargo run -p ui --example traffic_lights` reads off a plain macOS window: the close
+    /// button at x 9, three 14px buttons 9 apart. The workbench asks AppKit for the same x, so
+    /// its buttons land where every other app's do and the row after them starts clear of 69.
+    const CLOSE_X: f32 = 9.;
+    const BUTTON: f32 = 14.;
+    const GAP: f32 = 9.;
+
+    #[test]
+    fn the_row_starts_where_the_window_buttons_end() {
+        let last_button_ends = CLOSE_X + BUTTON + GAP + BUTTON + GAP + BUTTON;
+        assert_eq!(last_button_ends, TRAFFIC_LIGHTS_END);
+        assert_eq!(traffic_lights_inset(), gpui::px(TRAFFIC_LIGHTS_END) + chrome_padding_inline());
+    }
+
+    /// The buttons keep AppKit's size at every zoom, so the inset only zooms the padding after
+    /// them. Zooming the whole inset would walk the title row away from the buttons.
+    #[test]
+    fn zoom_moves_the_padding_and_not_the_buttons() {
+        let at_100 = traffic_lights_inset();
+        crate::scale::set_zoom_for_test(2.0);
+        let at_200 = traffic_lights_inset();
+        crate::scale::set_zoom_for_test(1.0);
+        assert_eq!(at_200 - at_100, chrome_padding_inline());
+    }
+}
 pub fn sidebar_default_width() -> Pixels { scale::px(220.) }
 pub fn sidebar_min_width() -> Pixels { scale::px(140.) }
 /// The column of session boxes the dock shows while no tool pane is open.

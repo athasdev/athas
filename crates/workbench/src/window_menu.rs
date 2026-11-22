@@ -260,7 +260,8 @@ impl Workbench {
     /// Opens the app menu from the title row's button, with `open` (File, Edit, …) showing.
     pub fn show_window_menu(&mut self, open: Option<usize>, window: &mut Window, cx: &mut Context<Self>) {
         let entries = window_menu_entries(window.focused(cx).filter(|focus| *focus != self.focus_handle), cx);
-        let position = gpui::point(metrics::traffic_lights_inset().min(px(16.)), metrics::workbench_gap() + metrics::pane_header() - px(4.));
+        // Under the title row's first button, which starts clear of the window buttons.
+        let position = gpui::point(metrics::traffic_lights_inset(), metrics::workbench_gap() + metrics::pane_header() - px(4.));
         self.show_menu(WINDOW_MENU, entries, position, Anchor::TopLeft, window, cx);
         if let Some(menu) = self.open_menu.as_ref().map(|menu| menu.menu.clone()) {
             menu.update(cx, |menu, cx| menu.highlight(open, open.is_some(), window, cx));

@@ -61,6 +61,12 @@ pub fn reset_zoom(cx: &mut App) {
     set_zoom(1.0, cx);
 }
 
+/// Sets the zoom without a window to refresh, for tests.
+#[cfg(test)]
+pub(crate) fn set_zoom_for_test(level: f32) {
+    ZOOM.store(level.to_bits(), Ordering::Relaxed);
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
