@@ -57,8 +57,8 @@ impl MenuSize {
     }
 }
 
-pub const OVERLAY_MAX_WIDTH: Pixels = px(480.);
-pub const OVERLAY_MAX_HEIGHT: Pixels = px(320.);
+pub fn overlay_max_width() -> Pixels { px(480.) }
+pub fn overlay_max_height() -> Pixels { px(320.) }
 /// Where an open menu paints among the deferred overlays: above the anchored popovers, cards and
 /// prompts, which draw at 3 and below. A submenu paints one step above its parent.
 pub const MENU_PRIORITY: usize = 4;
@@ -72,6 +72,8 @@ pub(crate) enum Trailing {
 pub struct MenuItem {
     pub(crate) label: SharedString,
     pub(crate) icon: Option<IconName>,
+    /// A picture in place of `icon`, such as the icon theme's icon for a file.
+    pub(crate) icon_image: Option<gpui::ImageSource>,
     pub(crate) checked: Option<bool>,
     pub(crate) selected: bool,
     pub(crate) shortcut: Option<SharedString>,
@@ -104,6 +106,7 @@ impl MenuItem {
         Self {
             label: label.into(),
             icon: None,
+            icon_image: None,
             checked: None,
             selected: false,
             shortcut: None,
@@ -155,6 +158,13 @@ impl MenuItem {
 
     pub fn hidden_while_searching(mut self) -> Self {
         self.hidden_while_searching = true;
+        self
+    }
+
+    /// A picture for the row, such as the icon theme's icon for a file. It takes the icon's
+    /// place, and a row with one counts as having an icon when the group is aligned.
+    pub fn icon_image(mut self, source: impl Into<gpui::ImageSource>) -> Self {
+        self.icon_image = Some(source.into());
         self
     }
 
@@ -521,8 +531,12 @@ impl Menu {
             return;
         }
         cx.emit(DismissEvent);
+        // Deferred, as a row that keeps the menu open already is: a handler that runs here runs
+        // inside the menu's own update, and nearly every one of them goes on to update the view
+        // that opened the menu — which may itself be the update this click arrived in. That is
+        // the "already being updated" panic, and a panic in an event handler aborts the app.
         if let Some(handler) = handler {
-            handler(window, cx);
+            window.defer(cx, move |window, cx| handler(window, cx));
         }
     }
 
@@ -617,7 +631,7 @@ impl Menu {
                 continue;
             }
             let items: Vec<&MenuItem> = (start..index).filter_map(|row| self.item(row)).collect();
-            if !items.is_empty() && items.iter().all(|item| item.icon.is_some()) {
+            if !items.is_empty() && items.iter().all(|item| item.icon.is_some() || item.icon_image.is_some()) {
                 visible[start..index].iter_mut().for_each(|flag| *flag = true);
             }
             start = index + 1;
@@ -649,7 +663,7 @@ impl Render for Menu {
                     .px(px(8.))
                     .pt(px(6.))
                     .pb(px(4.))
-                    .text_size(typography::TEXT_CAPTION)
+                    .text_size(typography::text_caption())
                     .line_height(px(16.))
                     .font_weight(typography::MEDIUM)
                     .text_color(colors.subtle_foreground)
@@ -658,7 +672,7 @@ impl Render for Menu {
                 MenuEntry::Text(text) => div()
                     .px(px(8.))
                     .pb(px(4.))
-                    .text_size(typography::TEXT_SM)
+                    .text_size(typography::text_sm())
                     .line_height(px(16.))
                     .text_color(colors.subtle_foreground)
                     .child(text.clone())
@@ -706,13 +720,14 @@ impl Render for Menu {
                         .w_full()
                         .px(px(8.))
                         .py(px(4.))
-                        .rounded(metrics::RADIUS)
+                        .rounded(metrics::radius())
                         .whitespace_nowrap()
                         .text_color(text)
                         .when_some(item.tooltip.clone(), |this, tooltip| this.anchored_tooltip(move || crate::Tooltip::new(tooltip.clone())))
                         .when_some(fill, |this, fill| this.bg(fill))
-                        .when(icons[index], |this| {
-                            this.children(item.icon.map(|icon| Icon::new(icon).size(IconSize::Small).color(icon_color)))
+                        .when(icons[index], |this| match item.icon_image.clone() {
+                            Some(source) => this.child(gpui::img(source).flex_none().size(px(14.))),
+                            None => this.children(item.icon.map(|icon| Icon::new(icon).size(IconSize::Small).color(icon_color))),
                         })
                         .map(|this| match item.description.clone() {
                             Some(description) => this.items_start().child(
@@ -791,15 +806,15 @@ impl Render for Menu {
             .flex()
             .flex_col()
             .min_w(px(128.))
-            .max_w(OVERLAY_MAX_WIDTH)
+            .max_w(overlay_max_width())
             .when_some(self.size.width(), |this, width| this.w(width))
             .relative()
             .max_h(window.viewport_size().height - px(20.))
-            .rounded(metrics::RADIUS_LG)
+            .rounded(metrics::radius_lg())
             .bg(colors.overlay)
             .shadow(theme.shadows.popover.clone())
             .font_family(typography::UI_FONT)
-            .text_size(typography::TEXT_CHROME)
+            .text_size(typography::text_chrome())
             .line_height(px(16.))
             .text_color(colors.foreground)
             .child(div()
