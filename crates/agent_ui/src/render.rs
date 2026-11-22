@@ -127,7 +127,16 @@ impl Render for SessionView {
         let body = self.with_side_column(body, window, cx);
         div()
             .id("agent-session")
+            .group("agent-session")
             .key_context("AgentSession")
+            // The whole chat takes a drop, not only the composer: a file dropped on the
+            // transcript is as clearly meant for the next prompt as one dropped on the box.
+            .drag_over::<ExternalPaths>(|style, _, _, _| style)
+            .on_drop(cx.listener(|this, paths: &ExternalPaths, _, cx| this.attach_paths(paths.paths().to_vec(), cx)))
+            .drag_over::<ui::DraggedResource>(|style, _, _, _| style)
+            .on_drop(cx.listener(|this, resource: &ui::DraggedResource, _, cx| this.attach_dragged_resource(resource, cx)))
+            .drag_over::<file_tree::DraggedEntry>(|style, _, _, _| style)
+            .on_drop(cx.listener(|this, entry: &file_tree::DraggedEntry, _, cx| this.attach_dragged_entry(entry, cx)))
             // A press anywhere puts the transcript's selection away, unless it is about to
             // extend it; the run of text pressed then starts a new one as the press bubbles.
             .capture_any_mouse_down(cx.listener(|this, event: &gpui::MouseDownEvent, _, cx| {
@@ -156,8 +165,45 @@ impl Render for SessionView {
             .text_size(typography::TEXT_BASE)
             .text_color(colors.foreground)
             .child(body)
+            .child(self.render_session_drop_hint(cx))
             .children(self.render_effort_popover(cx))
             .children(self.open_menu.as_ref().map(|menu| menu.render()))
+    }
+}
+
+impl SessionView {
+    /// The sheet that says the chat takes what is being dragged, over the whole view. It never
+    /// takes the mouse itself: the composer's own drop target stays in front of it.
+    fn render_session_drop_hint(&self, cx: &Context<Self>) -> impl IntoElement {
+        let colors = colors(cx);
+        div()
+            .absolute()
+            .inset_0()
+            .flex()
+            .items_center()
+            .justify_center()
+            .bg(colors.background.opacity(0.8))
+            .invisible()
+            .group_drag_over::<ExternalPaths>("agent-session", |style| style.visible())
+            .group_drag_over::<ui::DraggedResource>("agent-session", |style| style.visible())
+            .group_drag_over::<file_tree::DraggedEntry>("agent-session", |style| style.visible())
+            .child(
+                div()
+                    .flex()
+                    .items_center()
+                    .gap(px(8.))
+                    .px(px(16.))
+                    .py(px(12.))
+                    .rounded(metrics::RADIUS_XL)
+                    .border_1()
+                    .border_color(colors.primary)
+                    .bg(colors.primary_soft)
+                    .text_size(typography::TEXT_SM)
+                    .font_weight(typography::MEDIUM)
+                    .text_color(colors.primary)
+                    .child(Icon::new(IconName::FilePlus).size(IconSize::Small).color(colors.primary))
+                    .child("Drop to add as context"),
+            )
     }
 }
 
@@ -181,10 +227,13 @@ impl SessionView {
         // Measured in `render`, before the list lays out: reading the list's state from inside
         // its own item callback panics (the list holds its state mutably while it lays out).
         let pinned_room = if last { self.anchor_room } else { None };
-        // A user message starts a turn: more room above it.
+        // A user message starts a turn: more room above it. A reply the agent writes as several
+        // messages, with nothing between them, reads as one: no gap, no second block.
+        let joined = matches!(entry, Entry::Agent(_)) && matches!(self.transcript.entries.get(index.wrapping_sub(1)), Some(Entry::Agent(_)));
         let top = match entry {
             Entry::User(_) if !first => px(20.),
             _ if first => px(16.),
+            _ if joined => px(0.),
             _ => px(6.),
         };
         let content = match entry {
@@ -297,8 +346,18 @@ impl SessionView {
         let failure = crate::turn_error::describe_for(text, is_acp, offline, hosted);
         let auth_choice = (self.auth_choice_entry() == Some(index)).then(|| self.render_auth_choice_inline(cx)).flatten();
         if auth_choice.is_none() && failure.title == "Error" && failure.details.is_empty() && failure.actions.is_empty() {
+            // An agent that stops on a limit says so in its reply and then fails the turn with the
+            // same words; the line in red adds nothing but a second answer to read.
+            if said_already(&self.transcript.entries[..index], text) {
+                return div().into_any_element();
+            }
             let sel = self.selecting(cx);
-            return render_notice(NoticeKind::Error, text, SpanPath::entry(index).child(0), &sel, cx);
+            let notice = render_notice(NoticeKind::Error, text, SpanPath::entry(index).child(0), &sel, cx);
+            let colors = colors(cx);
+            return match self.ends_the_turn(index).then(|| self.render_turn_actions(index, &colors)).flatten() {
+                Some(actions) => div().group(TURN_TAIL).flex().flex_col().gap(px(8.)).child(notice).child(actions).into_any_element(),
+                None => notice,
+            };
         }
         let colors = colors(cx);
         let key = format!("error-details-{index}");
@@ -402,7 +461,7 @@ impl SessionView {
             );
         }
         let details = failure.details.clone();
-        div()
+        let card = div()
             .flex()
             .items_start()
             .gap(px(8.))
@@ -438,8 +497,11 @@ impl SessionView {
                         let sel = self.selecting(cx);
                         this.child(div().mt(px(6.)).child(code_box(&details, SpanPath::entry(index).child(1), &sel, cx)))
                     }),
-            )
-            .into_any_element()
+            );
+        match self.ends_the_turn(index).then(|| self.render_turn_actions(index, &colors)).flatten() {
+            Some(actions) => div().group(TURN_TAIL).flex().flex_col().gap(px(8.)).child(card).child(actions).into_any_element(),
+            None => card.into_any_element(),
+        }
     }
 
     fn render_user_message(&self, index: usize, message: &crate::thread::UserMessage, cx: &mut Context<Self>) -> AnyElement {
@@ -590,20 +652,7 @@ impl SessionView {
         let blocks = self.markdown(index, text);
         let colors = cx.theme().colors.clone();
         let running_last = self.is_running() && index + 1 == self.transcript.entries.len();
-        // A reply the agent writes between its steps comes as several messages; it reads as one:
-        // Copy and the usage sit under its last part and copy every part of the turn.
-        let entries = &self.transcript.entries;
-        let reply_end = !entries[index + 1..].iter().take_while(|entry| !matches!(entry, Entry::User(_))).any(|entry| matches!(entry, Entry::Agent(_)));
-        let turn_start = entries[..index].iter().rposition(|entry| matches!(entry, Entry::User(_))).map_or(0, |user| user + 1);
-        let copy_text = entries[turn_start..=index]
-            .iter()
-            .filter_map(|entry| match entry {
-                Entry::Agent(message) => Some(crate::follow_ups::extract(&message.text).0.trim().to_string()),
-                _ => None,
-            })
-            .filter(|text| !text.is_empty())
-            .collect::<Vec<_>>()
-            .join("\n\n");
+        let reply_end = self.ends_the_turn(index);
         let last_answer = !self.is_running() && !self.transcript.entries[index + 1..].iter().any(|entry| matches!(entry, Entry::Agent(_) | Entry::User(_)));
         let chips: Vec<AnyElement> = if last_answer {
             follow_ups
@@ -662,7 +711,7 @@ impl SessionView {
         };
         div()
             .id(("agent-message", index))
-            .group("agent-message")
+            .group(TURN_TAIL)
             .w_full()
             .min_w_0()
             .flex()
@@ -681,26 +730,63 @@ impl SessionView {
             .when(!chips.is_empty(), |this| this.child(div().flex().flex_wrap().gap(px(6.)).children(chips)))
             .children(self.render_cloud_tool_calls(index, cx))
             .children(self.render_cloud_run_actions(index, cx))
-            .when(!running_last && reply_end, |this| {
-                this.child(
-                    div()
-                        .flex()
-                        .items_center()
-                        .gap(px(2.))
-                        .text_size(typography::TEXT_SM)
-                        .text_color(colors.subtle_foreground)
-                        .child(
-                            div().flex().invisible().group_hover("agent-message", |style| style.visible()).child(
-                                Button::icon(("copy-message", index), IconName::Copy)
-                                    .size(ButtonSize::XSmall)
-                                    .tooltip("Copy response as Markdown")
-                                    .on_click(move |_, _, cx| cx.write_to_clipboard(gpui::ClipboardItem::new_string(copy_text.clone()))),
-                            ),
-                        ),
-                )
-            })
+            .children((!running_last && reply_end).then(|| self.render_turn_actions(index, &colors)).flatten())
             .text_color(colors.foreground)
             .into_any_element()
+    }
+
+    /// Whether this entry is the last thing the turn says, so it carries the turn's actions.
+    /// A reply the agent writes between its steps comes as several messages, and a turn that
+    /// failed ends on its error: Copy belongs under the last of them, not in the middle.
+    fn ends_the_turn(&self, index: usize) -> bool {
+        let entries = &self.transcript.entries;
+        let speaks = |entry: &Entry| match entry {
+            Entry::Agent(_) => true,
+            Entry::Notice(notice) => matches!(notice.kind, NoticeKind::Error | NoticeKind::Warning),
+            _ => false,
+        };
+        let rest = entries[index + 1..].iter().take_while(|entry| !matches!(entry, Entry::User(_)));
+        speaks(&entries[index]) && !rest.clone().any(|entry| speaks(entry)) && !self.turn_text(index).is_empty()
+    }
+
+    /// Everything the turn's replies said, as Copy writes it out.
+    fn turn_text(&self, index: usize) -> String {
+        let entries = &self.transcript.entries;
+        let start = entries[..index].iter().rposition(|entry| matches!(entry, Entry::User(_))).map_or(0, |user| user + 1);
+        entries[start..=index]
+            .iter()
+            .filter_map(|entry| match entry {
+                Entry::Agent(message) => Some(crate::follow_ups::extract(&message.text).0.trim().to_string()),
+                _ => None,
+            })
+            .filter(|text| !text.is_empty())
+            .collect::<Vec<_>>()
+            .join("\n\n")
+    }
+
+    /// The turn's actions under its last word: Copy, shown on hover.
+    fn render_turn_actions(&self, index: usize, colors: &theme::ThemeColors) -> Option<AnyElement> {
+        let text = self.turn_text(index);
+        if text.is_empty() {
+            return None;
+        }
+        Some(
+            div()
+                .flex()
+                .items_center()
+                .gap(px(2.))
+                .text_size(typography::TEXT_SM)
+                .text_color(colors.subtle_foreground)
+                .child(
+                    div().flex().invisible().group_hover(TURN_TAIL, |style| style.visible()).child(
+                        Button::icon(("copy-message", index), IconName::Copy)
+                            .size(ButtonSize::XSmall)
+                            .tooltip("Copy response as Markdown")
+                            .on_click(move |_, _, cx| cx.write_to_clipboard(gpui::ClipboardItem::new_string(text.clone()))),
+                    ),
+                )
+                .into_any_element(),
+        )
     }
 
     /// A `[PLAN_BLOCK]` plan between the text around it (`PlanBlockDisplay`): its steps, each
@@ -812,9 +898,9 @@ impl SessionView {
         use crate::cloud::transcript::CallStatus;
         let calls = self.cloud_tool_calls.get(&index).filter(|calls| !calls.is_empty())?;
         let colors = colors(cx);
-        let rows = calls.iter().map(|call| {
+        let rows = calls.iter().enumerate().map(|(position, call)| {
             let (icon, color, status) = match call.status {
-                CallStatus::InProgress => (IconName::CircleDotted, colors.primary, Some("Running")),
+                CallStatus::InProgress => (IconName::CircleDotted, colors.muted_foreground, Some("Running")),
                 CallStatus::Failed => (IconName::WarningCircle, colors.destructive, Some("Failed")),
                 CallStatus::Completed => (
                     match call.kind {
@@ -840,7 +926,10 @@ impl SessionView {
                 .min_w_0()
                 .text_size(typography::TEXT_SM)
                 .text_color(colors.muted_foreground)
-                .child(Icon::new(icon).size(IconSize::Small).color(color))
+                .child(match call.status {
+                    CallStatus::InProgress => busy_spinner(("cloud-call", position), colors.muted_foreground),
+                    _ => Icon::new(icon).size(IconSize::Small).color(color).into_any_element(),
+                })
                 .child(div().flex_none().text_color(colors.foreground).child(call.name.clone()))
                 .children(detail.map(|detail| div().min_w_0().flex_shrink(1.).truncate().child(detail)))
                 .children(status.map(|status| div().flex_none().text_size(typography::TEXT_CAPTION).text_color(color).child(status)))
@@ -909,10 +998,11 @@ impl SessionView {
         let waiting = call.status == ToolStatus::WaitingForPermission;
         let icon: AnyElement = match summary.phase {
             Phase::Background => div().size(px(14.)).flex().items_center().justify_center().child(div().size(px(6.)).rounded_full().bg(colors.success)).into_any_element(),
+            // The step is working: the arc turns, rather than a ring of dots standing still.
+            Phase::Running if !waiting => busy_spinner(("tool-call", index), colors.muted_foreground),
             phase => {
                 let (icon, color) = match phase {
-                    Phase::Running if waiting => (IconName::Key, colors.warning),
-                    Phase::Running => (IconName::CircleDotted, colors.primary),
+                    Phase::Running => (IconName::Key, colors.warning),
                     Phase::Failed => (IconName::WarningCircle, colors.destructive),
                     _ => (kind_icon(summary.kind), colors.subtle_foreground),
                 };
@@ -1280,9 +1370,14 @@ impl SessionView {
             .flex_col()
             .text_size(typography::TEXT_SM)
             .children(rows.into_iter().enumerate().map(|(row_index, row)| {
-                let (depth, icon, name, open) = match row {
-                    crate::tool_locations::TreeRow::Folder { depth, name } => (depth, IconName::Folder, name, None),
-                    crate::tool_locations::TreeRow::File { depth, name, path, line } => (depth, IconName::FileText, name, Some((path, line))),
+                let (depth, name, open) = match row {
+                    crate::tool_locations::TreeRow::Folder { depth, name } => (depth, name, None),
+                    crate::tool_locations::TreeRow::File { depth, name, path, line } => (depth, name, Some((path, line))),
+                };
+                let icon = match open.is_some() {
+                    true => extensions::file_icon(&name, px(14.), cx)
+                        .unwrap_or_else(|| Icon::new(IconName::FileText).size(IconSize::XSmall).color(colors.subtle_foreground).into_any_element()),
+                    false => Icon::new(IconName::Folder).size(IconSize::XSmall).color(colors.subtle_foreground).into_any_element(),
                 };
                 let line = open.as_ref().and_then(|(_, line)| *line);
                 div()
@@ -1295,7 +1390,7 @@ impl SessionView {
                     .pr(px(6.))
                     .rounded(metrics::RADIUS_MD)
                     .text_color(colors.muted_foreground)
-                    .child(Icon::new(icon).size(IconSize::XSmall).color(colors.subtle_foreground))
+                    .child(icon)
                     .child(div().min_w_0().truncate().child(name))
                     .children(line.map(|line| div().flex_none().text_color(colors.subtle_foreground).child(format!("line {line}"))))
                     .when_some(open, |this, (path, line)| {
@@ -1522,7 +1617,7 @@ impl SessionView {
                     .h(px(24.))
                     .text_size(typography::TEXT_SM)
                     .text_color(colors.subtle_foreground)
-                    .child(Icon::new(IconName::CircleDotted).size(IconSize::Small).color(colors.primary))
+                    .child(busy_spinner("agent-starting", colors.subtle_foreground))
                     .child(format!("Starting {}…", self.agent_name()))
                     .into_any_element(),
             ),
@@ -1538,7 +1633,7 @@ impl SessionView {
                         .h(px(24.))
                         .text_size(typography::TEXT_SM)
                         .text_color(colors.subtle_foreground)
-                        .child(Icon::new(IconName::CircleDotted).size(IconSize::Small).color(colors.primary))
+                        .child(busy_spinner("agent-waiting", colors.subtle_foreground))
                         .child(if stalled { "Still waiting for the agent…" } else { "Waiting for response…" })
                         .when(seconds > 0, |this| this.child(crate::tool_groups::format_elapsed(seconds)))
                         .when(stalled, |this| {
@@ -2080,6 +2175,9 @@ impl SessionView {
 
     /// The attachments summed up by kind; a group opens on its items, each removable
     /// (`ComposerAttachments`).
+    /// The composer's attachments. A handful show one chip each — its icon, its name and a way to
+    /// take it off — because "2 files" never said *which* files; past that they fall back to a chip
+    /// per kind that opens on its items.
     fn render_attachment_groups(&self, cx: &mut Context<Self>) -> Option<AnyElement> {
         use crate::attachment_groups;
         let groups = attachment_groups::groups(&self.attachments);
@@ -2087,49 +2185,91 @@ impl SessionView {
             return None;
         }
         let colors = colors(cx);
+        let items: Vec<(attachment_groups::Kind, Vec<usize>)> =
+            groups.iter().flat_map(|group| group.items.iter().map(|indices| (group.kind, indices.clone()))).collect();
+        let every: Vec<usize> = groups.iter().flat_map(|group| group.items.iter().flatten().copied()).collect();
+        let clear_all = (items.len() > 1).then(|| {
+            Button::new("clear-attachments", "Clear all")
+                .variant(ButtonVariant::Ghost)
+                .size(ButtonSize::XSmall)
+                .on_click(cx.listener(move |this, _: &ClickEvent, _, cx| {
+                    let every = every.clone();
+                    this.remove_attachments(&every, cx);
+                    this.open_attachment_group = None;
+                }))
+        });
+
+        // Few enough to name: a chip each.
+        if items.len() <= ATTACHMENT_CHIPS {
+            let mut chips: Vec<AnyElement> = Vec::new();
+            for (position, (kind, indices)) in items.iter().enumerate() {
+                if let Some(chip) = self.render_attachment_chip(position, *kind, indices, &colors, cx) {
+                    chips.push(chip);
+                }
+            }
+            return Some(div().flex().flex_wrap().items_center().gap(px(4.)).children(chips).children(clear_all).into_any_element());
+        }
+
         let open = self.open_attachment_group.and_then(|kind| groups.iter().find(|group| group.kind == kind)).cloned();
         let open_kind = open.as_ref().map(|group| group.kind);
-        let chips = groups.iter().map(|group| {
+        // Collected before the panel asks for `cx` again. A group of one names what it holds:
+        // "1 folder" says less than "ui/".
+        let mut chips: Vec<AnyElement> = Vec::new();
+        for (position, group) in groups.iter().enumerate() {
             let kind = group.kind;
+            if let [indices] = group.items.as_slice()
+                && let Some(chip) = self.render_attachment_chip(position, kind, indices, &colors, cx)
+            {
+                chips.push(chip);
+                continue;
+            }
             let active = open_kind == Some(kind);
-            div()
-                .id(SharedString::from(format!("attachment-group-{kind:?}")))
-                .flex()
-                .items_center()
-                .gap(px(4.))
-                .h(px(24.))
-                .px(px(6.))
-                .rounded(metrics::RADIUS_MD)
-                .text_size(typography::TEXT_SM)
-                .text_color(if active { colors.foreground } else { colors.muted_foreground })
-                .when(active, |this| this.bg(colors.accent))
-                .hover(|style| style.bg(colors.accent).text_color(colors.foreground))
-                .on_click(cx.listener(move |this, _: &ClickEvent, _, cx| {
-                    this.open_attachment_group = if this.open_attachment_group == Some(kind) { None } else { Some(kind) };
-                    cx.notify();
-                }))
-                .child(Icon::new(attachment_kind_icon(kind)).size(IconSize::Small))
-                .child(div().text_color(colors.foreground).child(group.items.len().to_string()))
-                .child(group.noun)
-                .child(Icon::new(if active { IconName::ChevronUp } else { IconName::ChevronDown }).size(IconSize::XSmall).color(colors.subtle_foreground))
-        });
+            chips.push(
+                div()
+                    .id(SharedString::from(format!("attachment-group-{kind:?}")))
+                    .flex()
+                    .items_center()
+                    .gap(px(4.))
+                    .h(px(22.))
+                    .px(px(6.))
+                    .rounded(metrics::RADIUS_MD)
+                    .text_size(typography::TEXT_SM)
+                    .text_color(if active { colors.foreground } else { colors.muted_foreground })
+                    .when(active, |this| this.bg(colors.accent))
+                    .hover(|style| style.bg(colors.accent).text_color(colors.foreground))
+                    .on_click(cx.listener(move |this, _: &ClickEvent, _, cx| {
+                        this.open_attachment_group = if this.open_attachment_group == Some(kind) { None } else { Some(kind) };
+                        cx.notify();
+                    }))
+                    .child(Icon::new(attachment_kind_icon(kind)).size(IconSize::XSmall))
+                    .child(div().text_color(colors.foreground).child(group.items.len().to_string()))
+                    .child(group.noun)
+                    .child(Icon::new(if active { IconName::ChevronUp } else { IconName::ChevronDown }).size(IconSize::XSmall).color(colors.subtle_foreground))
+                    .into_any_element(),
+            );
+        }
         let panel = open.map(|group| {
-            let root = self.info.cwd.clone();
+            let kind = group.kind;
             let all: Vec<usize> = group.items.iter().flatten().copied().collect();
+            let mut rows: Vec<AnyElement> = Vec::new();
+            for (position, indices) in group.items.iter().enumerate() {
+                if let Some(row) = self.render_attachment_row(position, kind, indices, &colors, cx) {
+                    rows.push(row);
+                }
+            }
             div()
                 .flex()
                 .flex_col()
-                .gap(px(2.))
+                .gap(px(1.))
                 .p(px(4.))
                 .rounded(metrics::RADIUS_MD)
-                .border_1()
-                .border_color(colors.border)
+                .bg(colors.surface)
                 .child(
                     div()
                         .flex()
                         .items_center()
                         .justify_between()
-                        .px(px(4.))
+                        .pl(px(4.))
                         .child(div().text_size(typography::TEXT_SM).font_weight(typography::MEDIUM).text_color(colors.foreground).child(group.label.clone()))
                         .child(
                             Button::new("clear-attachment-group", "Clear")
@@ -2141,55 +2281,135 @@ impl SessionView {
                                 })),
                         ),
                 )
-                .child(div().id("attachment-group-items").flex().flex_col().max_h(px(256.)).overflow_y_scroll().children(group.items.iter().enumerate().filter_map(|(position, indices)| {
-                    let attachment = self.attachments.get(*indices.first()?)?;
-                    let (name, description) = attachment_description(attachment, root.as_deref());
-                    let indices = indices.clone();
-                    let kind = group.kind;
-                    // A pasted image shows itself (`ItemMedia variant="image"`).
-                    let preview = match attachment {
-                        Attachment::Image { media_type, data, .. } => self.thumbnail(&crate::thread::MessageImage { media_type: media_type.clone(), data: data.clone() }),
-                        _ => None,
-                    };
-                    let media = match preview {
-                        Some(image) => div()
-                            .size(px(24.))
-                            .flex_none()
-                            .overflow_hidden()
-                            .rounded(metrics::RADIUS_MD)
-                            .child(gpui::img(image).size_full().object_fit(gpui::ObjectFit::Cover))
-                            .into_any_element(),
-                        None => Icon::new(attachment_kind_icon(kind)).size(IconSize::Small).color(colors.subtle_foreground).into_any_element(),
-                    };
-                    Some(
-                        div()
-                            .flex()
-                            .items_center()
-                            .gap(px(8.))
-                            .px(px(4.))
-                            .py(px(2.))
-                            .rounded(metrics::RADIUS_MD)
-                            .child(media)
-                            .child(
-                                div()
-                                    .flex_1()
-                                    .min_w_0()
-                                    .flex()
-                                    .flex_col()
-                                    .child(div().truncate().text_size(typography::TEXT_SM).text_color(colors.foreground).child(name.clone()))
-                                    .children((!description.is_empty()).then(|| div().truncate().text_size(typography::TEXT_CAPTION).text_color(colors.subtle_foreground).child(description))),
-                            )
-                            .child(
-                                Button::icon(SharedString::from(format!("remove-attachment-{position}")), IconName::X)
-                                    .variant(ButtonVariant::Ghost)
-                                    .size(ButtonSize::XSmall)
-                                    .tooltip(format!("Remove {name} from context"))
-                                    .on_click(cx.listener(move |this, _: &ClickEvent, _, cx| this.remove_attachments(&indices, cx))),
-                            ),
-                    )
-                })))
+                .child(div().id("attachment-group-items").flex().flex_col().gap(px(1.)).max_h(px(256.)).overflow_y_scroll().children(rows))
         });
-        Some(div().flex().flex_col().gap(px(4.)).children(panel).child(div().flex().flex_wrap().items_center().gap(px(4.)).children(chips)).into_any_element())
+        Some(
+            div()
+                .flex()
+                .flex_col()
+                .gap(px(4.))
+                .children(panel)
+                .child(div().flex().flex_wrap().items_center().gap(px(4.)).children(chips).children(clear_all))
+                .into_any_element(),
+        )
+    }
+
+    /// One attachment as a chip: what it is, and an × that takes it off. Files and tabs open on a
+    /// click, as their chips do in a sent prompt.
+    fn render_attachment_chip(
+        &self,
+        position: usize,
+        kind: crate::attachment_groups::Kind,
+        indices: &[usize],
+        colors: &theme::ThemeColors,
+        cx: &mut Context<Self>,
+    ) -> Option<AnyElement> {
+        let attachment = self.attachments.get(*indices.first()?)?;
+        let (name, description) = attachment_description(attachment, self.info.cwd.as_deref());
+        let leading = self.attachment_media(attachment, kind, px(16.), colors, cx);
+        let open = attachment_target(attachment);
+        let indices = indices.to_vec();
+        let tooltip = if description.is_empty() || description == name { name.clone() } else { format!("{name} — {description}") };
+        let remove_label = format!("Remove {name} from context");
+        Some(
+            div()
+                .id(SharedString::from(format!("attachment-chip-{position}")))
+                .flex()
+                .items_center()
+                .gap(px(4.))
+                .h(px(22.))
+                .pl(px(6.))
+                .pr(px(2.))
+                .rounded(metrics::RADIUS_MD)
+                .bg(colors.accent)
+                .text_size(typography::TEXT_SM)
+                .text_color(colors.foreground)
+                .tooltip(ui::Tooltip::text(tooltip))
+                .child(leading)
+                .child(div().max_w(px(180.)).min_w_0().truncate().child(name))
+                .child(
+                    Button::icon(SharedString::from(format!("remove-attachment-chip-{position}")), IconName::X)
+                        .variant(ButtonVariant::Ghost)
+                        .size(ButtonSize::XSmall)
+                        .tooltip(remove_label)
+                        .on_click(cx.listener(move |this, _: &ClickEvent, _, cx| {
+                            cx.stop_propagation();
+                            this.remove_attachments(&indices, cx);
+                        })),
+                )
+                .when_some(open, |this, open| this.cursor_pointer().on_click(move |_: &ClickEvent, _, cx| open(cx)))
+                .into_any_element(),
+        )
+    }
+
+    /// One attachment as a row of an open group.
+    fn render_attachment_row(
+        &self,
+        position: usize,
+        kind: crate::attachment_groups::Kind,
+        indices: &[usize],
+        colors: &theme::ThemeColors,
+        cx: &mut Context<Self>,
+    ) -> Option<AnyElement> {
+        let attachment = self.attachments.get(*indices.first()?)?;
+        let (name, description) = attachment_description(attachment, self.info.cwd.as_deref());
+        let media = self.attachment_media(attachment, kind, px(20.), colors, cx);
+        let open = attachment_target(attachment);
+        let indices = indices.to_vec();
+        let remove_label = format!("Remove {name} from context");
+        Some(
+            div()
+                .id(SharedString::from(format!("attachment-row-{position}")))
+                .flex()
+                .items_center()
+                .gap(px(8.))
+                .px(px(4.))
+                .py(px(2.))
+                .rounded(metrics::RADIUS_MD)
+                .hover(|style| style.bg(colors.accent))
+                .child(media)
+                .child(
+                    div()
+                        .flex_1()
+                        .min_w_0()
+                        .flex()
+                        .flex_col()
+                        .child(div().truncate().text_size(typography::TEXT_SM).text_color(colors.foreground).child(name.clone()))
+                        .children((!description.is_empty() && description != name).then(|| {
+                            div().truncate().text_size(typography::TEXT_CAPTION).text_color(colors.subtle_foreground).child(description)
+                        })),
+                )
+                .child(
+                    Button::icon(SharedString::from(format!("remove-attachment-{position}")), IconName::X)
+                        .variant(ButtonVariant::Ghost)
+                        .size(ButtonSize::XSmall)
+                        .tooltip(remove_label)
+                        .on_click(cx.listener(move |this, _: &ClickEvent, _, cx| {
+                            cx.stop_propagation();
+                            this.remove_attachments(&indices, cx);
+                        })),
+                )
+                .when_some(open, |this, open| this.cursor_pointer().on_click(move |_: &ClickEvent, _, cx| open(cx)))
+                .into_any_element(),
+        )
+    }
+
+    /// An attachment's picture: a pasted image shows itself, a file takes the icon theme's icon,
+    /// anything else its kind's.
+    fn attachment_media(&self, attachment: &Attachment, kind: crate::attachment_groups::Kind, size: gpui::Pixels, colors: &theme::ThemeColors, cx: &App) -> AnyElement {
+        if let Attachment::Image { media_type, data, .. } = attachment
+            && let Some(image) = self.thumbnail(&crate::thread::MessageImage { media_type: media_type.clone(), data: data.clone() })
+        {
+            return div()
+                .size(size)
+                .flex_none()
+                .overflow_hidden()
+                .rounded(metrics::RADIUS)
+                .child(gpui::img(image).size_full().object_fit(gpui::ObjectFit::Cover))
+                .into_any_element();
+        }
+        extensions::file_icon(&attachment.label(), size * 0.75, cx)
+            .unwrap_or_else(|| Icon::new(attachment_kind_icon(kind)).size(IconSize::XSmall).color(colors.subtle_foreground).into_any_element())
     }
 
     fn render_composer(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> AnyElement {
@@ -2583,7 +2803,11 @@ impl SessionView {
                 .when(selected, |this| this.bg(colors.selected))
                 .when(!selected, |this| this.hover(|style| style.bg(colors.accent)))
                 .on_click(cx.listener(move |this, _: &ClickEvent, _, cx| this.accept_completion(index, cx)))
-                .child(Icon::new(icon).size(IconSize::Small).color(if selected { colors.foreground } else { colors.subtle_foreground }))
+                .child(match item {
+                    CompletionItem::File { .. } => extensions::file_icon(&label, px(14.), cx)
+                        .unwrap_or_else(|| Icon::new(icon).size(IconSize::Small).color(if selected { colors.foreground } else { colors.subtle_foreground }).into_any_element()),
+                    _ => Icon::new(icon).size(IconSize::Small).color(if selected { colors.foreground } else { colors.subtle_foreground }).into_any_element(),
+                })
                 .child(div().flex_none().max_w(px(260.)).truncate().text_color(colors.foreground).child(label))
                 .child(div().flex_1().min_w_0().truncate().text_color(colors.subtle_foreground).child(detail))
                 .when_some(badge, |this, badge| {
@@ -3011,6 +3235,71 @@ fn attachment_kind_icon(kind: crate::attachment_groups::Kind) -> IconName {
 }
 
 /// An attachment's name and where it comes from, as its group lists it.
+/// Where an attachment's chip goes when it is clicked, if anywhere.
+fn attachment_target(attachment: &Attachment) -> Option<Box<dyn Fn(&mut App)>> {
+    use crate::context_refs::ContextRef;
+    match attachment {
+        Attachment::File(path) => {
+            let path = path.clone();
+            Some(Box::new(move |cx: &mut App| workbench_api::open_file(cx, path.clone(), None)))
+        }
+        Attachment::Context { reference: ContextRef::Selection { path, start_line, .. }, .. } => {
+            let (path, line) = (path.clone(), *start_line as u32);
+            Some(Box::new(move |cx: &mut App| workbench_api::open_file(cx, path.clone(), Some(line))))
+        }
+        Attachment::Context { reference: ContextRef::Tab { path: Some(path), .. }, .. } => {
+            let path = path.clone();
+            Some(Box::new(move |cx: &mut App| workbench_api::open_file(cx, path.clone(), None)))
+        }
+        Attachment::Context { reference: ContextRef::Tab { kind: Some(kind), id: Some(id), title, .. }, .. } => {
+            let (kind, id, title) = (kind.clone(), id.clone(), title.clone());
+            Some(Box::new(move |cx: &mut App| workbench_api::open_resource(cx, &kind, &id, &title)))
+        }
+        _ => None,
+    }
+}
+
+/// How many attachments show one chip each before they fall back to a chip per kind.
+const ATTACHMENT_CHIPS: usize = 5;
+
+/// Something is working: the arc that turns, in the colour of the text beside it. The box keeps
+/// an icon's width so a row does not shift when the work ends.
+pub(crate) fn busy_spinner(id: impl Into<gpui::ElementId>, color: Hsla) -> AnyElement {
+    div()
+        .flex_none()
+        .size(px(14.))
+        .flex()
+        .items_center()
+        .justify_center()
+        .child(ui::Spinner::new(id).compact().color(color))
+        .into_any_element()
+}
+
+/// The group a turn's last entry carries, so its actions show when the pointer is anywhere on it.
+const TURN_TAIL: &str = "turn-tail";
+
+/// The sentence an error carries, without the `… error: ` an RPC layer puts in front of it.
+fn error_core(text: &str) -> &str {
+    match text.split_once(": ") {
+        Some((head, rest)) if head.len() <= 32 && head.to_lowercase().contains("error") => rest.trim(),
+        _ => text.trim(),
+    }
+}
+
+/// Whether the turn's reply already said what this error says. Agents that stop on a limit send
+/// the sentence as a message and then fail the turn with the same words.
+fn said_already(before: &[Entry], text: &str) -> bool {
+    let core = error_core(text).to_lowercase();
+    if core.chars().count() < 12 {
+        return false;
+    }
+    before
+        .iter()
+        .rev()
+        .take_while(|entry| !matches!(entry, Entry::User(_)))
+        .any(|entry| matches!(entry, Entry::Agent(message) if message.text.trim().to_lowercase().contains(core.as_str())))
+}
+
 fn attachment_description(attachment: &Attachment, root: Option<&std::path::Path>) -> (String, String) {
     match attachment {
         Attachment::File(path) => (attachment.label(), display_path(path, root)),
@@ -3021,8 +3310,14 @@ fn attachment_description(attachment: &Attachment, root: Option<&std::path::Path
     }
 }
 
+/// A prompt's attachment as a chip. A file takes the icon theme's icon, as the lists do.
 fn attachment_chip(icon: IconName, label: String, cx: &App) -> gpui::Div {
     let colors = &cx.theme().colors;
+    let leading = match icon {
+        IconName::File => extensions::file_icon(&label, px(12.), cx),
+        _ => None,
+    }
+    .unwrap_or_else(|| Icon::new(icon).size(IconSize::XSmall).color(colors.subtle_foreground).into_any_element());
     div()
         .flex()
         .items_center()
@@ -3034,7 +3329,7 @@ fn attachment_chip(icon: IconName, label: String, cx: &App) -> gpui::Div {
         .bg(colors.accent)
         .text_size(typography::TEXT_CAPTION)
         .text_color(colors.muted_foreground)
-        .child(Icon::new(icon).size(IconSize::XSmall).color(colors.subtle_foreground))
+        .child(leading)
         .child(div().min_w_0().truncate().child(label))
 }
 
@@ -3610,6 +3905,26 @@ fn link_card(href: &str, root: Option<&std::path::Path>, details: Option<&GitHub
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn an_error_the_reply_already_said_is_not_repeated() {
+        use crate::thread::{AgentMessage, Entry};
+        let limit = "You've hit your 5-hour limit · resets 7am (Europe/Istanbul)";
+        let entries = vec![
+            Entry::User(Default::default()),
+            Entry::Agent(AgentMessage { text: limit.to_string(), ..Default::default() }),
+        ];
+        assert_eq!(error_core("Internal error: abc def ghij"), "abc def ghij");
+        assert_eq!(error_core("no prefix here at all"), "no prefix here at all");
+        assert!(said_already(&entries, &format!("Internal error: {limit}")));
+        assert!(said_already(&entries, limit));
+        // Something the reply did not say stays, and a few words are too little to match on.
+        assert!(!said_already(&entries, "Internal error: the agent stopped unexpectedly"));
+        assert!(!said_already(&entries, "Error: nope"));
+        // A reply from an earlier turn is not this turn's.
+        let earlier = vec![entries[1].clone(), Entry::User(Default::default())];
+        assert!(!said_already(&earlier, limit));
+    }
+
     use super::*;
 
     #[test]

@@ -186,8 +186,11 @@ pub struct SessionView {
     cancel_grace: Option<Task<()>>,
     /// The latest prompt, pinned to the top of the list while its reply grows beneath it.
     prompt_anchor: Option<usize>,
-    /// The room left under the pinned prompt's turn so the prompt can sit at the top.
-    anchor_spacer: Pixels,
+    /// Whether the pinned turn's reply has outgrown the room held for it, so the pin may go.
+    anchor_filled: bool,
+    /// The prompt was pinned before the list had room to put it at the top; the scroll is made
+    /// again as soon as the room is there.
+    anchor_pending: bool,
     /// The room under the pinned prompt for this frame, measured before the list lays out.
     pub(crate) anchor_room: Option<Pixels>,
     pub(crate) permissions: VecDeque<PendingPermission>,
@@ -352,7 +355,8 @@ impl Focusable for SessionView {
 /// the file may set `"running": true` and a `"permission"` (an ACP `session/request_permission`
 /// request's params) or an `"elicitation"` (`elicitation/create` params) to show a turn in
 /// progress, and the composer's state: `"agent"`,
-/// `"composer"` (its text), `"attachments"` and `"queue"`.
+/// `"composer"` (its text), `"attachments"` and `"queue"`; `"pinPrompt"` pins an entry to the top
+/// of the list, as sending a prompt does, so the scroll anchor can be drawn.
 #[derive(serde::Deserialize, Default)]
 #[serde(default)]
 struct Fixture {
@@ -378,6 +382,9 @@ struct Fixture {
     /// Open the first group of attachments.
     #[serde(rename = "openAttachments")]
     open_attachments: bool,
+    /// Pin this entry to the top of the list, as sending a prompt does.
+    #[serde(rename = "pinPrompt")]
+    pin_prompt: Option<usize>,
     /// The running turn has waited this long for the agent's first answer.
     #[serde(rename = "waitingSeconds")]
     waiting_seconds: Option<u64>,
@@ -490,6 +497,7 @@ impl SessionView {
         let mut mentions = Vec::new();
         let mut fixture_pull_request = None;
         let mut open_attachments = false;
+        let mut pinned_prompt = None;
         let mut waiting_seconds = None;
         let mut fixture_cloud_run = None;
         let (transcript, running, permission) = match fixture {
@@ -529,6 +537,7 @@ impl SessionView {
                 sign_in = fixture.sign_in;
                 search = fixture.search;
                 open_attachments = fixture.open_attachments;
+                pinned_prompt = fixture.pin_prompt;
                 mentions = fixture.mentions;
                 fixture_pull_request = fixture.pull_request.map(|pull_request| crate::pull_request::BranchPullRequest {
                     number: pull_request.number,
@@ -564,7 +573,8 @@ impl SessionView {
             waiting_tick: None,
             cancel_grace: None,
             prompt_anchor: None,
-            anchor_spacer: Pixels::ZERO,
+            anchor_filled: false,
+            anchor_pending: false,
             anchor_room: None,
             review_totals: (0, 0, 0),
             checkpoint_turns: Vec::new(),
@@ -697,6 +707,9 @@ impl SessionView {
         if !sign_in.is_empty() {
             let methods = sign_in.into_iter().enumerate().map(|(index, name)| AuthChoice { id: index.to_string(), name, description: None, terminal: None }).collect();
             this.auth_choices = Some((methods, String::new()));
+        }
+        if let Some(index) = pinned_prompt.filter(|index| *index < this.transcript.entries.len()) {
+            this.pin_prompt(index);
         }
         if let Some(query) = search {
             this.toggle_message_search(window, cx);
@@ -3009,25 +3022,72 @@ impl SessionView {
     /// the end, until the user scrolls to the end of a turn taller than the list.
     pub(crate) fn pin_prompt(&mut self, index: usize) {
         self.prompt_anchor = Some(index);
+        self.anchor_filled = false;
+        self.anchor_pending = true;
+        self.anchor_room = None;
         self.list.set_follow_mode(FollowMode::Normal);
         self.list.scroll_to(ListOffset { item_ix: index, offset_in_item: Pixels::ZERO });
     }
 
     /// The height the last entry fills so the pinned prompt can sit at the top of the list.
+    ///
+    /// Only what the list has laid out can be measured, and that changes as the view scrolls: a
+    /// sum taken while part of the turn is off screen comes up short, the room grows by that
+    /// much, and the last entry jumps — the flicker while scrolling through a reply. So the room
+    /// is only worked out when the whole turn can be measured, and otherwise stays as it was.
     pub(crate) fn anchor_min_height(&mut self, last: usize) -> Option<Pixels> {
-        let anchor = self.prompt_anchor.filter(|anchor| *anchor <= last)?;
+        let Some(anchor) = self.prompt_anchor.filter(|anchor| *anchor <= last) else {
+            self.anchor_room = None;
+            return None;
+        };
         let viewport = self.list.viewport_bounds().size.height;
-        let above: Pixels = (anchor..last).filter_map(|index| self.list.bounds_for_item(index)).map(|bounds| bounds.size.height).sum();
+        if viewport <= Pixels::ZERO {
+            return self.anchor_room;
+        }
+        // Nothing is measured on the frame a turn is pinned: hold the whole viewport then, which
+        // is what a reply about to be written needs anyway, and measure once it is drawn.
+        let unmeasured = self.anchor_room.or(Some(viewport));
+        let mut above = Pixels::ZERO;
+        for index in anchor..last {
+            let Some(bounds) = self.list.bounds_for_item(index) else { return unmeasured };
+            above += bounds.size.height;
+        }
+        let Some(own) = self.list.bounds_for_item(last) else { return unmeasured };
         let room = (viewport - above).max(Pixels::ZERO);
-        let own = self.list.bounds_for_item(last).map_or(Pixels::ZERO, |bounds| bounds.size.height);
-        self.anchor_spacer = (room - own).max(Pixels::ZERO);
-        (room > Pixels::ZERO).then_some(room)
+        // The entry is at least `room` tall while pinned, so a taller one means the reply itself
+        // has filled the room: the pin has done its work and the next scroll to the end drops it.
+        self.anchor_filled = own.size.height > room + Pixels::from(1.);
+        self.anchor_room = (room > Pixels::ZERO).then_some(room);
+        // The scroll made when the prompt was pinned had nothing under it to scroll into and was
+        // clamped; now that the room is there, put the prompt at the top once.
+        if self.anchor_pending && self.anchor_room.is_some() {
+            self.anchor_pending = false;
+            self.list.scroll_to(ListOffset { item_ix: anchor, offset_in_item: Pixels::ZERO });
+        }
+        // A reply that outgrew the room while the view sat at the end: let go here too, so the
+        // list follows the rest of it without waiting for the wheel to turn.
+        if self.anchor_filled && self.list.is_scrolled_to_end() == Some(true) {
+            self.release_anchor();
+        }
+        self.anchor_room
     }
 
+    /// Lets the pinned prompt go and follows the tail again.
+    fn release_anchor(&mut self) {
+        self.prompt_anchor = None;
+        self.anchor_pending = false;
+        self.anchor_filled = false;
+        self.anchor_room = None;
+        self.list.set_follow_mode(FollowMode::Tail);
+    }
+
+    /// The pin goes once the reply has filled the room held for it and the user has scrolled to
+    /// the end: from there the list follows the tail again. Scrolling anywhere else leaves both
+    /// the pin and the scroll position alone.
     fn list_scrolled(&mut self) {
-        if self.prompt_anchor.is_some() && self.anchor_spacer == Pixels::ZERO && self.list.is_scrolled_to_end() == Some(true) {
-            self.prompt_anchor = None;
-            self.list.set_follow_mode(FollowMode::Tail);
+        let filled = self.anchor_filled || self.anchor_room.is_none();
+        if self.prompt_anchor.is_some() && filled && self.list.is_scrolled_to_end() == Some(true) {
+            self.release_anchor();
         }
     }
 

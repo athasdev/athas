@@ -299,11 +299,11 @@ impl SessionView {
                 .on_click(cx.listener(move |this, _: &ClickEvent, _, cx| this.toggle_group(run.clone(), cx)))
                 .child(if dot {
                     div().flex_none().size(px(14.)).flex().items_center().justify_center().child(div().size(px(6.)).rounded_full().bg(colors.success)).into_any_element()
-                } else {
+                } else if running {
                     // A spinner while it works, the error mark once a step failed, else the list.
-                    let (icon, color) = if running {
-                        (IconName::CircleDotted, if summary.failed > 0 { colors.destructive } else { colors.primary })
-                    } else if summary.failed > 0 {
+                    crate::render::busy_spinner(("tool-group", index), if summary.failed > 0 { colors.destructive } else { colors.muted_foreground })
+                } else {
+                    let (icon, color) = if summary.failed > 0 {
                         (IconName::WarningCircle, colors.destructive)
                     } else {
                         (IconName::ListChecks, colors.subtle_foreground)
