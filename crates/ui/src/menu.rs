@@ -59,6 +59,9 @@ impl MenuSize {
 
 pub const OVERLAY_MAX_WIDTH: Pixels = px(480.);
 pub const OVERLAY_MAX_HEIGHT: Pixels = px(320.);
+/// Where an open menu paints among the deferred overlays: above the anchored popovers, cards and
+/// prompts, which draw at 3 and below. A submenu paints one step above its parent.
+pub const MENU_PRIORITY: usize = 4;
 
 /// What a row ends with besides its shortcut.
 pub(crate) enum Trailing {
@@ -771,7 +774,7 @@ impl Render for Menu {
                                         .snap_to_window_with_margin(px(8.))
                                         .child(div().when(opens_left, |this| this.mr(px(8.))).when(!opens_left, |this| this.ml(px(8.))).mt(px(-4.)).child(menu)),
                                 )
-                                .with_priority(2),
+                                .with_priority(MENU_PRIORITY + 1),
                             )
                         }))
                         .into_any_element()
@@ -998,7 +1001,9 @@ impl OpenMenu {
                 .snap_to_window_with_margin(px(8.))
                 .child(div().mt(px(4.)).child(self.menu.clone())),
         )
-        .with_priority(1)
+        // Above every anchored overlay (the inline edit prompt and the popovers draw at 3 and
+        // below), or a menu opened from inside one falls behind it (#796).
+        .with_priority(MENU_PRIORITY)
         .into_any_element()
     }
 }
