@@ -9,9 +9,13 @@ publish.workspace = true
 path = "src/github_panel.rs"
 
 [features]
-# Headless GPUI for the snapshot binaries (`athas_snapshot`); the example here takes what it
-# needs from the dev-dependencies instead.
+# The headless snapshot scenes (`athas_snapshot`, and the example below, which takes the rest of
+# what it needs from the dev-dependencies).
 snapshot = ["gpui/test-support"]
+
+[[example]]
+name = "github_snapshot"
+required-features = ["snapshot"]
 
 [dependencies]
 paths = { path = "../paths" }

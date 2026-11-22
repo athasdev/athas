@@ -2,7 +2,7 @@
 //! previews and the resource page layout (`src/ui/resource.tsx`, `github-chips.tsx`).
 
 use gpui::{
-    AnyElement, AnyView, App, ClickEvent, Context, Div, ElementId, Hsla, IntoElement, ParentElement, Render, SharedString,
+    AnyElement, AnyView, App, Context, Div, ElementId, Hsla, IntoElement, ParentElement, Render, SharedString,
     Stateful, Styled, Window, div, prelude::*, px, relative,
 };
 use theme::{ActiveTheme, ThemeColors};
@@ -172,33 +172,6 @@ impl Row {
                     .child(action)
             }))
     }
-}
-
-/// A folding group heading with its count (`StreamGroup`).
-pub fn group_header(
-    id: impl Into<ElementId>,
-    title: &str,
-    count: usize,
-    open: bool,
-    colors: &ThemeColors,
-    on_toggle: impl Fn(&ClickEvent, &mut Window, &mut App) + 'static,
-) -> Stateful<Div> {
-    let hover = colors.foreground;
-    div()
-        .id(id)
-        .flex()
-        .items_center()
-        .gap(px(6.))
-        .h(metrics::LIST_ROW)
-        .px(px(8.))
-        .text_size(typography::TEXT_SM)
-        .font_weight(typography::MEDIUM)
-        .text_color(colors.muted_foreground)
-        .hover(move |style| style.text_color(hover))
-        .child(Icon::new(if open { IconName::ChevronDown } else { IconName::ChevronRight }).size(IconSize::XSmall).color(colors.subtle_foreground))
-        .child(div().min_w_0().truncate().child(title.to_string()))
-        .child(caption(count.to_string(), colors))
-        .on_click(on_toggle)
 }
 
 /// What an empty or failed list says, centred in the list (`StreamEmpty`).

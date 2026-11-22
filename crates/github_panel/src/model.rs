@@ -5,7 +5,7 @@ use crate::gh::{
     IssueDetails, IssueListItem, PullRequest, PullRequestComment, PullRequestDetails, PullRequestReview, StatusCheck,
     WorkflowRunJob, WorkflowRunListItem, WorkflowRunStep,
 };
-use chrono::{DateTime, Datelike, Local, Utc};
+use chrono::{DateTime, Utc};
 
 /// The colour family a state is drawn in.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -47,21 +47,6 @@ pub fn sidebar_time(value: &str, now: DateTime<Utc>) -> String {
         ..60 => format!("{minutes}m"),
         60..1440 => format!("{}h", minutes / 60),
         _ => format!("{}d", minutes / 1440),
-    }
-}
-
-/// A day heading for runs: "Today", "Yesterday", "Mar 3" or "Mar 3, 2024", in local time.
-pub fn day_title(time: DateTime<Utc>, today: DateTime<Local>) -> String {
-    let date = time.with_timezone(&Local).date_naive();
-    let today = today.date_naive();
-    if date == today {
-        "Today".to_string()
-    } else if today.pred_opt() == Some(date) {
-        "Yesterday".to_string()
-    } else if date.year() == today.year() {
-        date.format("%b %-d").to_string()
-    } else {
-        date.format("%b %-d, %Y").to_string()
     }
 }
 
@@ -202,25 +187,6 @@ impl PrFilter {
     }
 }
 
-#[derive(Clone, Debug, PartialEq)]
-pub struct Group<T> {
-    pub id: String,
-    pub title: String,
-    pub items: Vec<T>,
-}
-
-fn group<T>(id: &str, title: &str, items: Vec<T>) -> Option<Group<T>> {
-    (!items.is_empty()).then(|| Group { id: id.to_string(), title: title.to_string(), items })
-}
-
-pub fn group_pull_requests<'a>(prs: &[&'a PullRequest], filter: PrFilter) -> Vec<Group<&'a PullRequest>> {
-    if filter == PrFilter::ReviewRequests {
-        return group("review", "Review requested", prs.to_vec()).into_iter().collect();
-    }
-    let (drafts, open): (Vec<_>, Vec<_>) = prs.iter().copied().partition(|pr| pr.is_draft);
-    group("open", "Open", open).into_iter().chain(group("drafts", "Drafts", drafts)).collect()
-}
-
 fn matches(query: &str, values: &[&str]) -> bool {
     values.iter().any(|value| value.to_lowercase().contains(query))
 }
@@ -286,11 +252,6 @@ pub fn issue_tone(state: &str, state_reason: Option<&str>) -> Tone {
     } else {
         Tone::Merged
     }
-}
-
-pub fn group_issues<'a>(issues: &[&'a IssueListItem]) -> Vec<Group<&'a IssueListItem>> {
-    let (open, closed): (Vec<_>, Vec<_>) = issues.iter().copied().partition(|issue| issue_is_open(&issue.state));
-    group("open", "Open", open).into_iter().chain(group("closed", "Closed", closed)).collect()
 }
 
 pub fn issue_matches(issue: &IssueListItem, query: &str) -> bool {
@@ -511,28 +472,6 @@ pub fn run_matches(run: &WorkflowRunListItem, query: &str) -> bool {
                 &format!("#{}", run.database_id),
             ],
         )
-}
-
-/// Runs by the day they started, newest first.
-pub fn group_runs_by_day<'a>(runs: &[&'a WorkflowRunListItem], today: DateTime<Local>) -> Vec<Group<&'a WorkflowRunListItem>> {
-    let time = |run: &WorkflowRunListItem| run.created_at.as_deref().or(run.updated_at.as_deref()).and_then(parse_time);
-    let mut sorted = runs.to_vec();
-    sorted.sort_by_key(|run| std::cmp::Reverse(time(run)));
-    let mut groups: Vec<Group<&WorkflowRunListItem>> = Vec::new();
-    for run in sorted {
-        let (id, title) = match time(run) {
-            Some(time) => {
-                let local = time.with_timezone(&Local).date_naive();
-                (local.to_string(), day_title(time, today))
-            }
-            None => ("unknown".to_string(), "Unknown".to_string()),
-        };
-        match groups.iter_mut().find(|group| group.id == id) {
-            Some(group) => group.items.push(run),
-            None => groups.push(Group { id, title, items: vec![run] }),
-        }
-    }
-    groups
 }
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -814,16 +753,6 @@ mod tests {
         assert_eq!(elapsed(Some("2026-11-11T11:58:00Z"), None, true, now()).as_deref(), Some("2m 00s"));
         assert_eq!(elapsed(Some("2026-11-11T11:58:00Z"), Some("2026-11-11T11:58:30Z"), false, now()).as_deref(), Some("30s"));
         assert_eq!(elapsed(None, None, true, now()), None);
-    }
-
-    #[test]
-    fn titles_days() {
-        let today = Local.with_ymd_and_hms(2026, 11, 11, 12, 0, 0).unwrap();
-        let at = |y, m, d| Local.with_ymd_and_hms(y, m, d, 10, 0, 0).unwrap().with_timezone(&Utc);
-        assert_eq!(day_title(at(2026, 11, 11), today), "Today");
-        assert_eq!(day_title(at(2026, 11, 10), today), "Yesterday");
-        assert_eq!(day_title(at(2026, 3, 3), today), "Mar 3");
-        assert_eq!(day_title(at(2024, 3, 3), today), "Mar 3, 2024");
     }
 
     #[test]

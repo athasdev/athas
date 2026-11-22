@@ -279,7 +279,8 @@ pub struct GitHubPanel {
     pub(crate) deployments: List<Deployment>,
     pub(crate) deployments_exhausted: bool,
     pub(crate) deployment_filter: DeploymentFilter,
-    pub(crate) collapsed: HashSet<String>,
+    /// The sections showing their whole list instead of the newest five.
+    pub(crate) expanded: HashSet<Section>,
     /// The accordion's scroll.
     pub(crate) list_scroll: gpui::ScrollHandle,
     /// The sections folded open; the last one opened is `section`.
@@ -379,7 +380,7 @@ impl GitHubPanel {
             deployments: List::default(),
             deployments_exhausted: false,
             deployment_filter: DeploymentFilter::default(),
-            collapsed: HashSet::new(),
+            expanded: HashSet::new(),
             list_scroll: gpui::ScrollHandle::new(),
             open_sections: HashSet::from([Section::PullRequests]),
             selected: None,
@@ -756,9 +757,10 @@ impl GitHubPanel {
         cx.notify();
     }
 
-    pub(crate) fn toggle_group(&mut self, key: String, cx: &mut Context<Self>) {
-        if !self.collapsed.remove(&key) {
-            self.collapsed.insert(key);
+    /// Shows a section's whole list, or folds it back to the newest five.
+    pub(crate) fn toggle_expanded(&mut self, section: Section, cx: &mut Context<Self>) {
+        if !self.expanded.remove(&section) {
+            self.expanded.insert(section);
         }
         cx.notify();
     }

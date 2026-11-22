@@ -1,10 +1,9 @@
 //! The views' logic against JSON shaped like `athas-github`'s models, as recorded from the API.
 
 use crate::gh::{IssueListItem, PullRequest, PullRequestComment, PullRequestDetails, WorkflowRunJob, WorkflowRunListItem};
-use chrono::{Local, TimeZone};
 use serde_json::json;
 
-use crate::model::{self, Phase, PrFilter, ReviewerState, RunFilter, TimelineEvent, Tone};
+use crate::model::{self, Phase, ReviewerState, RunFilter, TimelineEvent, Tone};
 
 fn pull_requests() -> Vec<PullRequest> {
     serde_json::from_value(json!([
@@ -56,14 +55,9 @@ fn comments() -> Vec<PullRequestComment> {
 }
 
 #[test]
-fn groups_and_filters_pull_requests() {
+fn filters_pull_requests() {
     let prs = pull_requests();
     assert_eq!(prs[2].author.login, "unknown");
-    let all: Vec<&PullRequest> = prs.iter().collect();
-    let groups = model::group_pull_requests(&all, PrFilter::Open);
-    let summary: Vec<_> = groups.iter().map(|group| (group.title.as_str(), group.items.iter().map(|pr| pr.number).collect::<Vec<_>>())).collect();
-    assert_eq!(summary, [("Open", vec![41, 39]), ("Drafts", vec![40])]);
-    assert_eq!(model::group_pull_requests(&all, PrFilter::ReviewRequests)[0].title, "Review requested");
 
     let matching = |query: &str| prs.iter().filter(|pr| model::pr_matches(pr, query)).map(|pr| pr.number).collect::<Vec<_>>();
     assert_eq!(matching("draft"), [40]);
@@ -116,21 +110,18 @@ fn summarizes_and_orders_checks() {
 }
 
 #[test]
-fn groups_issues() {
+fn filters_issues() {
     let issues: Vec<IssueListItem> = serde_json::from_value(json!([
         {"number": 5, "title": "Crash on open", "state": "OPEN", "author": {"login": "a"}, "updatedAt": "2026-11-11T00:00:00Z", "url": "", "labels": [{"name": "bug", "color": "d73a4a"}]},
         {"number": 4, "title": "Old", "state": "CLOSED", "author": {"login": "b"}, "updatedAt": "2026-10-11T00:00:00Z", "url": "", "labels": []}
     ]))
     .unwrap();
-    let all: Vec<&IssueListItem> = issues.iter().collect();
-    let groups = model::group_issues(&all);
-    assert_eq!(groups.iter().map(|group| group.title.as_str()).collect::<Vec<_>>(), ["Open", "Closed"]);
     assert!(model::issue_matches(&issues[0], "bug"));
     assert!(!model::issue_matches(&issues[1], "bug"));
 }
 
 #[test]
-fn groups_and_filters_runs() {
+fn filters_runs() {
     let runs: Vec<WorkflowRunListItem> = serde_json::from_value(json!([
         {"databaseId": 1, "displayTitle": "CI", "status": "completed", "conclusion": "success", "createdAt": "2026-11-11T08:00:00Z", "url": "", "headBranch": "main"},
         {"databaseId": 2, "name": "Release", "status": "in_progress", "createdAt": "2026-11-11T09:00:00Z", "url": ""},
@@ -144,14 +135,6 @@ fn groups_and_filters_runs() {
     assert_eq!(ids(RunFilter::Successful), [1]);
     assert_eq!(ids(RunFilter::Failed), [3, 4]);
     assert!(model::run_matches(&runs[2], "#88"));
-
-    let all: Vec<&WorkflowRunListItem> = runs.iter().collect();
-    let today = Local.with_ymd_and_hms(2026, 11, 11, 23, 0, 0).unwrap();
-    let groups = model::group_runs_by_day(&all, today);
-    let ids: Vec<Vec<i64>> = groups.iter().map(|group| group.items.iter().map(|run| run.database_id).collect()).collect();
-    assert_eq!(ids.last(), Some(&vec![4]));
-    assert_eq!(groups.last().map(|group| group.title.as_str()), Some("Unknown"));
-    assert_eq!(ids.iter().flatten().count(), 4);
 }
 
 #[test]

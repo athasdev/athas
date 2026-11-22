@@ -2,7 +2,7 @@
 
 use ui::TooltipExt as _;
 use crate::gh::{Deployment, IssueListItem, PullRequest, Release, WorkflowRunListItem};
-use chrono::{Local, Utc};
+use chrono::Utc;
 use gpui::{
     Anchor, AnyElement, ClickEvent, Context, IntoElement, MouseButton, MouseDownEvent, Render, SharedString, Window, div, prelude::*, px,
 };
@@ -15,20 +15,13 @@ use crate::{
     menus::{self, below},
     delivery_view,
     model::{self, DeploymentFilter, IssueFilter, PrFilter, ReleaseFilter, RunFilter, Tone},
-    widgets::{self, Preview, PreviewLeading, Row, group_header, list_message, tone_color},
+    widgets::{self, Preview, PreviewLeading, Row, list_message, tone_color},
 };
 
 /// The repository row and the filter row.
 const BAR_HEIGHT: gpui::Pixels = px(32.);
-
-/// A group of the sidebar list as last drawn: one child of the list each, in order.
-#[derive(Clone, Debug)]
-pub(crate) struct ShownGroup {
-    key: String,
-    title: String,
-    count: usize,
-    open: bool,
-}
+/// Rows a section shows before "Show more", as the git sidebar's history does.
+const SHOWN: usize = 5;
 
 impl Section {
     fn title(self) -> &'static str {
@@ -155,7 +148,7 @@ impl GitHubPanel {
         let mut column = div().id("github-list").flex().flex_col().size_full().overflow_y_scroll().track_scroll(&self.list_scroll).gap(px(2.)).pb(px(12.));
         for section in self.sections.clone() {
             let open = self.open_sections.contains(&section);
-            let count = if section == Section::PullRequests { self.pulls.len() } else { 0 };
+            let count = self.section_count(section);
             let mut row = ui::AccordionRow::new(
                 gpui::ElementId::Name(format!("github-section-{}", section.id()).into()),
                 section.title(),
@@ -189,6 +182,17 @@ impl GitHubPanel {
             .overflow_hidden()
             .child(column)
             .child(ui::Scrollbar::new("github-list-scrollbar", &self.list_scroll))
+    }
+
+    /// What a section's row counts: everything loaded for it.
+    fn section_count(&self, section: Section) -> usize {
+        match section {
+            Section::PullRequests => self.pulls.len(),
+            Section::Issues => self.issues.len(),
+            Section::Actions => self.runs.len(),
+            Section::Releases => self.releases.len(),
+            Section::Deployments => self.deployments.len(),
+        }
     }
 
     /// A section's filter and create buttons.
@@ -372,37 +376,55 @@ impl GitHubPanel {
         (shown == 0).then(|| list_message(format!("No matching {noun}"), None, None, colors).into_any_element())
     }
 
-    fn render_groups<T>(
+    /// A section's rows: the newest five, then a row for the rest, the way the git sidebar's
+    /// history lists commits. A search shows every match instead. `paging` is the (exhausted,
+    /// loading) pair of a section that reads its list a page at a time.
+    fn render_rows<T>(
         &self,
-        prefix: &str,
-        groups: Vec<model::Group<&T>>,
-        forced_open: bool,
+        section: Section,
+        matching: Vec<&T>,
+        paging: Option<(bool, bool)>,
         colors: &ThemeColors,
         cx: &mut Context<Self>,
         row: impl Fn(&Self, &T, &ThemeColors, &mut Context<Self>) -> AnyElement,
     ) -> Vec<AnyElement> {
-        let mut children = Vec::new();
-        for group in groups {
-            let key = format!("{prefix}:{}", group.id);
-            let open = forced_open || !self.collapsed.contains(&key);
-            let info = ShownGroup { key, title: group.title.to_string(), count: group.items.len(), open };
-            // `StreamSection`: the header and its rows are one block, so the header can stay on top
-            // while its rows scroll under it.
-            let mut block = div().flex().flex_col().child(self.render_group_header(&info, "", colors, cx));
-            if open {
-                block = block.child(div().flex().flex_col().pb(px(8.)).children(group.items.into_iter().map(|item| row(self, item, colors, cx))));
+        let searching = !self.query(cx).is_empty();
+        let expanded = searching || self.expanded.contains(&section);
+        let shown = if expanded { matching.len() } else { matching.len().min(SHOWN) };
+        let mut children: Vec<AnyElement> = matching.iter().take(shown).map(|item| row(self, item, colors, cx)).collect();
+        if !expanded {
+            let hidden = matching.len() - shown;
+            if hidden > 0 {
+                children.push(self.render_more_row(section, "Show more", Some(hidden.to_string()), false, cx));
             }
-            children.push(block.into_any_element());
+            return children;
+        }
+        // Expanded, the rest of a paged list is one more click away, and the list folds back.
+        if let Some((false, loading)) = paging.filter(|_| !searching) {
+            children.push(self.render_more_row(section, if loading { "Loading…" } else { "Load more" }, None, true, cx));
+        }
+        if !searching && matching.len() > SHOWN {
+            children.push(self.render_more_row(section, "Show less", None, false, cx));
         }
         children
     }
 
-    fn render_group_header(&self, group: &ShownGroup, id_suffix: &str, colors: &ThemeColors, cx: &mut Context<Self>) -> gpui::Stateful<gpui::Div> {
-        let toggle_key = group.key.clone();
-        let entity = cx.entity().downgrade();
-        group_header(SharedString::from(format!("github-group-{}{id_suffix}", group.key)), &group.title, group.count, group.open, colors, move |_, _, cx| {
-            entity.update(cx, |this, cx| this.toggle_group(toggle_key.clone(), cx)).ok();
-        })
+    /// The quiet row under a list: "Show more", "Show less" or "Load more".
+    fn render_more_row(&self, section: Section, label: &'static str, count: Option<String>, paging: bool, cx: &mut Context<Self>) -> AnyElement {
+        let id = SharedString::from(format!("github-{}-{}", section.id(), if paging { "load-more" } else { "show-more" }));
+        let mut item = ui::SidebarListItem::new(id, label).on_click(cx.listener(
+            move |this, _: &ClickEvent, _, cx| {
+                if paging {
+                    this.load_more(section, cx);
+                } else {
+                    this.toggle_expanded(section, cx);
+                }
+            },
+        ));
+        if let Some(count) = count {
+            item = item.trailing(count);
+        }
+        div().flex_none().child(item).into_any_element()
     }
 
     fn render_pull_requests(&self, colors: &ThemeColors, cx: &mut Context<Self>) -> Vec<AnyElement> {
@@ -412,8 +434,7 @@ impl GitHubPanel {
         if let Some(status) = self.list_status(Section::PullRequests, &self.pulls, matching.len(), colors, cx) {
             return vec![status];
         }
-        let groups = model::group_pull_requests(&matching, self.pr_filter);
-        self.render_groups("pr", groups, !query.is_empty(), colors, cx, Self::render_pr_row)
+        self.render_rows(Section::PullRequests, matching, None, colors, cx, Self::render_pr_row)
     }
 
     fn render_pr_row(&self, pr: &PullRequest, colors: &ThemeColors, cx: &mut Context<Self>) -> AnyElement {
@@ -509,8 +530,7 @@ impl GitHubPanel {
         if let Some(status) = self.list_status(Section::Issues, &self.issues, matching.len(), colors, cx) {
             return vec![status];
         }
-        let groups = model::group_issues(&matching);
-        self.render_groups("issue", groups, !query.is_empty(), colors, cx, Self::render_issue_row)
+        self.render_rows(Section::Issues, matching, None, colors, cx, Self::render_issue_row)
     }
 
     fn render_issue_row(&self, issue: &IssueListItem, colors: &ThemeColors, cx: &mut Context<Self>) -> AnyElement {
@@ -571,12 +591,13 @@ impl GitHubPanel {
     fn render_runs(&self, colors: &ThemeColors, cx: &mut Context<Self>) -> Vec<AnyElement> {
         let query = self.query(cx);
         let items = self.runs.items.clone().unwrap_or_default();
-        let matching: Vec<&WorkflowRunListItem> = items.iter().filter(|run| self.run_filter.matches(run) && model::run_matches(run, &query)).collect();
+        let mut matching: Vec<&WorkflowRunListItem> = items.iter().filter(|run| self.run_filter.matches(run) && model::run_matches(run, &query)).collect();
+        // The newest runs first, whatever order they arrived in: only the first few are shown.
+        matching.sort_by_key(|run| std::cmp::Reverse(run.created_at.as_deref().or(run.updated_at.as_deref()).and_then(model::parse_time)));
         if let Some(status) = self.list_status(Section::Actions, &self.runs, matching.len(), colors, cx) {
             return vec![status];
         }
-        let groups = model::group_runs_by_day(&matching, Local::now());
-        self.render_groups("run", groups, !query.is_empty(), colors, cx, Self::render_run_row)
+        self.render_rows(Section::Actions, matching, None, colors, cx, Self::render_run_row)
     }
 
     fn render_run_row(&self, run: &WorkflowRunListItem, colors: &ThemeColors, cx: &mut Context<Self>) -> AnyElement {
@@ -690,29 +711,26 @@ impl GitHubPanel {
         if let Some(status) = self.list_status(Section::Releases, &self.releases, matching.len(), colors, cx) {
             return vec![status];
         }
+        let paging = (query.is_empty() && items.len() >= crate::RELEASE_PAGE).then_some((self.releases_exhausted, self.releases.loading));
+        self.render_rows(Section::Releases, matching, paging, colors, cx, Self::render_release_row)
+    }
+
+    fn render_release_row(&self, release: &Release, colors: &ThemeColors, cx: &mut Context<Self>) -> AnyElement {
         let now = Utc::now();
-        let mut children: Vec<AnyElement> = matching
-            .iter()
-            .map(|release| {
-                let title = delivery_view::release_title(release);
-                let (label, tone) = delivery_view::release_status(release);
-                let icon = if release.draft { IconName::PencilLine } else { IconName::Tag };
-                let when = release.published_at.clone().unwrap_or_else(|| release.created_at.clone());
-                let id = release.id;
-                let selected = self.selected == Some((Section::Releases, id));
-                let mut row = Row::new(SharedString::from(format!("github-release-{id}")), Icon::new(icon).size(IconSize::Small).color(tone_color(tone, colors)), title.clone());
-                row.secondary = Some(format!("{} · {label}", release.tag_name).into());
-                row.meta = Some(div().child(model::sidebar_time(&when, now)).into_any_element());
-                row.selected = selected;
-                let dragged = ui::DraggedResource::new("github-release", id.to_string(), title.clone(), title.clone(), IconName::Tag);
-                row.render(colors)
-                    .on_drag(dragged, |dragged, _, _, cx| dragged.preview(cx))
-                    .on_click(cx.listener(move |this, _, _, cx| this.open(Section::Releases, "github-release", id, title.clone(), cx)))
-                    .into_any_element()
-            })
-            .collect();
-        children.extend(self.render_load_more(Section::Releases, items.len(), self.releases_exhausted, self.releases.loading, &query, cx));
-        children
+        let title = delivery_view::release_title(release);
+        let (label, tone) = delivery_view::release_status(release);
+        let icon = if release.draft { IconName::PencilLine } else { IconName::Tag };
+        let when = release.published_at.clone().unwrap_or_else(|| release.created_at.clone());
+        let id = release.id;
+        let mut row = Row::new(SharedString::from(format!("github-release-{id}")), Icon::new(icon).size(IconSize::Small).color(tone_color(tone, colors)), title.clone());
+        row.secondary = Some(format!("{} · {label}", release.tag_name).into());
+        row.meta = Some(div().child(model::sidebar_time(&when, now)).into_any_element());
+        row.selected = self.selected == Some((Section::Releases, id));
+        let dragged = ui::DraggedResource::new("github-release", id.to_string(), title.clone(), title.clone(), IconName::Tag);
+        row.render(colors)
+            .on_drag(dragged, |dragged, _, _, cx| dragged.preview(cx))
+            .on_click(cx.listener(move |this, _, _, cx| this.open(Section::Releases, "github-release", id, title.clone(), cx)))
+            .into_any_element()
     }
 
     fn render_deployments(&self, colors: &ThemeColors, cx: &mut Context<Self>) -> Vec<AnyElement> {
@@ -723,43 +741,28 @@ impl GitHubPanel {
         if let Some(status) = self.list_status(Section::Deployments, &self.deployments, matching.len(), colors, cx) {
             return vec![status];
         }
-        let now = Utc::now();
-        let mut children: Vec<AnyElement> = matching
-            .iter()
-            .map(|deployment| {
-                let (label, tone, _) = delivery_view::deployment_state(deployment);
-                let id = deployment.id;
-                let title = format!("{} · {}", deployment.environment, deployment.git_ref);
-                let mut row = Row::new(SharedString::from(format!("github-deployment-{id}")), Icon::new(IconName::Rocket).size(IconSize::Small).color(tone_color(tone, colors)), deployment.git_ref.clone());
-                row.secondary = Some(format!("{} · {label}", deployment.environment).into());
-                row.meta = Some(div().child(model::sidebar_time(&deployment.created_at, now)).into_any_element());
-                row.selected = self.selected == Some((Section::Deployments, id));
-                let dragged = ui::DraggedResource::new("github-deployment", id.to_string(), title.clone(), title.clone(), IconName::Rocket);
-                row.render(colors)
-                    .on_drag(dragged, |dragged, _, _, cx| dragged.preview(cx))
-                    .on_click(cx.listener(move |this, _, _, cx| this.open(Section::Deployments, "github-deployment", id, title.clone(), cx)))
-                    .into_any_element()
-            })
-            .collect();
-        children.extend(self.render_load_more(Section::Deployments, items.len(), self.deployments_exhausted, self.deployments.loading, &query, cx));
-        children
+        let paging = (query.is_empty() && items.len() >= crate::RELEASE_PAGE).then_some((self.deployments_exhausted, self.deployments.loading));
+        self.render_rows(Section::Deployments, matching, paging, colors, cx, Self::render_deployment_row)
     }
 
-    fn render_load_more(&self, section: Section, count: usize, exhausted: bool, loading: bool, query: &str, cx: &mut Context<Self>) -> Option<AnyElement> {
-        (!exhausted && query.is_empty() && count >= crate::RELEASE_PAGE).then(|| {
-            div()
-                .flex()
-                .justify_center()
-                .py(px(6.))
-                .child(
-                    Button::new(SharedString::from(format!("github-{}-more", section.noun())), if loading { "Loading…" } else { "Load more" })
-                        .variant(ButtonVariant::Ghost)
-                        .size(ButtonSize::Small)
-                        .disabled(loading)
-                        .on_click(cx.listener(move |this, _, _, cx| this.load_more(section, cx))),
-                )
-                .into_any_element()
-        })
+    fn render_deployment_row(&self, deployment: &Deployment, colors: &ThemeColors, cx: &mut Context<Self>) -> AnyElement {
+        let now = Utc::now();
+        let (label, tone, _) = delivery_view::deployment_state(deployment);
+        let id = deployment.id;
+        let title = format!("{} · {}", deployment.environment, deployment.git_ref);
+        let mut row = Row::new(
+            SharedString::from(format!("github-deployment-{id}")),
+            Icon::new(IconName::Rocket).size(IconSize::Small).color(tone_color(tone, colors)),
+            deployment.git_ref.clone(),
+        );
+        row.secondary = Some(format!("{} · {label}", deployment.environment).into());
+        row.meta = Some(div().child(model::sidebar_time(&deployment.created_at, now)).into_any_element());
+        row.selected = self.selected == Some((Section::Deployments, id));
+        let dragged = ui::DraggedResource::new("github-deployment", id.to_string(), title.clone(), title.clone(), IconName::Rocket);
+        row.render(colors)
+            .on_drag(dragged, |dragged, _, _, cx| dragged.preview(cx))
+            .on_click(cx.listener(move |this, _, _, cx| this.open(Section::Deployments, "github-deployment", id, title.clone(), cx)))
+            .into_any_element()
     }
 
     fn render_notice(&self, colors: &ThemeColors, cx: &mut Context<Self>) -> Option<impl IntoElement> {
