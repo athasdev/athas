@@ -93,6 +93,14 @@ sudo apt install build-essential clang cmake pkg-config libssl-dev libfontconfig
   libwebkit2gtk-4.1-dev libgtk-3-dev
 ```
 
+On Fedora:
+
+```bash
+sudo dnf install gcc gcc-c++ make clang cmake pkgconf-pkg-config openssl-devel fontconfig-devel \
+  wayland-devel libxkbcommon-x11-devel libX11-devel libxcb-devel vulkan-loader-devel libzstd-devel \
+  alsa-lib-devel webkit2gtk4.1-devel gtk3-devel
+```
+
 The development build keeps its data apart from an installed Athas. See the
 [contributing guide](CONTRIBUTING.md) for tests and contribution guidelines.
 
