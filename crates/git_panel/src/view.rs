@@ -532,6 +532,11 @@ impl GitPanel {
                         // rounded-md`): Commit, then the menu chevron behind a faint divider.
                         .child({
                             let (hover, divider) = (colors.primary_hover, colors.primary_foreground.opacity(0.2));
+                            // Commit can be unavailable while the menu is not: with a message
+                            // typed and nothing staged, Stage All & Commit still works. So the
+                            // label dims on its own; dimming the half would leave the chevron
+                            // bright beside it and split the block in two.
+                            let label = if can_commit { colors.primary_foreground } else { colors.primary_foreground.opacity(0.5) };
                             div()
                                 .flex()
                                 .flex_none()
@@ -549,9 +554,9 @@ impl GitPanel {
                                         .text_size(typography::TEXT_SM)
                                         .font_weight(typography::MEDIUM)
                                         .whitespace_nowrap()
+                                        .text_color(label)
                                         .child(if self.committing { "Committing…" } else { "Commit" })
                                         .anchored_tooltip(|| ui::Tooltip::new("Commit (⌘↵)"))
-                                        .when(!can_commit, |this| this.opacity(0.4))
                                         .when(can_commit, |this| {
                                             this.hover(move |style| style.bg(hover)).on_click(cx.listener(|this, _, _, cx| this.commit(false, false, cx)))
                                         }),
