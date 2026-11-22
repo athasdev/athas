@@ -13,7 +13,7 @@ use theme::ActiveTheme;
 use crate::{
     Icon, IconName, IconSize, InputAppearance, MenuSize, TextInput, TextInputEvent, Tooltip,
     menu::{OVERLAY_MAX_HEIGHT, OVERLAY_MAX_WIDTH},
-    metrics, typography,
+    typography,
 };
 
 #[derive(Clone, Debug, PartialEq)]

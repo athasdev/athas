@@ -5,7 +5,9 @@
 
 #[cfg(not(target_family = "wasm"))]
 pub use crate::gh::{CopilotAllowance, CopilotQuota};
-use gpui::{App, Task, prelude::*};
+use gpui::{App, Task};
+#[cfg(not(target_family = "wasm"))]
+use gpui::prelude::*;
 
 /// Asks GitHub what is left of this month's Copilot allowance. `None` without a token.
 #[cfg(not(target_family = "wasm"))]

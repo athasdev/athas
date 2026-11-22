@@ -2646,7 +2646,7 @@ impl Render for Workbench {
         let shell = ui::shell(cx)
             .when(sidebar_column, |this| this.child(self.render_sidebar_column(window, cx)))
             .when(!narrow && !pane_fullscreen, |this| this.children(self.render_inbox_column(cx)))
-            .child(self.render_centre(sidebar_column || (narrow && !pane_fullscreen), traffic_lights, window, cx));
+            .child(self.render_centre(window, cx));
         let body = div()
             .relative()
             .flex()

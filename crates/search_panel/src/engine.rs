@@ -4,7 +4,9 @@
 use std::{path::PathBuf, sync::Arc};
 
 use anyhow::{Result, anyhow};
-use gpui::{App, AppContext as _, Global};
+use gpui::{App, Global};
+#[cfg(not(target_family = "wasm"))]
+use gpui::AppContext as _;
 
 use crate::query::{GrepPattern, PathFilter};
 

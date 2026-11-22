@@ -1,6 +1,6 @@
 //! Draws a GitHub page to a PNG without a window, from recorded data.
 //!
-//! `cargo run -p github_panel --features snapshot --example github_snapshot -- out.png <scene> [dark|light] [repo]`
+//! `cargo run -p github_panel --example github_snapshot -- out.png <scene> [dark|light] [repo]`
 
 use std::{path::PathBuf, sync::Arc};
 

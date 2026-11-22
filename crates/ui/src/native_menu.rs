@@ -2,6 +2,10 @@
 //! checked state, a shortcut hint and submenus; icons, tones and trailing text have no native
 //! form and are left out. Menus opened from the keyboard, searchable menus and windows without an
 //! AppKit view (tests, snapshots, Linux, Windows) keep the in-app menu.
+//!
+//! Only the AppKit side below calls the helpers that read a shortcut hint and tidy the entries;
+//! the tests cover them everywhere.
+#![cfg_attr(not(target_os = "macos"), allow(dead_code))]
 
 use crate::menu::MenuEntry;
 

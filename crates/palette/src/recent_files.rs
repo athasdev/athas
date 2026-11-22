@@ -128,7 +128,10 @@ pub(crate) fn still_there(path: &Path) -> bool {
     #[cfg(not(target_family = "wasm"))]
     return crate::remote_files::is_remote_root(path) || path.is_file();
     #[cfg(target_family = "wasm")]
-    return true;
+    {
+        let _ = path;
+        true
+    }
 }
 
 pub(crate) fn now_ms() -> u64 {

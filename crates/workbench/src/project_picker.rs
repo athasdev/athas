@@ -11,9 +11,12 @@ use gpui::{
 };
 use theme::ActiveTheme;
 use ui::{
-    Button, ButtonVariant, Card, CardHeader, Field, Icon, IconName, IconSize, InputAppearance, InputGroup, PromptDialog,
-    Select, SelectEvent, SelectOption, TextInput, TextInputEvent, typography,
+    Button, ButtonVariant, Card, CardHeader, Field, Icon, IconName, IconSize, InputAppearance, InputGroup, Select, SelectEvent,
+    SelectOption, TextInput, TextInputEvent, typography,
 };
+// Only the native build opens a WSL distribution by path.
+#[cfg(not(target_family = "wasm"))]
+use ui::PromptDialog;
 use workspace::{
     RecentProject,
     new_project::{self, NewProjectSource, PackageManager},

@@ -2,8 +2,9 @@
 //! (`requestAgentNativeNotificationPermission`). Only the macOS app bundle needs to ask; a bare
 //! binary and other systems show notifications without a prompt.
 
-/// What the OS answered.
+/// What the OS answered. Only macOS ever asks, so the other systems never see a refusal.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[cfg_attr(not(target_os = "macos"), allow(dead_code))]
 pub enum Permission {
     Granted,
     Denied,

@@ -9,12 +9,9 @@ publish.workspace = true
 path = "src/github_panel.rs"
 
 [features]
-# The headless snapshot example (`cargo run -p github_panel --example github_snapshot --features snapshot`).
-snapshot = ["dep:gpui_platform", "dep:image", "gpui/test-support"]
-
-[[example]]
-name = "github_snapshot"
-required-features = ["snapshot"]
+# Headless GPUI for the snapshot binaries (`athas_snapshot`); the example here takes what it
+# needs from the dev-dependencies instead.
+snapshot = ["gpui/test-support"]
 
 [dependencies]
 paths = { path = "../paths" }
@@ -39,8 +36,6 @@ serde.workspace = true
 web-time = "1"
 chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
 pulldown-cmark = { version = "0.13", default-features = false }
-gpui_platform = { workspace = true, optional = true, features = ["test-support"] }
-image = { version = "0.25", default-features = false, features = ["png"], optional = true }
 
 [target.'cfg(not(target_family = "wasm"))'.dependencies]
 secure_storage = { path = "../secure_storage" }
@@ -55,3 +50,6 @@ specta = { version = "=2.0.0-rc.25", features = ["derive", "serde_json"] }
 
 [dev-dependencies]
 gpui = { workspace = true, features = ["test-support"] }
+# The headless snapshot example (`cargo run -p github_panel --example github_snapshot`).
+gpui_platform = { workspace = true, features = ["test-support"] }
+image = { version = "0.25", default-features = false, features = ["png"] }

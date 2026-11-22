@@ -36,8 +36,6 @@ struct PaneLayout<'a> {
     leading: u64,
     /// The group in the top-right corner, which carries the centre's own actions.
     trailing: u64,
-    sidebar_column: bool,
-    traffic_lights: bool,
 }
 
 /// A file tab's icon from the icon theme (`BufferTypeIcon`).
@@ -66,13 +64,7 @@ use crate::{Drag, NewSession, OpenProject, QuickOpen, Workbench};
 
 impl Workbench {
     /// The centre: the tabs of the session or project in front, and the bottom pane below them.
-    pub(crate) fn render_centre(
-        &self,
-        sidebar_column: bool,
-        traffic_lights: bool,
-        window: &mut Window,
-        cx: &mut Context<Self>,
-    ) -> impl IntoElement {
+    pub(crate) fn render_centre(&self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let bottom = self.state.layout.bottom_pane_visible && !self.centre_maximized;
         let bottom_full_screen = self.bottom_full_screen && self.state.layout.bottom_pane_visible;
         div()
@@ -83,7 +75,7 @@ impl Workbench {
             .min_h_0()
             .when(bottom_full_screen, |this| this.child(self.render_bottom_content(window, cx)))
             .when(!bottom_full_screen, |this| {
-                this.child(self.render_editor_island(sidebar_column, traffic_lights, window, cx))
+                this.child(self.render_editor_island(window, cx))
                     .when(bottom, |this| this.child(self.render_bottom_pane(window, cx)))
             })
     }
@@ -94,7 +86,7 @@ impl Workbench {
         match self.state.layout.bottom_tab {
             workspace::BottomTab::Buffers if !self.state.bottom.is_empty() => {
                 let panes = self.state.bottom.clone();
-                let layout = PaneLayout { panes: &panes, leading: u64::MAX, trailing: u64::MAX, sidebar_column: true, traffic_lights: false };
+                let layout = PaneLayout { panes: &panes, leading: u64::MAX, trailing: u64::MAX };
                 div().flex().flex_col().flex_1().min_h_0().child(self.render_pane_node(&panes.root, &layout, window, cx)).into_any_element()
             }
             workspace::BottomTab::Debugger if self.debugger.is_some() => {
@@ -133,21 +125,15 @@ impl Workbench {
         }
     }
 
-    fn render_editor_island(
-        &self,
-        sidebar_column: bool,
-        traffic_lights: bool,
-        window: &mut Window,
-        cx: &mut Context<Self>,
-    ) -> AnyElement {
+    fn render_editor_island(&self, window: &mut Window, cx: &mut Context<Self>) -> AnyElement {
         let panes = self.state.centre_panes().cloned().unwrap_or_default();
         if let Some(group) = self.fullscreen_group.filter(|group| panes.group(*group).is_some()) {
-            let layout = PaneLayout { panes: &panes, leading: group, trailing: group, sidebar_column, traffic_lights };
+            let layout = PaneLayout { panes: &panes, leading: group, trailing: group };
             return self.render_group(group, &layout, window, cx);
         }
         let leading = top_left(&panes.root);
         let trailing = top_right(&panes.root);
-        let layout = PaneLayout { panes: &panes, leading, trailing, sidebar_column, traffic_lights };
+        let layout = PaneLayout { panes: &panes, leading, trailing };
         self.render_pane_node(&panes.root, &layout, window, cx)
     }
 
