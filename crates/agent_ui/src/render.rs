@@ -2660,8 +2660,10 @@ impl SessionView {
                     .flex()
                     .flex_none()
                     .child(action("send-queued-now", IconName::Bolt, "Send now").tone(ButtonTone::Accent).on_click(cx.listener(move |this, _: &ClickEvent, _, cx| this.send_queued_now(index, cx))))
-                    .child(action("queued-earlier", IconName::ArrowUp, "Move earlier").disabled(index == 0).on_click(cx.listener(move |this, _: &ClickEvent, _, cx| this.move_queued(index, index - 1, cx))))
-                    .child(action("queued-later", IconName::ArrowDown, "Move later").disabled(index + 1 == count).on_click(cx.listener(move |this, _: &ClickEvent, _, cx| this.move_queued(index, index + 1, cx))))
+                    .when(count > 1, |this| {
+                        this.child(action("queued-earlier", IconName::ArrowUp, "Move earlier").disabled(index == 0).on_click(cx.listener(move |this, _: &ClickEvent, _, cx| this.move_queued(index, index - 1, cx))))
+                            .child(action("queued-later", IconName::ArrowDown, "Move later").disabled(index + 1 == count).on_click(cx.listener(move |this, _: &ClickEvent, _, cx| this.move_queued(index, index + 1, cx))))
+                    })
                     .child(action("edit-queued", IconName::Pencil, "Edit queued message").on_click(cx.listener(move |this, _: &ClickEvent, window, cx| this.edit_queued(index, window, cx))))
                     .child(action("remove-queued", IconName::Trash, "Remove queued message").tone(ButtonTone::Danger).on_click(cx.listener(move |this, _: &ClickEvent, _, cx| this.remove_queued(index, cx))))
             };
