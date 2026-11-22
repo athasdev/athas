@@ -1229,7 +1229,7 @@ impl Workbench {
     pub fn show_help_menu(&mut self, position: Point<Pixels>, window: &mut Window, cx: &mut Context<Self>) {
         let urls = account::urls(cx);
         let open = |label: &'static str, icon: ui::IconName, url: String| -> MenuEntry {
-            MenuItem::new(label).icon(icon).on_select(move |_, cx| cx.open_url(&url)).into()
+            MenuItem::new(label).icon(icon).external().on_select(move |_, cx| cx.open_url(&url)).into()
         };
         let entries = vec![
             MenuItem::new("What's New")
@@ -1259,7 +1259,16 @@ impl Workbench {
                 .into(),
             MenuItem::new("Send Feedback")
                 .icon(ui::IconName::Megaphone)
-                .on_select(|window, cx| window.dispatch_action(Box::new(account::SendFeedback), cx))
+                .on_select({
+                    let weak = cx.weak_entity();
+                    move |window, cx| {
+                        weak.update(cx, |this, cx| {
+                            let dialog = cx.new(|cx| account::FeedbackDialog::new(env!("CARGO_PKG_VERSION"), window, cx));
+                            this.open_modal(dialog, window, cx);
+                        })
+                        .ok();
+                    }
+                })
                 .into(),
         ];
         self.show_menu("help", entries, position, Anchor::BottomLeft, window, cx);

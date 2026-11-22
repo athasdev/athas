@@ -671,7 +671,7 @@ impl Workbench {
                     ui::MenuItem::new("Open").icon(IconName::ChatBubbleText).on_select(move |_, cx| agent_ui::cloud::session::open_run_as_session(run.clone(), cx)).into()
                 }];
                 if let Some(url) = run.pr_url.clone() {
-                    entries.push(ui::MenuItem::new("Open Pull Request").icon(IconName::GitPullRequest).on_select(move |_, cx| cx.open_url(&url)).into());
+                    entries.push(ui::MenuItem::new("Open Pull Request").icon(IconName::GitPullRequest).external().on_select(move |_, cx| cx.open_url(&url)).into());
                 }
                 let repo = run.repo.clone();
                 entries.push(

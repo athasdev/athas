@@ -917,7 +917,7 @@ impl DiffView {
             );
         }
         if let Some(url) = self.github_url.clone() {
-            entries.push(MenuItem::new("View on GitHub").icon(IconName::Github).on_select(move |_, cx| cx.open_url(&url)).into());
+            entries.push(MenuItem::new("View on GitHub").icon(IconName::Github).external().on_select(move |_, cx| cx.open_url(&url)).into());
         }
         entries.push(
             MenuItem::new(if self.show_whitespace { "Hide whitespace" } else { "Show whitespace" })

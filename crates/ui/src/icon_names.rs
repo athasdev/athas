@@ -386,6 +386,12 @@ impl IconName {
             IconName::Sparkle => Some("icons/sparkle_filled.svg"),
             IconName::Stack => Some("icons/stack_filled.svg"),
             IconName::Warning => Some("icons/warning_filled.svg"),
+            IconName::Bell => Some("icons/bell_filled.svg"),
+            IconName::Play => Some("icons/play_filled.svg"),
+            IconName::Question => Some("icons/question_filled.svg"),
+            IconName::Sidebar => Some("icons/sidebar_filled.svg"),
+            IconName::TerminalWindow => Some("icons/terminal_window_filled.svg"),
+            IconName::User => Some("icons/user_filled.svg"),
             _ => None,
         }
     }

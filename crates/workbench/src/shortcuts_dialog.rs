@@ -85,7 +85,7 @@ impl Render for ShortcutsDialog {
     fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let colors = cx.theme().colors.clone();
         let weak = cx.entity().downgrade();
-        let sections = SECTIONS.iter().map(|(title, rows)| {
+        let sections: Vec<_> = SECTIONS.iter().map(|(title, rows)| {
             div()
                 .flex()
                 .flex_col()
@@ -106,7 +106,10 @@ impl Render for ShortcutsDialog {
                             .child(Kbd::new(keys)),
                     )
                 }))
-        });
+        }).collect();
+        let mut sections = sections.into_iter();
+        let left: Vec<_> = sections.by_ref().take(2).collect();
+        let right: Vec<_> = sections.collect();
         div()
             .on_key_down(cx.listener(|_, event: &gpui::KeyDownEvent, _, cx| {
                 if event.keystroke.key == "escape" {
@@ -116,7 +119,7 @@ impl Render for ShortcutsDialog {
             .child(
                 Dialog::new("keyboard-shortcuts", "Keyboard Shortcuts")
                     .icon(IconName::Keyboard)
-                    .size(DialogSize::Md)
+                    .size(DialogSize::Custom(px(720.)))
                     .scrollable(true)
                     .track_focus(&self.focus_handle)
                     .on_close(move |_, cx| {
@@ -130,7 +133,13 @@ impl Render for ShortcutsDialog {
                             }
                         }))
                         .into_any_element()])
-                    .child(div().flex().flex_col().gap(px(16.)).children(sections)),
+                    .child(
+                        div()
+                            .flex()
+                            .gap(px(32.))
+                            .child(div().flex().flex_col().flex_1().min_w_0().gap(px(16.)).children(left))
+                            .child(div().flex().flex_col().flex_1().min_w_0().gap(px(16.)).children(right)),
+                    ),
             )
     }
 }

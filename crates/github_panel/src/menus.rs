@@ -33,7 +33,7 @@ pub fn item<V: 'static>(label: impl Into<SharedString>, cx: &Context<V>, action:
 
 /// A menu item that opens a web page.
 pub fn link(label: impl Into<SharedString>, url: String) -> MenuItem {
-    MenuItem::new(label).on_select(move |_, cx| cx.open_url(&url))
+    MenuItem::new(label).external().on_select(move |_, cx| cx.open_url(&url))
 }
 
 /// A menu item that copies text, confirmed with a toast named after the label ("Copy branch
