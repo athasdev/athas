@@ -196,6 +196,9 @@ pub fn theme_choices(cx: &App) -> AnyElement {
         ],
         scheme.value(),
     )
+    // In the sidebar the three schemes are wider than the card: they run onto a second row
+    // rather than past its edge.
+    .wrap()
     .on_change(|value, _, cx| {
         if let Some(scheme) = Scheme::from_value(value) {
             set_scheme(scheme, cx);

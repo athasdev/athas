@@ -451,6 +451,13 @@ pub struct Workbench {
     /// Switch between the light and dark theme with the system.
     pub follow_system_appearance: bool,
     file_tree: Option<(Entity<FileTree>, Subscription)>,
+    /// Settings, which shows in the sidebar like any other tool. It is kept once opened, so
+    /// going back to it returns to the page it was left on.
+    settings_panel: Option<(Entity<settings_ui::SettingsView>, Vec<Subscription>)>,
+    /// The page list the sidebar shows, drawn from the same view.
+    settings_nav: Option<Entity<settings_ui::SettingsNav>>,
+    /// The tool the sidebar was on when Settings took it over, for Escape to go back to.
+    settings_return_view: SidebarView,
     /// The Git panel, its events and the observer that publishes its repository
     /// (`workbench_api::git_repository`).
     git_panel: Option<(Entity<GitPanel>, [Subscription; 2])>,
@@ -721,6 +728,9 @@ impl Workbench {
             centre_maximized: false,
             follow_system_appearance: true,
             file_tree: None,
+            settings_panel: None,
+            settings_nav: None,
+            settings_return_view: SidebarView::Agents,
             git_panel: None,
             terminal: None,
             parked_terminals: HashMap::new(),
@@ -782,6 +792,9 @@ impl Workbench {
             // (a tab closes, a panel goes away), take it back right here.
             _focus_lost: cx.on_focus_lost(window, |this, window, cx| this.restore_focus(window, cx)),
         };
+        // Settings had a tab of its own for a while, and a saved workspace may still hold one.
+        // It has no view any more, so drop it rather than leave a tab that draws nothing.
+        this.state.close_resource("settings", "settings");
         this.sync_continuous_projects(cx);
         this.publish_projects(cx);
         this.observe_ui_extensions(window, cx);
@@ -1019,6 +1032,10 @@ impl Workbench {
                 github_panel::GitHubEvent::OpenInNewWindow { kind, id, title } => this.open_resource_in_detached_window(kind, id, title, cx),
             });
             self.github_panel = Some((github, subscription));
+        }
+
+        if view == SidebarView::Settings {
+            self.ensure_settings_panel(None, window, cx);
         }
 
         self.sync_centre_views(window, cx);
@@ -1422,6 +1439,7 @@ impl Workbench {
         }
         let narrow = Self::is_narrow(window);
         let shown = if narrow { self.sidebar_overlay_open } else { self.state.layout.sidebar_visible };
+        self.remember_settings_return(view);
         if shown && self.state.layout.sidebar_view == view {
             if narrow {
                 self.sidebar_overlay_open = false;
@@ -1441,6 +1459,10 @@ impl Workbench {
                     state.layout.sidebar_visible = true;
                 }
             });
+            // The page list alone says nothing: the centre shows the page it is on.
+            if view == SidebarView::Settings {
+                self.ensure_settings_panel(None, window, cx);
+            }
         }
     }
 
@@ -3001,8 +3023,8 @@ impl Render for Workbench {
             .children(self.open_menu.as_ref().map(|menu| menu.render()))
             .children(self.modal.as_ref().map(|(view, _)| {
                 let viewport = window.viewport_size();
-                // Settings is a dialog, centred like every `AppDialog`; pickers sit a tenth down.
-                let centred = view.clone().downcast::<settings_ui::SettingsView>().is_ok() || view.clone().downcast::<account::FeedbackDialog>().is_ok();
+                // A dialog is centred like every `AppDialog`; pickers sit a tenth down.
+                let centred = view.clone().downcast::<account::FeedbackDialog>().is_ok();
                 gpui::deferred(
                     div()
                         .id("modal-layer")

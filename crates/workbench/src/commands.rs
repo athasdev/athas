@@ -22,10 +22,20 @@ impl Workbench {
         }
     }
 
+    /// Remembers the tool the sidebar is on before Settings takes it over, so closing Settings
+    /// goes back to it instead of to whatever the default is.
+    pub(crate) fn remember_settings_return(&mut self, next: SidebarView) {
+        let current = self.state.layout.sidebar_view;
+        if next == SidebarView::Settings && current != SidebarView::Settings {
+            self.settings_return_view = current;
+        }
+    }
+
     pub(crate) fn show_sidebar_view(&mut self, view: SidebarView, window: &mut Window, cx: &mut Context<Self>) {
         if !self.tool_available(view, cx) {
             return;
         }
+        self.remember_settings_return(view);
         self.leave_extension_view();
         if Self::is_narrow(window) {
             self.sidebar_overlay_open = true;
@@ -299,16 +309,38 @@ impl Workbench {
         self.open_settings_page(None, window, cx);
     }
 
-    /// Opens Settings on a page: `general`, `appearance`, `keyboard`, …
-    pub fn open_settings_page(&mut self, page: Option<&'static str>, window: &mut Window, cx: &mut Context<Self>) {
-        if crate::detached::open_settings_window(page, |_, _, _| {}, cx) {
-            return;
+    /// The Settings view the sidebar shows, built on first use and kept afterwards so coming
+    /// back to Settings returns to the page it was left on.
+    pub(crate) fn ensure_settings_panel(
+        &mut self,
+        page: Option<&'static str>,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> gpui::Entity<SettingsView> {
+        if let Some((view, _)) = &self.settings_panel {
+            let view = view.clone();
+            if let Some(page) = page {
+                view.update(cx, |view, cx| view.set_page(page, cx));
+            }
+            return view;
         }
         let view = cx.new(|cx| SettingsView::new(page, window, cx));
-        self.open_modal(view, window, cx);
+        // Escape in the search field closes Settings, as it closed the dialog: the sidebar goes
+        // back to the tool it was on.
+        let dismiss = cx.subscribe_in(&view, window, |this, _, _: &gpui::DismissEvent, window, cx| {
+            this.close_settings_sidebar(window, cx);
+        });
+        self.settings_nav = Some(cx.new(|cx| settings_ui::SettingsNav::new(view.clone(), cx)));
+        self.settings_panel = Some((view.clone(), vec![dismiss]));
+        view
     }
 
-    /// Opens Settings on a page, in its own window when there can be one, and runs `then` on it.
+    /// Opens Settings on a page: `general`, `appearance`, `keyboard`, …
+    pub fn open_settings_page(&mut self, page: Option<&'static str>, window: &mut Window, cx: &mut Context<Self>) {
+        self.open_settings_view(page, window, cx);
+    }
+
+    /// Opens Settings on a page and runs `then` on its view.
     pub fn open_settings_with(
         &mut self,
         page: Option<&'static str>,
@@ -316,55 +348,34 @@ impl Workbench {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
-        let then = std::rc::Rc::new(std::cell::RefCell::new(Some(then)));
-        let in_window = then.clone();
-        let opened = crate::detached::open_settings_window(
-            page,
-            move |view, window, cx| {
-                if let Some(then) = in_window.borrow_mut().take() {
-                    then(view, window, cx);
-                }
-            },
-            cx,
-        );
-        if opened {
-            return;
-        }
         let view = self.open_settings_view(page, window, cx);
-        if let Some(then) = then.borrow_mut().take() {
-            view.update(cx, |view, cx| then(view, window, cx));
-        }
+        view.update(cx, |view, cx| then(view, window, cx));
     }
 
-    /// Opens Settings on a page and hands back its view.
+    /// Puts the sidebar back on the tool Settings took it over from.
+    pub(crate) fn close_settings_sidebar(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        if self.state.layout.sidebar_view != SidebarView::Settings {
+            return;
+        }
+        let back = self.settings_return_view;
+        self.show_sidebar_view(if back == SidebarView::Settings { SidebarView::Agents } else { back }, window, cx);
+    }
+
+    /// Shows Settings in the sidebar on a page and hands back its view.
     pub fn open_settings_view(&mut self, page: Option<&'static str>, window: &mut Window, cx: &mut Context<Self>) -> gpui::Entity<SettingsView> {
-        let view = cx.new(|cx| SettingsView::new(page, window, cx));
-        self.open_modal(view.clone(), window, cx);
+        self.show_sidebar_view(SidebarView::Settings, window, cx);
+        let view = self.ensure_settings_panel(page, window, cx);
+        view.update(cx, |view, cx| view.focus_search(window, cx));
         view
     }
 
     /// Opens Settings on a page by its id, searching for `query` when given.
     pub fn open_settings_at(&mut self, page: Option<&str>, query: Option<&str>, window: &mut Window, cx: &mut Context<Self>) {
         let page = page.and_then(settings_ui::known_page);
-        let query = query.filter(|query| !query.is_empty()).map(str::to_string);
-        let window_query = query.clone();
-        if crate::detached::open_settings_window(
-            page,
-            move |view, window, cx| {
-                if let Some(query) = window_query {
-                    view.set_query(&query, window, cx);
-                }
-            },
-            cx,
-        ) {
-            return;
-        }
-        let query = query.as_deref();
-        let view = cx.new(|cx| SettingsView::new(page, window, cx));
+        let view = self.open_settings_view(page, window, cx);
         if let Some(query) = query.filter(|query| !query.is_empty()) {
             view.update(cx, |view, cx| view.set_query(query, window, cx));
         }
-        self.open_modal(view, window, cx);
     }
 
     pub fn select_icon_theme(&mut self, _: &SelectIconTheme, window: &mut Window, cx: &mut Context<Self>) {

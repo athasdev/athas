@@ -85,6 +85,8 @@ pub struct KeybindingsEditor {
     reset: Entity<TypedConfirm>,
     /// The table's rows as last filtered: the list draws only the visible ones from here.
     rows: std::rc::Rc<Vec<CommandRow>>,
+    /// In a pane too narrow for five columns (the sidebar) a row stacks instead.
+    narrow: bool,
     list_scroll: UniformListScrollHandle,
     _subscriptions: Vec<Subscription>,
 }
@@ -101,8 +103,10 @@ struct CommandRow {
     conflicts: Vec<String>,
 }
 
-/// Every row is this tall, so the table can draw only the rows in view.
+/// Every row is this tall, so the table can draw only the rows in view. A stacked row holds the
+/// command over its key, so it needs more.
 const ROW_HEIGHT: f32 = 52.;
+const STACKED_ROW_HEIGHT: f32 = 76.;
 
 fn notify(cx: &mut App, kind: NotificationKind, message: impl Into<SharedString>, description: Option<String>) {
     notifications::notify(cx, kind, NotificationCategory::Athas, message, description.map(SharedString::from), None);
@@ -190,8 +194,17 @@ impl KeybindingsEditor {
             editing: false,
             reset,
             rows: Default::default(),
+            narrow: false,
             list_scroll: UniformListScrollHandle::new(),
             _subscriptions: vec![subscription, reload, observe_settings, confirmed],
+        }
+    }
+
+    /// Whether the pane is too narrow for the five-column table (the sidebar).
+    pub fn set_narrow(&mut self, narrow: bool, cx: &mut Context<Self>) {
+        if self.narrow != narrow {
+            self.narrow = narrow;
+            cx.notify();
         }
     }
 
@@ -464,20 +477,15 @@ impl KeybindingsEditor {
             .into_any_element()
     }
 
-    /// The header's first row: back, the search filling the room, then the file actions.
+    /// The header's first row: back, the search filling the room, then the file actions. Too
+    /// narrow for all of it on one line (the sidebar), the file actions wrap under the search.
     fn render_toolbar(&self, cx: &mut Context<Self>) -> AnyElement {
-        div()
+        let narrow = self.narrow;
+        let actions = div()
             .flex()
             .items_center()
             .gap(px(8.))
-            // Clear of the Settings window's close button in the corner above.
-            .pr(px(24.))
-            .child(
-                Button::icon("keybindings-back", IconName::ArrowLeft)
-                    .tooltip("Back to Keybindings")
-                    .on_click(cx.listener(|this, _, window, cx| this.set_editing(false, window, cx))),
-            )
-            .child(div().flex_1().min_w_0().child(self.search.clone()))
+            .when(narrow, |this| this.flex_wrap())
             .child(
                 Button::new("keybindings-json", "Edit JSON")
                     .variant(ButtonVariant::Outline)
@@ -494,8 +502,23 @@ impl KeybindingsEditor {
                     .variant(ButtonVariant::Outline)
                     .on_click(cx.listener(|this, _, _, cx| this.export(cx))),
             )
-            .child(self.reset.clone())
-            .into_any_element()
+            .child(self.reset.clone());
+        let search_row = div()
+            .flex()
+            .items_center()
+            .gap(px(8.))
+            // Clear of the Settings window's close button in the corner above.
+            .when(!narrow, |this| this.pr(px(24.)))
+            .child(
+                Button::icon("keybindings-back", IconName::ArrowLeft)
+                    .tooltip("Back to Keybindings")
+                    .on_click(cx.listener(|this, _, window, cx| this.set_editing(false, window, cx))),
+            )
+            .child(div().flex_1().min_w_0().child(self.search.clone()));
+        if narrow {
+            return div().flex().flex_col().gap(px(8.)).child(search_row).child(actions).into_any_element();
+        }
+        search_row.child(actions).into_any_element()
     }
 }
 
@@ -625,6 +648,8 @@ impl Render for KeybindingsEditor {
             .font_weight(typography::MEDIUM)
             .text_color(colors.subtle_foreground)
             .children(["Command", "Keybinding", "When", "Source", ""].into_iter().enumerate().map(|(index, label)| column(index).child(label)));
+        // Stacked rows carry their own labels; a header of five columns would name nothing.
+        let columns = (!self.narrow).then_some(columns);
         let body = if count == 0 {
             div()
                 .flex()
@@ -652,9 +677,10 @@ impl Render for KeybindingsEditor {
             .child(
                 div()
                     .flex()
-                    .items_center()
-                    .justify_between()
                     .gap(px(12.))
+                    // Side by side the count is pushed off a narrow pane, so there it sits under
+                    // the filters instead.
+                    .map(|this| if self.narrow { this.flex_col().items_start().gap(px(6.)) } else { this.items_center().justify_between() })
                     .child(filters)
                     .child(div().flex_none().text_size(typography::text_sm()).text_color(colors.subtle_foreground).child(format!("{count} commands"))),
             )
@@ -668,7 +694,7 @@ impl Render for KeybindingsEditor {
                     .bg(colors.raised)
                     .shadow(theme.shadows.raised.clone())
                     .overflow_hidden()
-                    .child(columns)
+                    .children(columns)
                     .child(body),
             )
             .into_any_element()
@@ -689,49 +715,85 @@ impl KeybindingsEditor {
                 let conflict = (!row.conflicts.is_empty()).then(|| format!("Same key as {}", row.conflicts.join(", ")));
                 let command_id = row.id.clone();
                 let removed = row.binding.clone();
-                Some(
+                let title = div()
+                    .flex()
+                    .items_center()
+                    .gap(px(6.))
+                    .min_w_0()
+                    .child(
+                        div()
+                            .truncate()
+                            .text_size(typography::text_sm())
+                            .text_color(if row.ported { colors.foreground } else { colors.muted_foreground })
+                            .child(row.title.clone()),
+                    )
+                    .when(!row.ported, |this| this.child(Badge::new("Not ported yet")));
+                let subtitle = div()
+                    .truncate()
+                    .text_size(typography::text_caption())
+                    .text_color(colors.subtle_foreground)
+                    .child(row.subtitle.clone());
+                let key_cell = self.render_key_cell(index, &row.id, &row.title, row.binding.as_ref(), cx);
+                let conflict_mark = conflict.clone().map(|text| {
                     div()
+                        .id(("binding-conflict", index))
+                        .flex_none()
+                        .child(Icon::new(IconName::WarningCircle).size(IconSize::Small).color(colors.destructive))
+                        .anchored_tooltip(move || ui::Tooltip::new(text.clone()))
+                });
+                let source_badge = Badge::new(row.source).tone(if is_user { Tone::Accent } else { Tone::Neutral });
+                let reset_button = is_user.then(|| {
+                    let command_id = command_id.clone();
+                    Button::icon(("binding-reset", index), IconName::ArrowCounterClockwise)
+                        .size(ButtonSize::Small)
+                        .tooltip("Reset to default")
+                        .on_click(cx.listener(move |this, _, _, cx| this.reset(&command_id, cx)))
+                });
+                let remove_button = removed.map(|binding| {
+                    Button::icon(("binding-remove", index), IconName::Trash)
+                        .size(ButtonSize::Small)
+                        .tooltip("Remove keybinding")
+                        .on_click(cx.listener(move |this, _, _, cx| this.remove(&binding, cx)))
+                });
+                let frame = div()
+                    .w_full()
+                    .px(px(12.))
+                    .border_b_1()
+                    .border_color(colors.divider)
+                    .when(conflict.is_some(), |this| this.bg(colors.destructive_soft));
+                // Stacked, a row is the command over its key, its source and its actions; the
+                // When clause has no line of its own and shows on the key instead.
+                if self.narrow {
+                    return Some(
+                        frame
+                            .flex()
+                            .flex_col()
+                            .justify_center()
+                            .gap(px(4.))
+                            .h(px(STACKED_ROW_HEIGHT))
+                            .child(title)
+                            .child(subtitle)
+                            .child(
+                                div()
+                                    .flex()
+                                    .items_center()
+                                    .gap(px(6.))
+                                    .child(div().flex_1().min_w_0().child(key_cell))
+                                    .children(conflict_mark)
+                                    .child(source_badge)
+                                    .children(reset_button)
+                                    .children(remove_button),
+                            )
+                            .into_any_element(),
+                    );
+                }
+                Some(
+                    frame
                         .flex()
                         .items_center()
-                        .w_full()
                         .h(px(ROW_HEIGHT))
-                        .px(px(12.))
-                        .border_b_1()
-                        .border_color(colors.divider)
-                        .when(conflict.is_some(), |this| this.bg(colors.destructive_soft))
-                        .child(
-                            column(0)
-                                .flex()
-                                .flex_col()
-                                .gap(px(2.))
-                                .child(
-                                    div()
-                                        .flex()
-                                        .items_center()
-                                        .gap(px(6.))
-                                        .min_w_0()
-                                        .child(
-                                            div()
-                                                .truncate()
-                                                .text_size(typography::text_sm())
-                                                .text_color(if row.ported { colors.foreground } else { colors.muted_foreground })
-                                                .child(row.title.clone()),
-                                        )
-                                        .when(!row.ported, |this| this.child(Badge::new("Not ported yet"))),
-                                )
-                                .child(div().truncate().text_size(typography::text_caption()).text_color(colors.subtle_foreground).child(row.subtitle.clone())),
-                        )
-                        .child(
-                            column(1).flex().items_center().gap(px(6.)).child(self.render_key_cell(index, &row.id, &row.title, row.binding.as_ref(), cx)).children(
-                                conflict.map(|text| {
-                                    div()
-                                        .id(("binding-conflict", index))
-                                        .flex_none()
-                                        .child(Icon::new(IconName::WarningCircle).size(IconSize::Small).color(colors.destructive))
-                                        .anchored_tooltip(move || ui::Tooltip::new(text.clone()))
-                                }),
-                            ),
-                        )
+                        .child(column(0).flex().flex_col().gap(px(2.)).child(title).child(subtitle))
+                        .child(column(1).flex().items_center().gap(px(6.)).child(key_cell).children(conflict_mark))
                         .child(
                             column(2)
                                 .truncate()
@@ -739,30 +801,15 @@ impl KeybindingsEditor {
                                 .text_color(colors.subtle_foreground)
                                 .child(row.binding.as_ref().and_then(|binding| binding.when.clone()).unwrap_or_else(|| "-".into())),
                         )
-                        .child(column(3).child(Badge::new(row.source).tone(if is_user { Tone::Accent } else { Tone::Neutral })))
+                        .child(column(3).child(source_badge))
                         .child(
                             column(4)
                                 .flex()
                                 .items_center()
                                 .justify_end()
                                 .gap(px(2.))
-                                .when(is_user, |this| {
-                                    let command_id = command_id.clone();
-                                    this.child(
-                                        Button::icon(("binding-reset", index), IconName::ArrowCounterClockwise)
-                                            .size(ButtonSize::Small)
-                                            .tooltip("Reset to default")
-                                            .on_click(cx.listener(move |this, _, _, cx| this.reset(&command_id, cx))),
-                                    )
-                                })
-                                .when_some(removed, |this, binding| {
-                                    this.child(
-                                        Button::icon(("binding-remove", index), IconName::Trash)
-                                            .size(ButtonSize::Small)
-                                            .tooltip("Remove keybinding")
-                                            .on_click(cx.listener(move |this, _, _, cx| this.remove(&binding, cx))),
-                                    )
-                                }),
+                                .children(reset_button)
+                                .children(remove_button),
                         )
                         .into_any_element(),
                 )

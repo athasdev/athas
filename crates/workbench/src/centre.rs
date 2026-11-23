@@ -76,8 +76,11 @@ impl Workbench {
             .min_h_0()
             .when(bottom_full_screen, |this| this.child(self.render_bottom_content(window, cx)))
             .when(!bottom_full_screen, |this| {
-                this.child(self.render_editor_island(window, cx))
-                    .when(bottom, |this| this.child(self.render_bottom_pane(window, cx)))
+                this.child(match self.settings_takes_the_centre() {
+                    true => self.render_settings_island(),
+                    false => self.render_editor_island(window, cx),
+                })
+                .when(bottom, |this| this.child(self.render_bottom_pane(window, cx)))
             })
     }
 
@@ -124,6 +127,23 @@ impl Workbench {
             }
             _ => framed_pane().flex_1().children(self.terminal.as_ref().map(|(terminal, _)| terminal.clone())).into_any_element(),
         }
+    }
+
+    /// Whether Settings has the centre. It is a mode, not a document: the sidebar lists the
+    /// pages and the centre shows the one picked, and leaving the sidebar gives the tabs back
+    /// untouched. A tab would have belonged to one project or chat, and Settings belongs to none.
+    pub(crate) fn settings_takes_the_centre(&self) -> bool {
+        self.state.layout.sidebar_visible
+            && self.state.layout.sidebar_view == workspace::SidebarView::Settings
+            && self.settings_panel.is_some()
+    }
+
+    /// The Settings page, filling the centre in place of the editor groups.
+    fn render_settings_island(&self) -> AnyElement {
+        ui::framed_pane()
+            .flex_1()
+            .children(self.settings_panel.as_ref().map(|(view, _)| view.clone()))
+            .into_any_element()
     }
 
     fn render_editor_island(&self, window: &mut Window, cx: &mut Context<Self>) -> AnyElement {
@@ -1239,6 +1259,7 @@ impl Workbench {
                 workspace::SidebarView::Git => IconName::GitBranch,
                 workspace::SidebarView::GitHub => IconName::Github,
                 workspace::SidebarView::Agents => IconName::ChatBubbleText,
+                workspace::SidebarView::Settings => IconName::Settings,
             };
             let weak = weak.clone();
             entries.push(

@@ -174,36 +174,6 @@ fn with_session_owner(id: &workspace::SessionId, cx: &mut App, change: impl FnOn
     }
 }
 
-/// The Settings window's view, to show a page in it when it is already open.
-struct SettingsWindowView(gpui::WeakEntity<settings_ui::SettingsView>);
-
-impl Global for SettingsWindowView {}
-
-/// Opens Settings in its own window, or brings that window forward, on `page`, then runs `then`
-/// on its view. False on the web, which has no extra windows (Settings opens as a dialog there).
-pub fn open_settings_window(
-    page: Option<&'static str>,
-    then: impl FnOnce(&mut settings_ui::SettingsView, &mut gpui::Window, &mut Context<settings_ui::SettingsView>) + 'static,
-    cx: &mut App,
-) -> bool {
-    if cx.try_global::<DetachedOpener>().is_none() || !open_detached(DetachedContent::Settings, cx) {
-        return false;
-    }
-    let Some(view) = cx.try_global::<SettingsWindowView>().and_then(|global| global.0.upgrade()) else { return true };
-    let Some(handle) = find("settings", cx) else { return true };
-    handle
-        .update(cx, |_, window, cx| {
-            view.update(cx, |view, cx| {
-                if let Some(page) = page {
-                    view.set_page(page, cx);
-                }
-                then(view, window, cx);
-            });
-        })
-        .ok();
-    true
-}
-
 pub fn open_detached(content: DetachedContent, cx: &mut App) -> bool {
     let key = content.key();
     if let Some(handle) = key.as_deref().and_then(|key| find(key, cx)) {
@@ -291,10 +261,9 @@ impl DetachedWindow {
             DetachedContent::Settings => {
                 let settings = cx.new(|cx| {
                     let mut view = settings_ui::SettingsView::new(None, window, cx);
-                    view.set_standalone(true);
+                    view.set_presentation(settings_ui::SettingsPresentation::Window);
                     view
                 });
-                cx.set_global(SettingsWindowView(settings.downgrade()));
                 let focus = settings.focus_handle(cx);
                 (settings.into(), focus)
             }

@@ -145,6 +145,7 @@ impl Workbench {
                 SidebarView::Files => Button::icon("activity-files", IconName::Files),
                 SidebarView::Git => Button::icon("activity-git", IconName::GitBranch),
                 SidebarView::GitHub => Button::new("activity-github", "").icon_path("icons/github.svg").icon_only(),
+                SidebarView::Settings => Button::icon("activity-settings", IconName::Settings),
             };
             button
                 .size(ButtonSize::Medium)
@@ -240,6 +241,7 @@ impl Workbench {
                                 )
                             }),
                     )
+                    .child(item(SidebarView::Settings, cx))
                     .child(
                         Button::icon("help", IconName::Question)
                             .size(ButtonSize::Medium)

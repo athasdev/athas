@@ -39,7 +39,7 @@ use settings::{SETTING_DEFS, SETTINGS_PAGES, SettingDef, SettingKind};
 use theme::ActiveTheme;
 use ui::{
     Badge, Button, ButtonSize, ButtonTone, ButtonVariant, Icon, IconName, IconSize, MenuEntry,
-    MenuItem, OpenMenu, Plane, SidebarListItem, Switch, TextInput, TextInputEvent, Tone, metrics,
+    MenuItem, OpenMenu, SidebarListItem, Switch, TextInput, TextInputEvent, Tone, metrics,
     typography,
 };
 
@@ -212,10 +212,21 @@ fn view_target(def: &SettingDef) -> JumpTarget {
     JumpTarget::View(usize::from(sharing))
 }
 
+/// Where Settings is drawn. It used to float as a dialog over the workbench; the page now fills
+/// a tab in the centre, with the page list in the sidebar ([`SettingsNav`]), or a window of its
+/// own holds both.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum SettingsPresentation {
+    /// The page fills a centre tab; the workbench sidebar draws the page list.
+    #[default]
+    Centre,
+    /// Both the page list and the page fill a window of their own (New Settings Window).
+    Window,
+}
+
 pub struct SettingsView {
     page: &'static str,
-    /// Fills a window of its own instead of floating as a dialog.
-    standalone: bool,
+    presentation: SettingsPresentation,
     search: Entity<TextInput>,
     query: SharedString,
     fields: HashMap<&'static str, (Entity<TextInput>, Subscription)>,
@@ -468,6 +479,24 @@ const FONT_PREVIEW: &str = "The quick brown fox jumps over the lazy dog 01234567
 /// The space a standalone Settings window leaves at its top for the traffic lights and dragging.
 fn standalone_top() -> gpui::Pixels { px(40.) }
 
+/// How wide a page is allowed to get. A row is a label at one edge and its control at the other,
+/// so a window dragged out to 2000px would leave them an arm's length apart; the page keeps to a
+/// readable measure and centres itself in whatever room it has.
+const PAGE_WIDTH: f32 = 880.;
+
+/// Lifts a layer out of the pane it was built in and over the whole window, for the dialogs
+/// Settings opens while it shows in the sidebar.
+fn over_window(layer: gpui::Div, viewport: gpui::Size<Pixels>) -> AnyElement {
+    deferred(
+        anchored()
+            .position(point(px(0.), px(0.)))
+            .anchor(Anchor::TopLeft)
+            .child(layer.w(viewport.width).h(viewport.height).occlude()),
+    )
+    .with_priority(2)
+    .into_any_element()
+}
+
 impl SettingsView {
     /// Opens on `page`, or on the page Settings was last left on.
     pub fn new(page: Option<&'static str>, window: &mut Window, cx: &mut Context<Self>) -> Self {
@@ -510,7 +539,7 @@ impl SettingsView {
             .and_then(|_| known_page(&settings::saved(cx).last_settings_tab));
         Self {
             page: page.or(remembered).unwrap_or("general"),
-            standalone: false,
+            presentation: SettingsPresentation::default(),
             search,
             query: SharedString::default(),
             fields: HashMap::new(),
@@ -543,9 +572,14 @@ impl SettingsView {
         }
     }
 
-    /// Fills a window of its own (New Settings Window) instead of floating as a dialog.
-    pub fn set_standalone(&mut self, standalone: bool) {
-        self.standalone = standalone;
+    /// Where the view is drawn: the sidebar, a window of its own, or a dialog.
+    pub fn set_presentation(&mut self, presentation: SettingsPresentation) {
+        self.presentation = presentation;
+    }
+
+    /// Puts the keyboard in the search field, as opening Settings does.
+    pub fn focus_search(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        self.search.update(cx, |search, cx| search.focus(window, cx));
     }
 
     /// Shows the table of every command on the Keybindings page, as its Edit button does.
@@ -1375,8 +1409,11 @@ impl SettingsView {
                         div()
                             .flex()
                             .items_center()
+                            .min_w_0()
                             .gap(px(6.))
-                            .child(div().text_size(typography::text_sm()).text_color(colors.foreground).child(text(def.label.into())))
+                            // The label wraps rather than running past the card: in the sidebar
+                            // there is no room for a long one on a line of its own.
+                            .child(div().min_w_0().text_size(typography::text_sm()).text_color(colors.foreground).child(text(def.label.into())))
                             .when(def.key.is_some(), |this| {
                                 this.child(div().flex().items_center().justify_center().size(px(20.)).when(resettable, |this| {
                                     let key = def.key.unwrap_or_default();
@@ -1610,7 +1647,9 @@ impl SettingsView {
                             .flex()
                             .flex_col()
                             .rounded(metrics::radius_lg())
-                            .bg(colors.background)
+                            // A card on a plane, as every other card of the page is: it used to
+                            // take the content plane, which the centre the page now fills is.
+                            .bg(colors.raised)
                             .shadow(shadow.clone())
                             .overflow_hidden()
                             .children(children),
@@ -1659,7 +1698,11 @@ impl SettingsView {
     }
 
     fn keybindings_editor(&mut self, window: &mut Window, cx: &mut Context<Self>) -> Entity<KeybindingsEditor> {
-        self.keybindings.get_or_insert_with(|| cx.new(|cx| KeybindingsEditor::new(window, cx))).clone()
+        let editor = self.keybindings.get_or_insert_with(|| cx.new(|cx| KeybindingsEditor::new(window, cx))).clone();
+        // The table has no room for five columns in a stacked page (the sidebar).
+        let narrow = self.stacked;
+        editor.update(cx, |editor, cx| editor.set_narrow(narrow, cx));
+        editor
     }
 
     /// The views a page carries beyond its rows.
@@ -1692,29 +1735,39 @@ impl SettingsView {
     }
 }
 
-impl Render for SettingsView {
-    fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
-        self.settle_jump(cx);
-        let theme = cx.theme().clone();
-        let colors = &theme.colors;
-        let searching = !self.query.trim().is_empty();
-        // Narrow layouts (`ui/workbench.tsx` at 680px, `settings-section.tsx` at 640px): the
-        // pages become a dropdown over the content, and rows stack their control under the label.
-        let viewport = window.viewport_size();
-        let width = if self.standalone { viewport.width } else { (viewport.width - px(64.)).min(px(1152.)) };
-        let narrow = width <= px(680.);
-        let content_width = if narrow { width - px(24.) } else { width - px(208.) - px(48.) };
-        self.stacked = content_width <= px(640.);
-
-        // The Team page is for accounts with a team or an enterprise plan.
+impl SettingsView {
+    /// Pages a plan takes away cannot stay in front of the user.
+    fn settle_page(&mut self, cx: &App) {
         let team_access = account::AccountStore::global(cx)
             .and_then(|store| store.read(cx).subscription().cloned())
             .is_some_and(|subscription| subscription.enterprise.has_access || subscription.collaboration.as_ref().is_some_and(|team| team.enabled));
         if self.page == "team" && !team_access {
             self.page = "general";
         }
-        let mut pages: Vec<&(&'static str, &'static str)> = SETTINGS_PAGES.iter().filter(|(id, _)| *id != "team" || team_access).collect();
+    }
+
+    /// The pages the account may open, in the order the list shows them.
+    fn pages(&self, cx: &App) -> Vec<(&'static str, &'static str)> {
+        let team_access = account::AccountStore::global(cx)
+            .and_then(|store| store.read(cx).subscription().cloned())
+            .is_some_and(|subscription| subscription.enterprise.has_access || subscription.collaboration.as_ref().is_some_and(|team| team.enabled));
+        let mut pages: Vec<(&'static str, &'static str)> =
+            SETTINGS_PAGES.iter().copied().filter(|(id, _)| *id != "team" || team_access).collect();
         pages.sort_by_key(|(id, _)| NAVIGATION_ORDER.iter().position(|page| page == id).unwrap_or(NAVIGATION_ORDER.len()));
+        pages
+    }
+
+    /// The page list: the title, the search field, then the pages or what the search found. The
+    /// workbench draws this in the sidebar; a Settings window draws it beside the page itself.
+    pub fn render_nav(&mut self, window: &mut Window, cx: &mut Context<Self>) -> AnyElement {
+        self.settle_page(cx);
+        let colors = cx.theme().colors.clone();
+        let searching = !self.query.trim().is_empty();
+        let in_window = self.presentation == SettingsPresentation::Window;
+        // A window too narrow for two columns puts the pages in a dropdown over the page.
+        let narrow = in_window && window.viewport_size().width <= px(680.);
+        let pages = self.pages(cx);
+
         let nav: Vec<AnyElement> = if searching {
             let results = self.search_results(cx);
             if results.is_empty() {
@@ -1768,7 +1821,6 @@ impl Render for SettingsView {
         } else {
             pages
                 .iter()
-                .copied()
                 .map(|(id, title)| {
                     let id: &'static str = id;
                     SidebarListItem::new(("settings-page", id.as_ptr() as usize), *title)
@@ -1805,6 +1857,89 @@ impl Render for SettingsView {
                     open_select_menu(this, menu_key.clone(), &options, on_select.clone(), point(position.x, position.y + px(10.)), window, cx);
                 }))
         });
+
+        div()
+            .flex()
+            .flex_col()
+            .flex_none()
+            .min_w_0()
+            .font_family(typography::UI_FONT)
+            .text_color(colors.foreground)
+            .when(narrow, |this| this.w_full())
+            .when(!narrow && in_window, |this| this.w(px(208.)).h_full().bg(colors.window))
+            // In the workbench the pane around it sets the surface and the width.
+            .when(!in_window, |this| this.size_full().min_h_0())
+            .p(px(8.))
+            // In its own window the pages run to the top, under the traffic lights, on the window
+            // plane like the workbench's sidebar.
+            .map(|this| if in_window { this.pt(standalone_top()) } else { this.pt(px(0.)) })
+            .gap(if in_window { px(12.) } else { px(8.) })
+            .child(
+                div()
+                    .flex()
+                    .flex_col()
+                    .gap(px(8.))
+                    .when(!in_window, |this| {
+                        this.child(
+                            div()
+                                .flex()
+                                .items_center()
+                                .gap(px(2.))
+                                .h(px(28.))
+                                .pr(px(6.))
+                                // Settings took the sidebar and the centre over; this hands both
+                                // back to the tool they were on, as Escape does.
+                                .child(
+                                    Button::icon("settings-back", IconName::ArrowLeft)
+                                        .size(ButtonSize::Small)
+                                        .tooltip("Close Settings")
+                                        .on_click(cx.listener(|_, _, _, cx| cx.emit(DismissEvent))),
+                                )
+                                .child(
+                                    div()
+                                        .text_size(typography::text_base())
+                                        .font_weight(typography::MEDIUM)
+                                        .child("Settings"),
+                                ),
+                        )
+                    })
+                    .child(self.search.clone())
+                    .children(page_dropdown),
+            )
+            .when(!narrow || searching, |this| {
+                this.child(
+                    div()
+                        .id("settings-nav")
+                        .flex()
+                        .flex_col()
+                        .flex_1()
+                        .min_h_0()
+                        .when(narrow, |this| this.max_h(px(240.)))
+                        .gap(px(2.))
+                        .overflow_y_scroll()
+                        .children(nav)
+                        .scrollbar_with(&self.nav_scroll),
+                )
+            })
+            .into_any_element()
+    }
+
+    /// The page itself: its toolbar over its scrolling rows and views, and whatever it has opened
+    /// over them (a select's menu, Create Theme, Report a Bug, a font picker).
+    pub fn render_page(&mut self, window: &mut Window, cx: &mut Context<Self>) -> AnyElement {
+        self.settle_jump(cx);
+        self.settle_page(cx);
+        let theme = cx.theme().clone();
+        let colors = theme.colors.clone();
+        let in_window = self.presentation == SettingsPresentation::Window;
+        let viewport = window.viewport_size();
+        // Narrow layouts (`ui/workbench.tsx` at 680px, `settings-section.tsx` at 640px): rows
+        // stack their control under the label. In the centre the sidebar and the rail are gone
+        // from the room the page has.
+        let width = if in_window { viewport.width } else { viewport.width - px(300.) };
+        let narrow = width <= px(680.);
+        self.stacked = width - px(48.) <= px(640.);
+
         let page_toolbar = self.page_toolbar(window, cx);
         let importing = self.importer.as_ref().map(|(importer, _)| importer.clone());
         let table_page = importing.is_none() && self.page == "keyboard" && self.keybindings.as_ref().is_some_and(|editor| editor.read(cx).is_editing());
@@ -1842,157 +1977,87 @@ impl Render for SettingsView {
             }));
         }
 
-        let title = "Import";
-
         div()
-            .id("settings")
             .relative()
-            .track_focus(&self.focus_handle)
-            .occlude()
-            .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
             .flex()
-            .when(narrow, |this| this.flex_col())
-            .when(self.standalone, |this| this.size_full())
-            .when(!self.standalone, |this| {
-                this.w((window.viewport_size().width - px(64.)).min(px(1152.)))
-                    .h((window.viewport_size().height - px(64.)).min(px(768.)))
-                    .rounded(metrics::overlay_radius())
-                    .shadow(theme.shadows.dialog.clone())
-            })
-            .overflow_hidden()
-            .bg(colors.surface)
+            .flex_col()
+            .flex_1()
+            .min_w_0()
+            .min_h_0()
             .font_family(typography::UI_FONT)
             .text_color(colors.foreground)
-            .child(
+            .when(importing.is_some(), |this| {
+                this.child(
+                    div()
+                        .flex()
+                        .flex_none()
+                        .items_center()
+                        .h(metrics::pane_header())
+                        .px(px(24.))
+                        .text_size(typography::text_base())
+                        .font_weight(typography::MEDIUM)
+                        .child("Import"),
+                )
+            })
+            .when(importing.is_none() || in_window, |this| this.pt(if in_window { standalone_top() } else { px(16.) }))
+            .children(page_toolbar.map(|toolbar| {
                 div()
                     .flex()
-                    .flex_col()
                     .flex_none()
-                    .when(narrow, |this| this.w_full())
-                    .when(!narrow, |this| this.w(px(208.)).h_full())
-                    .p(px(8.))
-                    // In its own window the sidebar runs to the top, under the traffic lights,
-                    // on the window plane like the workbench's sidebar.
-                    .when(self.standalone, |this| this.pt(standalone_top()))
-                    .when(self.standalone && !narrow, |this| this.bg(colors.window))
-                    .gap(px(12.))
-                    .child(
-                        div()
-                            .flex()
-                            .flex_col()
-                            .gap(px(8.))
-                            .when(!self.standalone, |this| this.child(
-                                div()
-                                    .flex()
-                                    .items_center()
-                                    .h(px(28.))
-                                    .px(px(6.))
-                                    .text_size(typography::text_base())
-                                    .font_weight(typography::MEDIUM)
-                                    .child("Settings"),
-                            ))
-                            .child(self.search.clone())
-                            .children(page_dropdown),
-                    )
-                    .when(!narrow || searching, |this| {
-                        this.child(
-                            div()
-                                .id("settings-nav")
-                                .flex()
-                                .flex_col()
-                                .flex_1()
-                                .min_h_0()
-                                .when(narrow, |this| this.max_h(px(240.)))
-                                .gap(px(2.))
-                                .overflow_y_scroll()
-                                .children(nav)
-                                .scrollbar_with(&self.nav_scroll),
-                        )
-                    }),
-            )
+                    .px(if narrow { px(12.) } else { px(24.) })
+                    .pb(px(16.))
+                    .child(div().w_full().max_w(px(PAGE_WIDTH)).mx_auto().child(toolbar))
+            }))
             .child(
+                // The page scrolls with the overlay scrollbar (`ScrollArea`).
                 div()
+                    .relative()
                     .flex()
                     .flex_col()
                     .flex_1()
-                    .min_w_0()
                     .min_h_0()
-                    .when(importing.is_some(), |this| {
-                        this.child(
-                            div()
-                                .flex()
-                                .flex_none()
-                                .items_center()
-                                .h(metrics::pane_header())
-                                .px(px(24.))
-                                .text_size(typography::text_base())
-                                .font_weight(typography::MEDIUM)
-                                .child(title),
-                        )
-                    })
-                    .when(importing.is_none() || self.standalone, |this| {
-                        this.pt(if self.standalone { standalone_top() } else if narrow { px(16.) } else { px(24.) })
-                    })
-                    .children(page_toolbar.map(|toolbar| {
-                        div().flex().flex_none().px(if narrow { px(12.) } else { px(24.) }).pb(px(16.)).child(toolbar)
-                    }))
                     .child(
-                        // The page scrolls with the overlay scrollbar (`ScrollArea`).
                         div()
-                            .relative()
+                            .id("settings-content")
                             .flex()
                             .flex_col()
                             .flex_1()
                             .min_h_0()
+                            // The keybindings table scrolls by itself under its header, so the
+                            // page around it holds still.
+                            .when(!table_page, |this| this.overflow_y_scroll().track_scroll(&self.scroll).pb(px(40.)))
+                            .when(table_page, |this| this.pb(px(24.)))
+                            .px(if narrow { px(12.) } else { px(24.) })
                             .child(
                                 div()
-                                    .id("settings-content")
+                                    .w_full()
+                                    .max_w(px(PAGE_WIDTH))
+                                    .mx_auto()
                                     .flex()
                                     .flex_col()
-                                    .flex_1()
                                     .min_h_0()
-                                    // The keybindings table scrolls by itself under its header,
-                                    // so the page around it holds still.
-                                    .when(!table_page, |this| this.overflow_y_scroll().track_scroll(&self.scroll).pb(px(40.)))
-                                    .when(table_page, |this| this.pb(px(24.)))
-                                    .px(if narrow { px(12.) } else { px(24.) })
                                     .gap(px(32.))
                                     .children(content),
-                            )
-                            .child(ui::Scrollbar::new("settings-scrollbar", &self.scroll)),
-                    ),
+                            ),
+                    )
+                    .child(ui::Scrollbar::new("settings-scrollbar", &self.scroll)),
             )
-            .when(!self.standalone, |this| {
-                this.child(
-                    div().absolute().top(px(12.)).right(px(12.)).child(
-                        Button::icon("settings-close", IconName::X)
-                            .size(ButtonSize::Small)
-                            .plane(Plane::Content)
-                            .tooltip("Close")
-                            .on_click(cx.listener(|_, _, _, cx| cx.emit(DismissEvent))),
-                    ),
-                )
-            })
             .children(self.open_menu.as_ref().map(|menu| menu.render()))
+            // Create Theme and Report a Bug are dialogs in their own right. In a tab they float
+            // over the window, so a split pane does not crop them.
             .children(self.theme_creator.as_ref().map(|(creator, _)| {
-                div()
-                    .absolute()
-                    .inset_0()
-                    .flex()
-                    .items_center()
-                    .justify_center()
-                    .bg(colors.scrim)
-                    .child(creator.clone())
+                let layer = div().flex().items_center().justify_center().bg(colors.scrim).child(creator.clone());
+                match in_window {
+                    true => layer.absolute().inset_0().into_any_element(),
+                    false => over_window(layer, viewport),
+                }
             }))
             .children(self.report_bug.as_ref().map(|(picker, _)| {
-                div()
-                    .absolute()
-                    .top(px(64.))
-                    .left_0()
-                    .right_0()
-                    .flex()
-                    .justify_center()
-                    .child(picker.clone())
+                let layer = div().flex().justify_center().pt(px(64.)).child(picker.clone());
+                match in_window {
+                    true => layer.absolute().top_0().left_0().right_0().into_any_element(),
+                    false => over_window(layer.items_start(), viewport),
+                }
             }))
             .children(self.font_picker.as_ref().map(|open| {
                 deferred(
@@ -2004,6 +2069,58 @@ impl Render for SettingsView {
                 )
                 .with_priority(1)
             }))
+            .into_any_element()
+    }
+}
+
+impl Render for SettingsView {
+    fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        let in_window = self.presentation == SettingsPresentation::Window;
+        let narrow = in_window && window.viewport_size().width <= px(680.);
+        let surface = cx.theme().colors.surface;
+        div()
+            .id("settings")
+            .relative()
+            .track_focus(&self.focus_handle)
+            // A window of its own owns its surface and its clicks; in a tab the pane around it
+            // does, and occluding there would take the hover and the focus the pane hands it.
+            .when(in_window, |this| {
+                this.occlude().on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation()).bg(surface)
+            })
+            .flex()
+            .when(narrow, |this| this.flex_col())
+            .size_full()
+            .overflow_hidden()
+            .when(in_window, |this| this.child(self.render_nav(window, cx)))
+            .child(self.render_page(window, cx))
+    }
+}
+
+/// The Settings page list, for the workbench sidebar. It holds no state of its own: the one
+/// [`SettingsView`] the centre tab shows draws the list and owns the page it is on.
+pub struct SettingsNav {
+    view: Entity<SettingsView>,
+    _observe: Subscription,
+}
+
+impl SettingsNav {
+    pub fn new(view: Entity<SettingsView>, cx: &mut Context<Self>) -> Self {
+        // The list follows the page and the search of the view it draws.
+        let observe = cx.observe(&view, |_, _, cx| cx.notify());
+        Self { view, _observe: observe }
+    }
+}
+
+impl Focusable for SettingsNav {
+    fn focus_handle(&self, cx: &App) -> FocusHandle {
+        self.view.read(cx).search.focus_handle(cx)
+    }
+}
+
+impl Render for SettingsNav {
+    fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        let view = self.view.clone();
+        view.update(cx, |view, cx| view.render_nav(window, cx))
     }
 }
 

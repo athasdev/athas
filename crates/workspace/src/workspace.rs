@@ -110,6 +110,7 @@ pub enum SidebarView {
     Git,
     #[serde(rename = "github-prs")]
     GitHub,
+    Settings,
 }
 
 impl SidebarView {
@@ -121,6 +122,7 @@ impl SidebarView {
             SidebarView::Files => "Files",
             SidebarView::Git => "Source Control",
             SidebarView::GitHub => "GitHub",
+            SidebarView::Settings => "Settings",
         }
     }
 }

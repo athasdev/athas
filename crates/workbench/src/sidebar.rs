@@ -159,6 +159,15 @@ impl Workbench {
             _ if extension_view.is_some() && self.state.active_project().is_none() => self.render_project_tool(view, cx).into_any_element(),
             _ if let Some(extension_view) = &extension_view => self.render_extension_view(extension_view, cx),
             SidebarView::Agents => self.render_agents_view(window, cx).into_any_element(),
+            // Settings needs no project: the sidebar lists its pages and the centre shows the
+            // one picked.
+            SidebarView::Settings => div()
+                .flex()
+                .flex_col()
+                .flex_1()
+                .min_h_0()
+                .children(self.settings_nav.clone())
+                .into_any_element(),
             tool => self.render_project_tool(tool, cx).into_any_element(),
         };
         div()
