@@ -38,12 +38,17 @@ mod windows;
 
 pub use close_guard::CloseIntent;
 pub use detached::{
-    DetachedContent, DetachedSession, DetachedWindow, NewExtensionsWindow, NewSettingsWindow, NewTerminalWindow, open_detached,
-    recall_session, session_is_detached, set_detached_opener,
+    DetachedContent, DetachedSession, DetachedWindow, NewExtensionsWindow, NewSettingsWindow, NewTerminalWindow,
+    detached_traffic_lights, open_detached, recall_session, session_is_detached, set_detached_opener,
 };
 #[cfg(target_family = "wasm")]
 pub use remote_projects::{WebBackend, set_web_backend};
 pub use project_picker::ProjectPickerStep;
+
+/// Where a workbench window wants its macOS window buttons, for the platform crate that opens it.
+pub fn workbench_traffic_lights() -> gpui::Point<gpui::Pixels> {
+    ui::metrics::workbench_traffic_lights()
+}
 pub use web_chrome::{BranchList, OpenGithubRepository, RepositoryEntry, RepositoryGate, WebChrome, set_web_chrome};
 pub use windows::{
     MergeAllWindows, MoveTabToNewWindow, NewWindow, NewWindowRequest, NewWindowTab, ShowAllWindowTabs,
@@ -466,6 +471,8 @@ pub struct Workbench {
     /// The editor and terminal zoom last drawn, and the badge a change shows for a moment
     /// (`ZoomIndicator`).
     zoom_seen: (f32, f32),
+    /// The zoom the window buttons were last placed for.
+    traffic_lights_zoom: f32,
     zoom_badge: Option<(SharedString, gpui::Task<()>)>,
     /// Whether this version's What's New is unread, read once and cleared when it is shown.
     whats_new_unread: Option<bool>,
@@ -724,6 +731,7 @@ impl Workbench {
             dirty_tabs: Default::default(),
             timed_toasts: Default::default(),
             zoom_seen: (ui::scale::zoom(), settings::get(cx).terminal_font_size as f32),
+            traffic_lights_zoom: ui::scale::zoom(),
             zoom_badge: None,
             whats_new_unread: None,
             onboarding: None,
@@ -1668,6 +1676,21 @@ impl Workbench {
         window.focus(&view.focus_handle(cx), cx);
         self.modal = Some((view.into(), subscription));
         cx.notify();
+    }
+
+    /// AppKit leaves the window buttons wherever it was last told and draws them at its own size,
+    /// so a zoom that changes the title strip's height leaves them off it: high in the strip
+    /// zoomed in, over the content below it zoomed out. Asks for the strip's middle again.
+    fn centre_traffic_lights(&mut self, window: &Window) {
+        let zoom = ui::scale::zoom();
+        if !self.platform.has_traffic_lights() || self.traffic_lights_zoom == zoom {
+            return;
+        }
+        self.traffic_lights_zoom = zoom;
+        #[cfg(not(target_family = "wasm"))]
+        window.set_traffic_light_position(ui::metrics::workbench_traffic_lights());
+        #[cfg(target_family = "wasm")]
+        let _ = window;
     }
 
     /// The terminal panel holding the keyboard, if one is.
@@ -2738,6 +2761,7 @@ impl Render for Workbench {
         let sidebar_column = self.state.layout.sidebar_visible && !narrow && !pane_fullscreen;
         let window_tabs = self.window_tabs(window, cx);
         // With window tabs, the traffic lights sit in the tab row above the workbench.
+        self.centre_traffic_lights(window);
         let traffic_lights = self.platform.has_traffic_lights() && !window.is_fullscreen() && window_tabs.is_empty();
         let dragging = self.drag.is_some();
 

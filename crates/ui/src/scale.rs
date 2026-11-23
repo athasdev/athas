@@ -61,7 +61,12 @@ pub fn reset_zoom(cx: &mut App) {
     set_zoom(1.0, cx);
 }
 
-/// Sets the zoom without a window to refresh, for tests.
+/// Holds the zoom for one test at a time: it is one process-wide factor, and the tests that
+/// read a scaled size would otherwise race the tests that change it.
+#[cfg(test)]
+pub(crate) static TEST_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
+/// Sets the zoom without a window to refresh, for tests. Take [`TEST_LOCK`] first.
 #[cfg(test)]
 pub(crate) fn set_zoom_for_test(level: f32) {
     ZOOM.store(level.to_bits(), Ordering::Relaxed);
@@ -83,8 +88,12 @@ mod tests {
     }
 
     #[test]
-    fn a_size_is_itself_at_a_hundred_percent() {
-        assert_eq!(zoom(), 1.0);
+    fn a_size_scales_with_the_zoom() {
+        let _held = TEST_LOCK.lock().unwrap_or_else(|held| held.into_inner());
+        set_zoom_for_test(1.0);
         assert_eq!(px(8.), gpui::px(8.));
+        set_zoom_for_test(1.5);
+        assert_eq!(px(8.), gpui::px(12.));
+        set_zoom_for_test(1.0);
     }
 }

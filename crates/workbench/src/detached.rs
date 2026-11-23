@@ -238,6 +238,16 @@ pub fn recall_session(id: &str, cx: &mut App) {
 }
 
 /// The root view of a detached window: a 32px title bar and the one view it hosts.
+/// Where the buttons centre in a window that draws over the title bar: the room its own chrome
+/// leaves at the top (`traffic_light_position`'s y 20 plus half a 14px button).
+const OVERLAY_LIGHTS_CENTRE: f32 = 27.;
+
+/// Where a single-view window that draws over the title bar wants its window buttons, for the
+/// platform crate that opens it.
+pub fn detached_traffic_lights() -> gpui::Point<gpui::Pixels> {
+    ui::metrics::traffic_light_position(ui::scale::px(OVERLAY_LIGHTS_CENTRE))
+}
+
 pub struct DetachedWindow {
     content: DetachedContent,
     view: AnyView,
@@ -247,6 +257,8 @@ pub struct DetachedWindow {
     root_focus: FocusHandle,
     platform: Platform,
     should_move_window: bool,
+    /// The zoom the window buttons were last placed for.
+    traffic_lights_zoom: f32,
     _subscriptions: Vec<Subscription>,
 }
 
@@ -349,11 +361,34 @@ impl DetachedWindow {
         // answers no shortcut, so the root takes it back.
         let root = root_focus.clone();
         subscriptions.push(cx.on_focus_lost(window, move |_, window, cx| window.focus(&root, cx)));
-        Self { content, view, focus, root_focus, platform: Platform::current(), should_move_window: false, _subscriptions: subscriptions }
+        Self {
+            content,
+            view,
+            focus,
+            root_focus,
+            platform: Platform::current(),
+            should_move_window: false,
+            traffic_lights_zoom: ui::scale::zoom(),
+            _subscriptions: subscriptions,
+        }
     }
 
     pub fn content(&self) -> &DetachedContent {
         &self.content
+    }
+
+    /// The buttons hold AppKit's size and last position through a zoom; a window that draws over
+    /// the title bar puts them back where its own chrome leaves room.
+    fn centre_traffic_lights(&mut self, window: &Window) {
+        let zoom = ui::scale::zoom();
+        if !self.content.overlays_title_bar() || !Platform::current().has_traffic_lights() || self.traffic_lights_zoom == zoom {
+            return;
+        }
+        self.traffic_lights_zoom = zoom;
+        #[cfg(not(target_family = "wasm"))]
+        window.set_traffic_light_position(ui::metrics::traffic_light_position(ui::scale::px(OVERLAY_LIGHTS_CENTRE)));
+        #[cfg(target_family = "wasm")]
+        let _ = window;
     }
 
     /// Zooms what this window shows: a terminal window its terminal, anything else the editors.
@@ -488,6 +523,7 @@ impl Focusable for DetachedWindow {
 
 impl Render for DetachedWindow {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        self.centre_traffic_lights(window);
         let colors = cx.theme().colors.clone();
         let plane = self.content.on_window_plane();
         let overlay = self.content.overlays_title_bar();

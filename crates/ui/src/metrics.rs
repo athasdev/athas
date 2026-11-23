@@ -128,10 +128,31 @@ pub fn radius_lg() -> Pixels { scale::px(8.) }
 pub fn radius_xl() -> Pixels { scale::px(12.) }
 /// What floats clear of the window: the command palette and the surfaces like it.
 pub fn overlay_radius() -> Pixels { scale::px(16.) }
-/// Where the macOS window buttons end. AppKit draws them at its own size whatever the window is
-/// zoomed to: from `traffic_light_position`'s x 9, three 14px buttons 9 apart, so the last ends
-/// at 69. Measure it again with `cargo run -p ui --example traffic_lights`.
+/// The macOS window buttons, as AppKit draws them. It holds its own size and spacing whatever
+/// the window is zoomed to, so these do not scale. Measure them again with
+/// `cargo run -p ui --example traffic_lights`.
+///
+/// The close button's left edge, which is the inset every other Mac app has.
+pub const TRAFFIC_LIGHT_X: f32 = 9.;
+/// One button, square.
+pub const TRAFFIC_LIGHT_SIZE: f32 = 14.;
+/// Where the last of the three ends: `9 + 3 * 14 + 2 * 9`.
 pub const TRAFFIC_LIGHTS_END: f32 = 69.;
+
+/// Where to ask AppKit for the window buttons so their row centres on `centre` below the window's
+/// top. GPUI makes their container `TRAFFIC_LIGHT_SIZE + 2y` tall and puts them `y` up from its
+/// bottom, so their centre lands `y + SIZE / 2` down from the top.
+///
+/// A window has to ask again whenever `centre` moves: AppKit leaves them wherever it was last
+/// told, so a zoom that changes the title strip's height otherwise leaves them off it.
+pub fn traffic_light_position(centre: Pixels) -> gpui::Point<Pixels> {
+    gpui::point(gpui::px(TRAFFIC_LIGHT_X), centre - gpui::px(TRAFFIC_LIGHT_SIZE / 2.))
+}
+
+/// Where the workbench wants them: the middle of its title strip.
+pub fn workbench_traffic_lights() -> gpui::Point<Pixels> {
+    traffic_light_position(pane_header() / 2.)
+}
 
 /// What the first thing in the title row clears: the window buttons, which hold their size at
 /// every zoom, and one inline padding, which does not.
@@ -148,23 +169,38 @@ mod traffic_lights {
     const BUTTON: f32 = 14.;
     const GAP: f32 = 9.;
 
+    /// The strip grows with the zoom but the buttons do not, so the window asks for a new
+    /// position each time: centred on the strip at every level, as the title row beside them is.
+    /// The row's own inset moves only by its padding, since the buttons hold their size.
+    #[test]
+    fn the_buttons_and_the_row_line_up_at_every_zoom() {
+        let _held = crate::scale::TEST_LOCK.lock().unwrap_or_else(|held| held.into_inner());
+        crate::scale::set_zoom_for_test(1.0);
+        // A 40px strip puts a 14px button at 13, which is what the window opens with.
+        assert_eq!(workbench_traffic_lights(), gpui::point(gpui::px(TRAFFIC_LIGHT_X), gpui::px(13.)));
+        let inset_at_100 = traffic_lights_inset();
+
+        for zoom in [0.75, 1.5, 2.0] {
+            crate::scale::set_zoom_for_test(zoom);
+            let centre = pane_header() / 2.;
+            assert_eq!(workbench_traffic_lights().y + gpui::px(TRAFFIC_LIGHT_SIZE / 2.), centre, "centred at {zoom}x");
+            assert_eq!(workbench_traffic_lights().x, gpui::px(TRAFFIC_LIGHT_X), "the left inset holds at {zoom}x");
+        }
+
+        crate::scale::set_zoom_for_test(2.0);
+        assert_eq!(traffic_lights_inset() - inset_at_100, chrome_padding_inline() / 2., "only the padding zooms");
+        crate::scale::set_zoom_for_test(1.0);
+    }
+
     #[test]
     fn the_row_starts_where_the_window_buttons_end() {
         let last_button_ends = CLOSE_X + BUTTON + GAP + BUTTON + GAP + BUTTON;
+        assert_eq!(CLOSE_X, TRAFFIC_LIGHT_X);
+        assert_eq!(BUTTON, TRAFFIC_LIGHT_SIZE);
         assert_eq!(last_button_ends, TRAFFIC_LIGHTS_END);
         assert_eq!(traffic_lights_inset(), gpui::px(TRAFFIC_LIGHTS_END) + chrome_padding_inline());
     }
 
-    /// The buttons keep AppKit's size at every zoom, so the inset only zooms the padding after
-    /// them. Zooming the whole inset would walk the title row away from the buttons.
-    #[test]
-    fn zoom_moves_the_padding_and_not_the_buttons() {
-        let at_100 = traffic_lights_inset();
-        crate::scale::set_zoom_for_test(2.0);
-        let at_200 = traffic_lights_inset();
-        crate::scale::set_zoom_for_test(1.0);
-        assert_eq!(at_200 - at_100, chrome_padding_inline());
-    }
 }
 pub fn sidebar_default_width() -> Pixels { scale::px(220.) }
 pub fn sidebar_min_width() -> Pixels { scale::px(140.) }
