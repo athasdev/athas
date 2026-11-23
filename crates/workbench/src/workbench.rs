@@ -3,6 +3,8 @@
 
 mod activity_bar;
 mod agent_hooks;
+mod archived_sessions;
+pub(crate) mod secondary;
 pub mod agent_usage;
 mod centre;
 mod centre_views;
@@ -458,6 +460,9 @@ pub struct Workbench {
     settings_panel: Option<(Entity<settings_ui::SettingsView>, Vec<Subscription>)>,
     /// The page list the sidebar shows, drawn from the same view.
     settings_nav: Option<Entity<settings_ui::SettingsNav>>,
+    /// Archived Sessions: its search field, what is ticked there, and where its list is scrolled.
+    archived_search: Option<Entity<ui::TextInput>>,
+    pub(crate) archived_selected: std::collections::HashSet<SessionId>,
     /// The tool the sidebar was on when Settings took it over, for Escape to go back to.
     settings_return_view: SidebarView,
     /// The Git panel, its events and the observer that publishes its repository
@@ -523,7 +528,9 @@ pub struct Workbench {
     /// first, and the click after it must not open it again.
     account_menu_pressed: Option<(Point<Pixels>, web_time::Instant)>,
     /// The Inbox beside the sidebar, while it is open (the bell in the activity bar).
-    pub(crate) inbox: Option<(Entity<notifications::InboxPanel>, Subscription)>,
+    /// The one secondary column beside the sidebar: the Inbox, or one of the lists the sidebar's
+    /// footer opens. One slot, so opening one puts the last away.
+    pub(crate) secondary: Option<crate::secondary::Secondary>,
     /// What the next team session tab opens to do: a review or a hand-off.
     pending_team_send: Option<collaboration::SendTo>,
     /// The agent History shows when it opens next (AI: Import Agent Session).
@@ -743,6 +750,8 @@ impl Workbench {
             file_tree: None,
             settings_panel: None,
             settings_nav: None,
+            archived_search: None,
+            archived_selected: Default::default(),
             settings_return_view: SidebarView::Agents,
             git_panel: None,
             terminal: None,
@@ -777,7 +786,7 @@ impl Workbench {
             pending_imports: Default::default(),
             account_menu: None,
             account_menu_pressed: None,
-            inbox: None,
+            secondary: None,
             pending_team_send: None,
             pending_history_agent: None,
             pending_terminals: HashMap::new(),
@@ -1070,6 +1079,7 @@ impl Workbench {
         if view == SidebarView::Settings {
             self.ensure_settings_panel(None, window, cx);
         }
+        self.ensure_archived_search(window, cx);
 
         self.sync_centre_views(window, cx);
         if settings::get(cx).show_outline {
@@ -1754,9 +1764,9 @@ impl Workbench {
             return;
         }
         self.traffic_lights_zoom = zoom;
-        #[cfg(not(target_family = "wasm"))]
+        #[cfg(target_os = "macos")]
         window.set_traffic_light_position(ui::metrics::workbench_traffic_lights());
-        #[cfg(target_family = "wasm")]
+        #[cfg(not(target_os = "macos"))]
         let _ = window;
     }
 
@@ -1850,7 +1860,7 @@ impl Workbench {
     /// Whether an overlay over the workbench holds the keyboard: a modal, a menu, the account
     /// menu or the Inbox. Views built underneath must not take it from them.
     pub(crate) fn overlay_has_focus(&self) -> bool {
-        self.modal.is_some() || self.open_menu.is_some() || self.account_menu.is_some() || self.inbox.is_some()
+        self.modal.is_some() || self.open_menu.is_some() || self.account_menu.is_some() || self.secondary.is_some()
     }
 
     /// Remembers where the keyboard is before an overlay takes it, unless an overlay already has
@@ -1908,20 +1918,20 @@ impl Workbench {
 
     /// The bell: opens the Inbox beside the sidebar, or closes it.
     fn show_notifications(&mut self, _: &ShowNotifications, window: &mut Window, cx: &mut Context<Self>) {
-        if self.inbox.is_some() {
-            self.close_inbox(window, cx);
+        if matches!(self.secondary, Some(crate::secondary::Secondary::Inbox { .. })) {
+            self.close_secondary(window, cx);
             return;
         }
         let panel = cx.new(notifications::InboxPanel::new);
-        let subscription = cx.subscribe_in(&panel, window, |this, _, _: &gpui::DismissEvent, window, cx| this.close_inbox(window, cx));
+        let subscription = cx.subscribe_in(&panel, window, |this, _, _: &gpui::DismissEvent, window, cx| this.close_secondary(window, cx));
         self.remember_focus(window, cx);
         window.focus(&panel.focus_handle(cx), cx);
-        self.inbox = Some((panel, subscription));
+        self.secondary = Some(crate::secondary::Secondary::Inbox { panel, _subscription: subscription });
         cx.notify();
     }
 
-    pub(crate) fn close_inbox(&mut self, window: &mut Window, cx: &mut Context<Self>) {
-        if let Some((panel, _)) = self.inbox.take()
+    pub(crate) fn close_secondary(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        if let Some(crate::secondary::Secondary::Inbox { panel, .. }) = self.secondary.take()
             && panel.focus_handle(cx).contains_focused(window, cx)
         {
             self.restore_focus(window, cx);
@@ -1931,7 +1941,7 @@ impl Workbench {
 
     /// The Inbox as a column beside the sidebar, with a resize edge as the sidebar has.
     fn render_inbox_column(&self, cx: &mut Context<Self>) -> Option<impl IntoElement> {
-        let (panel, _) = self.inbox.as_ref()?;
+        let panel = self.render_secondary_panel(cx)?;
         let resizing = matches!(self.drag, Some(Drag::Inbox { .. }));
         let line = if resizing { cx.theme().colors.primary } else { cx.theme().colors.border_strong };
         Some(
@@ -1943,7 +1953,7 @@ impl Workbench {
                 .h_full()
                 .w(px(self.state.layout.inbox_width.clamp(INBOX_MIN_WIDTH, INBOX_MAX_WIDTH)))
                 .pr(metrics::workbench_gap())
-                .child(panel.clone())
+                .child(panel)
                 .child(
                     div()
                         .id("inbox-resize")
@@ -1979,12 +1989,12 @@ impl Workbench {
         if !narrow {
             return None;
         }
-        let (panel, _) = self.inbox.as_ref()?;
+        let panel = self.render_secondary_panel(cx)?;
         Some(
             div()
                 .absolute()
                 .inset_0()
-                .child(div().id("inbox-backdrop").absolute().inset_0().on_click(cx.listener(|this, _, window, cx| this.close_inbox(window, cx))))
+                .child(div().id("inbox-backdrop").absolute().inset_0().on_click(cx.listener(|this, _, window, cx| this.close_secondary(window, cx))))
                 .child(
                     div()
                         .absolute()
@@ -1997,7 +2007,7 @@ impl Workbench {
                         .rounded(metrics::island_radius())
                         .shadow(cx.theme().shadows.popover.clone())
                         .occlude()
-                        .child(panel.clone()),
+                        .child(panel),
                 ),
         )
     }

@@ -181,6 +181,44 @@ impl Workbench {
         }
     }
 
+    /// Opens a fork of a session: a new session of the same agent and project, its history
+    /// written out under the new id before the view asks for it, then brought to the front.
+    pub(crate) fn fork_session(
+        &mut self,
+        from: &SessionId,
+        title: &str,
+        transcript: &agent_ui::thread::Transcript,
+        window: &mut gpui::Window,
+        cx: &mut Context<Self>,
+    ) {
+        let Some(source) = self.state.session(from) else { return };
+        let (agent, project) = (source.agent.clone(), source.project.clone());
+        let mut created = None;
+        self.update_state(cx, |state| {
+            let id = state.new_session(project.clone(), &agent);
+            state.rename_session(&id, title);
+            created = Some(id);
+        });
+        let Some(id) = created else { return };
+        // The view loads its transcript from the store when it opens, so the fork's history has
+        // to be on disk before that: write it, then open.
+        match agent_ui::persistence::sessions_dir() {
+            Some(dir) => {
+                if let Err(error) = agent_ui::persistence::save(&dir, &id.0, transcript) {
+                    notifications::error(cx, "Could not fork the chat", Some(format!("{error:#}").into()));
+                    self.update_state(cx, |state| state.delete_session(&id));
+                    return;
+                }
+            }
+            None => {
+                notifications::error(cx, "Could not fork the chat", Some("No place to keep its history".into()));
+                self.update_state(cx, |state| state.delete_session(&id));
+                return;
+            }
+        }
+        self.open_session(id, window, cx);
+    }
+
     /// Shows or puts away the side column of boxes beside the session.
     fn toggle_session_details(&mut self, cx: &mut Context<Self>) {
         if self.state.focused_session().is_none() {

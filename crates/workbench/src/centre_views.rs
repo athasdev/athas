@@ -694,6 +694,9 @@ impl Workbench {
                         SessionViewEvent::DevServer { url, open } => this.session_dev_server(&id.0, url.clone(), *open, window, cx),
                         SessionViewEvent::DevServerStopped(url) => this.session_dev_server_stopped(&id.0, url, cx),
                         SessionViewEvent::OpenBrowser(url) => browser_view::open_browser_tab(url.as_deref(), cx),
+                        SessionViewEvent::Fork { title, transcript } => {
+                            this.fork_session(&id, title, transcript, window, cx);
+                        }
                         SessionViewEvent::TitleChanged(title) => {
                             let title = title.clone();
                             this.update_state(cx, |state| state.rename_session(&id, &title));

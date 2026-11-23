@@ -150,6 +150,10 @@ pub enum SessionViewEvent {
     DevServerStopped(String),
     /// Open a page (a dev server the session runs, or a blank one) in a browser tab.
     OpenBrowser(Option<String>),
+    /// Start a session of this one's history up to and including a reply, so the conversation
+    /// can go another way from there without losing this one. The transcript is the fork's own
+    /// copy, already cut.
+    Fork { title: String, transcript: Box<crate::thread::Transcript> },
 }
 
 /// Registers the AI commands with the command palette and binds the AI views' keys. Call once at

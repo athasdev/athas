@@ -559,3 +559,11 @@ mod tests {
         );
     }
 }
+
+/// What a fork of a session is called: the original's title, marked once however many times it
+/// is forked again, so a chain of forks does not grow a tail of them.
+pub fn fork_title(title: &str) -> String {
+    let base = title.trim();
+    let base = base.strip_suffix(" (fork)").unwrap_or(base);
+    if base.is_empty() { "Fork".to_string() } else { format!("{base} (fork)") }
+}

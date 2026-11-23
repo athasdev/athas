@@ -223,7 +223,7 @@ impl Workbench {
                                     .variant(ui::ButtonVariant::Chrome)
                                     .tooltip("Inbox")
                                     .filled_when_active()
-                                    .active(self.inbox.is_some())
+                                    .active(matches!(self.secondary, Some(crate::secondary::Secondary::Inbox { .. })))
                                     .tooltip_side(ui::TooltipSide::Right)
                                     .on_click(|_, window, cx| window.dispatch_action(Box::new(ShowNotifications), cx)),
                             )

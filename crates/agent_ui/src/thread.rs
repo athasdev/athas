@@ -99,11 +99,16 @@ pub struct UserMessage {
     pub issues: Vec<(u64, String)>,
 }
 
+/// A stamp as a clock reads it ("03:45 PM"), Athas's `formatTime`.
+fn time_of_day(at: Option<u64>) -> Option<String> {
+    let at = chrono::DateTime::from_timestamp_millis(i64::try_from(at?).ok()?)?;
+    Some(at.with_timezone(&chrono::Local).format("%I:%M %p").to_string())
+}
+
 impl UserMessage {
     /// The hour and minute it was sent, as Athas's `formatTime` ("03:45 PM").
     pub fn time_of_day(&self) -> Option<String> {
-        let at = chrono::DateTime::from_timestamp_millis(i64::try_from(self.sent_at?).ok()?)?;
-        Some(at.with_timezone(&chrono::Local).format("%I:%M %p").to_string())
+        time_of_day(self.sent_at)
     }
 }
 
@@ -135,6 +140,17 @@ pub struct AgentMessage {
     /// The built-in agent's steps and cost for the turn (`usage`).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub usage: Option<MessageUsage>,
+    /// When the reply began arriving, in milliseconds since the epoch, as `UserMessage::sent_at`
+    /// stamps a prompt. Older saves have none, and a replayed reply is stamped as it arrives.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub received_at: Option<u64>,
+}
+
+impl AgentMessage {
+    /// The hour and minute it arrived, as Athas's `formatTime` ("03:45 PM").
+    pub fn time_of_day(&self) -> Option<String> {
+        time_of_day(self.received_at)
+    }
 }
 
 /// A turn's token usage from the end of the turn (`AcpTurnUsage`).
@@ -754,7 +770,9 @@ impl Transcript {
                     message.message_id = message_id;
                 }
             }
-            _ => self.entries.push(Entry::Agent(AgentMessage { message_id, text: text.to_string(), ..Default::default() })),
+            _ => self
+                .entries
+                .push(Entry::Agent(AgentMessage { message_id, text: text.to_string(), received_at: Some(now_ms()), ..Default::default() })),
         }
         Applied { entry: Some(self.entries.len() - 1), session: false }
     }
@@ -922,7 +940,9 @@ mod tests {
         transcript.apply(update(json!({ "sessionUpdate": "tool_call", "toolCallId": "t1", "title": "Read file", "kind": "read" })));
         assert_eq!(transcript.apply(agent_chunk("Done")).entry, Some(4));
         assert!(matches!(&transcript.entries[1], Entry::Thought(thought) if thought.text == "Let me look."));
-        assert_eq!(transcript.entries[2], Entry::Agent(AgentMessage { message_id: None, text: "Hello, world".into(), ..Default::default() }));
+        // The reply carries the moment it arrived, so compare what it says, not the stamp.
+        assert!(matches!(&transcript.entries[2], Entry::Agent(message)
+            if message.text == "Hello, world" && message.message_id.is_none() && message.received_at.is_some()));
         assert!(matches!(&transcript.entries[4], Entry::Agent(message) if message.text == "Done"));
     }
 

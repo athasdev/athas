@@ -371,9 +371,9 @@ impl DetachedWindow {
             return;
         }
         self.traffic_lights_zoom = zoom;
-        #[cfg(not(target_family = "wasm"))]
+        #[cfg(target_os = "macos")]
         window.set_traffic_light_position(ui::metrics::traffic_light_position(ui::scale::px(OVERLAY_LIGHTS_CENTRE)));
-        #[cfg(target_family = "wasm")]
+        #[cfg(not(target_os = "macos"))]
         let _ = window;
     }
 

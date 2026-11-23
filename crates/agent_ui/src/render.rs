@@ -375,12 +375,7 @@ impl SessionView {
                 return div().into_any_element();
             }
             let sel = self.selecting(cx);
-            let notice = render_notice(NoticeKind::Error, text, SpanPath::entry(index).child(0), &sel, cx);
-            let colors = colors(cx);
-            return match self.ends_the_turn(index).then(|| self.render_turn_actions(index, &colors)).flatten() {
-                Some(actions) => div().group(TURN_TAIL).flex().flex_col().gap(px(8.)).child(notice).child(actions).into_any_element(),
-                None => notice,
-            };
+            return render_notice(NoticeKind::Error, text, SpanPath::entry(index).child(0), &sel, cx);
         }
         let colors = colors(cx);
         let key = format!("error-details-{index}");
@@ -521,10 +516,7 @@ impl SessionView {
                         this.child(div().mt(px(6.)).child(code_box(&details, SpanPath::entry(index).child(1), &sel, cx)))
                     }),
             );
-        match self.ends_the_turn(index).then(|| self.render_turn_actions(index, &colors)).flatten() {
-            Some(actions) => div().group(TURN_TAIL).flex().flex_col().gap(px(8.)).child(card).child(actions).into_any_element(),
-            None => card.into_any_element(),
-        }
+        card.into_any_element()
     }
 
     fn render_user_message(&self, index: usize, message: &crate::thread::UserMessage, cx: &mut Context<Self>) -> AnyElement {
@@ -675,7 +667,6 @@ impl SessionView {
         let blocks = self.markdown(index, text);
         let colors = cx.theme().colors.clone();
         let running_last = self.is_running() && index + 1 == self.transcript.entries.len();
-        let reply_end = self.ends_the_turn(index);
         let last_answer = !self.is_running() && !self.transcript.entries[index + 1..].iter().any(|entry| matches!(entry, Entry::Agent(_) | Entry::User(_)));
         let chips: Vec<AnyElement> = if last_answer {
             follow_ups
@@ -732,6 +723,7 @@ impl SessionView {
                 .collect(),
             _ => Vec::new(),
         };
+        let reply_actions = (!running_last).then(|| self.render_reply_actions(index, &colors, cx)).flatten();
         div()
             .id(("agent-message", index))
             .group(TURN_TAIL)
@@ -753,61 +745,72 @@ impl SessionView {
             .when(!chips.is_empty(), |this| this.child(div().flex().flex_wrap().gap(px(6.)).children(chips)))
             .children(self.render_cloud_tool_calls(index, cx))
             .children(self.render_cloud_run_actions(index, cx))
-            .children((!running_last && reply_end).then(|| self.render_turn_actions(index, &colors)).flatten())
+            // While the reply is still being written it has no row yet: the words under it keep
+            // moving, and half a reply is not one to copy or fork from.
+            .children(reply_actions)
             .text_color(colors.foreground)
             .into_any_element()
     }
 
-    /// Whether this entry is the last thing the turn says, so it carries the turn's actions.
-    /// A reply the agent writes between its steps comes as several messages, and a turn that
-    /// failed ends on its error: Copy belongs under the last of them, not in the middle.
-    fn ends_the_turn(&self, index: usize) -> bool {
-        let entries = &self.transcript.entries;
-        let speaks = |entry: &Entry| match entry {
-            Entry::Agent(_) => true,
-            Entry::Notice(notice) => matches!(notice.kind, NoticeKind::Error | NoticeKind::Warning),
-            _ => false,
-        };
-        let rest = entries[index + 1..].iter().take_while(|entry| !matches!(entry, Entry::User(_)));
-        speaks(&entries[index]) && !rest.clone().any(|entry| speaks(entry)) && !self.turn_text(index).is_empty()
+    /// Starts a session of this one's history up to and including `index`. The fork gets its own
+    /// copy of the transcript, cut there, so neither conversation can disturb the other.
+    fn fork_from(&mut self, index: usize, cx: &mut Context<Self>) {
+        let mut transcript = self.transcript.clone();
+        transcript.entries.truncate(index + 1);
+        let title = crate::summary::fork_title(&self.info.title);
+        cx.emit(crate::SessionViewEvent::Fork { title, transcript: Box::new(transcript) });
     }
 
-    /// Everything the turn's replies said, as Copy writes it out.
-    fn turn_text(&self, index: usize) -> String {
-        let entries = &self.transcript.entries;
-        let start = entries[..index].iter().rposition(|entry| matches!(entry, Entry::User(_))).map_or(0, |user| user + 1);
-        entries[start..=index]
-            .iter()
-            .filter_map(|entry| match entry {
-                Entry::Agent(message) => Some(crate::follow_ups::extract(&message.text).0.trim().to_string()),
-                _ => None,
-            })
-            .filter(|text| !text.is_empty())
-            .collect::<Vec<_>>()
-            .join("\n\n")
+    /// What one reply said, as Copy writes it out: its own words, without the follow-up block.
+    fn reply_text(&self, index: usize) -> String {
+        match self.transcript.entries.get(index) {
+            Some(Entry::Agent(message)) => crate::follow_ups::extract(&message.text).0.trim().to_string(),
+            _ => String::new(),
+        }
     }
 
-    /// The turn's actions under its last word: Copy, shown on hover.
-    fn render_turn_actions(&self, index: usize, colors: &theme::ThemeColors) -> Option<AnyElement> {
-        let text = self.turn_text(index);
+    /// The row under a reply, on hover: Copy, Fork chat from here, and when it arrived.
+    ///
+    /// It used to belong to the *turn* and was drawn under whichever entry happened to end it —
+    /// an agent message, or an error notice — and only when the turn had text. An agent that
+    /// writes, runs a tool, then writes again makes one turn of several replies, so the row
+    /// appeared under the last of them and nowhere else, which read as it appearing at random.
+    /// Every reply carries its own row now, and each control means the same thing: this reply.
+    fn render_reply_actions(&self, index: usize, colors: &theme::ThemeColors, cx: &mut Context<Self>) -> Option<AnyElement> {
+        let text = self.reply_text(index);
         if text.is_empty() {
             return None;
         }
+        let at = match self.transcript.entries.get(index) {
+            Some(Entry::Agent(message)) => message.time_of_day(),
+            _ => None,
+        };
+        let copy = text.clone();
         Some(
             div()
                 .flex()
                 .items_center()
+                .min_h(px(24.))
                 .gap(px(2.))
                 .text_size(typography::text_sm())
                 .text_color(colors.subtle_foreground)
+                .invisible()
+                .group_hover(TURN_TAIL, |style| style.visible())
                 .child(
-                    div().flex().invisible().group_hover(TURN_TAIL, |style| style.visible()).child(
-                        Button::icon(("copy-message", index), IconName::Copy)
-                            .size(ButtonSize::XSmall)
-                            .tooltip("Copy response as Markdown")
-                            .on_click(move |_, _, cx| cx.write_to_clipboard(gpui::ClipboardItem::new_string(text.clone()))),
-                    ),
+                    Button::icon(("copy-message", index), IconName::Copy)
+                        .variant(ButtonVariant::Ghost)
+                        .size(ButtonSize::XSmall)
+                        .tooltip("Copy response as Markdown")
+                        .on_click(move |_, _, cx| cx.write_to_clipboard(gpui::ClipboardItem::new_string(copy.clone()))),
                 )
+                .child(
+                    Button::icon(("fork-chat", index), IconName::GitBranch)
+                        .variant(ButtonVariant::Ghost)
+                        .size(ButtonSize::XSmall)
+                        .tooltip("Fork chat from here")
+                        .on_click(cx.listener(move |this, _: &ClickEvent, _, cx| this.fork_from(index, cx))),
+                )
+                .children(at.map(|time| div().px(px(4.)).child(time)))
                 .into_any_element(),
         )
     }
