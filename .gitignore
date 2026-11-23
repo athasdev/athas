@@ -1,4 +1,7 @@
 /target
 /core/target
+# nix build output symlinks
+/result
+/result-*
 .DS_Store
 .env
