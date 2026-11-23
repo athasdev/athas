@@ -68,11 +68,6 @@
           openssl
           zlib
           zstd
-          # wry webview (browser tabs); linked if the webview feature is on
-          gtk3
-          glib
-          webkitgtk_4_1
-          libsoup_3
         ];
 
         # Libraries GPUI and wgpu open at runtime with dlopen, so they need to be on the
@@ -103,7 +98,27 @@
             pname = "athas";
             version = (builtins.fromTOML (builtins.readFile ./Cargo.toml)).workspace.package.version;
 
-            src = lib.cleanSource ./.;
+            # The working tree is big and mostly not source: `target/` runs to tens of GB and
+            # `.notes/` is untracked notes. Keep them out of the copy that goes to the store.
+            src = lib.cleanSourceWith {
+              name = "athas-source";
+              src = ./.;
+              filter =
+                path: type:
+                let
+                  base = baseNameOf (toString path);
+                in
+                lib.cleanSourceFilter path type
+                && !(
+                  type == "directory"
+                  && builtins.elem base [
+                    "target"
+                    "node_modules"
+                    ".notes"
+                    ".direnv"
+                  ]
+                );
+            };
 
             cargoLock = {
               lockFile = ./Cargo.lock;
