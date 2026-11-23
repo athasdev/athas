@@ -392,7 +392,7 @@ impl<V: 'static> Multibuffer<V> {
             .border_b_1()
             .border_color(colors.divider)
             .bg(colors.background)
-            .font_family(typography::UI_FONT)
+            .font_family(typography::ui_font())
             .text_size(typography::text_sm())
             .child(
                 Button::icon(SharedString::from(format!("{id}-toggle")), if collapsed { IconName::ChevronRight } else { IconName::ChevronDown })

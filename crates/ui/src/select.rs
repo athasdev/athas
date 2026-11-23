@@ -619,7 +619,7 @@ impl Select {
                     .w_full()
                     .px(px(8.))
                     .py(px(4.))
-                    .rounded(crate::metrics::radius())
+                    .rounded(crate::metrics::radius_md())
                     .whitespace_nowrap()
                     .text_color(text)
                     .when(highlighted, |this| this.bg(colors.primary))
@@ -678,7 +678,7 @@ impl Select {
             .rounded(crate::metrics::radius_lg())
             .bg(colors.overlay)
             .shadow(theme.shadows.popover.clone())
-            .font_family(typography::UI_FONT)
+            .font_family(typography::ui_font())
             .text_size(typography::text_chrome())
             .line_height(px(16.))
             .text_color(colors.foreground)
@@ -737,7 +737,7 @@ impl Render for Select {
             .relative()
             .flex()
             .min_w_0()
-            .font_family(typography::UI_FONT)
+            .font_family(typography::ui_font())
             .map(|this| match (self.width, self.icon_only) {
                 (_, true) | (SelectWidth::Content, _) => this.max_w(px(288.)),
                 (SelectWidth::Full, _) => this.w_full(),

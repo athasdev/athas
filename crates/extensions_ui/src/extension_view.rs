@@ -1319,7 +1319,7 @@ impl Render for ExtensionView {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let colors = cx.theme().colors.clone();
         let sidebar = self.surface == Surface::Sidebar;
-        let base = div().flex().flex_col().min_w_0().when(sidebar, |this| this.size_full()).font_family(typography::UI_FONT).text_color(colors.foreground);
+        let base = div().flex().flex_col().min_w_0().when(sidebar, |this| this.size_full()).font_family(typography::ui_font()).text_color(colors.foreground);
         // `ProGate`: generated views are a Pro feature.
         if matches!(self.source, Source::Generative) && !has_intelligence(cx) {
             return base.child(pro_gate(&colors));

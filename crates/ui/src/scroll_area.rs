@@ -92,13 +92,19 @@ pub struct Scrollbar {
     id: ElementId,
     source: ScrollSource,
     inside: bool,
+    /// Drawn whenever the content overflows, not only while the pointer is over it.
+    always: bool,
+    /// Where the thumb draws among the deferred elements. The bar is deferred so later rows
+    /// cannot cover it, which also puts it under anything deferred above it — a scrolling list
+    /// inside a modal (priority 2) needs its own priority to show at all.
+    priority: usize,
     bar: Option<(AnyElement, Rc<Cell<Bounds<Pixels>>>)>,
 }
 
 impl Scrollbar {
     /// For a div with `overflow_y_scroll().track_scroll(handle)`.
     pub fn new(id: impl Into<ElementId>, handle: &ScrollHandle) -> Self {
-        Self { id: id.into(), source: ScrollSource::Handle(handle.clone()), inside: false, bar: None }
+        Self { id: id.into(), source: ScrollSource::Handle(handle.clone()), inside: false, always: false, priority: 0, bar: None }
     }
 
     /// For a `uniform_list(..).track_scroll(handle)`.
@@ -108,7 +114,21 @@ impl Scrollbar {
 
     /// For a variable-height `list(state, ..)`.
     pub fn list(id: impl Into<ElementId>, state: &ListState) -> Self {
-        Self { id: id.into(), source: ScrollSource::List(state.clone()), inside: false, bar: None }
+        Self { id: id.into(), source: ScrollSource::List(state.clone()), inside: false, always: false, priority: 0, bar: None }
+    }
+
+    /// Always drawn while the content overflows: for a surface the keyboard drives, where the
+    /// pointer may never go near the list (a command surface).
+    pub fn always(mut self) -> Self {
+        self.always = true;
+        self
+    }
+
+    /// Draws the thumb among the deferred elements at `priority`, for a list inside an overlay
+    /// that is itself deferred (a modal draws at 2, a menu at 4).
+    pub fn priority(mut self, priority: usize) -> Self {
+        self.priority = priority;
+        self
     }
 
     /// For a bar added as the last child of the scrolling div itself (no wrapper): it undoes the
@@ -205,7 +225,8 @@ impl Element for Scrollbar {
     ) -> (LayoutId, Self::RequestLayoutState) {
         // The bar is laid out here, as `deferred` lays out its child, and drawn later.
         let cell = Rc::new(Cell::new(Bounds::default()));
-        let mut bar = ScrollbarBar { source: self.source.clone(), bounds: cell.clone(), hitbox: None, inside: self.inside }.into_any_element();
+        let mut bar =
+            ScrollbarBar { source: self.source.clone(), bounds: cell.clone(), hitbox: None, always: self.always, inside: self.inside }.into_any_element();
         let layout_id = bar.request_layout(window, cx);
         self.bar = Some((bar, cell));
         (layout_id, ())
@@ -232,7 +253,7 @@ impl Element for Scrollbar {
         // ancestors, so rows added after it never cover the thumb; it stays clipped as before.
         let Some((bar, cell)) = self.bar.take() else { return };
         cell.set(bounds);
-        window.defer_draw(bar, window.element_offset(), 0, Some(window.content_mask()));
+        window.defer_draw(bar, window.element_offset(), self.priority, Some(window.content_mask()));
     }
 
     fn paint(
@@ -254,6 +275,8 @@ struct ScrollbarBar {
     source: ScrollSource,
     bounds: Rc<Cell<Bounds<Pixels>>>,
     hitbox: Option<Hitbox>,
+    /// Drawn whenever the content overflows, not only while the pointer is over it.
+    always: bool,
     /// A child of the scrolling div: a full-height box there would count as content, and with
     /// the div's padding make it scroll by that much with nothing to scroll to.
     inside: bool,
@@ -261,7 +284,7 @@ struct ScrollbarBar {
 
 impl ScrollbarBar {
     fn geometry(&self, bounds: Bounds<Pixels>) -> Option<Geometry> {
-        Scrollbar { id: "".into(), source: self.source.clone(), inside: false, bar: None }.geometry(bounds)
+        Scrollbar { id: "".into(), source: self.source.clone(), inside: false, always: false, priority: 0, bar: None }.geometry(bounds)
     }
 }
 
@@ -353,7 +376,7 @@ impl Element for ScrollbarBar {
         if recently_scrolled && !hovered && !dragging {
             window.request_animation_frame();
         }
-        let always = cx.try_global::<AlwaysShowScrollbars>().is_some_and(|always| always.0);
+        let always = self.always || cx.try_global::<AlwaysShowScrollbars>().is_some_and(|always| always.0);
         if hovered || dragging || recently_scrolled || always {
             let widened = dragging || hitbox.is_hovered(window);
             let (rest, active) = thumb_colors(dark);

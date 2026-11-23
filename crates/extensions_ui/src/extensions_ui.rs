@@ -672,7 +672,7 @@ impl Render for ExtensionsView {
             .when(!self.embedded(), |this| this.min_h_0().size_full().bg(colors.surface))
             .when(self.embedded(), |this| this.w_full().flex_none())
             .text_color(colors.foreground)
-            .font_family(typography::UI_FONT)
+            .font_family(typography::ui_font())
             .child(body)
     }
 }

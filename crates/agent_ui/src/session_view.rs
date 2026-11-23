@@ -307,6 +307,10 @@ pub struct SessionView {
     pub(crate) offline_errors: HashSet<(usize, String)>,
     /// Why the agent process went away on its own, until it runs again.
     pub(crate) agent_disconnected: Option<String>,
+    /// The session was taken over from the agent and its history has not arrived yet
+    /// (`session/load` replays it). Until it does, the view says so rather than offering the
+    /// blank "Where should we begin?" of a new chat.
+    pub(crate) replaying: bool,
     /// The draft went to another window with the session; closing this view leaves it alone.
     draft_handed_off: bool,
     pub(crate) dismissed_notices: HashSet<String>,
@@ -392,6 +396,9 @@ struct Fixture {
     /// The cloud run the session sent last, instead of asking the service.
     #[serde(rename = "cloudRun")]
     cloud_run: Option<crate::cloud::CloudRun>,
+    /// The session is being taken over from the agent and its history has not arrived yet.
+    #[serde(default)]
+    replaying: bool,
 }
 
 #[derive(serde::Deserialize)]
@@ -500,6 +507,7 @@ impl SessionView {
         let mut open_attachments = false;
         let mut pinned_prompt = None;
         let mut waiting_seconds = None;
+        let mut fixture_replaying = false;
         let mut fixture_cloud_run = None;
         let (transcript, running, permission) = match fixture {
             Some(fixture) => {
@@ -549,6 +557,7 @@ impl SessionView {
                 });
                 waiting_seconds = fixture.waiting_seconds;
                 fixture_cloud_run = fixture.cloud_run;
+                fixture_replaying = fixture.replaying;
                 (fixture.transcript, fixture.running, fixture.permission)
             }
             None => {
@@ -596,6 +605,7 @@ impl SessionView {
             offline_prompt: None,
             offline_errors: HashSet::new(),
             agent_disconnected: None,
+            replaying: fixture_replaying,
             draft_handed_off: false,
             dismissed_notices: HashSet::new(),
             notice_action_pending: false,
@@ -966,8 +976,13 @@ impl SessionView {
             return;
         }
         self.transcript.agent_session_id = Some(session_id);
+        // The agent replays the conversation as it loads it; until the first entry arrives the
+        // view would otherwise read as a new chat. The built-in agent has no session of its own
+        // to replay, so it never waits.
+        self.replaying = !builtin::is_builtin(&self.info.agent);
         self.schedule_save(cx);
         self.warm_up(cx);
+        cx.notify();
     }
 
     /// Puts a sent prompt back in the composer; sending it replaces that turn and what followed.
@@ -1753,7 +1768,16 @@ impl SessionView {
                 })
                 .ok()?;
             match state {
-                Some(Some(agent)) => return Some(agent),
+                Some(Some(agent)) => {
+                    this.update(cx, |this, cx| {
+                        if this.replaying {
+                            this.replaying = false;
+                            cx.notify();
+                        }
+                    })
+                    .ok();
+                    return Some(agent);
+                }
                 Some(None) if waited => return None,
                 Some(None) => break,
                 None => {
@@ -1780,11 +1804,22 @@ impl SessionView {
         };
         match started {
             Ok(agent) => {
-                this.update(cx, |this, _| this.agent_disconnected = None).ok();
+                this.update(cx, |this, cx| {
+                    this.agent_disconnected = None;
+                    // Whatever the agent replayed has arrived with the open; an empty session is
+                    // an empty session now, not one still loading.
+                    this.replaying = false;
+                    cx.notify();
+                })
+                .ok();
                 Some(agent)
             }
             Err(failure) => {
-                this.update(cx, |this, cx| this.agent_failed(failure, cx)).ok();
+                this.update(cx, |this, cx| {
+                    this.replaying = false;
+                    this.agent_failed(failure, cx)
+                })
+                .ok();
                 None
             }
         }
@@ -2274,6 +2309,10 @@ impl SessionView {
                 let before = self.transcript.entries.len();
                 let latest_edit = self.latest_edit();
                 let Applied { entry, session } = self.transcript.apply(update);
+                // The replay has started arriving; the view shows the conversation from here.
+                if self.replaying && !self.transcript.entries.is_empty() {
+                    self.replaying = false;
+                }
                 if let Some(previous) = latest_edit.filter(|previous| self.latest_edit() != Some(*previous)) {
                     self.entry_changed(previous);
                 }

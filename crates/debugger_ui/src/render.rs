@@ -849,7 +849,7 @@ impl DebuggerView {
                     .py(px(4.))
                     .font_family(typography::MONO_FONT)
                     .text_size(typography::text_sm())
-                    .when(lines.is_empty(), |this| this.font_family(typography::UI_FONT).child(empty(EMPTY_CONSOLE, &colors)))
+                    .when(lines.is_empty(), |this| this.font_family(typography::ui_font()).child(empty(EMPTY_CONSOLE, &colors)))
                     .children(lines),
             )
             .when(has_session, |this| {
@@ -920,7 +920,7 @@ impl Render for DebuggerView {
             .min_h_0()
             .bg(colors.background)
             .text_color(colors.foreground)
-            .font_family(typography::UI_FONT)
+            .font_family(typography::ui_font())
             .child(bar)
             .child(div().flex().flex_1().min_h_0().child(aside).child(div().flex().flex_col().flex_1().min_w_0().min_h_0().child(content)))
             .children(self.open_menu.as_ref().map(|menu| menu.render()))

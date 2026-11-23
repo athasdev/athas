@@ -202,7 +202,7 @@ impl RenderOnce for Dialog {
             .rounded(dialog_radius())
             .bg(colors.overlay)
             .shadow(theme.shadows.dialog.clone())
-            .font_family(typography::UI_FONT)
+            .font_family(typography::ui_font())
             .text_size(typography::text_sm())
             .text_color(colors.foreground)
             .when(!hide_header, |this| {
@@ -488,7 +488,7 @@ impl Render for AlertDialog {
             .rounded(dialog_radius())
             .bg(colors.overlay)
             .shadow(theme.shadows.dialog.clone())
-            .font_family(typography::UI_FONT)
+            .font_family(typography::ui_font())
             .text_color(colors.foreground)
             .child(
                 div()

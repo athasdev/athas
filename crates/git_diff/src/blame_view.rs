@@ -217,7 +217,7 @@ impl Render for BlameView {
             .size_full()
             .min_h_0()
             .bg(colors.background)
-            .font_family(typography::UI_FONT)
+            .font_family(typography::ui_font())
             .text_color(colors.foreground);
         match &self.state {
             State::Loading => container.child(fill_message("Loading blame…", None, IconName::History, None)),

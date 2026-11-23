@@ -239,7 +239,7 @@ impl Render for FontPicker {
             .bg(colors.overlay)
             .shadow(theme.shadows.popover.clone())
             .overflow_hidden()
-            .font_family(typography::UI_FONT)
+            .font_family(typography::ui_font())
             .child(
                 div()
                     .flex()

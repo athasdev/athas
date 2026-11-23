@@ -57,7 +57,7 @@ impl RenderOnce for Popover {
             .rounded(metrics::radius_lg())
             .bg(theme.colors.overlay)
             .shadow(theme.shadows.popover.clone())
-            .font_family(typography::UI_FONT)
+            .font_family(typography::ui_font())
             .text_size(typography::text_chrome())
             .text_color(theme.colors.foreground)
             .children(self.children)

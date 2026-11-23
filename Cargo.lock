@@ -3396,6 +3396,7 @@ dependencies = [
  "image",
  "keymap",
  "notifications",
+ "palette",
  "paths",
  "serde",
  "serde_json",

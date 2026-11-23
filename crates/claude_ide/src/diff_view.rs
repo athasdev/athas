@@ -156,7 +156,7 @@ impl Render for ClaudeDiffView {
             .flex()
             .flex_col()
             .bg(colors.background)
-            .font_family(typography::UI_FONT)
+            .font_family(typography::ui_font())
             .child(
                 div()
                     .flex()

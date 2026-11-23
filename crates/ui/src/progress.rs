@@ -78,7 +78,7 @@ impl RenderOnce for Progress {
             .flex_col()
             .w_full()
             .gap(px(8.))
-            .font_family(typography::UI_FONT)
+            .font_family(typography::ui_font())
             .text_size(typography::text_sm())
             .when(has_header, |this| {
                 this.child(
@@ -323,7 +323,7 @@ impl RenderOnce for ToggleGroup {
             .max_w_full()
             .rounded_full()
             .bg(colors.segment_track)
-            .font_family(typography::UI_FONT)
+            .font_family(typography::ui_font())
             .text_size(typography::text_sm())
             .font_weight(typography::MEDIUM)
             .when(self.full_width, |this| this.w_full())

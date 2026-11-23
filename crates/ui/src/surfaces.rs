@@ -142,7 +142,7 @@ impl RenderOnce for Table {
             .flex()
             .flex_col()
             .w_full()
-            .font_family(typography::UI_FONT)
+            .font_family(typography::ui_font())
             .text_size(typography::text_sm())
             .children(header)
             .children(rows)
@@ -209,7 +209,7 @@ impl RenderOnce for HoverCard {
             .rounded(crate::metrics::radius_xl())
             .bg(theme.colors.overlay)
             .shadow(theme.shadows.popover.clone())
-            .font_family(typography::UI_FONT)
+            .font_family(typography::ui_font())
             .text_size(typography::text_chrome())
             .text_color(theme.colors.foreground)
             .children(self.children)
@@ -244,7 +244,7 @@ fn viewer_frame(layout: ViewerLayout, cx: &App) -> gpui::Div {
         .gap(px(12.))
         .p(px(32.))
         .bg(cx.theme().colors.background)
-        .font_family(typography::UI_FONT)
+        .font_family(typography::ui_font())
         .text_center()
         .map(|this| match layout {
             ViewerLayout::Fill => this.size_full(),

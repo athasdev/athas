@@ -921,7 +921,7 @@ fn section(title: &'static str, rows: Vec<AnyElement>, cx: &App) -> AnyElement {
         .flex_col()
         .gap(px(8.))
         .child(div().px(px(12.)).text_size(typography::text_sm()).font_weight(typography::MEDIUM).text_color(colors.muted_foreground).child(title))
-        .child(div().flex().flex_col().rounded(metrics::island_radius()).bg(colors.raised).shadow(cx.theme().shadows.raised.clone()).overflow_hidden().children(rows))
+        .child(div().flex().flex_col().rounded(metrics::radius_lg()).bg(colors.raised).shadow(cx.theme().shadows.raised.clone()).overflow_hidden().children(rows))
         .into_any_element()
 }
 
@@ -2593,7 +2593,7 @@ impl Render for AiSettingsView {
             .flex()
             .flex_col()
             .gap(px(24.))
-            .font_family(typography::UI_FONT)
+            .font_family(typography::ui_font())
             .text_color(colors.foreground)
             .when_some(self.notice.clone(), |this, notice| {
                 this.child(

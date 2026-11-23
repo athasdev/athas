@@ -254,7 +254,7 @@ impl Render for Questionnaire {
             .w_full()
             .min_w_0()
             .gap(px(12.))
-            .font_family(typography::UI_FONT)
+            .font_family(typography::ui_font())
             .child(div().text_size(typography::text_caption()).text_color(colors.subtle_foreground).child(format!("{} of {total}", self.step + 1)))
             .child(
                 div()

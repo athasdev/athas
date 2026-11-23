@@ -75,7 +75,7 @@ impl TextStyle {
     fn new(cx: &gpui::App) -> Self {
         let colors = &cx.theme().colors;
         Self {
-            ui: font(typography::UI_FONT),
+            ui: font(typography::ui_font()),
             mono: font(SharedString::from(settings::get(cx).font_family.clone())),
             foreground: colors.foreground,
             muted: colors.muted_foreground,

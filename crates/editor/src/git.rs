@@ -375,7 +375,7 @@ impl Editor {
             .border_color(colors.border)
             .bg(colors.overlay)
             .shadow(theme.shadows.popover.clone())
-            .font_family(typography::UI_FONT)
+            .font_family(typography::ui_font())
             .text_size(typography::text_sm())
             .text_color(colors.foreground)
             .on_hover(cx.listener(|editor, hovered: &bool, _, cx| editor.hover_blame(None, Some(*hovered), cx)))

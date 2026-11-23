@@ -357,50 +357,25 @@ fn shadow(color: Hsla, y: f32, blur: f32, spread: f32, inset: bool) -> BoxShadow
 }
 
 fn shadows(dark: bool, edge: Hsla) -> ThemeShadows {
+    // The surfaces inside a pane are flat. A card, a field, a button and a segment knob are told
+    // apart by their fill and the hairline `edge` ring, not by being lifted off the page: stacked
+    // drop shadows on every one of them read as grime, and GPUI bands the wide blurs besides.
+    // Only what actually floats over the content keeps a shadow, and one soft layer is enough to
+    // say so.
+    let ring = |inset: bool| shadow(edge, 0., 0., 1., inset);
     if dark {
         ThemeShadows {
-            raised: vec![
-                shadow(edge, 0., 0., 1., true),
-                shadow(black(0.22), 0., 0., 1., false),
-                shadow(black(0.2), 1., 2., 0., false),
-                shadow(black(0.12), 2., 4., 0., false),
-            ],
-            raised_inset: vec![shadow(edge, 0., 0., 1., true), shadow(black(0.25), -1., 0., 0., true)],
-            // Few, soft layers: stacked wide blurs band into visible rings in GPUI, and a solid
-            // dark ring outside the inner edge reads as a second border.
-            popover: vec![
-                shadow(edge, 0., 0., 1., true),
-                shadow(black(0.18), 0., 0., 1., false),
-                shadow(black(0.16), 1., 3., 0., false),
-                shadow(black(0.26), 6., 18., -4., false),
-            ],
-            dialog: vec![
-                shadow(edge, 0., 0., 1., true),
-                shadow(black(0.2), 0., 0., 1., false),
-                shadow(black(0.18), 2., 6., 0., false),
-                shadow(black(0.34), 16., 40., -10., false),
-            ],
+            raised: vec![ring(false)],
+            raised_inset: vec![ring(true)],
+            popover: vec![ring(false), shadow(black(0.3), 4., 12., -2., false)],
+            dialog: vec![ring(false), shadow(black(0.38), 12., 32., -8., false)],
         }
     } else {
         ThemeShadows {
-            raised: vec![
-                shadow(edge, 0., 0., 1., false),
-                shadow(black(0.06), 1., 2., -1., false),
-                shadow(black(0.03), 2., 4., 0., false),
-            ],
-            raised_inset: vec![shadow(edge, 0., 0., 1., true), shadow(black(0.05), -1., 0., 0., true)],
-            popover: vec![
-                shadow(edge, 0., 0., 1., false),
-                shadow(black(0.04), 2., 4., 0., false),
-                shadow(black(0.08), 8., 16., -4., false),
-                shadow(black(0.06), 16., 32., -8., false),
-            ],
-            dialog: vec![
-                shadow(edge, 0., 0., 1., false),
-                shadow(black(0.04), 2., 6., 0., false),
-                shadow(black(0.08), 12., 24., -6., false),
-                shadow(black(0.12), 32., 64., -12., false),
-            ],
+            raised: vec![ring(false)],
+            raised_inset: vec![ring(true)],
+            popover: vec![ring(false), shadow(black(0.08), 4., 12., -2., false)],
+            dialog: vec![ring(false), shadow(black(0.12), 12., 32., -8., false)],
         }
     }
 }

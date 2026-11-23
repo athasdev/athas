@@ -383,7 +383,7 @@ impl Editor {
                 .border_y_1()
                 .border_color(colors.divider)
                 .bg(colors.surface)
-                .font_family(typography::UI_FONT)
+                .font_family(typography::ui_font())
                 .text_size(typography::text_sm())
                 .text_color(colors.foreground)
                 .on_action(cx.listener(|editor, _: &MenuUp, _, cx| {

@@ -414,6 +414,8 @@ impl Platform {
     }
 }
 
+/// How long the workspace state waits for the changes to stop before it is written.
+const SAVE_DEBOUNCE: std::time::Duration = std::time::Duration::from_millis(400);
 const INBOX_MIN_WIDTH: f32 = 260.;
 const INBOX_MAX_WIDTH: f32 = 560.;
 
@@ -557,8 +559,13 @@ pub struct Workbench {
     tree_git_status: Option<(PathBuf, gpui::Task<()>)>,
     /// The session whose sidebar row is being renamed, and its field.
     pub(crate) session_rename: Option<(SessionId, Entity<ui::TextInput>, Subscription, std::time::Instant)>,
-    /// Project session lists showing past their first few, by project id.
-    pub(crate) expanded_session_lists: std::collections::HashSet<String>,
+    /// How many rows a project's session list shows past its first few, by project id (absent:
+    /// the first few).
+    pub(crate) expanded_session_lists: std::collections::HashMap<String, usize>,
+    /// What the Sessions list is narrowed to, from the sidebar's Filter menu.
+    pub(crate) session_filter: crate::sidebar::SessionFilter,
+    /// The debounced write of the workspace state (`save_soon`).
+    save_task: Option<gpui::Task<()>>,
 }
 
 impl Focusable for Workbench {
@@ -676,6 +683,12 @@ impl Workbench {
             this.handle_open_requests(window, cx);
         })
         .detach();
+        // A panel that wants a command surface leaves the list here; the sidebar is too narrow
+        // to hold one and the workbench owns the modal layer.
+        cx.observe_global_in::<palette::PendingCommandLists>(window, |this, window, cx| {
+            this.open_pending_command_lists(window, cx);
+        })
+        .detach();
         cx.observe_global::<notifications::Notifications>(|this, cx| {
             this.time_toasts(cx);
             cx.notify();
@@ -786,6 +799,8 @@ impl Workbench {
             tree_git_status: None,
             session_rename: None,
             expanded_session_lists: Default::default(),
+            session_filter: Default::default(),
+            save_task: None,
             focus_before_overlay: None,
             // Every key is bound in a surface's key context, so a window with nothing focused
             // answers no shortcut at all. When the view holding the keyboard stops being drawn
@@ -848,7 +863,7 @@ impl Workbench {
         self.state.limit_tabs(max_tabs, |tab| {
             open.iter().any(|(group, open)| open == tab && dirty.contains(&centre_views::view_key(*group, tab)))
         });
-        self.save();
+        self.save_soon(cx);
         self.sync_continuous_projects(cx);
         self.publish_projects(cx);
         cx.notify();
@@ -913,6 +928,24 @@ impl Workbench {
     /// Keeps closed projects' tabs in `file`, which every window shares.
     pub fn share_closed_project_tabs(&mut self, file: PathBuf) {
         self.state.share_closed_project_tabs(file);
+    }
+
+    /// Writes the state after a short quiet spell. Every change goes through [`update_state`],
+    /// and a working agent changes its session's state several times a second; writing the whole
+    /// file on each of them was the main thread's work, not the disk's. Anything that must not be
+    /// lost (closing a window, quitting) calls [`save`] itself.
+    fn save_soon(&mut self, cx: &mut Context<Self>) {
+        if self.store.is_none() || self.save_task.is_some() {
+            return;
+        }
+        self.save_task = Some(cx.spawn(async move |this, cx| {
+            cx.background_executor().timer(SAVE_DEBOUNCE).await;
+            this.update(cx, |this, _| {
+                this.save_task = None;
+                this.save();
+            })
+            .ok();
+        }));
     }
 
     pub fn save(&self) {
@@ -1678,6 +1711,18 @@ impl Workbench {
     }
 
     /// Floats a view over the workbench until it emits `DismissEvent`.
+    /// Opens what a panel asked to show as a command surface (`palette::show_command_list`).
+    /// Only the last list matters when several arrive at once: an action that opens another
+    /// surface does so from the one in front.
+    pub(crate) fn open_pending_command_lists(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        if crate::windows::front_window(cx).is_some_and(|front| front != window.window_handle().window_id()) {
+            return;
+        }
+        let Some(list) = palette::take_command_lists(cx).pop() else { return };
+        let picker = cx.new(|cx| palette::Picker::new(palette::CommandListDelegate::new(list), window, cx));
+        self.open_modal(picker, window, cx);
+    }
+
     pub fn open_modal<V>(&mut self, view: Entity<V>, window: &mut Window, cx: &mut Context<Self>)
     where
         V: Render + EventEmitter<DismissEvent> + Focusable,
@@ -2496,20 +2541,6 @@ impl Workbench {
                     let id = id.clone();
                     move |_, cx| {
                         weak.update(cx, |this, cx| this.update_state(cx, |state| state.open_project_dashboard(&id))).ok();
-                    }
-                })
-                .into(),
-            MenuItem::new("Show project files")
-                .icon(ui::IconName::SidebarRight)
-                .on_select({
-                    let weak = weak.clone();
-                    let id = id.clone();
-                    move |window, cx| {
-                        weak.update(cx, |this, cx| {
-                            this.activate_project(id.clone(), cx);
-                            this.toggle_sidebar_view(SidebarView::Files, window, cx);
-                        })
-                        .ok();
                     }
                 })
                 .into(),

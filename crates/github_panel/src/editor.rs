@@ -650,7 +650,7 @@ fn popover_frame<V: EventEmitter<DismissEvent>>(id: &'static str, focus_handle: 
         .rounded(metrics::radius_lg())
         .bg(theme.colors.overlay)
         .shadow(theme.shadows.popover.clone())
-        .font_family(typography::UI_FONT)
+        .font_family(typography::ui_font())
         .text_color(theme.colors.foreground)
         .on_mouse_down_out(cx.listener(|_, _, _, cx| cx.emit(DismissEvent)))
         .on_key_down(cx.listener(|_, event: &KeyDownEvent, _, cx| {

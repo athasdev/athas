@@ -22,7 +22,7 @@ pub(crate) fn panel(id: impl Into<ElementId>, window: &Window, cx: &App) -> Stat
         .bg(theme.colors.overlay)
         .shadow(theme.shadows.dialog.clone())
         .overflow_hidden()
-        .font_family(typography::UI_FONT)
+        .font_family(typography::ui_font())
         .text_color(theme.colors.foreground)
 }
 

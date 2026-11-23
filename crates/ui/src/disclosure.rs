@@ -74,7 +74,7 @@ impl RenderOnce for AccordionTrigger {
                     .gap(metrics::chrome_gap_tight())
                     .px(px(8.))
                     .rounded(metrics::radius_md())
-                    .font_family(typography::UI_FONT)
+                    .font_family(typography::ui_font())
                     .font_weight(typography::MEDIUM)
                     .text_size(typography::text_chrome())
                     .text_color(colors.muted_foreground)

@@ -2,6 +2,7 @@
 //! sessions (quick open), commands (the command palette) and themes.
 
 mod command_labels;
+mod command_list;
 mod command_order;
 mod command_palette;
 mod fuzzy;
@@ -15,6 +16,7 @@ mod row;
 mod theme_picker;
 
 pub use command_labels::{palette_label, with_category};
+pub use command_list::{CommandList, CommandListDelegate, CommandRow, PendingCommandLists, show as show_command_list, take as take_command_lists};
 pub use command_order::COMMAND_ORDER;
 pub use command_palette::{
     CommandEntry, CommandPaletteDelegate, RecentCommands, SettingEntry, category_filter, recent_commands_path,

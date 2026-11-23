@@ -233,7 +233,7 @@ impl Render for Preview {
                 .rounded(metrics::radius_lg())
                 .bg(colors.overlay)
                 .shadow(theme.shadows.popover.clone())
-                .font_family(typography::UI_FONT)
+                .font_family(typography::ui_font())
                 .text_size(typography::text_sm())
                 .child(
                     div()

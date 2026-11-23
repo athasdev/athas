@@ -87,7 +87,7 @@ impl RenderOnce for Spinner {
             .flex()
             .items_center()
             .gap(px(8.))
-            .font_family(typography::UI_FONT)
+            .font_family(typography::ui_font())
             .text_size(typography::text_sm())
             .text_color(colors.muted_foreground)
             .child(ring)

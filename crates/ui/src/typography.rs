@@ -1,4 +1,14 @@
-//! The type scale (`--ui-text-*`): one family, four sizes.
+//! The type scale (`--ui-text-*`): one family, four sizes, both of them what `uiFontFamily` and
+//! `uiFontSize` ask for.
+//!
+//! The size and the family live in `static`s, for the same reason the zoom factor does (see
+//! `scale`): the ladder below is written in `const`-shaped places with no `App` to read from, and
+//! every window of the app shares them. They used to be constants with the setting applied to the
+//! workbench's root element alone — which the seven hundred odd `text_size(text_sm())` calls
+//! under it each overrode, so changing the setting moved nothing anyone could see.
+
+use std::sync::RwLock;
+use std::sync::atomic::{AtomicU32, Ordering};
 
 use gpui::{App, FontWeight, Global, Pixels, SharedString, Styled};
 
@@ -7,11 +17,27 @@ use crate::scale::px;
 
 pub const UI_FONT: &str = "Inter";
 pub const MONO_FONT: &str = "JetBrains Mono";
+/// What `uiFontSize` is before anyone changes it; the rungs below are offsets from it.
+pub const UI_FONT_SIZE: f32 = 13.;
 
-pub fn text_base() -> Pixels { crate::scale::px(13.) }
-pub fn text_lg() -> Pixels { crate::scale::px(15.) }
-pub fn text_sm() -> Pixels { crate::scale::px(12.) }
-pub fn text_caption() -> Pixels { crate::scale::px(11.) }
+static SIZE: AtomicU32 = AtomicU32::new(UI_FONT_SIZE.to_bits());
+static FAMILY: RwLock<Option<SharedString>> = RwLock::new(None);
+
+/// The size `uiFontSize` asks for, before the zoom.
+pub fn ui_font_size() -> f32 {
+    f32::from_bits(SIZE.load(Ordering::Relaxed))
+}
+
+/// The family `uiFontFamily` asks for. Write `font_family(ui_font())`, not the `UI_FONT`
+/// constant, or the setting stops at whatever element set it last.
+pub fn ui_font() -> SharedString {
+    FAMILY.read().ok().and_then(|family| family.clone()).unwrap_or_else(|| UI_FONT.into())
+}
+
+pub fn text_base() -> Pixels { px(ui_font_size()) }
+pub fn text_lg() -> Pixels { px(ui_font_size() + 2.) }
+pub fn text_sm() -> Pixels { px(ui_font_size() - 1.) }
+pub fn text_caption() -> Pixels { px(ui_font_size() - 2.) }
 /// Chrome text: headers, tabs and toolbars.
 pub fn text_chrome() -> Pixels { text_sm() }
 
@@ -30,7 +56,7 @@ pub struct UiTypography {
 
 impl Default for UiTypography {
     fn default() -> Self {
-        Self { family: UI_FONT.into(), size: 13. }
+        Self { family: UI_FONT.into(), size: UI_FONT_SIZE }
     }
 }
 
@@ -38,16 +64,16 @@ impl Global for UiTypography {}
 
 impl UiTypography {
     pub fn base(&self) -> Pixels {
-        px(self.size)
+        text_base()
     }
     pub fn lg(&self) -> Pixels {
-        px(self.size + 2.)
+        text_lg()
     }
     pub fn sm(&self) -> Pixels {
-        px((self.size - 1.).max(11.))
+        text_sm()
     }
     pub fn caption(&self) -> Pixels {
-        px((self.size - 3.).max(11.))
+        text_caption()
     }
     /// A list row's height for this size (`getFileTreeRowHeight`).
     pub fn row_height(&self) -> Pixels {
@@ -61,9 +87,16 @@ pub fn ui(cx: &App) -> UiTypography {
 }
 
 pub fn set_ui(cx: &mut App, typography: UiTypography) {
-    if cx.try_global::<UiTypography>() != Some(&typography) {
-        cx.set_global(typography);
+    if cx.try_global::<UiTypography>() == Some(&typography) {
+        return;
     }
+    SIZE.store(typography.size.to_bits(), Ordering::Relaxed);
+    if let Ok(mut family) = FAMILY.write() {
+        *family = Some(typography.family.clone());
+    }
+    cx.set_global(typography);
+    // The ladder is read on the next frame, so every window has to draw one.
+    cx.refresh_windows();
 }
 
 pub trait TextStyleExt: Styled + Sized {
@@ -85,3 +118,36 @@ pub trait TextStyleExt: Styled + Sized {
 }
 
 impl<T: Styled> TextStyleExt for T {}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// The rungs are offsets from `uiFontSize`, not constants. They were constants once, with the
+    /// setting applied to the workbench's root element alone — which every `text_size` call under
+    /// it overrode, so the setting moved nothing anyone could see.
+    #[test]
+    fn the_rungs_follow_the_setting() {
+        // The zoom is a process-wide factor and the sizes below read it, so hold it still rather
+        // than racing the tests that move it.
+        let _held = crate::scale::TEST_LOCK.lock().unwrap_or_else(|held| held.into_inner());
+        SIZE.store(UI_FONT_SIZE.to_bits(), Ordering::Relaxed);
+        assert_eq!(text_base(), gpui::px(13.));
+        assert_eq!(text_sm(), gpui::px(12.));
+        assert_eq!(text_caption(), gpui::px(11.));
+        assert_eq!(text_lg(), gpui::px(15.));
+
+        SIZE.store(18.0f32.to_bits(), Ordering::Relaxed);
+        assert_eq!(text_base(), gpui::px(18.));
+        assert_eq!(text_sm(), gpui::px(17.));
+        assert_eq!(text_caption(), gpui::px(16.));
+        assert_eq!(text_chrome(), text_sm());
+
+        SIZE.store(UI_FONT_SIZE.to_bits(), Ordering::Relaxed);
+    }
+
+    #[test]
+    fn the_family_falls_back_to_the_default() {
+        assert_eq!(ui_font(), SharedString::from(UI_FONT));
+    }
+}

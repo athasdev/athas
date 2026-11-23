@@ -341,7 +341,7 @@ impl RenderOnce for VimModeIndicator {
             .gap(px(6.))
             .h(px(24.))
             .px(px(6.))
-            .font_family(typography::UI_FONT)
+            .font_family(typography::ui_font())
             .text_size(typography::text_caption())
             .text_color(colors.subtle_foreground)
             .child(mode.label())

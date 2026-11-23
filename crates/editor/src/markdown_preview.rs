@@ -949,7 +949,7 @@ impl Render for MarkdownPreview {
         let reveal_bounds = self.reveal_bounds.clone();
         let weak = cx.weak_entity();
         let look = Look {
-            ui: font(typography::UI_FONT),
+            ui: font(typography::ui_font()),
             mono: font(SharedString::from(settings::get(cx).font_family.clone())),
             foreground: colors.foreground,
             muted: colors.muted_foreground,
@@ -1044,7 +1044,7 @@ impl Render for MarkdownPreview {
                     .overflow_y_scroll()
                     .bg(colors.background)
                     .text_color(colors.foreground)
-                    .font_family(typography::UI_FONT)
+                    .font_family(typography::ui_font())
                     .text_size(px(14.))
                     .line_height(relative(TYPESET_PREVIEW_LEADING))
                     .child(
@@ -1090,7 +1090,7 @@ pub(crate) fn markdown_element(markdown: &str, base_dir: PathBuf, cx: &gpui::App
     let theme = cx.theme().clone();
     let colors = &theme.colors;
     let look = Look {
-        ui: font(typography::UI_FONT),
+        ui: font(typography::ui_font()),
         mono: font(SharedString::from(settings::get(cx).font_family.clone())),
         foreground: colors.foreground,
         muted: colors.muted_foreground,

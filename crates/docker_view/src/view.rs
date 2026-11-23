@@ -1251,7 +1251,7 @@ impl Render for DockerView {
             .size_full()
             .min_h_0()
             .min_w_0()
-            .font_family(typography::UI_FONT)
+            .font_family(typography::ui_font())
             .child(self.render_header(&colors, cx))
             .child(div().flex().flex_col().flex_1().min_h_0().child(body))
             .children(self.render_form(&colors, cx))

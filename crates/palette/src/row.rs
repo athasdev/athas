@@ -16,6 +16,8 @@ pub struct PaletteRow {
     shortcut: Option<SharedString>,
     accessory: Option<AnyElement>,
     badge: Option<SharedString>,
+    /// Quiet text at the row's end, such as a date or a short hash.
+    meta: Option<SharedString>,
     title_element: Option<AnyElement>,
     selected: bool,
     stacked: bool,
@@ -34,6 +36,7 @@ impl PaletteRow {
             shortcut: None,
             accessory: None,
             badge: None,
+            meta: None,
             title_element: None,
             selected: false,
             stacked: true,
@@ -86,6 +89,13 @@ impl PaletteRow {
         self
     }
 
+    /// Quiet text at the row's end, such as a date or a short hash. A shortcut is drawn as a
+    /// key chip; meta is plain text, since "2d ago" is not a chord.
+    pub fn meta(mut self, meta: impl Into<SharedString>) -> Self {
+        self.meta = Some(meta.into());
+        self
+    }
+
     pub fn badge(mut self, badge: impl Into<SharedString>) -> Self {
         self.badge = Some(badge.into());
         self
@@ -123,8 +133,8 @@ impl RenderOnce for PaletteRow {
             _ if file_icon.is_some() => file_icon.map(|source| {
                 div().flex().flex_none().size(px(16.)).items_center().justify_center().child(gpui::img(source).size(px(14.))).into_any_element()
             }),
-            (_, Some(path)) => Some(Icon::from_path(path).size(IconSize::Medium).color(muted).into_any_element()),
-            (Some(icon), None) => Some(Icon::new(icon).size(IconSize::Medium).color(muted).into_any_element()),
+            (_, Some(path)) => Some(Icon::from_path(path).size(IconSize::Small).color(muted).into_any_element()),
+            (Some(icon), None) => Some(Icon::new(icon).size(IconSize::Small).color(muted).into_any_element()),
             _ => None,
         };
         let title = self.title_element.unwrap_or_else(|| highlighted(self.title, &self.highlights, text));
@@ -149,17 +159,17 @@ impl RenderOnce for PaletteRow {
         div()
             .flex()
             .items_center()
-            .gap(px(10.))
+            .gap(px(8.))
             .w_full()
-            .min_h(px(40.))
-            .mb(px(2.))
-            .px(px(10.))
-            .py(px(8.))
+            .min_h(px(28.))
+            .mb(px(1.))
+            .px(px(8.))
+            .py(px(4.))
             .rounded(metrics::radius_md())
             .text_size(typography::text_sm())
             .line_height(gpui::relative(typography::LEADING_ROW))
             .when(self.selected, |this| this.bg(colors.primary))
-            .children(icon.map(|icon| div().flex().flex_none().items_center().justify_center().size(px(24.)).child(icon)))
+            .children(icon.map(|icon| div().flex().flex_none().items_center().justify_center().size(px(16.)).child(icon)))
             .child(content)
             .children(self.badge.map(|badge| {
                 div()
@@ -170,6 +180,9 @@ impl RenderOnce for PaletteRow {
                     .text_size(typography::text_caption())
                     .text_color(muted)
                     .child(badge)
+            }))
+            .children(self.meta.map(|meta| {
+                div().flex_none().whitespace_nowrap().text_size(typography::text_caption()).text_color(subtle).child(meta)
             }))
             .children(self.shortcut.map(|shortcut| div().flex_none().child(Kbd::new(shortcut).on_primary(self.selected))))
             .children(self.accessory.map(|accessory| div().flex().flex_none().items_center().gap(px(2.)).child(accessory)))

@@ -200,7 +200,7 @@ impl RenderOnce for StepSlider {
             .px(px(8.))
             .pt(px(6.))
             .pb(px(4.))
-            .font_family(typography::UI_FONT)
+            .font_family(typography::ui_font())
             .child(
                 div()
                     .flex()

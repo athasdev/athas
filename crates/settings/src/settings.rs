@@ -4,8 +4,10 @@
 
 pub mod import;
 mod jsonc;
+mod advanced;
 mod schema;
 mod search_keywords;
+pub use advanced::is_advanced;
 pub use search_keywords::search_keywords;
 
 use std::{collections::BTreeMap, path::PathBuf};

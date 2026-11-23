@@ -187,7 +187,7 @@ impl Render for CustomThemeCreator {
             ])
             .child(
                 div()
-                    .font_family(typography::UI_FONT)
+                    .font_family(typography::ui_font())
                     .text_size(typography::text_sm())
                     .text_color(colors.subtle_foreground)
                     .child("Start from an installed theme, then edit the generated JSON before saving or installing it."),

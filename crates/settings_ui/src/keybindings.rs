@@ -379,7 +379,7 @@ impl KeybindingsEditor {
                     .min_h(px(44.))
                     .py(px(10.))
                     .px(px(12.))
-                    .rounded(metrics::island_radius())
+                    .rounded(metrics::radius_lg())
                     .bg(colors.raised)
                     .shadow(cx.theme().shadows.raised.clone())
                     .child(
@@ -690,7 +690,7 @@ impl Render for KeybindingsEditor {
                     .flex_col()
                     .flex_1()
                     .min_h_0()
-                    .rounded(metrics::island_radius())
+                    .rounded(metrics::radius_lg())
                     .bg(colors.raised)
                     .shadow(theme.shadows.raised.clone())
                     .overflow_hidden()

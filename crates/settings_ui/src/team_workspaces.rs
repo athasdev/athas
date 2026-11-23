@@ -1068,7 +1068,7 @@ impl Render for WorkspaceSettings {
                     .items_center()
                     .gap(px(12.))
                     .py(px(32.))
-                    .rounded(metrics::island_radius())
+                    .rounded(metrics::radius_lg())
                     .bg(colors.raised)
                     .child(Self::text("Add a project folder to create a workspace. Your existing files stay where they are.", cx))
                     .child(Button::new("workspace-add-empty", "Add Workspace").on_click(cx.listener(|this, _, _, cx| {

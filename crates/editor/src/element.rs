@@ -1478,7 +1478,7 @@ impl Editor {
         if !lens_rows.is_empty() {
             let lens_lines = self.code_lens_lines();
             let lens_size = font_size * 0.85;
-            let ui_font = font(SharedString::from(ui::typography::UI_FONT));
+            let ui_font = font(ui::typography::ui_font());
             let shape = |text: &str, color: Hsla, hovered: bool| {
                 text_system.shape_line(
                     SharedString::from(text.to_string()),

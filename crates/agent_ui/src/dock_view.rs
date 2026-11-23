@@ -802,7 +802,7 @@ impl Render for SessionDockView {
             .pt(px(12.))
             .pb(px(12.))
             .pr(px(12.))
-            .font_family(typography::UI_FONT)
+            .font_family(typography::ui_font())
             .text_size(typography::text_sm())
             .text_color(colors.foreground)
             .children(boxes)

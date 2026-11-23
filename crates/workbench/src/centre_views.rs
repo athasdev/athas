@@ -240,7 +240,9 @@ impl Workbench {
         }
         let shown = shown_sessions(&self.state);
         let existing: std::collections::HashSet<&str> = self.state.sessions.iter().map(|session| session.id.0.as_str()).collect();
-        let keep = |id: &String| shown.contains(id) || crate::detached::session_is_detached(id, cx);
+        // The detached windows are read once: asking per session walked every open window.
+        let detached = crate::detached::detached_sessions(cx);
+        let keep = |id: &String| shown.contains(id) || detached.contains(id);
         for (id, panes) in self.session_panes.iter_mut() {
             if panes.holds_tools() && !keep(id) {
                 panes.release_tools();
@@ -273,11 +275,15 @@ impl Workbench {
     pub(crate) fn sync_centre_views(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         let open: std::collections::HashSet<String> =
             self.state.all_group_tabs().map(|(group, item)| view_key(group, item)).collect();
-        let sessions: std::collections::HashSet<String> =
-            self.state.sessions.iter().map(|session| format!("session:{}", session.id.0)).collect();
         self.capture_editor_views(cx);
         self.rehome_file_views(&open);
-        self.centre_views.retain(|key, _| open.contains(key) || sessions.contains(key));
+        // By id, not by key: `render` runs this every frame, and formatting "session:<id>" for
+        // every session allocated a string per session per frame.
+        {
+            let sessions: std::collections::HashSet<&str> = self.state.sessions.iter().map(|session| session.id.0.as_str()).collect();
+            self.centre_views
+                .retain(|key, _| open.contains(key) || key.strip_prefix("session:").is_some_and(|id| sessions.contains(id)));
+        }
         let live: std::collections::HashSet<gpui::EntityId> = self.centre_views.values().filter_map(|view| view.editor.as_ref().map(|editor| editor.entity_id())).collect();
         self.lsp_subscriptions.retain(|(editor, _)| live.contains(editor));
         self.dirty_tabs.retain(|key| open.contains(key));

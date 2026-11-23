@@ -33,7 +33,7 @@ pub fn section(title: Option<&str>, rows: Vec<AnyElement>, cx: &App) -> AnyEleme
             div()
                 .flex()
                 .flex_col()
-                .rounded(metrics::island_radius())
+                .rounded(metrics::radius_lg())
                 .bg(theme.colors.raised)
                 .shadow(theme.shadows.raised.clone())
                 .children(rows),
@@ -105,7 +105,7 @@ pub fn dialog(title: impl Into<SharedString>, body: impl IntoElement, footer: Ve
         .overflow_hidden()
         .bg(theme.colors.background)
         .shadow(theme.shadows.dialog.clone())
-        .font_family(typography::UI_FONT)
+        .font_family(typography::ui_font())
         .text_color(theme.colors.foreground)
         .child(
             div()

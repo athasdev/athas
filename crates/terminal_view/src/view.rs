@@ -902,7 +902,7 @@ impl TerminalView {
                         .rounded(ui::metrics::radius_md())
                         .bg(theme.colors.surface)
                         .shadow(theme.shadows.popover.clone())
-                        .font_family(typography::UI_FONT)
+                        .font_family(typography::ui_font())
                         .text_size(typography::text_sm())
                         .text_color(theme.colors.foreground)
                         .child(div().font_family(typography::MONO_FONT).truncate().child(hovered.link.label()))

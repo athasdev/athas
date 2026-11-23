@@ -948,7 +948,7 @@ impl Render for TextArea {
             .on_mouse_up_out(MouseButton::Left, cx.listener(Self::on_mouse_up))
             .on_mouse_move(cx.listener(Self::on_mouse_move))
             .on_scroll(cx.listener(Self::on_scroll_wheel))
-            .font_family(if self.mono { typography::MONO_FONT } else { typography::UI_FONT })
+            .font_family(if self.mono { typography::MONO_FONT.into() } else { typography::ui_font() })
             .text_size(typography::text_sm())
             .line_height(line_height())
             .text_color(colors.foreground)

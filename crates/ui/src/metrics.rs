@@ -103,7 +103,9 @@ pub fn tab() -> Pixels { scale::px(24.) }
 pub fn tab_max_width() -> Pixels { scale::px(200.) }
 /// The one gutter: around the workbench and between its columns and stacked panes.
 pub fn workbench_gap() -> Pixels { scale::px(6.) }
-/// Islands round a little more than controls, so they read as cards set into the window.
+/// A workbench pane: the sidebar, the centre, the editor. It rounds a little more than the cards
+/// inside it, so it reads as the surface they are set into. A card on a page is `radius_lg`, not
+/// this; mixing the two put 8px and 10px corners side by side on the same page.
 pub fn island_radius() -> Pixels { scale::px(10.) }
 /// Where a pane's first item starts from its island's edge.
 pub fn pane_inset() -> Pixels { scale::px(12.) }
@@ -116,13 +118,16 @@ pub fn chrome_gap_tight() -> Pixels { scale::px(2.) }
 pub fn chrome_gap() -> Pixels { scale::px(4.) }
 pub fn chrome_padding_inline() -> Pixels { scale::px(6.) }
 /// The radius ladder. A corner belongs to the surface it is on: the smaller the thing, the
-/// tighter the corner, so a key cap and a command palette do not round the same way.
-/// Smallest things: a key cap, a chip inside a row.
+/// tighter the corner, so a key cap and a command palette do not round the same way. Pick the
+/// rung by what the thing *is* — two of a kind round alike, wherever they are drawn.
+/// A key cap or a chip inside a row.
 pub fn radius_sm() -> Pixels { scale::px(2.) }
-/// The base: buttons, fields, rows and anything else a pointer acts on.
+/// Small marks a pointer acts on: a checkbox, a crumb, a drag chip, a slider step.
 pub fn radius() -> Pixels { scale::px(4.) }
-/// A little softer, for popovers and surfaces that sit over content.
+/// Controls and the rows a pointer runs down: a button, a list row, a menu item, a select
+/// option, a tooltip.
 pub fn radius_md() -> Pixels { scale::px(6.) }
+/// What holds them: a card, a field, a menu or select panel.
 pub fn radius_lg() -> Pixels { scale::px(8.) }
 /// A block of content rather than a control: a message bubble, a grouped panel.
 pub fn radius_xl() -> Pixels { scale::px(12.) }

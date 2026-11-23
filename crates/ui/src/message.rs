@@ -66,7 +66,7 @@ impl RenderOnce for Message {
             .min_w_0()
             .gap(px(8.))
             .when(end, |this| this.flex_row_reverse())
-            .font_family(typography::UI_FONT)
+            .font_family(typography::ui_font())
             .text_size(typography::text_sm())
             .children(self.leading)
             .child(
@@ -227,7 +227,7 @@ impl RenderOnce for Attachment {
             .rounded(metrics::radius_md())
             .bg(colors.surface)
             .text_color(colors.foreground)
-            .font_family(typography::UI_FONT)
+            .font_family(typography::ui_font())
             .text_size(typography::text_sm())
             .map(|this| {
                 if self.vertical {
@@ -313,7 +313,7 @@ impl RenderOnce for ResourceSummary {
             .items_start()
             .min_w_0()
             .gap(px(24.))
-            .font_family(typography::UI_FONT)
+            .font_family(typography::ui_font())
             .child(
                 div()
                     .flex_1()
@@ -393,7 +393,7 @@ impl RenderOnce for ResourceSection {
             .flex_col()
             .min_w_0()
             .gap(px(12.))
-            .font_family(typography::UI_FONT)
+            .font_family(typography::ui_font())
             .child(
                 div()
                     .flex()

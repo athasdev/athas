@@ -458,7 +458,7 @@ pub fn render_toast(notification: &Notification, on_close: impl Fn(&mut Window, 
         .rounded(ui::metrics::radius_xl())
         .bg(colors.overlay)
         .shadow(theme.shadows.popover.clone())
-        .font_family(typography::UI_FONT)
+        .font_family(typography::ui_font())
         .child(div().flex_none().pt(px(1.)).child(Icon::new(icon).size(IconSize::Custom(px(18.))).color(colors.foreground)))
         .child(
             div()

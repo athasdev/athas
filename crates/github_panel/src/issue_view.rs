@@ -842,7 +842,7 @@ impl Render for IssueView {
             .size_full()
             .min_h_0()
             .bg(colors.background)
-            .font_family(typography::UI_FONT)
+            .font_family(typography::ui_font())
             .text_color(colors.foreground);
         let Some(page) = self.page.clone() else {
             let body = match &self.error {

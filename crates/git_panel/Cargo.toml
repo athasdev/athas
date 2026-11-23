@@ -19,6 +19,8 @@ settings = { path = "../settings" }
 notifications = { path = "../notifications" }
 keymap = { path = "../keymap" }
 workbench_api = { path = "../workbench_api" }
+# The Command surface the sidebar's footer lists open in (`GitCommandSurface`).
+palette = { path = "../palette" }
 # Diff, commit and blame tabs the panel opens, and their ids.
 git_diff = { path = "../git_diff" }
 # Which sections are open, kept between runs (`athas:git-stream-sections`).

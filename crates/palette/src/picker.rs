@@ -7,7 +7,10 @@ use gpui::{
 use theme::ActiveTheme;
 use ui::{Icon, IconName, IconSize, InputAppearance, Kbd, TextInput, TextInputEvent, metrics, typography};
 
-actions!(picker, [SelectNext, SelectPrevious, SelectFirst, SelectLast, NextTab, PreviousTab]);
+actions!(picker, [SelectNext, SelectPrevious, SelectFirst, SelectLast, PageDown, PageUp, NextTab, PreviousTab]);
+
+/// Rows a page key moves by.
+const PAGE: usize = 8;
 
 pub fn init(cx: &mut App) {
     ui::bind_keys_once(cx, "picker", bind_keys);
@@ -20,8 +23,12 @@ fn bind_keys(cx: &mut App) {
         KeyBinding::new("ctrl-n", SelectNext, context),
         KeyBinding::new("up", SelectPrevious, context),
         KeyBinding::new("ctrl-p", SelectPrevious, context),
-        KeyBinding::new("pageup", SelectFirst, context),
-        KeyBinding::new("pagedown", SelectLast, context),
+        KeyBinding::new("pageup", PageUp, context),
+        KeyBinding::new("pagedown", PageDown, context),
+        KeyBinding::new("cmd-up", SelectFirst, context),
+        KeyBinding::new("cmd-down", SelectLast, context),
+        KeyBinding::new("home", SelectFirst, context),
+        KeyBinding::new("end", SelectLast, context),
         KeyBinding::new("tab", NextTab, context),
         KeyBinding::new("shift-tab", PreviousTab, context),
     ]);
@@ -264,6 +271,17 @@ impl<D: PickerDelegate> Picker<D> {
     fn select_last(&mut self, _: &SelectLast, _: &mut Window, cx: &mut Context<Self>) {
         self.select(self.delegate.match_count().saturating_sub(1), cx);
     }
+
+    /// A page key moves by a screenful and stops at the ends, where the arrows wrap.
+    fn page(&mut self, down: bool, cx: &mut Context<Self>) {
+        let count = self.delegate.match_count();
+        if count == 0 {
+            return;
+        }
+        let selected = self.delegate.selected_index();
+        let index = if down { (selected + PAGE).min(count - 1) } else { selected.saturating_sub(PAGE) };
+        self.select(index, cx);
+    }
 }
 
 impl<D: PickerDelegate> Render for Picker<D> {
@@ -286,10 +304,10 @@ impl<D: PickerDelegate> Render for Picker<D> {
             if let Some(label) = self.delegate.section_label(index) {
                 rows.push(
                     div()
-                        .px(px(10.))
-                        .pt(px(8.))
-                        .pb(px(4.))
-                        .text_size(typography::text_chrome())
+                        .px(px(8.))
+                        .pt(px(6.))
+                        .pb(px(2.))
+                        .text_size(typography::text_caption())
                         .font_weight(typography::MEDIUM)
                         .text_color(colors.subtle_foreground)
                         .child(label)
@@ -314,40 +332,39 @@ impl<D: PickerDelegate> Render for Picker<D> {
 
         let tabs = self.delegate.tabs();
         let actions = self.delegate.header_actions(window, cx);
+        // One bar: what this is, then the field, then the way out. A title of its own above the
+        // field made the surface read as two headers stacked.
         let title = self.delegate.title().map(|(title, subtitle)| {
             div()
                 .flex()
                 .flex_none()
                 .items_center()
-                .gap(px(8.))
-                .min_w_0()
-                .px(px(12.))
-                .pt(px(10.))
-                .text_size(typography::text_base())
+                .gap(px(6.))
+                .max_w(px(220.))
                 .child(Icon::new(self.delegate.title_icon()).size(IconSize::Small).color(colors.subtle_foreground))
-                .child(div().flex_none().font_weight(typography::MEDIUM).text_color(colors.foreground).child(title))
-                .children(subtitle.map(|subtitle| {
-                    div().min_w_0().truncate().text_size(typography::text_sm()).text_color(colors.subtle_foreground).child(subtitle)
-                }))
+                .child(div().flex_none().truncate().font_weight(typography::MEDIUM).text_color(colors.foreground).child(title))
+                .children(subtitle.map(|subtitle| div().min_w_0().truncate().text_color(colors.subtle_foreground).child(subtitle)))
+                .child(div().flex_none().w(px(1.)).h(px(14.)).bg(colors.divider))
         });
         let header = div()
             .flex()
             .flex_none()
             .items_center()
-            .gap(px(8.))
-            .px(px(12.))
-            .py(px(10.))
+            .gap(px(6.))
+            .h(px(36.))
+            .px(px(10.))
             .border_b_1()
             .border_color(colors.divider)
+            .text_size(typography::text_sm())
+            .children(title)
             .children(match self.delegate.leading_element(window, cx) {
                 Some(element) => Some(element),
                 None if self.delegate.shows_leading_icon() => {
-                    Some(Icon::new(self.delegate.leading_icon()).size(IconSize::Medium).color(colors.subtle_foreground).into_any_element())
+                    Some(Icon::new(self.delegate.leading_icon()).size(IconSize::Small).color(colors.subtle_foreground).into_any_element())
                 }
                 None => None,
             })
-            .child(div().flex_1().min_w_0().h(px(32.)).flex().items_center().child(self.input.clone()))
-            .when(self.delegate.shows_return_hint(), |this| this.child(Kbd::new("Return")))
+            .child(div().flex_1().min_w_0().h(px(24.)).flex().items_center().child(self.input.clone()))
             .children(actions)
             .child(
                 div()
@@ -355,8 +372,8 @@ impl<D: PickerDelegate> Render for Picker<D> {
                     .flex()
                     .items_center()
                     .justify_center()
-                    .size(px(24.))
-                    .rounded_full()
+                    .size(px(20.))
+                    .rounded(metrics::radius())
                     .hover(|style| style.bg(colors.accent))
                     .child(Icon::new(IconName::X).size(IconSize::XSmall).color(colors.subtle_foreground))
                     .on_click(cx.listener(|this, _, window, cx| this.dismiss(window, cx))),
@@ -396,9 +413,32 @@ impl<D: PickerDelegate> Render for Picker<D> {
                     .children(tabs),
             )
         });
-        let footer = self.delegate.footer(window, cx).map(|footer| {
-            div().flex().flex_none().items_center().gap(px(6.)).p(px(8.)).border_t_1().border_color(colors.divider).child(footer)
-        });
+        // The keys that work here, always: a command surface is driven from the keyboard, and a
+        // hint row costs less than guessing. What the delegate adds sits beside them.
+        let hint = |keys: &'static str, label: &'static str| {
+            div().flex().flex_none().items_center().gap(px(4.)).child(Kbd::new(keys)).child(div().text_color(colors.subtle_foreground).child(label))
+        };
+        let footer = div()
+            .flex()
+            .flex_none()
+            .items_center()
+            .gap(px(10.))
+            .h(px(28.))
+            .px(px(8.))
+            .border_t_1()
+            .border_color(colors.divider)
+            .text_size(typography::text_caption())
+            .child(hint("↑↓", "Move"))
+            .when(self.delegate.shows_return_hint(), |this| this.child(hint("↵", "Open")))
+            .child(hint("esc", "Close"))
+            .child(div().flex_1())
+            .children(self.delegate.footer(window, cx))
+            .when(count > 0, |this| {
+                this.child(div().flex_none().text_color(colors.subtle_foreground).child(match count {
+                    1 => "1 result".to_string(),
+                    count => format!("{count} results"),
+                }))
+            });
 
         let list = div()
             .id("picker-list")
@@ -409,10 +449,13 @@ impl<D: PickerDelegate> Render for Picker<D> {
             .overflow_y_scroll()
             .track_scroll(&self.scroll)
             .p(px(4.))
+            // Room for the scrollbar, so a row's meta does not sit under the thumb.
+            .pr(px(8.))
             .when(count == 0, |this| {
                 this.child(
                     div()
-                        .p(px(12.))
+                        .px(px(8.))
+                        .py(px(10.))
                         .text_center()
                         .text_size(typography::text_sm())
                         .text_color(colors.muted_foreground)
@@ -429,24 +472,25 @@ impl<D: PickerDelegate> Render for Picker<D> {
             .on_action(cx.listener(Self::select_previous))
             .on_action(cx.listener(Self::select_first))
             .on_action(cx.listener(Self::select_last))
+            .on_action(cx.listener(|this, _: &PageDown, _, cx| this.page(true, cx)))
+            .on_action(cx.listener(|this, _: &PageUp, _, cx| this.page(false, cx)))
             .on_action(cx.listener(|this, _: &NextTab, window, cx| this.step_tab(true, window, cx)))
             .on_action(cx.listener(|this, _: &PreviousTab, window, cx| this.step_tab(false, window, cx)))
             .occlude()
             .flex()
             .flex_col()
-            .w((viewport.width - px(32.)).min(px(800.)))
-            .max_h((viewport.height * 0.72).min(px(608.)))
+            .w((viewport.width - px(32.)).min(px(620.)))
+            .max_h((viewport.height * 0.6).min(px(440.)))
             .rounded(metrics::overlay_radius())
             .bg(colors.overlay)
             .shadow(theme.shadows.dialog.clone())
             .overflow_hidden()
-            .font_family(typography::UI_FONT)
+            .font_family(typography::ui_font())
             .text_color(colors.foreground)
-            .children(title)
             .child(header)
             .children(tab_bar)
-            .child(ui::with_scrollbar(list, ui::Scrollbar::new("picker-scrollbar", &self.scroll)))
-            .children(footer)
+            .child(ui::with_scrollbar(list, ui::Scrollbar::new("picker-scrollbar", &self.scroll).always().priority(3)))
+            .child(footer)
             .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
     }
 }

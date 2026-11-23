@@ -158,7 +158,7 @@ impl RenderOnce for Toggle {
             .h(side)
             .map(|this| if pressed_with_label { this.px(px(10.)) } else { this.w(side) })
             .map(|this| if self.size == ToggleSize::Lg { this.rounded(metrics::radius_md()) } else { this.rounded_full() })
-            .font_family(typography::UI_FONT)
+            .font_family(typography::ui_font())
             .font_weight(typography::MEDIUM)
             .text_size(typography::text_sm())
             .text_color(text)
@@ -394,7 +394,7 @@ impl RenderOnce for Tabs {
             .items_center()
             .map(|this| if vertical { this.flex_col().items_stretch() } else { this.flex_row() })
             .when(wrap, |this| this.flex_wrap())
-            .font_family(typography::UI_FONT)
+            .font_family(typography::ui_font())
             .font_weight(typography::MEDIUM)
             .text_size(typography::text_chrome())
             .map(|this| match variant {
@@ -486,7 +486,9 @@ impl RenderOnce for ChoiceCards {
             };
             let handler = self.on_change.clone().filter(|_| !card.disabled);
             let value = card.value.clone();
-            let popover = theme.shadows.popover.clone();
+            // Unchecked, a card shows its ring only under the pointer; it used to lift on a
+            // shadow instead, the one place a shadow stood for a hover state.
+            let hover_ring = if checked { colors.primary } else { colors.border_strong };
             let ring = if checked { colors.primary } else { gpui::transparent_black() };
             div()
                 .id(index)
@@ -510,12 +512,12 @@ impl RenderOnce for ChoiceCards {
                         .shadow(theme.shadows.raised.clone())
                         .border_2()
                         .border_color(ring)
-                        .when(!card.disabled, |this| this.hover(move |style| style.shadow(popover.clone())))
+                        .when(!card.disabled, |this| this.hover(move |style| style.border_color(hover_ring)))
                         .child(card.preview),
                 )
                 .child(
                     div()
-                        .font_family(typography::UI_FONT)
+                        .font_family(typography::ui_font())
                         .text_size(typography::text_sm())
                         .text_color(if checked { colors.foreground } else { colors.muted_foreground })
                         .when(checked, |this| this.font_weight(typography::MEDIUM))
@@ -607,7 +609,7 @@ impl RenderOnce for Menubar {
             .gap(px(2.))
             .p(px(2.))
             .rounded(metrics::radius_md())
-            .font_family(typography::UI_FONT)
+            .font_family(typography::ui_font())
             .text_size(typography::text_chrome())
             .children(triggers)
     }

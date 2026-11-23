@@ -1000,7 +1000,7 @@ impl Render for Composer {
             .on_mouse_move(cx.listener(Self::on_mouse_move))
             .on_scroll(cx.listener(Self::on_scroll_wheel))
             // A `!command` is typed in the terminal's face (`font="mono"`).
-            .font_family(if self.content.trim_start().starts_with('!') { typography::MONO_FONT } else { typography::UI_FONT })
+            .font_family(if self.content.trim_start().starts_with('!') { typography::MONO_FONT.into() } else { typography::ui_font() })
             .text_size(typography::text_base())
             .line_height(line_height())
             .text_color(colors.foreground)

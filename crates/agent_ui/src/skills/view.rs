@@ -481,7 +481,7 @@ impl Render for SkillsView {
             .flex()
             .flex_col()
             .bg(colors.background)
-            .font_family(typography::UI_FONT)
+            .font_family(typography::ui_font())
             .text_size(typography::text_base())
             .text_color(colors.foreground)
             .child(

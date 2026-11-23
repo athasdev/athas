@@ -38,7 +38,7 @@ use serde_json::Value;
 use settings::{SETTING_DEFS, SETTINGS_PAGES, SettingDef, SettingKind};
 use theme::ActiveTheme;
 use ui::{
-    Badge, Button, ButtonSize, ButtonTone, ButtonVariant, Icon, IconName, IconSize, MenuEntry,
+    Button, ButtonSize, ButtonTone, ButtonVariant, Icon, IconName, IconSize, MenuEntry,
     MenuItem, OpenMenu, SidebarListItem, Switch, TextInput, TextInputEvent, Tone, metrics,
     typography,
 };
@@ -244,10 +244,8 @@ pub struct SettingsView {
     theme_creator: Option<(Entity<custom_theme_creator::CustomThemeCreator>, Subscription)>,
     reset_settings: Entity<TypedConfirm>,
     uninstall_cli: Entity<TypedConfirm>,
-    show_telemetry_log: bool,
     shells: Vec<terminal_view::Shell>,
     scroll: ScrollHandle,
-    telemetry_scroll: ScrollHandle,
     nav_scroll: ScrollHandle,
     jump: Option<Jump>,
     jump_bounds: Rc<Cell<Option<Bounds<Pixels>>>>,
@@ -256,6 +254,8 @@ pub struct SettingsView {
     control_bounds: Rc<std::cell::RefCell<HashMap<usize, Bounds<Pixels>>>>,
     /// Rows stack their control under the label (`@max-[640px]/settings`).
     stacked: bool,
+    /// Whether the page's "Advanced" disclosure is open. It shuts again on the next page.
+    advanced_open: bool,
     focus_handle: FocusHandle,
     _subscriptions: Vec<Subscription>,
 }
@@ -557,13 +557,12 @@ impl SettingsView {
             theme_creator: None,
             reset_settings,
             uninstall_cli,
-            show_telemetry_log: false,
             shells: terminal_view::available_shells(),
             scroll: ScrollHandle::new(),
-            telemetry_scroll: ScrollHandle::new(),
             nav_scroll: ScrollHandle::new(),
             control_bounds: Rc::default(),
             stacked: false,
+            advanced_open: false,
             jump: None,
             jump_bounds: Rc::new(Cell::new(None)),
             flash: None,
@@ -575,6 +574,12 @@ impl SettingsView {
     /// Where the view is drawn: the sidebar, a window of its own, or a dialog.
     pub fn set_presentation(&mut self, presentation: SettingsPresentation) {
         self.presentation = presentation;
+    }
+
+    /// Opens the page's "Advanced" disclosure, as clicking it does; for previews.
+    pub fn show_advanced(&mut self, cx: &mut Context<Self>) {
+        self.advanced_open = true;
+        cx.notify();
     }
 
     /// Puts the keyboard in the search field, as opening Settings does.
@@ -654,6 +659,7 @@ impl SettingsView {
     pub fn set_page(&mut self, page: &'static str, cx: &mut Context<Self>) {
         self.page = page;
         self.importer = None;
+        self.advanced_open = false;
         self.scroll.set_offset(point(px(0.), px(0.)));
         if settings::saved(cx).last_settings_tab != page {
             settings::update(cx, |settings| settings.last_settings_tab = page.to_string());
@@ -696,6 +702,10 @@ impl SettingsView {
                 Some(view) => view.update(cx, |view, cx| view.show_category(category, cx)),
                 None => settings::update(cx, |settings| settings.extensions_active_tab = category.to_string()),
             }
+        }
+        // Hidden is not gone: a row the page keeps behind Advanced opens it to be scrolled to.
+        if settings::is_advanced(def) {
+            self.advanced_open = true;
         }
         let target = if def.kind == SettingKind::View { view_target(def) } else { JumpTarget::Row(index) };
         // The theme cards head Appearance, and the catalog its own categories; both open at the top.
@@ -1105,24 +1115,6 @@ impl SettingsView {
                 .variant(ButtonVariant::Outline)
                 .on_click(cx.listener(|this, _, _, cx| this.import_settings(cx)))
                 .into_any_element(),
-            ("advanced", "Telemetry Log") => div()
-                .flex()
-                .items_center()
-                .gap(px(8.))
-                .child(Button::new("telemetry-log-clear", "Clear").variant(ButtonVariant::Outline).on_click(cx.listener(|_, _, _, cx| {
-                    telemetry::clear_log(cx);
-                    notify(cx, NotificationKind::Success, "Telemetry log cleared", None);
-                    cx.notify();
-                })))
-                .child(
-                    Button::new("telemetry-log-toggle", if self.show_telemetry_log { "Hide" } else { "Show" })
-                        .variant(ButtonVariant::Outline)
-                        .on_click(cx.listener(|this, _, _, cx| {
-                            this.show_telemetry_log = !this.show_telemetry_log;
-                            cx.notify();
-                        })),
-                )
-                .into_any_element(),
             ("advanced", "Logs Folder") => Button::new("settings-logs-folder", "Open")
                 .variant(ButtonVariant::Outline)
                 .on_click(|_, _, cx| reveal_logs(cx))
@@ -1477,69 +1469,6 @@ impl SettingsView {
             .into_any_element()
     }
 
-    /// The telemetry log under "Telemetry Log", when shown.
-    fn telemetry_log(&self, cx: &App) -> AnyElement {
-        let colors = cx.theme().colors.clone();
-        let entries = telemetry::log_entries(cx);
-        if entries.is_empty() {
-            return div()
-                .relative()
-                .py(px(20.))
-                .text_center()
-                .text_size(typography::text_sm())
-                .text_color(colors.muted_foreground)
-                .child(div().absolute().top_0().left(px(12.)).right_0().h(px(1.)).bg(colors.divider))
-                .child("No entries yet")
-                .into_any_element();
-        }
-        div()
-            .id("telemetry-log")
-            .relative()
-            .flex()
-            .flex_col()
-            .max_h(px(288.))
-            .overflow_y_scroll()
-            .px(px(12.))
-            .py(px(10.))
-            .gap(px(2.))
-            .child(div().absolute().top_0().left(px(12.)).right_0().h(px(1.)).bg(colors.divider))
-            .children(entries.into_iter().rev().map(|entry| {
-                let status = serde_json::to_value(entry.status).ok().and_then(|value| value.as_str().map(str::to_string)).unwrap_or_default();
-                let tone = match status.as_str() {
-                    "failed" => Tone::Danger,
-                    "sent" => Tone::Success,
-                    "local" => Tone::Accent,
-                    _ => Tone::Neutral,
-                };
-                let time = entry.timestamp.replace('T', " ");
-                let time = time.split('.').next().unwrap_or_default().trim_end_matches('Z').to_string();
-                div()
-                    .flex()
-                    .items_center()
-                    .gap(px(12.))
-                    .py(px(6.))
-                    .child(
-                        div()
-                            .flex()
-                            .flex_col()
-                            .flex_1()
-                            .min_w_0()
-                            .child(div().truncate().text_size(typography::text_sm()).text_color(colors.foreground).child(entry.event_type.clone()))
-                            .child(
-                                div()
-                                    .truncate()
-                                    .text_size(typography::text_sm())
-                                    .text_color(colors.subtle_foreground)
-                                    .child(entry.error.clone().unwrap_or_else(|| entry.summary.clone())),
-                            ),
-                    )
-                    .child(Badge::new(status).tone(tone))
-                    .child(div().flex_none().text_size(typography::text_sm()).text_color(colors.subtle_foreground).child(time))
-            }))
-            .scrollbar_with(&self.telemetry_scroll)
-            .into_any_element()
-    }
-
     /// "N commands not covered by this preset", under the preset row.
     fn preset_coverage_alert(cx: &App) -> Option<AnyElement> {
         let preset = settings::saved(cx).keybinding_preset.clone();
@@ -1603,9 +1532,6 @@ impl SettingsView {
                     }
                     children.push(self.render_row(index, def, position + offset == 0, words, window, cx));
                     position += 1;
-                    if def.tab == "advanced" && def.label == "Telemetry Log" && self.show_telemetry_log {
-                        children.push(self.telemetry_log(cx));
-                    }
                     if def.tab == "general" && def.label == "Version" {
                         // The download's progress and a failed check's error, under the row.
                         let status = workbench_api::update_status(cx);
@@ -1863,7 +1789,7 @@ impl SettingsView {
             .flex_col()
             .flex_none()
             .min_w_0()
-            .font_family(typography::UI_FONT)
+            .font_family(typography::ui_font())
             .text_color(colors.foreground)
             .when(narrow, |this| this.w_full())
             .when(!narrow && in_window, |this| this.w(px(208.)).h_full().bg(colors.window))
@@ -1958,7 +1884,10 @@ impl SettingsView {
                 // Shortcuts section, or the whole page while editing.
                 .filter(|(_, def)| drawn_as_row(def) && !(page == "keyboard" && editing_keys))
                 .collect();
-            content = self.render_sections(defs, &[], window, cx);
+            // The tail of a long page goes behind one disclosure, keeping its own section
+            // headings so a row still reads in context.
+            let (plain, advanced): (Vec<_>, Vec<_>) = defs.into_iter().partition(|(_, def)| !settings::is_advanced(def));
+            content = self.render_sections(plain, &[], window, cx);
             let tracked_view = self.jump.as_ref().and_then(|jump| match jump.target {
                 JumpTarget::View(view) => Some(view),
                 JumpTarget::Row(_) => None,
@@ -1975,6 +1904,31 @@ impl SettingsView {
                     .child(canvas(move |view, _, _| bounds.set(Some(view)), |_, _, _, _| {}).absolute().size_full())
                     .into_any_element()
             }));
+            if !advanced.is_empty() {
+                let open = self.advanced_open;
+                // The trigger's own chip is inset 8px; 4 more line its label up with the section
+                // headings above it.
+                let mut block = vec![
+                    div().px(px(4.)).child(
+                        ui::AccordionTrigger::new("settings-advanced", "Advanced")
+                        .open(open)
+                        .on_toggle({
+                            let weak = cx.weak_entity();
+                            move |open, _, cx| {
+                                weak.update(cx, |this, cx| {
+                                    this.advanced_open = open;
+                                    cx.notify();
+                                })
+                                .ok();
+                            }
+                        }),
+                    ).into_any_element(),
+                ];
+                if open {
+                    block.extend(self.render_sections(advanced, &[], window, cx));
+                }
+                content.push(div().flex().flex_col().gap(px(12.)).children(block).into_any_element());
+            }
         }
 
         div()
@@ -1984,7 +1938,7 @@ impl SettingsView {
             .flex_1()
             .min_w_0()
             .min_h_0()
-            .font_family(typography::UI_FONT)
+            .font_family(typography::ui_font())
             .text_color(colors.foreground)
             .when(importing.is_some(), |this| {
                 this.child(
@@ -2035,8 +1989,13 @@ impl SettingsView {
                                     .mx_auto()
                                     .flex()
                                     .flex_col()
-                                    .min_h_0()
                                     .gap(px(32.))
+                                    // Its full height, so the page around it has something to
+                                    // scroll; shrinking to fit left nothing overflowing and the
+                                    // rows past the fold were simply cut off. The keybindings
+                                    // table is the exception: it fills the page and scrolls
+                                    // itself under its own header.
+                                    .map(|this| if table_page { this.flex_1().min_h_0() } else { this.flex_none() })
                                     .children(content),
                             ),
                     )

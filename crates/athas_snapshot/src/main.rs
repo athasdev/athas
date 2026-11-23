@@ -19,14 +19,17 @@
 //! `ATHAS_SNAPSHOT_SETTINGS_PAGE` (the page `settings` opens on), `ATHAS_SNAPSHOT_SETTINGS_JSON`
 //! (settings to start from), `ATHAS_SNAPSHOT_SETTINGS_QUERY`, `ATHAS_SNAPSHOT_WORKSPACE_SECTION`, `ATHAS_SNAPSHOT_KEYBINDINGS_EDIT=1`,
 //! `ATHAS_SNAPSHOT_SETTINGS_EXTENSION` (an integration's page on Settings' Integrations),
-//! `ATHAS_SNAPSHOT_REPORT_BUG=1`, `ATHAS_SNAPSHOT_OUTSIDE_SESSIONS=1` (agent sessions outside Athas in the sidebar), `ATHAS_SNAPSHOT_THEME_CREATOR=1` (Create Theme over Settings),
+//! `ATHAS_SNAPSHOT_SETTINGS_ADVANCED=1` (a page's Advanced disclosure open), `ATHAS_SNAPSHOT_REPORT_BUG=1`, `ATHAS_SNAPSHOT_OUTSIDE_SESSIONS=1` (agent sessions outside Athas in the sidebar), `ATHAS_SNAPSHOT_THEME_CREATOR=1` (Create Theme over Settings),
 //! `ATHAS_SNAPSHOT_CUSTOM_THEMES` (a `custom-themes.json` to read), `ATHAS_SNAPSHOT_EXTENSIONS_DIR`
 //! (extensions installed there instead of the app's folder), `ATHAS_SNAPSHOT_FOLDERS` (folders
 //! added to the project's workspace, separated by `:`),
 //! `ATHAS_SNAPSHOT_PROJECT`, `ATHAS_SNAPSHOT_FILE`, `ATHAS_SNAPSHOT_RESOURCE`,
 //! `ATHAS_SNAPSHOT_THEME`, `ATHAS_SNAPSHOT_SETTLE_MS`, `ATHAS_SNAPSHOT_GIT_TAB` (the Source Control tab shown), `ATHAS_SNAPSHOT_COMMAND` (a command id run
 //! after the scene, such as `help.showWhatsNew`), `ATHAS_SNAPSHOT_TAB_MENU` (a tab's context menu,
-//! by index), `ATHAS_SNAPSHOT_SESSION_MENU=x,y` (the session in front's More actions menu), `ATHAS_SNAPSHOT_KEYS` (keystrokes typed after
+//! by index), `ATHAS_SNAPSHOT_SESSION_MENU=x,y` (the session in front's More actions menu),
+//! `ATHAS_SNAPSHOT_SIDEBAR_MENU=usage:x,y` (a Sessions sidebar menu: `usage`, `accounts`, `filter`),
+//! `ATHAS_SNAPSHOT_COMMAND_SURFACE=stashes` (a sidebar tool's command surface),
+//! `ATHAS_SNAPSHOT_SESSIONS=250` (that many sessions in the workspace), `ATHAS_SNAPSHOT_KEYS` (keystrokes typed after
 //! it, separated by spaces), `ATHAS_SNAPSHOT_RUN_ACTION=new` (the New run action dialog), and `ATHAS_SNAPSHOT_AGENT_EDIT=1`, which
 //! logs an agent edit of `ATHAS_SNAPSHOT_FILE` for session `s2` so its review and the editor's
 //! lenses have a hunk. Agent reviews and continuous agents are kept in memory.
@@ -314,6 +317,9 @@ fn main() -> Result<()> {
                             if let Ok(query) = std::env::var("ATHAS_SNAPSHOT_SETTINGS_QUERY") {
                                 view.set_query(&query, window, cx);
                             }
+                            if std::env::var_os("ATHAS_SNAPSHOT_SETTINGS_ADVANCED").is_some() {
+                                view.show_advanced(cx);
+                            }
                             if std::env::var_os("ATHAS_SNAPSHOT_KEYBINDINGS_EDIT").is_some() {
                                 view.edit_keybindings(window, cx);
                             }
@@ -394,6 +400,27 @@ fn main() -> Result<()> {
         cx.update(|cx| {
             window.update(cx, |workbench, window, cx| workbench.show_front_session_more_actions(gpui::point(px(x), px(y)), window, cx)).ok();
         });
+    }
+    // `ATHAS_SNAPSHOT_SIDEBAR_MENU=usage:x,y`: one of the Sessions sidebar's menus (`usage`,
+    // `accounts`, `filter`), opened from that point.
+    if let Some((which, x, y)) = std::env::var("ATHAS_SNAPSHOT_SIDEBAR_MENU").ok().and_then(|value| {
+        let (which, point) = value.split_once(':')?;
+        let (x, y) = point.split_once(',')?;
+        Some((which.to_string(), x.parse::<f32>().ok()?, y.parse::<f32>().ok()?))
+    }) {
+        cx.run_until_parked();
+        cx.update(|cx| {
+            window.update(cx, |workbench, window, cx| workbench.show_sidebar_menu(&which, gpui::point(px(x), px(y)), window, cx)).ok();
+        });
+    }
+    // `ATHAS_SNAPSHOT_COMMAND_SURFACE=stashes`: a sidebar tool's command surface (`stashes`,
+    // `remotes`, `tags`, `history`, `releases`, `deployments`).
+    if let Ok(which) = std::env::var("ATHAS_SNAPSHOT_COMMAND_SURFACE") {
+        cx.run_until_parked();
+        cx.update(|cx| {
+            window.update(cx, |workbench, _, cx| workbench.show_tool_command_surface(&which, cx)).ok();
+        });
+        cx.run_until_parked();
     }
     if std::env::var("ATHAS_SNAPSHOT_RUN_ACTION").as_deref() == Ok("new") {
         cx.update(|cx| {
@@ -545,6 +572,15 @@ fn scene_state(scene: &str) -> WorkspaceState {
         let id = state.open_project(&path);
         for folder in std::env::var("ATHAS_SNAPSHOT_FOLDERS").unwrap_or_default().split(':').filter(|folder| !folder.is_empty()) {
             state.add_project_folder(&id, folder);
+        }
+    }
+    // `ATHAS_SNAPSHOT_SESSIONS=250` fills the workspace with that many sessions, to see (and
+    // time) the sidebar with a list as long as a heavy user's.
+    if let Some(count) = std::env::var("ATHAS_SNAPSHOT_SESSIONS").ok().and_then(|count| count.parse::<usize>().ok()) {
+        let project = state.projects.first().map(|project| project.id.clone());
+        for index in 0..count {
+            let id = state.new_session(project.clone(), "claude-code");
+            state.rename_session(&id, &format!("Session {index}: a title long enough to truncate in the sidebar"));
         }
     }
     if let Some(width) = std::env::var("ATHAS_SNAPSHOT_SIDEBAR_WIDTH").ok().and_then(|width| width.parse().ok()) {

@@ -121,11 +121,12 @@ impl Workbench {
         entries.sort_by_key(|(at, _)| std::cmp::Reverse(*at));
         let total = entries.len();
         let shown = if self.dashboard_all_sessions { total } else { total.min(DASHBOARD_SESSIONS) };
+        let row_context = self.session_row_context(now, cx);
         let mut rows: Vec<AnyElement> = entries
             .into_iter()
             .take(shown)
             .map(|(_, entry)| match entry {
-                Entry::Session(session) => self.render_session_row_in(session, false, false, false, now, cx),
+                Entry::Session(session) => self.render_session_row_in(session, false, false, false, &row_context, cx),
                 Entry::Outside(session) => self.render_outside_session_row(session, now, cx),
                 Entry::Cloud(run) => self.render_cloud_run_row(run, now, cx),
             })
@@ -299,7 +300,7 @@ impl Workbench {
             .flex_1()
             .min_h_0()
             .overflow_y_scroll()
-            .font_family(typography::UI_FONT)
+            .font_family(typography::ui_font())
             .text_size(typography::text_base())
             .text_color(colors.foreground)
             .child(

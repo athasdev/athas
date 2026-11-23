@@ -98,7 +98,7 @@ impl TeamSettings {
                 div()
                     .flex()
                     .flex_col()
-                    .rounded(metrics::island_radius())
+                    .rounded(metrics::radius_lg())
                     .bg(colors.raised)
                     .shadow(cx.theme().shadows.raised.clone())
                     .children(rows.into_iter().enumerate().map(|(index, row)| {

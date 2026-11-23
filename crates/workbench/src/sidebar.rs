@@ -1,6 +1,7 @@
 use ui::scale::px;
 use gpui::{
-    Anchor, Context, Focusable as _, IntoElement, MouseButton, ParentElement, Pixels, Point, Styled, Window, div, point,
+    Anchor, App, Context, Focusable as _, IntoElement, MouseButton, ParentElement, Pixels, Point, Styled, Window, div,
+    point,
     prelude::*,
 };
 use theme::ActiveTheme;
@@ -12,8 +13,185 @@ use workspace::{Owner, Session, SessionStatus, SidebarView, now_ms, relative_tim
 
 use crate::{Drag, Workbench};
 
+/// What every session row reads, gathered once for the whole list.
+pub(crate) struct SessionRowContext {
+    colors: theme::ThemeColors,
+    /// Sessions showing in a window of their own: their rows cannot open a menu.
+    detached: std::collections::HashSet<String>,
+    /// Sessions whose work runs in the cloud: their rows carry the cloud mark.
+    cloud: std::collections::HashSet<String>,
+    /// The moment the list was drawn, for "3m" and the like.
+    now: u64,
+}
+
+/// What the Sessions list is narrowed to (the sidebar's Filter menu).
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub(crate) enum SessionFilter {
+    #[default]
+    All,
+    Running,
+    NeedsInput,
+    ReviewReady,
+    Failed,
+}
+
+impl SessionFilter {
+    pub(crate) const ALL: [SessionFilter; 5] =
+        [SessionFilter::All, SessionFilter::Running, SessionFilter::NeedsInput, SessionFilter::ReviewReady, SessionFilter::Failed];
+
+    fn label(self) -> &'static str {
+        match self {
+            SessionFilter::All => "All sessions",
+            SessionFilter::Running => "Working",
+            SessionFilter::NeedsInput => "Needs input",
+            SessionFilter::ReviewReady => "Ready to review",
+            SessionFilter::Failed => "Failed",
+        }
+    }
+
+    fn icon(self) -> IconName {
+        match self {
+            SessionFilter::All => IconName::ChatBubbleText,
+            SessionFilter::Running => IconName::Play,
+            SessionFilter::NeedsInput => IconName::WarningCircle,
+            SessionFilter::ReviewReady => IconName::CheckCircle,
+            SessionFilter::Failed => IconName::Xcircle,
+        }
+    }
+
+    /// Whether a session's status is what the filter asks for; a filtered list leaves out the
+    /// agents' own sessions, which carry no status of ours.
+    fn matches(self, status: SessionStatus) -> bool {
+        match self {
+            SessionFilter::All => true,
+            SessionFilter::Running => status == SessionStatus::Running,
+            SessionFilter::NeedsInput => status == SessionStatus::NeedsInput,
+            SessionFilter::ReviewReady => matches!(status, SessionStatus::ReviewReady | SessionStatus::PrOpen),
+            SessionFilter::Failed => status == SessionStatus::Failed,
+        }
+    }
+}
+
+/// What one agent's sessions open now have spent, as the Usage menu says it.
+struct AgentSpend {
+    id: String,
+    name: String,
+    tokens: u64,
+    /// The cost so far and its currency, when the agent reports one.
+    cost: Option<(f64, String)>,
+    sessions: usize,
+}
+
+impl AgentSpend {
+    /// What the row ends with: the cost when the agent reports one, else the tokens.
+    fn value(&self) -> String {
+        match &self.cost {
+            Some((amount, currency)) => agent_ui::context_budget::format_usage_cost(*amount, currency),
+            None => format!("{} tokens", agent_ui::summary::format_token_count(self.tokens)),
+        }
+    }
+
+    /// "128k tokens · 2 sessions", the part the value does not already say.
+    fn detail(&self) -> String {
+        let mut parts = Vec::new();
+        if self.cost.is_some() && self.tokens > 0 {
+            parts.push(format!("{} tokens", agent_ui::summary::format_token_count(self.tokens)));
+        }
+        parts.push(match self.sessions {
+            1 => "1 session open".to_string(),
+            count => format!("{count} sessions open"),
+        });
+        parts.join(" · ")
+    }
+}
+
+/// An ACP agent this machine can run.
+struct InstalledAgent {
+    id: String,
+    name: String,
+    /// What runs it: the version Athas installed, or that it was found on `PATH`.
+    source: String,
+}
+
+/// How many agents are installed, without building their rows: the footer counts them on every
+/// frame.
+fn installed_agent_count(cx: &mut App) -> usize {
+    use agent_ui::agent_registry::AgentRegistry;
+    let registry = AgentRegistry::global(cx);
+    let registry = registry.read(cx);
+    registry.agents().iter().filter(|agent| registry.state(&agent.id).is_installed()).count()
+}
+
+/// The agents installed here, in the registry's order.
+fn installed_agents(cx: &mut App) -> Vec<InstalledAgent> {
+    use agent_ui::agent_registry::{AgentRegistry, InstallState};
+    let registry = AgentRegistry::global(cx);
+    let registry = registry.read(cx);
+    registry
+        .agents()
+        .iter()
+        .filter_map(|agent| {
+            let source = match registry.state(&agent.id) {
+                InstallState::NotInstalled => return None,
+                InstallState::Managed { version: Some(version), .. } => version,
+                InstallState::Managed { version: None, .. } => "Installed".to_string(),
+                InstallState::External(_) => "On PATH".to_string(),
+            };
+            Some(InstalledAgent { id: agent.id.clone(), name: agent.name.clone(), source })
+        })
+        .collect()
+}
+
+/// A provider whose API key is saved here.
+#[derive(Clone)]
+struct ProviderKey {
+    id: String,
+    name: String,
+    /// The key as settings shows it: the last four characters.
+    masked: String,
+}
+
+/// The saved keys, read once and kept: a keychain read is slow and the footer counts them on
+/// every render. [`refresh_provider_keys`] reads them again when the Accounts menu opens.
+#[derive(Default)]
+struct ProviderKeys(Vec<ProviderKey>);
+
+impl gpui::Global for ProviderKeys {}
+
+fn provider_keys(cx: &mut App) -> Vec<ProviderKey> {
+    if !cx.has_global::<ProviderKeys>() {
+        // The first read asks the OS keychain once per provider, which is slow enough to be
+        // worth keeping out of the render that asked; the count arrives with the next frame.
+        cx.set_global(ProviderKeys::default());
+        cx.defer(|cx| {
+            refresh_provider_keys(cx);
+            cx.refresh_windows();
+        });
+    }
+    cx.global::<ProviderKeys>().0.clone()
+}
+
+fn refresh_provider_keys(cx: &mut App) {
+    let keychain = ai_providers::secrets::Keychain::shared();
+    let keys = ai_providers::catalog::PROVIDERS
+        .iter()
+        .filter(|provider| provider.requires_api_key)
+        .chain(ai_providers::external_providers().into_iter().filter(|provider| provider.requires_api_key))
+        .filter_map(|provider| {
+            let key = ai_providers::secrets::api_key(keychain, provider)?;
+            Some(ProviderKey { id: provider.id.to_string(), name: provider.name.to_string(), masked: ai_providers::secrets::mask(&key) })
+        })
+        .collect();
+    cx.set_global(ProviderKeys(keys));
+}
+
 /// Sessions a project's list shows before "Show more".
 const PROJECT_SESSION_LIMIT: usize = 5;
+/// How many more rows each "Show more" adds. Every row of the sidebar is built on every frame,
+/// so a list of hundreds is paged rather than opened whole.
+const SESSION_PAGE: usize = 25;
+/// The archived section's own paging, kept beside the project lists' (no project has this id).
+const ARCHIVED_KEY: &str = "\u{1f}archived";
 /// How long a new rename field keeps its focus through the menu closing.
 const RENAME_FOCUS_SETTLE: std::time::Duration = std::time::Duration::from_millis(300);
 
@@ -159,8 +337,8 @@ impl Workbench {
             _ if extension_view.is_some() && self.state.active_project().is_none() => self.render_project_tool(view, cx).into_any_element(),
             _ if let Some(extension_view) = &extension_view => self.render_extension_view(extension_view, cx),
             SidebarView::Agents => self.render_agents_view(window, cx).into_any_element(),
-            // Settings needs no project: the sidebar lists its pages and the centre shows the
-            // one picked.
+            // Settings needs no project: the sidebar lists its pages and the centre tab shows
+            // the one picked.
             SidebarView::Settings => div()
                 .flex()
                 .flex_col()
@@ -235,23 +413,18 @@ impl Workbench {
         let colors = cx.theme().colors.clone();
         let lists = self.state.sidebar_sessions();
         let now = now_ms();
+        let rows = self.session_row_context(now, cx);
         let focused_session = match &self.state.focus {
             Some(Owner::Session(id)) => Some(id.clone()),
             _ => None,
         };
         let emphasized = self.sidebar_focus.contains_focused(window, cx);
         let row = |session: &Session, this: &Self, cx: &mut Context<Self>| {
-            this.render_session_row(session, focused_session.as_ref() == Some(&session.id), emphasized, now, cx)
+            this.render_session_row(session, focused_session.as_ref() == Some(&session.id), emphasized, &rows, cx)
         };
         let mut cloud = self.cloud_sidebar_groups(cx);
 
         let mut content = div().flex().flex_col().gap(px(12.)).px(px(8.)).pb(px(8.));
-
-        if !lists.pinned.is_empty() {
-            content = content.child(
-                div().flex().flex_col().gap(px(1.)).children(lists.pinned.iter().map(|session| row(session, self, cx))),
-            );
-        }
 
         let project = self.state.active_project().cloned();
         if project.is_none() {
@@ -263,12 +436,7 @@ impl Workbench {
         }
         // Chats (sessions of no open project) are sessions like any other and share the list.
         let project_id = project.as_ref().map(|project| project.id.clone());
-        let mut actions = div().flex().items_center().gap(px(2.)).child(
-            Button::icon("project-new-session", IconName::Plus).size(ButtonSize::Small).plane(ui::Plane::Page).tooltip("New session").on_click(cx.listener({
-                let project_id = project_id.clone();
-                move |this, _, _, cx| this.start_session(project_id.clone(), cx)
-            })),
-        );
+        let mut actions = div().flex().items_center().gap(px(2.)).child(self.render_session_filter(cx));
         if let Some(project_id) = project_id.clone() {
             let menu_key = format!("project-menu:{}", project_id.0);
             let menu_open = self.menu_is_open(&menu_key);
@@ -302,43 +470,94 @@ impl Workbench {
             );
         }
         section = section.child(SectionLabel::new("Sessions").trailing(actions));
+        section = section.child(
+            Button::new("project-new-session", "New session")
+                .leading_icon(IconName::Plus)
+                .size(ButtonSize::Small)
+                .plane(ui::Plane::Page)
+                .full_width()
+                .align_start()
+                .regular_weight()
+                .on_click(cx.listener({
+                    let project_id = project_id.clone();
+                    move |this, _, _, cx| this.start_session(project_id.clone(), cx)
+                })),
+        );
+        // Pinned sessions sit right under the button, over a line that divides them from the
+        // project's own list.
+        if !lists.pinned.is_empty() {
+            section = section.child(
+                div()
+                    .flex()
+                    .flex_col()
+                    .gap(px(1.))
+                    .pt(px(2.))
+                    .children(lists.pinned.iter().map(|session| row(session, self, cx)))
+                    .child(div().pt(px(5.)).pb(px(1.)).px(px(6.)).child(ui::Separator::horizontal())),
+            );
+        }
         let mut list = div().flex().flex_col().gap(px(1.));
+        let filter = self.session_filter;
         if sessions.is_empty() && outside.is_empty() {
+            // The New session button above says what to do; a row repeating it read as a session.
             list = list.child(
-                SidebarListItem::new("project-empty-new-session", "New session")
-                    .leading(Icon::new(IconName::Plus).size(IconSize::XSmall).color(colors.subtle_foreground))
-                    .on_click(cx.listener({
-                        let project_id = project_id.clone();
-                        move |this, _, _, cx| this.start_session(project_id.clone(), cx)
-                    })),
+                div()
+                    .px(px(6.))
+                    .py(px(2.))
+                    .text_size(ui::typography::text_caption())
+                    .text_color(colors.subtle_foreground)
+                    .child("No sessions yet"),
             );
         } else {
             let list_key = project_id.as_ref().map_or_else(|| "chats".to_string(), |id| id.0.clone());
-            let show_all = self.expanded_session_lists.contains(&list_key);
+            // How many rows the list shows: the first few, then a page more each time it is
+            // asked. Two hundred rows at once made every frame of the whole window slow, and the
+            // ones past the first screenful were not being read anyway.
+            let shown = self.expanded_session_lists.get(&list_key).copied().unwrap_or(PROJECT_SESSION_LIMIT);
+            // A filter narrows the list to the sessions in that state; the agents' own sessions
+            // carry no status of ours, so they show only under All.
             let mut entries: Vec<(u64, Result<&Session, &agent_ui::outside_sessions::OutsideSession>)> = sessions
                 .iter()
+                .filter(|session| filter.matches(session.status))
                 .map(|session| (session.last_activity_at, Ok(*session)))
-                .chain(outside.iter().map(|session| (session.updated_ms(), Err(session))))
+                .chain(outside.iter().filter(|_| filter == SessionFilter::All).map(|session| (session.updated_ms(), Err(session))))
                 .collect();
             entries.sort_by_key(|(at, _)| std::cmp::Reverse(*at));
-            let visible = if show_all { entries.len() } else { entries.len().min(PROJECT_SESSION_LIMIT) };
+            if entries.is_empty() {
+                list = list.child(
+                    div()
+                        .px(px(6.))
+                        .py(px(2.))
+                        .text_size(ui::typography::text_caption())
+                        .text_color(colors.subtle_foreground)
+                        .child(format!("No session is {}", filter.label().to_lowercase())),
+                );
+            }
+            let visible = entries.len().min(shown);
             let hidden = entries.len() - visible;
             list = list.children(entries.iter().take(visible).map(|(_, entry)| match entry {
                 Ok(session) => row(session, self, cx),
                 Err(session) => self.render_outside_session_row(session, now, cx),
             }));
-            if hidden > 0 || show_all {
-                let label = if show_all { "Show less".to_string() } else { format!("Show {hidden} more") };
+            if hidden > 0 || shown > PROJECT_SESSION_LIMIT {
+                let step = hidden.min(SESSION_PAGE);
+                let label = if hidden == 0 { "Show less".to_string() } else { format!("Show {step} more") };
                 list = list.child(
                     SidebarListItem::new("project-sessions-show-more", label)
                         .leading(
-                            Icon::new(if show_all { IconName::ChevronDown } else { IconName::ChevronRight })
+                            Icon::new(if hidden == 0 { IconName::ChevronUp } else { IconName::ChevronDown })
                                 .size(IconSize::XSmall)
                                 .color(colors.subtle_foreground),
                         )
                         .on_click(cx.listener(move |this, _, _, cx| {
-                            if !this.expanded_session_lists.remove(&list_key) {
-                                this.expanded_session_lists.insert(list_key.clone());
+                            match hidden {
+                                0 => {
+                                    this.expanded_session_lists.remove(&list_key);
+                                }
+                                _ => {
+                                    let shown = this.expanded_session_lists.entry(list_key.clone()).or_insert(PROJECT_SESSION_LIMIT);
+                                    *shown += SESSION_PAGE;
+                                }
                             }
                             cx.notify();
                         })),
@@ -378,12 +597,27 @@ impl Workbench {
                             })),
                     )
                     .when(expanded, |this| {
+                        // Archived sessions are the oldest and the most numerous; the section
+                        // opens on a page of them, as the list above does.
+                        let shown = self.expanded_session_lists.get(ARCHIVED_KEY).copied().unwrap_or(SESSION_PAGE);
+                        let hidden = lists.archived.len().saturating_sub(shown);
                         this.child(
                             div()
                                 .flex()
                                 .flex_col()
                                 .gap(px(1.))
-                                .children(lists.archived.iter().map(|session| row(session, self, cx))),
+                                .children(lists.archived.iter().take(shown).map(|session| row(session, self, cx)))
+                                .when(hidden > 0, |this| {
+                                    this.child(
+                                        SidebarListItem::new("archived-show-more", format!("Show {} more", hidden.min(SESSION_PAGE)))
+                                            .leading(Icon::new(IconName::ChevronDown).size(IconSize::XSmall).color(colors.subtle_foreground))
+                                            .on_click(cx.listener(|this, _, _, cx| {
+                                                let shown = this.expanded_session_lists.entry(ARCHIVED_KEY.to_string()).or_insert(SESSION_PAGE);
+                                                *shown += SESSION_PAGE;
+                                                cx.notify();
+                                            })),
+                                    )
+                                }),
                         )
                     }),
             );
@@ -455,50 +689,99 @@ impl Workbench {
         div().flex().flex_col().flex_none().gap(px(2.)).py(px(4.)).children(rows)
     }
 
-    /// How many accounts the agents can run on are connected, as the Accounts row counts them.
-    fn connected_accounts(&self, cx: &gpui::App) -> usize {
+    /// How many accounts the agents run on are connected: the Athas account, GitHub, every ACP
+    /// agent installed here and every provider with an API key.
+    fn connected_accounts(&self, cx: &mut Context<Self>) -> usize {
         let athas = account::AccountStore::global(cx).is_some_and(|store| store.read(cx).is_signed_in());
         let github = account::linked_accounts::github(cx).is_some_and(|linked| linked.connected);
-        usize::from(athas) + usize::from(github)
+        usize::from(athas) + usize::from(github) + installed_agent_count(cx) + provider_keys(cx).len()
     }
 
-    /// What is left on the accounts the agents run on (`agent_usage`), one row each: what the
-    /// footer used to draw as bars, with the whole story under the label. A row opens the page
-    /// the allowance is managed on. Nothing reports an allowance until an account is connected,
-    /// so the menu says so rather than opening empty.
+    /// What the accounts the agents run on have left, and what the sessions open now have spent.
+    /// Allowances come from the accounts that publish one; everything else reports its own spend,
+    /// since ACP agents and the model APIs publish no quota at all.
     fn show_usage_menu(&mut self, position: Point<Pixels>, window: &mut Window, cx: &mut Context<Self>) {
-        let rows = crate::agent_usage::rows(cx);
+        let allowances = crate::agent_usage::rows(cx);
+        let spend = self.session_spend(cx);
+        let weak = cx.weak_entity();
         let mut entries: Vec<MenuEntry> = Vec::new();
-        if rows.is_empty() {
-            entries.push(MenuEntry::Text("No account reports an allowance yet.".into()));
+        if !allowances.is_empty() {
+            entries.push(MenuEntry::Label("Left this period".into()));
         }
-        for row in rows {
+        for row in &allowances {
             let url = row.url.clone();
-            let mut item = MenuItem::new(row.label).icon(row.icon).trailing_text(row.value).description(row.detail);
-            item = if url.is_empty() {
-                item.disabled(true)
-            } else {
-                item.external().on_select(move |_, cx| cx.open_url(&url))
-            };
-            entries.push(item.into());
+            let item = MenuItem::new(row.label).icon(row.icon).trailing_text(row.value.clone()).description(row.detail.clone());
+            entries.push(if url.is_empty() { item.disabled(true).into() } else { item.external().on_select(move |_, cx| cx.open_url(&url)).into() });
+        }
+        if !spend.is_empty() {
+            entries.push(MenuEntry::Label("Spent by the sessions open now".into()));
+            for agent in &spend {
+                entries.push(
+                    MenuItem::new(agent.name.clone())
+                        .icon(agent_ui::model_vendor::provider_icon(&agent.id))
+                        .trailing_text(agent.value())
+                        .description(agent.detail())
+                        .disabled(true)
+                        .into(),
+                );
+            }
+        }
+        if allowances.is_empty() && spend.is_empty() {
+            entries.push(MenuEntry::Text("No account here publishes an allowance, and no session open now has said what it spent.".into()));
         }
         let billing = account::urls(cx).billing();
         entries.push(MenuEntry::Separator);
+        entries.push(MenuItem::new("Plan & Billing").icon(IconName::CreditCard).external().on_select(move |_, cx| cx.open_url(&billing)).into());
         entries.push(
-            MenuItem::new("Plan & Billing")
-                .icon(IconName::CreditCard)
-                .external()
-                .on_select(move |_, cx| cx.open_url(&billing))
+            MenuItem::new("AI settings")
+                .icon(IconName::Sparkle)
+                .on_select(move |window, cx| {
+                    weak.update(cx, |this, cx| this.open_settings_page(Some("ai"), window, cx)).ok();
+                })
                 .into(),
         );
         self.show_menu("sessions-usage", entries, position, Anchor::BottomLeft, window, cx);
     }
 
-    /// The accounts the agents sign in with. Each connected one keeps its actions in a submenu,
-    /// as a stash does; a missing one is the row that connects it.
+    /// What the sessions open now have spent, by agent: the tokens and the cost each agent
+    /// reports for its session (`Transcript::usage`). Agents that report neither are left out.
+    fn session_spend(&self, cx: &App) -> Vec<AgentSpend> {
+        let mut spend: Vec<AgentSpend> = Vec::new();
+        for view in self.centre_views.values() {
+            let Some(session) = &view.session else { continue };
+            let session = session.read(cx);
+            let Some(usage) = session.transcript().usage.as_ref() else { continue };
+            let tokens = usage.input_tokens.unwrap_or_default() + usage.output_tokens.unwrap_or_default();
+            if tokens == 0 && usage.cost.is_none() {
+                continue;
+            }
+            let id = session.info().agent.clone();
+            let agent = match spend.iter().position(|agent| agent.id == id) {
+                Some(index) => &mut spend[index],
+                None => {
+                    spend.push(AgentSpend { name: agent_ui::acp::agents::display_name(&id), id, tokens: 0, cost: None, sessions: 0 });
+                    spend.last_mut().expect("just pushed")
+                }
+            };
+            agent.sessions += 1;
+            agent.tokens += tokens;
+            if let Some(cost) = &usage.cost {
+                let spent = agent.cost.as_ref().map_or(0., |(amount, _)| *amount);
+                agent.cost = Some((spent + cost.amount, cost.currency.clone()));
+            }
+        }
+        spend.sort_by(|left, right| right.tokens.cmp(&left.tokens));
+        spend
+    }
+
+    /// The accounts the agents sign in with: the Athas account and GitHub, the ACP agents
+    /// installed here, and the providers whose API key is saved. Each row opens where it is
+    /// managed; the Athas account keeps its own actions in a submenu, as a stash does.
     fn show_accounts_menu(&mut self, position: Point<Pixels>, window: &mut Window, cx: &mut Context<Self>) {
-        // Opening the menu checks the linked GitHub account again, as the account menu does.
+        // Opening the menu checks the linked GitHub account and the saved keys again, as the
+        // account menu re-checks GitHub.
         account::linked_accounts::refresh_github(cx);
+        refresh_provider_keys(cx);
         let entries = self.account_entries(cx);
         self.show_menu("sessions-accounts", entries, position, Anchor::BottomLeft, window, cx);
     }
@@ -506,6 +789,12 @@ impl Workbench {
     fn account_entries(&self, cx: &mut Context<Self>) -> Vec<MenuEntry> {
         let urls = account::urls(cx);
         let weak = cx.weak_entity();
+        let settings_row = |label: String, page: &'static str, icon: IconName| -> MenuItem {
+            let weak = weak.clone();
+            MenuItem::new(label).icon(icon).on_select(move |window, cx| {
+                weak.update(cx, |this, cx| this.open_settings_page(Some(page), window, cx)).ok();
+            })
+        };
         let store = account::AccountStore::global(cx);
         let signed_in = store.as_ref().is_some_and(|store| store.read(cx).is_signed_in());
         let mut entries: Vec<MenuEntry> = Vec::new();
@@ -517,12 +806,7 @@ impl Workbench {
                 let submenu: Vec<MenuEntry> = vec![
                     MenuItem::new("Profile").icon(IconName::User).external().on_select(move |_, cx| cx.open_url(&dashboard)).into(),
                     MenuItem::new("Plan & Billing").icon(IconName::CreditCard).trailing_text(plan).external().on_select(move |_, cx| cx.open_url(&billing)).into(),
-                    MenuItem::new("Account settings")
-                        .icon(IconName::Settings)
-                        .on_select(move |window, cx| {
-                            weak.update(cx, |this, cx| this.open_settings_page(Some("account"), window, cx)).ok();
-                        })
-                        .into(),
+                    settings_row("Account settings".into(), "account", IconName::Settings).into(),
                     MenuEntry::Separator,
                     MenuItem::new("Sign out")
                         .icon(IconName::SignOut)
@@ -547,47 +831,202 @@ impl Workbench {
             ),
             None => {}
         }
-        let login = match account::linked_accounts::github(cx) {
+        let github_login = match account::linked_accounts::github(cx) {
             Some(linked) if linked.connected => Some(linked.login.unwrap_or_default()),
             _ => None,
         };
-        match login {
+        match github_login {
             Some(login) => {
                 let profile = if login.is_empty() { "https://github.com".to_string() } else { format!("https://github.com/{login}") };
                 let submenu: Vec<MenuEntry> = vec![
                     MenuItem::new("GitHub profile").icon(IconName::User).external().on_select(move |_, cx| cx.open_url(&profile)).into(),
-                    MenuItem::new("Copilot settings")
-                        .icon(IconName::CreditCard)
-                        .external()
-                        .on_select(|_, cx| cx.open_url("https://github.com/settings/copilot"))
-                        .into(),
+                    MenuItem::new("Copilot settings").icon(IconName::CreditCard).external().on_select(|_, cx| cx.open_url("https://github.com/settings/copilot")).into(),
                 ];
                 let trailing = if login.is_empty() { "Connected".to_string() } else { login };
                 entries.push(MenuItem::new("GitHub").icon(IconName::BrandGithub).trailing_text(trailing).submenu(submenu).into());
             }
             None => {
                 let integrations = urls.integrations();
-                entries.push(
-                    MenuItem::new("Connect GitHub")
-                        .icon(IconName::BrandGithub)
-                        .external()
-                        .on_select(move |_, cx| cx.open_url(&integrations))
-                        .into(),
-                );
+                entries.push(MenuItem::new("Connect GitHub").icon(IconName::BrandGithub).external().on_select(move |_, cx| cx.open_url(&integrations)).into());
             }
+        }
+
+        // The agents a session can run on: the ACP agents installed here, with what runs them.
+        let agents = installed_agents(cx);
+        entries.push(MenuEntry::Label("Agents".into()));
+        if agents.is_empty() {
+            entries.push(settings_row("Install an agent…".into(), "ai", IconName::Plus).into());
+        }
+        for agent in &agents {
+            entries.push(
+                settings_row(agent.name.clone(), "ai", IconName::Terminal)
+                    .icon(agent_ui::model_vendor::provider_icon(&agent.id))
+                    .trailing_text(agent.source.clone())
+                    .into(),
+            );
+        }
+
+        // The providers whose key is saved here, or read from their environment variable.
+        let providers = provider_keys(cx);
+        entries.push(MenuEntry::Label("Model providers".into()));
+        if providers.is_empty() {
+            entries.push(settings_row("Add an API key…".into(), "ai", IconName::Plus).into());
+        }
+        for provider in &providers {
+            entries.push(
+                settings_row(provider.name.clone(), "ai", IconName::Key)
+                    .icon(agent_ui::model_vendor::provider_icon(&provider.id))
+                    .trailing_text(provider.masked.clone())
+                    .into(),
+            );
         }
         entries
     }
 
+    /// The Filter button in the Sessions header, before More actions: what the list is narrowed
+    /// to, with the search over every session inside its menu. It stays filled while a filter is
+    /// on, so a short list says why it is short.
+    fn render_session_filter(&self, cx: &mut Context<Self>) -> impl IntoElement {
+        let filter = self.session_filter;
+        let tooltip = if filter == SessionFilter::All { "Filter sessions".to_string() } else { format!("Filter: {}", filter.label()) };
+        Button::icon("sessions-filter", IconName::Filter)
+            .size(ButtonSize::Small)
+            .plane(ui::Plane::Page)
+            .active(self.menu_is_open("sessions-filter") || filter != SessionFilter::All)
+            .tooltip(tooltip)
+            .on_click(cx.listener(|this, event: &gpui::ClickEvent, window, cx| {
+                let position = event.position();
+                this.show_session_filter_menu(point(position.x + px(8.), position.y + px(8.)), window, cx)
+            }))
+    }
+
+    /// The Filter menu: what the list shows, and — once something is typed in its field — every
+    /// session whose title matches, so the search lives where the filter does.
+    fn show_session_filter_menu(&mut self, position: Point<Pixels>, window: &mut Window, cx: &mut Context<Self>) {
+        let current = self.session_filter;
+        let weak = cx.weak_entity();
+        let mut entries: Vec<MenuEntry> = vec![MenuEntry::Label("Show".into())];
+        for filter in SessionFilter::ALL {
+            entries.push(
+                MenuItem::new(filter.label())
+                    .icon(filter.icon())
+                    .checked(current == filter)
+                    .on_select({
+                        let weak = weak.clone();
+                        move |_, cx| {
+                            weak.update(cx, |this, cx| {
+                                this.session_filter = filter;
+                                cx.notify();
+                            })
+                            .ok();
+                        }
+                    })
+                    .into(),
+            );
+        }
+        let lists = self.state.sidebar_sessions();
+        let sessions: Vec<Session> = lists
+            .pinned
+            .iter()
+            .chain(lists.project.iter())
+            .chain(lists.chats.iter())
+            .chain(lists.archived.iter())
+            .map(|session| (*session).clone())
+            .collect();
+        self.show_menu("sessions-filter", entries, position, Anchor::TopRight, window, cx);
+        self.make_menu_searchable("sessions-filter", "Search sessions…", "No matching sessions", cx);
+        // What is typed searches every session, in place of the rows above (`set_query_source`),
+        // so the menu stays the few filters until it is used as a search.
+        let Some(menu) = self.open_menu.as_ref().filter(|menu| menu.key.as_ref() == "sessions-filter") else { return };
+        let now = now_ms();
+        let weak = cx.weak_entity();
+        menu.menu.update(cx, move |menu, _| {
+            menu.set_query_source(std::rc::Rc::new(move |query, _, _| {
+                let query = query.to_lowercase();
+                sessions
+                    .iter()
+                    .filter(|session| session.title.to_lowercase().contains(&query) || session.agent.to_lowercase().contains(&query))
+                    .map(|session| {
+                        let id = session.id.clone();
+                        let weak = weak.clone();
+                        MenuItem::new(session.title.clone())
+                            .icon(agent_ui::model_vendor::provider_icon(&session.agent))
+                            .trailing_text(relative_time(session.last_activity_at, now))
+                            .on_select(move |window, cx| {
+                                weak.update(cx, |this, cx| this.open_session(id.clone(), window, cx)).ok();
+                            })
+                            .into()
+                    })
+                    .collect()
+            }))
+        });
+    }
+
+    /// Opens one of the Sessions sidebar's own menus at `position`, so a headless snapshot can
+    /// draw it (`ATHAS_SNAPSHOT_SIDEBAR_MENU`).
+    pub fn show_sidebar_menu(&mut self, which: &str, position: Point<Pixels>, window: &mut Window, cx: &mut Context<Self>) {
+        match which {
+            "usage" => self.show_usage_menu(position, window, cx),
+            "accounts" => self.show_accounts_menu(position, window, cx),
+            "filter" => self.show_session_filter_menu(position, window, cx),
+            _ => {}
+        }
+    }
+
+    /// Opens a sidebar tool's command surface, so a headless snapshot can draw it
+    /// (`ATHAS_SNAPSHOT_COMMAND_SURFACE`).
+    pub fn show_tool_command_surface(&mut self, which: &str, cx: &mut Context<Self>) {
+        let list = match (which, &self.git_panel, &self.github_panel) {
+            ("releases" | "deployments", _, Some((github, _))) => github.update(cx, |panel, cx| panel.command_surface(which, cx)),
+            (_, Some((git, _)), _) => git.update(cx, |panel, cx| panel.command_surface(which, cx)),
+            _ => None,
+        };
+        let Some(list) = list else { return };
+        palette::show_command_list(cx, list);
+    }
+
+    /// A search field over an open menu's rows, as the Source Control menus have.
+    fn make_menu_searchable(&mut self, key: &str, placeholder: &str, empty: &str, cx: &mut Context<Self>) {
+        if self.menu_is_open(key) && let Some(menu) = self.open_menu.take() {
+            self.open_menu = Some(menu.searchable(placeholder.to_string(), empty.to_string(), cx));
+        }
+    }
+
+
+    /// What every session row needs to know, read once for the whole list: the theme, the sessions
+    /// in a window of their own and the ones running in the cloud. Asking per row walked the open
+    /// windows and formatted a tab key for each of two hundred rows, on every frame.
+    pub(crate) fn session_row_context(&self, now: u64, cx: &mut Context<Self>) -> SessionRowContext {
+        let cloud = self
+            .centre_views
+            .iter()
+            .filter_map(|(key, view)| {
+                let session = view.session.as_ref()?;
+                let id = key.strip_prefix("session:")?;
+                session.read(cx).cloud_environment().is_some().then(|| id.to_string())
+            })
+            .collect();
+        SessionRowContext { colors: cx.theme().colors.clone(), detached: crate::detached::detached_sessions(cx), cloud, now }
+    }
+
     /// A sidebar session row; `emphasized` while the sidebar has focus.
-    pub(crate) fn render_session_row(&self, session: &Session, active: bool, emphasized: bool, now: u64, cx: &mut Context<Self>) -> gpui::AnyElement {
-        self.render_session_row_in(session, active && emphasized, active, true, now, cx)
+    pub(crate) fn render_session_row(&self, session: &Session, active: bool, emphasized: bool, rows: &SessionRowContext, cx: &mut Context<Self>) -> gpui::AnyElement {
+        self.render_session_row_in(session, active && emphasized, active, true, rows, cx)
     }
 
     /// A session's row; `renamable` rows turn into the rename field while it is open, so the
     /// field shows in the sidebar only, not again in the project's home.
-    pub(crate) fn render_session_row_in(&self, session: &Session, emphasized: bool, active: bool, renamable: bool, now: u64, cx: &mut Context<Self>) -> gpui::AnyElement {
-        let colors = cx.theme().colors.clone();
+    pub(crate) fn render_session_row_in(
+        &self,
+        session: &Session,
+        emphasized: bool,
+        active: bool,
+        renamable: bool,
+        rows: &SessionRowContext,
+        cx: &mut Context<Self>,
+    ) -> gpui::AnyElement {
+        let colors = &rows.colors;
+        let now = rows.now;
         // `StatusIcon` of `SessionSidebarRow`: the agent's mark while idle, a spinner while it
         // works, else the most urgent state's mark in its colour.
         let status_icon = |icon: IconName, color| Icon::new(icon).size(IconSize::XSmall).color(color).into_any_element();
@@ -600,12 +1039,8 @@ impl Workbench {
             SessionStatus::Merged => status_icon(IconName::GitMerge, colors.merged),
             SessionStatus::Failed => status_icon(IconName::Xcircle, colors.destructive),
         };
-        let detached = crate::detached::session_is_detached(&session.id.0, cx);
-        let cloud = self
-            .centre_views
-            .get(&crate::centre_views::tab_key(&workspace::TabItem::Session { id: session.id.clone() }))
-            .and_then(|view| view.session.as_ref())
-            .is_some_and(|view| view.read(cx).cloud_environment().is_some());
+        let detached = rows.detached.contains(&session.id.0);
+        let cloud = rows.cloud.contains(&session.id.0);
         if let Some((_, input, _, _)) = self.session_rename.as_ref().filter(|(id, ..)| renamable && *id == session.id) {
             return div()
                 .flex()

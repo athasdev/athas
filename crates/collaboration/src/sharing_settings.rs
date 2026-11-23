@@ -297,7 +297,7 @@ impl Render for SharingSettings {
             .flex()
             .flex_col()
             .gap(px(24.))
-            .font_family(typography::UI_FONT)
+            .font_family(typography::ui_font())
             .child(cloud)
             .child(shared)
             .when(self.error.is_some() && self.options.is_some(), |this| {

@@ -8,7 +8,7 @@ use gpui::{
     Anchor, AnyElement, ClickEvent, Context, IntoElement, MouseButton, MouseDownEvent, Render, SharedString, Window, div, prelude::*,
 };
 use theme::{ActiveTheme, ThemeColors};
-use ui::{Button, ButtonSize, ButtonVariant, EmptyState, Icon, IconName, IconSize, MenuEntry, Plane, metrics, typography};
+use ui::{Button, ButtonSize, ButtonVariant, EmptyState, Icon, IconName, IconSize, MenuEntry, MenuItem, Plane, metrics, typography};
 
 use crate::{
     GitHubPanel, RepoState, RunAction, Section,
@@ -18,6 +18,38 @@ use crate::{
     model::{self, DeploymentFilter, IssueFilter, PrFilter, ReleaseFilter, RunFilter, Tone},
     widgets::{self, Preview, PreviewLeading, Row, list_message, tone_color},
 };
+
+/// One item of a section, as the Filter menu's search lists it.
+pub(crate) struct SearchRow {
+    label: String,
+    keywords: String,
+    icon: IconName,
+    trailing: String,
+    kind: &'static str,
+    id: i64,
+    section: Section,
+}
+
+/// The rows whose label or keywords hold every word typed, as menu entries that open them.
+pub(crate) fn matching_rows(rows: &[SearchRow], query: &str, panel: &gpui::WeakEntity<GitHubPanel>) -> Vec<MenuEntry> {
+    let query = query.to_lowercase();
+    rows.iter()
+        .filter(|row| {
+            let haystack = format!("{} {}", row.label, row.keywords).to_lowercase();
+            query.split_whitespace().all(|word| haystack.contains(word))
+        })
+        .map(|row| {
+            let (panel, kind, id, section, title) = (panel.clone(), row.kind, row.id, row.section, row.label.clone());
+            MenuItem::new(row.label.clone())
+                .icon(row.icon)
+                .trailing_text(row.trailing.clone())
+                .on_select(move |_, cx| {
+                    panel.update(cx, |panel, cx| panel.open(section, kind, id, title.clone(), cx)).ok();
+                })
+                .into()
+        })
+        .collect()
+}
 
 /// The repository row and the filter row.
 fn bar_height() -> gpui::Pixels { px(32.) }
@@ -147,7 +179,7 @@ impl GitHubPanel {
     /// one scrolling column. An open row shows its filter and create buttons on hover.
     fn render_accordion(&mut self, colors: &ThemeColors, cx: &mut Context<Self>) -> impl IntoElement {
         let mut column = div().id("github-list").flex().flex_col().size_full().overflow_y_scroll().track_scroll(&self.list_scroll).gap(px(2.)).pb(px(12.));
-        for section in self.sections.clone() {
+        for section in self.sections.clone().into_iter().filter(|section| !section.in_footer()) {
             let open = self.open_sections.contains(&section);
             let count = self.section_count(section);
             let mut row = ui::AccordionRow::new(
@@ -185,6 +217,27 @@ impl GitHubPanel {
             .child(ui::Scrollbar::new("github-list-scrollbar", &self.list_scroll))
     }
 
+    /// The rows under the list: releases and deployments, each opening its command surface
+    /// where the Source Control sidebar's stashes open theirs.
+    fn render_footer(&self, colors: &ThemeColors, cx: &mut Context<Self>) -> impl IntoElement {
+        let mut rows: Vec<AnyElement> = Vec::new();
+        for section in self.sections.iter().copied().filter(|section| section.in_footer()) {
+            let open: fn(&GitHubPanel, &Context<GitHubPanel>) -> palette::CommandList = match section {
+                Section::Deployments => GitHubPanel::deployments_surface,
+                _ => GitHubPanel::releases_surface,
+            };
+            let item = ui::SidebarListItem::new(SharedString::from(format!("github-footer-{}", section.id())), section.title())
+                .leading(Icon::new(section.icon()).size(IconSize::XSmall).color(colors.subtle_foreground))
+                .trailing(self.section_count(section).to_string())
+                .on_click(cx.listener(move |panel, _: &ClickEvent, _, cx| {
+                    let list = open(panel, cx);
+                    palette::show_command_list(cx, list);
+                }));
+            rows.push(div().flex_none().px(px(8.)).child(item).into_any_element());
+        }
+        div().flex().flex_col().flex_none().gap(px(2.)).py(px(4.)).children(rows)
+    }
+
     /// What a section's row counts: everything loaded for it.
     fn section_count(&self, section: Section) -> usize {
         match section {
@@ -220,6 +273,13 @@ impl GitHubPanel {
                     .on_click(cx.listener(move |this, event: &ClickEvent, window, cx| {
                         let entries = this.filter_menu(section, cx);
                         menus::show(this, &menu_key, entries, below(event), Anchor::TopRight, window, cx);
+                        // As the Sessions sidebar's Filter: the states to show, and a field that
+                        // searches the section itself once something is typed.
+                        let noun = section.noun();
+                        menus::make_searchable(this, &menu_key, format!("Search {noun}…"), format!("No matching {noun}"), cx);
+                        let rows = this.section_rows(section);
+                        let weak = cx.weak_entity();
+                        menus::set_query_source(this, &menu_key, move |query, _, _| matching_rows(&rows, query, &weak), cx);
                     })),
             )
             .children(create.map(|(label, kind, id)| {
@@ -323,6 +383,63 @@ impl GitHubPanel {
             Section::Actions => (self.run_filter.label(), self.run_filter != RunFilter::default()),
             Section::Releases => (self.release_filter.label(), self.release_filter != ReleaseFilter::default()),
             Section::Deployments => (self.deployment_filter.label(), self.deployment_filter != DeploymentFilter::default()),
+        }
+    }
+
+    /// Every item of a section, for the Filter menu's search.
+    fn section_rows(&self, section: Section) -> Vec<SearchRow> {
+        let now = Utc::now();
+        match section {
+            Section::PullRequests => self
+                .pulls
+                .items
+                .clone()
+                .unwrap_or_default()
+                .iter()
+                .map(|pr| SearchRow {
+                    label: pr.title.clone(),
+                    keywords: format!("#{} {}", pr.number, pr.author.login),
+                    icon: IconName::GitPullRequest,
+                    trailing: model::sidebar_time(&pr.updated_at, now),
+                    kind: "github-pr",
+                    id: pr.number,
+                    section,
+                })
+                .collect(),
+            Section::Issues => self
+                .issues
+                .items
+                .clone()
+                .unwrap_or_default()
+                .iter()
+                .map(|issue| SearchRow {
+                    label: issue.title.clone(),
+                    keywords: format!("#{} {}", issue.number, issue.author.login),
+                    icon: IconName::CircleDot,
+                    trailing: model::sidebar_time(&issue.updated_at, now),
+                    kind: "github-issue",
+                    id: issue.number,
+                    section,
+                })
+                .collect(),
+            Section::Actions => self
+                .runs
+                .items
+                .clone()
+                .unwrap_or_default()
+                .iter()
+                .map(|run| SearchRow {
+                    label: model::list_run_title(run),
+                    keywords: format!("{} {}", model::run_label(run.run_number, run.database_id), run.workflow_name.clone().unwrap_or_default()),
+                    icon: IconName::Play,
+                    trailing: model::sidebar_time(run.updated_at.as_deref().unwrap_or_default(), now),
+                    kind: "github-run",
+                    id: run.database_id,
+                    section,
+                })
+                .collect(),
+            // The footer's sections search inside their own command surface.
+            Section::Releases | Section::Deployments => Vec::new(),
         }
     }
 
@@ -818,6 +935,7 @@ impl Render for GitHubPanel {
                     .child(self.render_bar(&colors, cx))
                     .child(self.render_toolbar())
                     .child(self.render_accordion(&colors, cx))
+                    .child(self.render_footer(&colors, cx))
                     .into_any_element()
             }
             _ => div().flex().flex_col().flex_1().min_h_0().child(self.render_title_only(cx)).child(self.render_auth(&colors, cx)).into_any_element(),
@@ -831,7 +949,7 @@ impl Render for GitHubPanel {
             .size_full()
             .min_h_0()
             .min_w_0()
-            .font_family(typography::UI_FONT)
+            .font_family(typography::ui_font())
             .child(body)
             .children(self.render_notice(&colors, cx))
             .children(self.open_menu.as_ref().map(|menu| menu.render()))

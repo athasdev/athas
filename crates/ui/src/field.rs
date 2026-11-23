@@ -145,7 +145,7 @@ impl RenderOnce for Field {
             div().text_size(typography::text_sm()).line_height(relative(1.5)).text_color(colors.muted_foreground).child(description)
         });
         let error = self.error.map(|error| div().text_size(typography::text_sm()).text_color(colors.destructive).child(error));
-        let field = div().flex().w_full().gap(px(8.)).font_family(typography::UI_FONT);
+        let field = div().flex().w_full().gap(px(8.)).font_family(typography::ui_font());
         match self.orientation {
             FieldOrientation::Vertical => field.flex_col().children(title).children(self.control).children(description).children(error),
             FieldOrientation::Horizontal => field
@@ -330,7 +330,7 @@ impl RenderOnce for InputGroup {
             .w_full()
             .min_w_0()
             .min_h(px(28.))
-            .font_family(typography::UI_FONT)
+            .font_family(typography::ui_font())
             .text_size(typography::text_sm())
             .text_color(colors.foreground)
             .when(self.variant == InputGroupVariant::Default, |this| this.bg(colors.raised))

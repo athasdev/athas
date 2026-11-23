@@ -285,7 +285,8 @@ impl PickerDelegate for CommandPaletteDelegate {
         PaletteRow::new(entry.label.clone())
             .icon(entry.icon)
             .description(format!("{} · {}", entry.category, entry.description))
-            .shortcut(entry.shortcut.clone().or_else(|| selected.then(|| "Return".into())))
+            // Return is in the footer now; a row shows only its own shortcut.
+            .shortcut(entry.shortcut.clone())
             .highlights(matched.positions.clone())
             .selected(selected)
             .into_any_element()

@@ -196,6 +196,23 @@ pub fn session_is_detached(id: &str, cx: &App) -> bool {
     find(&format!("session:{id}"), cx).is_some()
 }
 
+/// Every session showing in a window of its own, for a list that would otherwise ask about each
+/// of its rows: `find` walks the open windows, and a sidebar of two hundred rows walked them two
+/// hundred times a frame.
+pub fn detached_sessions(cx: &App) -> std::collections::HashSet<String> {
+    let Some(windows) = cx.try_global::<DetachedWindows>() else { return Default::default() };
+    if windows.0.is_empty() {
+        return Default::default();
+    }
+    let open: std::collections::HashSet<gpui::WindowId> = cx.windows().into_iter().map(|window| window.window_id()).collect();
+    windows
+        .0
+        .iter()
+        .filter(|(_, handle)| open.contains(&handle.window_id()))
+        .filter_map(|(key, _)| key.strip_prefix("session:").map(str::to_string))
+        .collect()
+}
+
 /// Takes a session back from its window (`recallAgentWindow`): the window closes, so the
 /// workbench can show it again.
 pub fn recall_session(id: &str, cx: &mut App) {

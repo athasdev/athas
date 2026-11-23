@@ -24,7 +24,6 @@ pub static SETTING_DEFS: &[SettingDef] = &[
     SettingDef { tab: "advanced", section: Some("Data"), label: "Export Settings", description: None, key: None, kind: SettingKind::Action },
     SettingDef { tab: "advanced", section: Some("Data"), label: "Import Settings", description: None, key: None, kind: SettingKind::Action },
     SettingDef { tab: "advanced", section: Some("Telemetry"), label: "Anonymous Usage Telemetry", description: None, key: Some("telemetry"), kind: SettingKind::Toggle },
-    SettingDef { tab: "advanced", section: Some("Telemetry"), label: "Telemetry Log", description: None, key: None, kind: SettingKind::Action },
     SettingDef { tab: "advanced", section: Some("Diagnostics"), label: "Logs Folder", description: None, key: None, kind: SettingKind::Action },
     SettingDef { tab: "advanced", section: Some("Reset"), label: "Reset Settings", description: Some("Restores every setting to its default"), key: None, kind: SettingKind::Action },
     SettingDef { tab: "ai", section: Some("Agent behavior"), label: "Follow Agent", description: Some("The editor follows the files an agent opens"), key: Some("aiFollowAgent"), kind: SettingKind::Toggle },

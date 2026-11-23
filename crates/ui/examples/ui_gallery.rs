@@ -661,7 +661,7 @@ impl Render for Gallery {
             .size_full()
             .p(px(24.))
             .bg(colors.surface)
-            .font_family(typography::UI_FONT)
+            .font_family(typography::ui_font())
             .text_size(typography::text_sm())
             .text_color(colors.foreground)
             .child(island(cx).p(px(24.)).child(content))

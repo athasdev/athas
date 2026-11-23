@@ -420,7 +420,7 @@ impl Render for TeamView {
             .flex_col()
             .size_full()
             .min_h_0()
-            .font_family(typography::UI_FONT)
+            .font_family(typography::ui_font())
             .child(
                 pane_header(cx)
                     .child(match workspace {

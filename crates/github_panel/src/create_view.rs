@@ -656,7 +656,7 @@ impl Render for CreateView {
             .size_full()
             .min_h_0()
             .bg(colors.background)
-            .font_family(typography::UI_FONT)
+            .font_family(typography::ui_font())
             .text_color(colors.foreground)
             .child(div().flex_none().pt(px(20.)).pb(px(12.)).border_b_1().border_color(colors.divider).child(rail(summary.render(&colors))))
             .child(div().id("github-create-content").flex_1().min_h_0().overflow_y_scroll().pt(px(24.)).pb(px(32.)).child(rail(div().max_w(px(880.)).child(body))).scrollbar(_window, cx))

@@ -6,6 +6,7 @@
 //! or page reopens at once and refreshes behind the scenes.
 
 pub mod auth;
+mod command_surface;
 mod create_view;
 mod delivery_view;
 mod diff;
@@ -169,6 +170,13 @@ pub(crate) enum Section {
 
 impl Section {
     pub(crate) const ALL: [Section; 5] = [Section::PullRequests, Section::Issues, Section::Actions, Section::Releases, Section::Deployments];
+
+    /// Whether the section sits in the sidebar's footer, as a row that opens its command
+    /// surface, instead of folding open in the list. Releases and deployments are read rarely
+    /// enough to live there, as the Source Control sidebar's stashes do.
+    pub(crate) fn in_footer(self) -> bool {
+        matches!(self, Section::Releases | Section::Deployments)
+    }
 
     /// The section's id in `githubSidebarSectionOrder`.
     pub(crate) fn id(self) -> &'static str {

@@ -55,7 +55,29 @@ impl Render for SessionView {
         }
         let colors = cx.theme().colors.clone();
         let empty = self.transcript.entries.is_empty();
-        let body = if empty {
+        // A session taken over from the agent is still loading its history: the new-chat screen
+        // ("Where should we begin?", the suggestions, the recent prompts) would say the opposite
+        // of what is happening.
+        let body = if empty && self.replaying {
+            div()
+                .id("agent-loading")
+                .flex_1()
+                .min_h_0()
+                .flex()
+                .flex_col()
+                .items_center()
+                .justify_center()
+                .gap(px(10.))
+                .px(px(24.))
+                .child(busy_spinner("agent-loading", colors.subtle_foreground))
+                .child(
+                    div()
+                        .text_size(typography::text_sm())
+                        .text_color(colors.muted_foreground)
+                        .child(format!("Loading this conversation from {}…", self.agent_name())),
+                )
+                .into_any_element()
+        } else if empty {
             div()
                 .id("agent-start")
                 .flex_1()
@@ -162,7 +184,7 @@ impl Render for SessionView {
             .flex()
             .flex_col()
             .bg(colors.background)
-            .font_family(typography::UI_FONT)
+            .font_family(typography::ui_font())
             .text_size(typography::text_base())
             .text_color(colors.foreground)
             .child(body)

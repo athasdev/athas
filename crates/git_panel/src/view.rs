@@ -275,9 +275,11 @@ impl GitPanel {
             .collect();
         let empty = rows.is_empty();
         let more = (self.commits.len() > SHOWN || self.has_more_commits).then(|| {
-            let item = ui::SidebarListItem::new("git-history-more", "View more").on_click(cx.listener(|panel, event: &ClickEvent, window, cx| {
-                panel.show_history_menu(below(event), Anchor::TopLeft, window, cx)
-            }));
+            let item = ui::SidebarListItem::new("git-history-more", "View more")
+                .on_click(cx.listener(|panel, _: &ClickEvent, _, cx| {
+                    let list = panel.history_surface(cx);
+                    palette::show_command_list(cx, list);
+                }));
             div().flex_none().px(px(8.)).child(item)
         });
         div()
@@ -297,22 +299,24 @@ impl GitPanel {
     /// clicked, instead of folding open.
     fn render_footer(&self, colors: &ThemeColors, cx: &mut Context<Self>) -> impl IntoElement {
         let mut rows: Vec<AnyElement> = Vec::new();
-        let mut add = |id: &'static str, label: &'static str, icon: IconName, count: usize, open: fn(&mut GitPanel, gpui::Point<gpui::Pixels>, Anchor, &mut Window, &mut Context<GitPanel>)| {
+        let mut add = |id: &'static str, label: &'static str, icon: IconName, count: usize, open: fn(&GitPanel, &Context<GitPanel>) -> palette::CommandList| {
             let item = ui::SidebarListItem::new(id, label)
                 .leading(Icon::new(icon).size(IconSize::XSmall).color(colors.subtle_foreground))
                 .trailing(count.to_string())
-                .active(self.menu_is_open(id))
-                .on_click(cx.listener(move |panel, event: &ClickEvent, window, cx| open(panel, event.position(), Anchor::BottomLeft, window, cx)));
+                .on_click(cx.listener(move |panel, _: &ClickEvent, _, cx| {
+                    let list = open(panel, cx);
+                    palette::show_command_list(cx, list);
+                }));
             rows.push(div().flex_none().px(px(8.)).child(item).into_any_element());
         };
         if self.is_visible("stashes") {
-            add("git-stashes", "Stashes", IconName::Stack, self.stashes.len(), GitPanel::show_stashes_menu);
+            add("git-stashes", "Stashes", IconName::Stack, self.stashes.len(), GitPanel::stashes_surface);
         }
         if self.is_visible("remotes") {
-            add("git-remotes", "Remotes", IconName::Globe, self.remotes.len(), GitPanel::show_remotes_menu);
+            add("git-remotes", "Remotes", IconName::Globe, self.remotes.len(), GitPanel::remotes_surface);
         }
         if self.is_visible("tags") {
-            add("git-tags", "Tags", IconName::Tag, self.tags.len(), GitPanel::show_tags_menu);
+            add("git-tags", "Tags", IconName::Tag, self.tags.len(), GitPanel::tags_surface);
         }
         div().flex().flex_col().flex_none().gap(px(2.)).py(px(4.)).children(rows)
     }

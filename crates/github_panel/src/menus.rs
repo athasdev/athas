@@ -20,6 +20,30 @@ pub fn show<V: MenuHost>(this: &mut V, key: &str, entries: Vec<MenuEntry>, posit
     cx.notify();
 }
 
+/// Puts a search field over the open menu's rows, as the sidebar's Filter menus have.
+pub fn make_searchable<V: MenuHost>(this: &mut V, key: &str, placeholder: impl Into<SharedString>, empty: impl Into<SharedString>, cx: &mut Context<V>) {
+    if !is_open(this.menu_slot(), key) {
+        return;
+    }
+    let Some(menu) = this.menu_slot().take() else { return };
+    *this.menu_slot() = Some(menu.searchable(placeholder, empty, cx));
+}
+
+/// Answers what is typed into the open menu's field with rows of its own, instead of filtering
+/// the menu's rows: the filters stay, and a query searches the list behind them.
+pub fn set_query_source<V: MenuHost>(
+    this: &mut V,
+    key: &str,
+    source: impl Fn(&str, &mut Window, &mut gpui::App) -> Vec<MenuEntry> + 'static,
+    cx: &mut Context<V>,
+) {
+    if !is_open(this.menu_slot(), key) {
+        return;
+    }
+    let Some(menu) = this.menu_slot().as_ref().map(|menu| menu.menu.clone()) else { return };
+    menu.update(cx, |menu, _| menu.set_query_source(std::rc::Rc::new(source)));
+}
+
 pub fn is_open(menu: &Option<OpenMenu>, key: &str) -> bool {
     menu.as_ref().is_some_and(|menu| menu.key.as_ref() == key)
 }

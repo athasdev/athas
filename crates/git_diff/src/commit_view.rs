@@ -207,7 +207,7 @@ impl Render for CommitView {
             .size_full()
             .min_h_0()
             .bg(colors.background)
-            .font_family(typography::UI_FONT)
+            .font_family(typography::ui_font())
             .text_color(colors.foreground);
         let details = match &self.state {
             State::Loading => return container.child(fill_message("Loading commit…", None, IconName::GitCommit, None)),

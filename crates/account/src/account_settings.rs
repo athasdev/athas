@@ -227,7 +227,7 @@ impl Render for AccountSettings {
             .flex()
             .flex_col()
             .gap(px(24.))
-            .font_family(typography::UI_FONT)
+            .font_family(typography::ui_font())
             .children(sections)
             .into_any_element()
     }

@@ -166,7 +166,7 @@ impl Tooltip {
             .bg(theme.colors.overlay)
             .shadow(theme.shadows.popover.clone())
             .text_size(typography::text_sm())
-            .font_family(typography::UI_FONT)
+            .font_family(typography::ui_font())
             .text_color(theme.colors.foreground)
             .child(text.into())
             .children(shortcut.map(Kbd::new))

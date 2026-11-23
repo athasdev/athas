@@ -6,6 +6,7 @@
 //! back with `this.update`. The status is polled every few seconds while the window is active and
 //! reloaded whenever the window comes back to the front.
 
+mod command_surface;
 mod commit_message;
 mod model;
 mod repository;
@@ -1692,107 +1693,6 @@ impl GitPanel {
         entries
     }
 
-    pub(crate) fn show_remotes_menu(&mut self, position: Point<Pixels>, anchor: Anchor, window: &mut Window, cx: &mut Context<Self>) {
-        let busy = self.remote_action.is_some();
-        let mut entries: Vec<MenuEntry> = vec![
-            self.item("Add remote…", cx, |this, window, cx| this.start_draft(DraftKind::Remote, window, cx)).icon(ui::IconName::Plus).into(),
-            self.item("Fetch all", cx, |this, _, cx| this.fetch_remote(None, cx)).icon(ui::IconName::ArrowsClockwise).disabled(busy || self.remotes.is_empty()).into(),
-        ];
-        if !self.remotes.is_empty() {
-            entries.push(MenuEntry::Separator);
-        }
-        for remote in &self.remotes {
-            let (name, url) = (remote.name.clone(), remote.url.clone());
-            let (fetch, copy_url, copy_name, doomed) = (name.clone(), url.clone(), name.clone(), name.clone());
-            let submenu: Vec<MenuEntry> = vec![
-                self.item(format!("Fetch {name}"), cx, move |this, _, cx| this.fetch_remote(Some(fetch.clone()), cx)).icon(ui::IconName::ArrowsClockwise).into(),
-                MenuEntry::Separator,
-                self.item("Copy URL", cx, move |this, _, cx| this.copy(copy_url.clone(), cx)).icon(ui::IconName::Copy).into(),
-                self.item("Copy Name", cx, move |this, _, cx| this.copy(copy_name.clone(), cx)).icon(ui::IconName::Copy).into(),
-                MenuEntry::Separator,
-                self.item("Remove Remote…", cx, move |this, window, cx| {
-                    let position = window.mouse_position();
-                    this.confirm_remove_remote(doomed.clone(), position, window, cx)
-                })
-                .icon(ui::IconName::Trash)
-                .destructive()
-                .into(),
-            ];
-            entries.push(MenuItem::new(name).icon(ui::IconName::Globe).trailing_text(url).submenu(submenu).into());
-        }
-        self.show_menu("git-remotes", entries, position, anchor, window, cx);
-        self.make_searchable("git-remotes", "Search remotes...", "No matching remotes", cx);
-    }
-
-    pub(crate) fn show_tags_menu(&mut self, position: Point<Pixels>, anchor: Anchor, window: &mut Window, cx: &mut Context<Self>) {
-        let now = view::now_seconds();
-        let mut entries: Vec<MenuEntry> = vec![self.item("New tag…", cx, |this, window, cx| this.start_draft(DraftKind::Tag, window, cx)).icon(ui::IconName::Plus).into()];
-        if !self.tags.is_empty() {
-            entries.push(MenuEntry::Separator);
-        }
-        for (index, tag) in self.tags.iter().enumerate() {
-            let previous = self.tags.get(index + 1);
-            let mut item = MenuItem::new(tag.name.clone()).icon(ui::IconName::Tag).submenu(self.tag_menu(tag, previous, cx));
-            if !tag.date.is_empty() {
-                item = item.trailing_text(model::relative_date(&tag.date, now));
-            }
-            entries.push(item.into());
-        }
-        self.show_menu("git-tags", entries, position, anchor, window, cx);
-        self.make_searchable("git-tags", "Search tags...", "No matching tags", cx);
-    }
-
-    pub(crate) fn show_stashes_menu(&mut self, position: Point<Pixels>, anchor: Anchor, window: &mut Window, cx: &mut Context<Self>) {
-        let now = view::now_seconds();
-        let mut entries: Vec<MenuEntry> = vec![
-            self.item("Stash changes", cx, |this, _, cx| this.stash(String::new(), None, cx)).icon(ui::IconName::Plus).disabled(self.file_count() == 0).into(),
-        ];
-        if !self.stashes.is_empty() {
-            entries.push(MenuEntry::Separator);
-        }
-        for stash in &self.stashes {
-            let index = stash.index;
-            let submenu: Vec<MenuEntry> = vec![
-                self.item("Show Changes", cx, move |this, _, cx| this.open_stash(index, cx)).icon(ui::IconName::GitDiff).into(),
-                MenuEntry::Separator,
-                self.item("Apply", cx, move |this, _, cx| this.stash_action(StashAction::Apply, index, cx)).icon(ui::IconName::Archive).into(),
-                self.item("Pop", cx, move |this, _, cx| this.stash_action(StashAction::Pop, index, cx)).icon(ui::IconName::ArrowUp).into(),
-                MenuEntry::Separator,
-                self.item("Drop", cx, move |this, _, cx| this.stash_action(StashAction::Drop, index, cx)).icon(ui::IconName::Trash).destructive().into(),
-            ];
-            entries.push(
-                MenuItem::new(model::stash_title(&stash.message))
-                    .icon(ui::IconName::Stack)
-                    .trailing_text(model::relative_date(&stash.date, now))
-                    .submenu(submenu)
-                    .into(),
-            );
-        }
-        self.show_menu("git-stashes", entries, position, anchor, window, cx);
-        self.make_searchable("git-stashes", "Search stashes...", "No stashes", cx);
-    }
-
-    /// Every loaded commit, to search and open; "View more" under the recent ones.
-    pub(crate) fn show_history_menu(&mut self, position: Point<Pixels>, anchor: Anchor, window: &mut Window, cx: &mut Context<Self>) {
-        let mut entries: Vec<MenuEntry> = Vec::new();
-        for commit in &self.commits {
-            let open = commit.clone();
-            entries.push(
-                self.item(commit.summary.clone(), cx, move |this, _, cx| this.open_commit(&open, cx))
-                    .icon(ui::IconName::History)
-                    .trailing_text(model::short_hash(&commit.hash).to_string())
-                    .keywords(format!("{} {}", commit.hash, commit.author))
-                    .into(),
-            );
-        }
-        if self.has_more_commits {
-            entries.push(MenuEntry::Separator);
-            entries.push(self.item("Load older commits", cx, |this, _, cx| this.load_more_commits(cx)).icon(ui::IconName::ArrowDown).into());
-        }
-        self.show_menu("git-history", entries, position, anchor, window, cx);
-        self.make_searchable("git-history", "Search commits...", "No matching commits", cx);
-    }
-
     /// The Changes toolbar's Compare menu.
     fn compare_menu(&self, cx: &Context<Self>) -> Vec<MenuEntry> {
         let has_unstaged = !self.groups.unstaged.is_empty();
@@ -2200,81 +2100,6 @@ impl GitPanel {
         );
     }
 
-    /// A tag's actions, after Athas's tag menu. `previous` is the next older tag.
-    fn tag_menu(&self, tag: &Tag, previous: Option<&Tag>, cx: &Context<Self>) -> Vec<MenuEntry> {
-        let name = tag.name.clone();
-        let mut entries: Vec<MenuEntry> = Vec::new();
-        let (target, base) = (name.clone(), previous.map(|tag| tag.name.clone()));
-        entries.push(
-            self.item(
-                base.as_ref().map_or_else(|| "Compare with previous tag".to_string(), |base| format!("Compare with {base}")),
-                cx,
-                move |this, _, cx| {
-                    if let Some(base) = base.clone() {
-                        this.compare_tag(base, target.clone(), cx)
-                    }
-                },
-            )
-            .icon(ui::IconName::History)
-            .disabled(previous.is_none())
-            .into(),
-        );
-        let target = name.clone();
-        entries.push(
-            self.item("Compare with HEAD", cx, move |this, _, cx| this.compare_tag("HEAD".into(), target.clone(), cx))
-                .icon(ui::IconName::GitDiff)
-                .into(),
-        );
-        let target = name.clone();
-        entries.push(self.item("Checkout tag", cx, move |this, _, cx| this.checkout_tag(target.clone(), cx)).icon(ui::IconName::Tag).into());
-        entries.push(MenuEntry::Separator);
-        let remote = self.tag_remote();
-        let (target, push_remote) = (name.clone(), remote.clone());
-        entries.push(
-            self.item(remote.as_ref().map_or_else(|| "Push tag".to_string(), |remote| format!("Push to {remote}")), cx, move |this, _, cx| {
-                if let Some(remote) = push_remote.clone() {
-                    this.push_tag(target.clone(), remote, cx)
-                }
-            })
-            .icon(ui::IconName::Upload)
-            .disabled(remote.is_none())
-            .into(),
-        );
-        let (target, delete_remote) = (name.clone(), remote.clone());
-        entries.push(
-            self.item(remote.as_ref().map_or_else(|| "Delete remote tag".to_string(), |remote| format!("Delete from {remote}")), cx, move |this, window, cx| {
-                let Some(remote) = delete_remote.clone() else { return };
-                let position = window.mouse_position();
-                let doomed = target.clone();
-                this.confirm("delete-remote-tag", format!("Delete {doomed} from {remote}?"), "Delete", position, window, cx, move |this, cx| {
-                    this.delete_remote_tag(doomed.clone(), remote.clone(), cx)
-                })
-            })
-            .icon(ui::IconName::X)
-            .disabled(remote.is_none())
-            .into(),
-        );
-        entries.push(MenuEntry::Separator);
-        let copy_name = name.clone();
-        entries.push(self.item("Copy name", cx, move |this, _, cx| this.copy(copy_name.clone(), cx)).icon(ui::IconName::Copy).into());
-        let commit = tag.commit.clone();
-        entries.push(self.item("Copy commit SHA", cx, move |this, _, cx| this.copy(commit.clone(), cx)).icon(ui::IconName::GitCommit).into());
-        entries.push(MenuEntry::Separator);
-        entries.push(
-            self.item("Delete local tag", cx, move |this, window, cx| {
-                let position = window.mouse_position();
-                let doomed = name.clone();
-                this.confirm("delete-tag", format!("Delete tag \"{doomed}\"?"), "Delete", position, window, cx, move |this, cx| {
-                    this.delete_tag(doomed.clone(), cx)
-                })
-            })
-            .icon(ui::IconName::Trash)
-            .destructive()
-            .into(),
-        );
-        entries
-    }
-
     fn file_menu(&self, file: &ChangeFile, cx: &Context<Self>) -> Vec<MenuEntry> {
         let mut entries: Vec<MenuEntry> = Vec::new();
         let diff = file.clone();
@@ -2426,24 +2251,24 @@ impl GitPanel {
                 .disabled(busy)
                 .into(),
             MenuEntry::Separator,
-            self.item("Remotes…", cx, |this, window, cx| {
-                let position = window.mouse_position();
+            self.item("Remotes…", cx, |this, _, cx| {
                 this.open_menu = None;
-                this.show_remotes_menu(position, Anchor::TopRight, window, cx)
+                let list = this.remotes_surface(cx);
+                palette::show_command_list(cx, list)
             })
             .icon(ui::IconName::HardDrives)
             .into(),
-            self.item("Tags…", cx, |this, window, cx| {
-                let position = window.mouse_position();
+            self.item("Tags…", cx, |this, _, cx| {
                 this.open_menu = None;
-                this.show_tags_menu(position, Anchor::TopRight, window, cx)
+                let list = this.tags_surface(cx);
+                palette::show_command_list(cx, list)
             })
             .icon(ui::IconName::Tag)
             .into(),
-            self.item("Stashes…", cx, |this, window, cx| {
-                let position = window.mouse_position();
+            self.item("Stashes…", cx, |this, _, cx| {
                 this.open_menu = None;
-                this.show_stashes_menu(position, Anchor::TopRight, window, cx)
+                let list = this.stashes_surface(cx);
+                palette::show_command_list(cx, list)
             })
             .icon(ui::IconName::Archive)
             .into(),

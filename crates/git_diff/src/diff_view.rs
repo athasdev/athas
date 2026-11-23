@@ -1082,7 +1082,7 @@ impl DiffView {
             .child(div().flex_none().child(range))
             .child(div().flex_1().min_w_0().truncate().text_color(colors.muted_foreground).child(hunk.context().to_string()))
             .children(diff_numbers(additions, deletions, colors))
-            .child(div().flex().flex_none().items_center().gap(px(2.)).font_family(typography::UI_FONT).children(actions))
+            .child(div().flex().flex_none().items_center().gap(px(2.)).font_family(typography::ui_font()).children(actions))
             .on_click(cx.listener(move |this, _, _, cx| this.toggle_hunk(file_index, hunk_index, cx)))
             .into_any_element()
     }
@@ -1471,7 +1471,7 @@ impl Render for DiffView {
             .size_full()
             .min_h_0()
             .bg(colors.background)
-            .font_family(typography::UI_FONT)
+            .font_family(typography::ui_font())
             .text_color(colors.foreground);
         let error = self.error.clone().map(|error| {
             div()
