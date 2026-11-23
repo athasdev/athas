@@ -13,7 +13,7 @@ use ui::{Button, ButtonSize, ButtonVariant, EmptyState, Icon, IconName, IconSize
 
 use crate::{
     DraftKind, GitPanel, GitSection, RepoState, Section,
-    model::{self, ChangeFile, can_discard, filter_files, matches_query, plural, short_hash},
+    model::{self, ChangeFile, can_discard, filter_files, matches_query, plural, short_hash, status_letter},
     repository::{Commit, FileStatus, RemoteOp},
 };
 
@@ -101,8 +101,6 @@ struct Row {
     selected: bool,
     muted: bool,
     struck: bool,
-    /// The file's Git status as a colour on its name.
-    tone: Option<Hsla>,
     /// The row's right-click menu, opened where the pointer is.
     context: Option<RowMenu>,
 }
@@ -122,7 +120,6 @@ impl Row {
             selected: false,
             muted: false,
             struck: false,
-            tone: None,
             context: None,
         }
     }
@@ -131,9 +128,6 @@ impl Row {
     /// its line, the meta at the end and the actions in its place on hover.
     fn render(self, _colors: &ThemeColors) -> gpui::Stateful<gpui::Div> {
         let mut item = ui::SidebarListItem::new(ElementId::Name(format!("{}-item", self.id).into()), self.title).active(self.selected).struck(self.struck);
-        if let Some(tone) = self.tone {
-            item = item.label_color(tone);
-        }
         if let Some(icon) = self.icon {
             item = item.leading(icon);
         }
@@ -649,7 +643,9 @@ impl GitPanel {
     /// A section's rows: flat with each file's folder beside it, or under folder captions with
     /// `gitChangesFolderView`.
     fn render_file_rows(&self, section: Section, files: &[&ChangeFile], colors: &ThemeColors, cx: &mut Context<Self>) -> AnyElement {
-        let mut rows = div().flex().flex_col().pb(px(8.));
+        // The inset every other row in this panel sits on -- the toolbar, the footer, the folder
+        // captions. Without it the files ran into the panel's left edge and read as overflowing.
+        let mut rows = div().flex().flex_col().px(px(8.)).pb(px(8.));
         if !self.settings.folder_view {
             return rows.children(files.iter().map(|file| self.render_file_row(file, true, colors, cx))).into_any_element();
         }
@@ -666,7 +662,7 @@ impl GitPanel {
                         .items_center()
                         .gap(px(6.))
                         .h(metrics::list_row())
-                        .px(px(8.))
+                        .px(px(6.))
                         .rounded(metrics::radius_md())
                         .map(|this| ui::sidebar_row(this, false, false, cx))
                         .child(
@@ -695,6 +691,7 @@ impl GitPanel {
     }
 
     fn render_file_row(&self, file: &ChangeFile, show_dir: bool, colors: &ThemeColors, cx: &mut Context<Self>) -> AnyElement {
+        let (letter, label) = status_letter(file.status);
         let key = file.key.clone();
         let mut actions = Vec::new();
         if can_discard(file) {
@@ -723,6 +720,22 @@ impl GitPanel {
         if !self.settings.compact_badges {
             meta.extend(diff_numbers(file.additions, file.deletions, colors));
         }
+        meta.push(
+            div()
+                .id(SharedString::from(format!("status-{key}")))
+                .flex()
+                .flex_none()
+                .size(px(16.))
+                .items_center()
+                .justify_center()
+                .font_family(typography::MONO_FONT)
+                .font_weight(typography::MEDIUM)
+                .text_color(status_color(file.status, colors))
+                .child(letter)
+                .anchored_tooltip(move || ui::Tooltip::new(label))
+                .into_any_element(),
+        );
+
         let icon = extensions::file_icon(&file.name, px(14.), cx)
             .unwrap_or_else(|| Icon::new(IconName::File).size(IconSize::XSmall).color(colors.subtle_foreground).into_any_element());
         let mut row = Row::new(format!("file-{key}"), icon, file.name.clone());
@@ -731,9 +744,6 @@ impl GitPanel {
         row.actions = actions;
         row.muted = self.busy_keys.contains(&file.key);
         row.struck = file.status == FileStatus::Deleted;
-        // The status was a monospace letter in a 16px box at the end of every row -- a column of
-        // M, A, D you had to learn. The name carries it now, in the colour the diff already uses.
-        row.tone = Some(status_color(file.status, colors));
 
         let open = file.clone();
         let menu_file = file.clone();

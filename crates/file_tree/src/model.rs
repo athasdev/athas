@@ -517,15 +517,30 @@ pub fn copy_name(name: &str, attempt: usize) -> String {
     }
 }
 
-/// Why a typed name cannot be used, if it cannot.
+/// A typed name as the path it means, relative to the folder it was typed in: `docs/readme.md`
+/// is `readme.md` in a `docs` folder, made along with it. A trailing slash means the entry itself
+/// is a folder, so `docs/` makes a folder even from the New File field.
+pub fn draft_path(name: &str) -> (PathBuf, bool) {
+    let name = name.trim();
+    let folder = name.ends_with('/') || name.ends_with('\\');
+    let path = name.trim_end_matches(['/', '\\']).split(['/', '\\']).map(str::trim).collect();
+    (path, folder)
+}
+
+/// Why a typed name cannot be used, if it cannot. Folders in a name are allowed and made with the
+/// entry, so every segment of it is checked on its own.
 pub fn validate_name(name: &str) -> Option<&'static str> {
     let name = name.trim();
-    if name.is_empty() {
-        Some("A name is required.")
-    } else if name == "." || name == ".." {
+    if name.starts_with('/') || name.starts_with('\\') {
+        return Some("A name cannot start at the root.");
+    }
+    let segments: Vec<&str> = name.trim_end_matches(['/', '\\']).split(['/', '\\']).map(str::trim).collect();
+    if segments.iter().any(|segment| *segment == "." || *segment == "..") {
         Some("That name is reserved.")
-    } else if name.contains('/') || name.contains('\\') {
-        Some("Names cannot contain slashes.")
+    } else if segments.iter().all(|segment| segment.is_empty()) {
+        Some("A name is required.")
+    } else if segments.iter().any(|segment| segment.is_empty()) {
+        Some("A folder in that name has no name.")
     } else {
         None
     }
@@ -818,8 +833,16 @@ mod tests {
         assert_eq!(copy_name(".env", 0), ".env_copy");
         assert_eq!(copy_name("Makefile", 1), "Makefile_copy_1");
         assert!(validate_name(" ").is_some());
-        assert!(validate_name("a/b").is_some());
         assert!(validate_name("ok.txt").is_none());
+        // A name may carry the folders it goes in; only a broken path is refused.
+        assert!(validate_name("docs/readme.md").is_none());
+        assert!(validate_name("docs/").is_none());
+        assert!(validate_name("docs//readme.md").is_some());
+        assert!(validate_name("/docs/readme.md").is_some());
+        assert!(validate_name("docs/../readme.md").is_some());
+        assert_eq!(draft_path(" docs/readme.md "), (PathBuf::from("docs/readme.md"), false));
+        assert_eq!(draft_path("docs/pages/"), (PathBuf::from("docs/pages"), true));
+        assert_eq!(draft_path("readme.md"), (PathBuf::from("readme.md"), false));
         assert_eq!(
             without_nested(vec!["/p/a/x".into(), "/p/a".into(), "/p/ab".into()]),
             [PathBuf::from("/p/a"), PathBuf::from("/p/ab")]

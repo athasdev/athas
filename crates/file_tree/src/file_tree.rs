@@ -503,7 +503,6 @@ pub struct FileTree {
     /// the current read is back, since it may have missed the change.
     reload_after: HashSet<PathBuf>,
     root_error: Option<SharedString>,
-    error: Option<SharedString>,
     edit: Option<Edit>,
     clipboard: Option<FileClipboard>,
     undo: UndoStack,
@@ -599,7 +598,6 @@ impl FileTree {
             loading: HashSet::new(),
             reload_after: HashSet::new(),
             root_error: None,
-            error: None,
             edit: None,
             clipboard: None,
             undo: UndoStack::default(),
@@ -1254,7 +1252,6 @@ impl FileTree {
     fn cancel(&mut self, _: &Cancel, window: &mut Window, cx: &mut Context<Self>) {
         self.pending_delete = None;
         self.clear_multi(self.selected.clone());
-        self.error = None;
         // Escape on an open menu puts it away; the tree takes the keyboard back, since a window
         // with nothing focused answers no shortcut.
         if let Some(menu) = self.open_menu.take() {
@@ -1650,14 +1647,20 @@ impl FileTree {
                     return;
                 }
                 if let Some(problem) = model::validate_name(&name) {
-                    self.show_error(problem, cx);
+                    self.show_hint(problem, cx);
                     return;
                 }
-                let to = edit.parent.join(&name);
+                // A name with folders in it moves the entry: `docs/readme.md` puts it in `docs`,
+                // which is made if it is not there yet.
+                let (relative, _) = model::draft_path(&name);
+                let to = edit.parent.join(&relative);
                 let (source, target) = (from.clone(), to.clone());
                 self.run(
-                    move |fs| fs.rename(&source, &target),
-                    vec![edit.parent.clone()],
+                    move |fs| {
+                        create_parents(fs, &target)?;
+                        if source.parent() == target.parent() { fs.rename(&source, &target) } else { fs.move_path(&source, &target) }
+                    },
+                    vec![edit.parent.clone(), parent_of(&to)],
                     move |tree, _, cx| {
                         tree.model.relocate(&from, &to);
                         tree.gitignore.forget(&from);
@@ -1666,9 +1669,12 @@ impl FileTree {
                                 *path = moved;
                             }
                         }
+                        let mut reload = tree.model.expand_to(&to);
                         if to.is_dir() || tree.model.is_loaded(&to) {
-                            tree.load_dirs(vec![to.clone()], cx);
+                            reload.push(to.clone());
                         }
+                        tree.load_dirs(reload, cx);
+                        tree.pending_reveal = Some(to.clone());
                         tree.undo.record(FileOperation::Move { from: from.clone(), to: to.clone() });
                         cx.emit(FileTreeEvent::Moved { from: from.clone(), to: to.clone() });
                     },
@@ -1680,11 +1686,14 @@ impl FileTree {
                     return;
                 }
                 if let Some(problem) = model::validate_name(&name) {
-                    self.show_error(problem, cx);
+                    self.show_hint(problem, cx);
                     return;
                 }
-                let is_dir = kind == EditKind::NewFolder;
-                let path = edit.parent.join(&name);
+                // Folders typed into the name are made with the entry, so New File takes
+                // `docs/readme.md`; a trailing slash asks for a folder either way.
+                let (relative, as_folder) = model::draft_path(&name);
+                let is_dir = kind == EditKind::NewFolder || as_folder;
+                let path = edit.parent.join(&relative);
                 let target = path.clone();
                 self.run(
                     move |fs| {
@@ -1695,11 +1704,15 @@ impl FileTree {
                                 "A file with this name already exists."
                             });
                         }
+                        create_parents(fs, &target)?;
                         if is_dir { fs.create_dir(&target) } else { fs.create_file(&target) }
                     },
-                    vec![edit.parent.clone()],
+                    vec![edit.parent.clone(), parent_of(&path)],
                     move |tree, _, cx| {
                         tree.selected = Some(path.clone());
+                        // The folders a nested name made are opened, so the new entry is in view.
+                        let unloaded = tree.model.expand_to(&path);
+                        tree.load_dirs(unloaded, cx);
                         tree.pending_reveal = Some(path.clone());
                         if !is_dir {
                             tree.open_file(path.clone(), cx);
@@ -1737,8 +1750,22 @@ impl FileTree {
         .detach();
     }
 
+    /// A failure the user may want to come back to, in the app's toasts (bottom right) where every
+    /// other message goes; the tree used to pin a banner of its own under the rows, far from the row
+    /// it was about. A new message replaces the tree's last one instead of stacking.
     fn show_error(&mut self, message: impl Into<SharedString>, cx: &mut Context<Self>) {
-        self.error = Some(message.into());
+        self.toast(notifications::NotificationKind::Error, message, cx);
+    }
+
+    /// A complaint about what was just typed. It shows and fades: once the name is fixed there is
+    /// nothing to come back to, so it stays out of the Inbox.
+    fn show_hint(&mut self, message: impl Into<SharedString>, cx: &mut Context<Self>) {
+        self.toast(notifications::NotificationKind::Warning, message, cx);
+    }
+
+    fn toast(&mut self, kind: notifications::NotificationKind, message: impl Into<SharedString>, cx: &mut Context<Self>) {
+        let id = SharedString::from(format!("file-tree-{}", cx.entity_id()));
+        notifications::notify(cx, kind, notifications::NotificationCategory::Athas, message, None, Some(id));
         cx.notify();
     }
 
@@ -1861,7 +1888,7 @@ impl FileTree {
         let dir = parent_of(&source);
         let target = dir.join(name);
         if target == source {
-            return self.show_error("Choose a different env file name", cx);
+            return self.show_hint("Choose a different env file name", cx);
         }
         let fs = self.fs.clone();
         let check = target.clone();
@@ -2343,39 +2370,6 @@ impl FileTree {
         element.into_any_element()
     }
 
-    fn render_error(&self, message: SharedString, cx: &mut Context<Self>) -> impl IntoElement {
-        let colors = cx.theme().colors.clone();
-        div()
-            .on_mouse_down(MouseButton::Left, keep_click)
-            .on_mouse_down(MouseButton::Right, keep_click)
-            .flex()
-            .items_start()
-            .gap(px(6.))
-            .m(px(6.))
-            .p(px(8.))
-            .rounded(metrics::radius_lg())
-            .bg(colors.destructive_soft)
-            .text_size(typography::text_sm())
-            .text_color(colors.destructive)
-            .child(Icon::new(IconName::WarningCircle).size(IconSize::Small).color(colors.destructive))
-            .child(div().flex_1().min_w_0().child(message.clone()))
-            .child(
-                Button::icon("files-error-copy", IconName::Copy)
-                    .size(ButtonSize::XSmall)
-                    .tooltip("Copy message")
-                    // A banner's text cannot be selected, so the only way out of it is a button.
-                    .on_click(move |_, _, cx| cx.write_to_clipboard(gpui::ClipboardItem::new_string(message.to_string()))),
-            )
-            .child(
-                Button::icon("files-error-dismiss", IconName::X)
-                    .size(ButtonSize::XSmall)
-                    .tooltip("Dismiss")
-                    .on_click(cx.listener(|this, _, _, cx| {
-                        this.error = None;
-                        cx.notify();
-                    })),
-            )
-    }
 }
 
 impl Render for FileTree {
@@ -2470,7 +2464,6 @@ impl Render for FileTree {
             .min_h_0()
             .font_family(typography::ui(cx).family)
             .child(body)
-            .children(self.error.clone().map(|error| self.render_error(error, cx)))
             .children(self.open_menu.as_ref().map(|menu| menu.render()))
     }
 }
@@ -2479,6 +2472,19 @@ impl Render for FileTree {
 /// the selection.
 fn keep_click(_: &MouseDownEvent, _: &mut Window, cx: &mut App) {
     cx.stop_propagation();
+}
+
+/// Makes the folders a typed name asks for (`docs/readme.md`), so the new entry lands in them.
+/// Every backend's `create_dir` is recursive, so one call makes the whole missing chain.
+fn create_parents(fs: &dyn Fs, path: &Path) -> anyhow::Result<()> {
+    let Some(parent) = path.parent().filter(|parent| !parent.as_os_str().is_empty()) else { return Ok(()) };
+    if !fs.exists(parent) {
+        return fs.create_dir(parent);
+    }
+    if !fs.is_dir(parent) {
+        anyhow::bail!("{} is a file, so nothing can go inside it.", display_name(parent));
+    }
+    Ok(())
 }
 
 fn parent_of(path: &Path) -> PathBuf {
@@ -2615,6 +2621,21 @@ mod tests {
         assert!(is_invalid_drop_target(Path::new("/p/src/ui"), Path::new("/p/src"), true));
         assert!(!is_invalid_drop_target(Path::new("/p/srcs"), Path::new("/p/src"), true));
         assert!(!is_invalid_drop_target(Path::new("/p/lib"), Path::new("/p/src/a.rs"), false));
+    }
+
+    #[test]
+    fn a_nested_name_makes_the_folders_it_asks_for() {
+        let dir = tempfile::tempdir().expect("temp dir");
+        let fs = fs::local();
+        let target = dir.path().join("docs/guides/readme.md");
+        create_parents(fs.as_ref(), &target).expect("folders");
+        fs.create_file(&target).expect("file");
+        assert!(target.is_file() && dir.path().join("docs/guides").is_dir());
+        // A folder already there is left as it is.
+        create_parents(fs.as_ref(), &dir.path().join("docs/guides/next.md")).expect("folders");
+        assert!(target.is_file());
+        // A file in the way is reported, not silently written over.
+        assert!(create_parents(fs.as_ref(), &target.join("deeper.md")).is_err());
     }
 
     #[test]

@@ -68,10 +68,31 @@ jobs:
             echo "Invalid release tag: $TAG" >&2; exit 1
           fi
           version="${TAG#v}"
+          # Strictly newer by semver precedence. `sort -V` alone will not do: it reads
+          # 0.19.0-beta.6 as newer than 0.19.0, because the string is longer, so the stable
+          # release that follows a beta of the same version could never be cut.
+          newer() {
+            local a="$1" b="$2"
+            local a_core="${a%%-*}" b_core="${b%%-*}"
+            local a_pre="" b_pre=""
+            [ "$a" != "$a_core" ] && a_pre="${a#*-}"
+            [ "$b" != "$b_core" ] && b_pre="${b#*-}"
+            if [ "$a_core" != "$b_core" ]; then
+              [ "$(printf '%s\n%s\n' "$a_core" "$b_core" | sort -V | tail -n 1)" = "$a_core" ]
+              return
+            fi
+            # Same version: the release beats every prerelease that led to it.
+            [ -z "$a_pre" ] && { [ -n "$b_pre" ]; return; }
+            [ -z "$b_pre" ] && return 1
+            [ "$a_pre" != "$b_pre" ] && [ "$(printf '%s\n%s\n' "$a_pre" "$b_pre" | sort -V | tail -n 1)" = "$a_pre" ]
+          }
           # The updater only offers newer versions, and www serves the newest release by version.
-          newest="$(gh api "repos/${RELEASE_REPO}/releases?per_page=30" --jq '[.[] | select(.draft | not) | .tag_name] | .[]' \
-            | sed 's/^v//' | sort -V | tail -n 1)"
-          if [ -n "$newest" ] && [ "$(printf '%s\n%s\n' "$newest" "$version" | sort -V | tail -n 1)" != "$version" ]; then
+          newest=""
+          while read -r published; do
+            [ -z "$published" ] && continue
+            if [ -z "$newest" ] || newer "$published" "$newest"; then newest="$published"; fi
+          done < <(gh api "repos/${RELEASE_REPO}/releases?per_page=30" --jq '[.[] | select(.draft | not) | .tag_name] | .[]' | sed 's/^v//')
+          if [ -n "$newest" ] && ! newer "$version" "$newest"; then
             echo "$version is not newer than the published $newest" >&2; exit 1
           fi
           # MSI versions are numeric (major.minor.patch.build); a beta maps to its build number.

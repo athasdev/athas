@@ -122,6 +122,17 @@ pub fn filter_files<'a>(files: &'a [ChangeFile], query: &str) -> Vec<&'a ChangeF
 }
 
 
+/// The letter a row shows for its change, and what it means.
+pub fn status_letter(status: FileStatus) -> (&'static str, &'static str) {
+    match status {
+        FileStatus::Modified => ("M", "Modified"),
+        FileStatus::Added => ("A", "Added"),
+        FileStatus::Deleted => ("D", "Deleted"),
+        FileStatus::Untracked => ("U", "Untracked"),
+        FileStatus::Renamed => ("R", "Renamed"),
+    }
+}
+
 /// Discard turns a file back into its committed version, so untracked files have nothing to go
 /// back to, and staged rows are unstaged first.
 pub fn can_discard(file: &ChangeFile) -> bool {
@@ -374,6 +385,15 @@ mod tests {
 
     fn entry(path: &str, status: FileStatus, staged: bool) -> StatusEntry {
         StatusEntry { path: path.into(), status, staged }
+    }
+
+    #[test]
+    fn maps_status_letters() {
+        assert_eq!(status_letter(FileStatus::Modified).0, "M");
+        assert_eq!(status_letter(FileStatus::Added).0, "A");
+        assert_eq!(status_letter(FileStatus::Deleted).0, "D");
+        assert_eq!(status_letter(FileStatus::Untracked), ("U", "Untracked"));
+        assert_eq!(status_letter(FileStatus::Renamed).0, "R");
     }
 
     #[test]
