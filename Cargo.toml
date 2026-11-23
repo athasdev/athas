@@ -46,14 +46,16 @@ derive_refineable = { opt-level = 3 }
 # (fat LTO of the whole app needs well over 16 GB). Panics keep unwinding: 66 background
 # threads (language servers, terminals, watchers, agents) rely on a panic ending only their
 # own thread, and the telemetry panic hook still records it. Symbols are stripped; crash
-# reports carry file and line from the panic location, not from debug info.
+# reports carry file and line from the panic location, not from debug info. Symbols stay: every
+# crash report of 0.19 came back as a row of `athas ?` frames, which says nothing about where the
+# app died, and `strip = "debuginfo"` drops the DWARF (the bulk) while keeping the names.
 [profile.release]
 opt-level = 3
 lto = "thin"
 codegen-units = 1
 panic = "unwind"
 debug = false
-strip = "symbols"
+strip = "debuginfo"
 incremental = false
 
 # The web build (`scripts/build-web.sh --release`): small over fast.
