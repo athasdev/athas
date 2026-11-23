@@ -174,7 +174,6 @@ impl Editor {
 
     pub(crate) fn scroll_wheel(&mut self, event: &ScrollEvent, cx: &mut Context<Self>) {
         self.lsp.hover = None;
-        self.scroll_animation = None;
         self.smooth_from = None;
         let Some(layout) = &self.layout else { return };
         let delta = event.delta.pixel_delta(layout.line_height);
@@ -183,10 +182,25 @@ impl Editor {
         // A vertical wheel with shift scrolls sideways (mice without a horizontal wheel).
         if event.modifiers.shift && dx == px(0.) {
             dx = dy;
+            self.scroll_animation = None;
             self.scroll.x = (self.scroll.x - dx).clamp(px(0.), max.x);
-        } else {
+            cx.notify();
+            return;
+        }
+        self.scroll.x = (self.scroll.x - dx).clamp(px(0.), max.x);
+        // A trackpad reports pixels and carries its own momentum, so its offset is applied as it
+        // arrives. A wheel reports whole lines a notch at a time, and applying one of those at
+        // once is the jump from line to line that wheel users see. A notch glides instead, from
+        // wherever the last glide had reached, so notches in quick succession run together.
+        if event.delta.precise() {
+            self.scroll_animation = None;
             self.scroll.y = (self.scroll.y - dy).clamp(px(0.), max.y);
-            self.scroll.x = (self.scroll.x - dx).clamp(px(0.), max.x);
+        } else {
+            let to = crate::ScrollGlide::wheel_target(self.scroll.y, self.scroll_animation.map(|glide| glide.to), dy, max.y);
+            if to != self.scroll.y {
+                self.scroll_animation =
+                    Some(crate::ScrollGlide { from: self.scroll.y, to, started: web_time::Instant::now(), seconds: crate::WHEEL_GLIDE });
+            }
         }
         cx.notify();
     }

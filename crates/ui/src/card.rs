@@ -1,8 +1,8 @@
 use crate::scale::px;
-use gpui::{AnyElement, App, Hsla, IntoElement, RenderOnce, SharedString, Window, div, prelude::*, relative};
+use gpui::{AnyElement, App, Hsla, IntoElement, Pixels, RenderOnce, SharedString, Window, div, prelude::*, relative};
 use theme::ActiveTheme;
 
-use crate::{Icon, IconName, Tone, metrics, typography};
+use crate::{Icon, IconName, IconSize, Tone, metrics, typography};
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub enum CardVariant {
@@ -345,4 +345,67 @@ impl RenderOnce for Alert {
             })
             .children(self.corner_action.map(|action| div().absolute().top(px(6.)).right(px(6.)).child(action)))
     }
+}
+
+/// A line of error text: what failed, in the destructive colour, with the warning mark when it
+/// needs one.
+///
+/// There was no component for this, so forty-odd places wrote `text_color(colors.destructive)`
+/// by hand and each picked its own size, its own icon (or none) and its own truncation. The
+/// colour is right in all of them; the rest was not agreed on anywhere.
+#[derive(IntoElement)]
+pub struct ErrorText {
+    message: SharedString,
+    icon: bool,
+    truncate: bool,
+    size: Option<Pixels>,
+}
+
+impl ErrorText {
+    pub fn new(message: impl Into<SharedString>) -> Self {
+        Self { message: message.into(), icon: false, truncate: false, size: None }
+    }
+
+    /// With the warning mark before it, for an error that has to catch the eye.
+    pub fn marked(mut self) -> Self {
+        self.icon = true;
+        self
+    }
+
+    /// Kept to one line, for a row that cannot grow.
+    pub fn truncate(mut self) -> Self {
+        self.truncate = true;
+        self
+    }
+
+    /// Quieter than the text around it (`text_caption`), for a hint under a field.
+    pub fn caption(mut self) -> Self {
+        self.size = Some(typography::text_caption());
+        self
+    }
+}
+
+impl RenderOnce for ErrorText {
+    fn render(self, _: &mut Window, cx: &mut App) -> impl IntoElement {
+        let destructive = cx.theme().colors.destructive;
+        div()
+            .flex()
+            .items_center()
+            .gap(px(6.))
+            .min_w_0()
+            .text_size(self.size.unwrap_or_else(typography::text_sm))
+            .text_color(destructive)
+            .when(self.icon, |this| this.child(Icon::new(IconName::WarningCircle).size(IconSize::XSmall).color(destructive)))
+            .child(div().min_w_0().when(self.truncate, |this| this.truncate()).child(self.message))
+    }
+}
+
+/// A quiet line where content is not: "No reviewers", "No comments yet", "Loading…".
+///
+/// Not every empty place wants an [`EmptyState`](crate::EmptyState) — that one is for a whole
+/// surface, with its icon and its sentence. This is the other kind, a note inside a field or a
+/// section, which two dozen places wrote by hand in three different sizes and two different
+/// greys. Returns a `Div`, so a note that is also a button can still be given one.
+pub fn quiet_note(text: impl Into<SharedString>, cx: &App) -> gpui::Div {
+    div().text_size(typography::text_sm()).text_color(cx.theme().colors.subtle_foreground).child(text.into())
 }

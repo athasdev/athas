@@ -666,7 +666,7 @@
  },
  {
   "id": "workspace.add",
-  "title": "Workspace: Add Workspace\u2026",
+  "title": "Workspace: Add Workspace…",
   "category": "File",
   "description": "Register a project folder as a workspace and edit what your team shares",
   "icon": "Grid"
@@ -1569,7 +1569,7 @@
  },
  {
   "id": "docker.open",
-  "title": "Open Docker\u2026",
+  "title": "Open Docker…",
   "category": "Docker",
   "description": "Manage containers, images, Compose services and project presets",
   "icon": "Package"
@@ -1597,14 +1597,14 @@
  },
  {
   "id": "team.handOffSession",
-  "title": "Hand Off Session\u2026",
+  "title": "Hand Off Session…",
   "category": "Team",
   "description": "Pass this agent session to a teammate",
   "icon": "Users"
  },
  {
   "id": "team.requestReview",
-  "title": "Request Review\u2026",
+  "title": "Request Review…",
   "category": "Team",
   "description": "Ask a teammate to review this agent session's changes",
   "icon": "Users"
@@ -1706,5 +1706,12 @@
   "category": "Window",
   "description": "Maximize or restore the window",
   "icon": "ArrowsOut"
+ },
+ {
+  "id": "help.shortcuts",
+  "title": "Keyboard Shortcuts",
+  "category": "Help",
+  "description": "The keys this window answers",
+  "icon": "Keyboard"
  }
 ]

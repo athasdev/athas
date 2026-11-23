@@ -268,7 +268,19 @@ impl Workbench {
 
     /// `help.showWhatsNew`: the running version's release notes in the welcome's pane.
     fn show_whats_new(&mut self, cx: &mut Context<Self>) {
-        let view = cx.new(|cx| onboarding::OnboardingView::whats_new(env!("CARGO_PKG_VERSION"), cx));
+        let fixture = std::env::var("ATHAS_SNAPSHOT_WHATS_NEW").ok().filter(|notes| !notes.is_empty());
+        let view = cx.new(|cx| match fixture {
+            Some(body) => onboarding::OnboardingView::whats_new_with(
+                onboarding::whats_new::WhatsNewInfo {
+                    version: env!("CARGO_PKG_VERSION").into(),
+                    body: Some(body),
+                    date: Some("2026-11-23T00:00:00Z".into()),
+                    ..Default::default()
+                },
+                cx,
+            ),
+            None => onboarding::OnboardingView::whats_new(env!("CARGO_PKG_VERSION"), cx),
+        });
         self.whats_new_unread = Some(false);
         self.onboarding = None;
         self.onboarding_reopened = true;

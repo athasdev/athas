@@ -8,22 +8,13 @@ use ui::{Icon, IconName, IconSize, metrics, typography};
 
 /// The panel, sized as the pickers are.
 pub(crate) fn panel(id: impl Into<ElementId>, window: &Window, cx: &App) -> Stateful<gpui::Div> {
-    let theme = cx.theme();
     let viewport = window.viewport_size();
-    div()
+    ui::overlay_surface(cx)
         .id(id.into())
         .occlude()
         .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
-        .flex()
-        .flex_col()
         .w((viewport.width - px(32.)).min(px(800.)))
         .max_h((viewport.height * 0.72).min(px(608.)))
-        .rounded(metrics::overlay_radius())
-        .bg(theme.colors.overlay)
-        .shadow(theme.shadows.dialog.clone())
-        .overflow_hidden()
-        .font_family(typography::ui_font())
-        .text_color(theme.colors.foreground)
 }
 
 pub(crate) fn header(cx: &App) -> gpui::Div {
@@ -180,7 +171,7 @@ impl RenderOnce for CommandRow {
             .group("command-row")
             .flex()
             .items_center()
-            .gap(px(10.))
+            .gap(px(12.))
             .w_full()
             .min_h(px(40.))
             .mb(px(2.))

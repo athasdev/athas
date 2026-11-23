@@ -177,7 +177,7 @@ impl DeliveryView {
         let path = root.to_string_lossy().into_owned();
         let release = id.and_then(|id| store::get::<Release>(&release_key(&path, id), cx)).filter(|_| kind == DeliveryKind::Release);
         let deployment = id.and_then(|id| store::get::<Deployment>(&deployment_key(&path, id), cx)).filter(|_| kind == DeliveryKind::Deployment);
-        let asset_filter = cx.new(|cx| TextInput::new(window, cx).placeholder("Filter assets…").leading_icon(IconName::Search));
+        let asset_filter = cx.new(|cx| TextInput::new(window, cx).placeholder("Filter assets").leading_icon(IconName::Search));
         let subscriptions = vec![cx.subscribe(&asset_filter, |_, _, _: &TextInputEvent, cx| cx.notify())];
         let poll = (kind == DeliveryKind::Deployment).then(|| {
             cx.spawn_in(window, async move |this, cx| {
@@ -739,7 +739,7 @@ impl DeliveryView {
             div()
                 .flex()
                 .items_center()
-                .gap(px(10.))
+                .gap(px(12.))
                 .px(px(10.))
                 .py(px(8.))
                 .rounded(metrics::radius_md())
@@ -810,7 +810,7 @@ impl DeliveryView {
             div()
                 .flex()
                 .flex_col()
-                .gap(px(10.))
+                .gap(px(12.))
                 .child(toolbar)
                 .children(self.action_error.clone().filter(|_| self.confirmation.is_none()).map(|error| div().text_size(typography::text_sm()).text_color(colors.destructive).child(error)))
                 .children(rows)
@@ -857,7 +857,7 @@ impl DeliveryView {
             div()
                 .flex()
                 .items_center()
-                .gap(px(10.))
+                .gap(px(12.))
                 .px(px(10.))
                 .py(px(8.))
                 .rounded(metrics::radius_md())

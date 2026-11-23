@@ -681,10 +681,10 @@ impl Editor {
         let autoscroll = self.autoscroll.take();
         // Where a jump starts: a page key's offset before it moved, or the glide's current one.
         let jump_from = self.smooth_from.take().unwrap_or(self.scroll.y);
-        if let Some((_, to, _)) = self.scroll_animation
+        if let Some(glide) = self.scroll_animation
             && autoscroll.is_none()
         {
-            self.scroll.y = to;
+            self.scroll.y = glide.to;
         }
         if let Some(mode) = autoscroll {
             let head_row = map.to_display(newest_head).row;
@@ -724,21 +724,21 @@ impl Editor {
         // page up/down) glides there over 180ms instead of landing at once; the wheel stops it.
         if frame.smooth_scrolling {
             let jumped = (self.scroll.y - jump_from).abs() > line_height * 2.;
-            if jumped && self.scroll_animation.is_none_or(|(_, to, _)| to != self.scroll.y) {
-                self.scroll_animation = Some((jump_from, self.scroll.y, web_time::Instant::now()));
+            if jumped && self.scroll_animation.is_none_or(|glide| glide.to != self.scroll.y) {
+                self.scroll_animation =
+                    Some(crate::ScrollGlide { from: jump_from, to: self.scroll.y, started: web_time::Instant::now(), seconds: crate::JUMP_GLIDE });
             }
-            if let Some((from, to, started)) = self.scroll_animation {
-                let t = (started.elapsed().as_secs_f32() / 0.18).min(1.);
-                let eased = 1. - (1. - t).powi(3);
-                self.scroll.y = (from + (to - from) * eased).clamp(px(0.), max_scroll_y);
-                if t >= 1. {
-                    self.scroll_animation = None;
-                } else {
-                    window.request_animation_frame();
-                }
+        }
+        // Whatever started it -- a jump, or a wheel notch, which glides whether or not the
+        // setting is on -- a glide in flight plays out to its end.
+        if let Some(glide) = self.scroll_animation {
+            let elapsed = glide.started.elapsed().as_secs_f32();
+            self.scroll.y = glide.eased(elapsed).clamp(px(0.), max_scroll_y);
+            if elapsed >= glide.seconds {
+                self.scroll_animation = None;
+            } else {
+                window.request_animation_frame();
             }
-        } else {
-            self.scroll_animation = None;
         }
 
         // The rows on screen.

@@ -107,6 +107,9 @@ impl AccountSettings {
                 let description: SharedString = match session {
                     Session::Unverified(check) => format!("{} Trying again in {}s.", check.message, check.retry_in.as_secs()).into(),
                     Session::Loading => "Checking your session…".into(),
+                    // The browser does not always come up (no handler, or a sandboxed one on
+                    // Linux), so say where the sign-in is and leave a way to open it again.
+                    _ if signing_in => "Finish signing in in your browser".into(),
                     _ => "Sign in for Pro, Athas AI, and settings sync".into(),
                 };
                 let unverified = matches!(session, Session::Unverified(_));
@@ -133,9 +136,10 @@ impl AccountSettings {
                             )
                         })
                         .child(
-                            Button::new("account-sign-in", if signing_in { "Signing In..." } else { "Sign In" })
+                            Button::new("account-sign-in", if signing_in { "Open Sign-In Page" } else { "Sign In" })
                                 .variant(ButtonVariant::Accent)
-                                .disabled(signing_in)
+                                // `sign_in` opens the waiting session's page again, so a browser
+                                // that never came up is one click away.
                                 .on_click(move |_, _, cx| update(cx, |store, cx| store.sign_in(cx))),
                         ),
                     cx,

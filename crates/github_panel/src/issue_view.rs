@@ -735,7 +735,7 @@ impl IssueView {
             .flex_col()
             .gap(px(20.))
             .child(timeline(items, colors))
-            .when(issue.comments.is_empty(), |this| this.child(div().pl(px(36.)).text_size(typography::text_sm()).text_color(colors.subtle_foreground).child("No comments yet")))
+            .when(issue.comments.is_empty(), |this| this.child(ui::quiet_note("No comments yet", cx).pl(px(36.))))
             .child(editor::composer(
                 "issue-composer",
                 &self.composer,

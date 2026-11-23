@@ -518,7 +518,7 @@ impl Editor {
             .id(("notebook-cell", index))
             .relative()
             .flex()
-            .gap(px(10.))
+            .gap(px(12.))
             .mb(px(16.))
             .py(px(4.))
             .pr(px(4.))

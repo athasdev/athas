@@ -117,6 +117,24 @@ pub fn chrome_hit_target() -> Pixels { scale::px(28.) }
 pub fn chrome_gap_tight() -> Pixels { scale::px(2.) }
 pub fn chrome_gap() -> Pixels { scale::px(4.) }
 pub fn chrome_padding_inline() -> Pixels { scale::px(6.) }
+/// How far a sidebar's rows and its heading sit from the pane's edge. One number, so Files,
+/// Sessions, Source Control, GitHub and the side panels all line up.
+pub fn sidebar_inset() -> Pixels { scale::px(8.) }
+
+/// The spacing ladder, for the room between things.
+///
+/// Counted across the app, the gaps already sat on it — 2, 4, 6 and 8 account for four fifths of
+/// them, with 12, 16 and 24 for the larger breaks — so this names what the code had settled on
+/// rather than inventing a scale for it. Reach for a rung; a number that is not one of these is
+/// a decision worth explaining in a comment. `gap(px(1.))` is the one deliberate exception: rows
+/// that all but touch, as the sessions list draws them.
+pub fn space_xs() -> Pixels { scale::px(2.) }
+pub fn space_sm() -> Pixels { scale::px(4.) }
+pub fn space() -> Pixels { scale::px(6.) }
+pub fn space_md() -> Pixels { scale::px(8.) }
+pub fn space_lg() -> Pixels { scale::px(12.) }
+pub fn space_xl() -> Pixels { scale::px(16.) }
+pub fn space_2xl() -> Pixels { scale::px(24.) }
 /// The radius ladder. A corner belongs to the surface it is on: the smaller the thing, the
 /// tighter the corner, so a key cap and a command palette do not round the same way. Pick the
 /// rung by what the thing *is* — two of a kind round alike, wherever they are drawn.

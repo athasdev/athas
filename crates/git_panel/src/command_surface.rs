@@ -1,17 +1,17 @@
-//! The lists under the Source Control sidebar's footer: stashes, remotes, tags and history.
+//! What one stash, remote or tag can do.
 //!
-//! They are long and worth searching, so each opens the Command surface
-//! (`palette::CommandList`, the original's `GitCommandSurface`) rather than a dropdown. An item
-//! with more than one action leads to a surface of its own, so picking never needs a submenu.
+//! The lists themselves are panels in the secondary column now ([`crate::section_panel`]). An
+//! item has more actions than a row can hold, so clicking one opens them as a Command surface
+//! (`palette::CommandList`, the original's `GitCommandSurface`) -- searchable, and never a
+//! submenu to aim at.
 
 use gpui::{Context, SharedString, Window};
 use palette::{CommandList, CommandRow};
 use ui::IconName;
 
 use crate::{
-    DraftKind, GitPanel, StashAction, model,
-    repository::{Commit, Remote, Stash, Tag},
-    view,
+    GitPanel, StashAction, model,
+    repository::{Remote, Stash, Tag},
 };
 
 impl GitPanel {
@@ -29,39 +29,10 @@ impl GitPanel {
         })
     }
 
-    /// A row that leads to another surface, such as one item's actions.
-    fn leads_to(label: impl Into<SharedString>, icon: IconName, list: CommandList) -> CommandRow {
-        CommandRow::new(label).icon(icon).on_select(move |_, cx| palette::show_command_list(cx, list.clone()))
-    }
 
-    /// Stashes: what is stashed, and what each one can do.
-    pub(crate) fn stashes_surface(&self, cx: &Context<Self>) -> CommandList {
-        let now = view::now_seconds();
-        let mut rows = vec![
-            self.row("Stash changes", IconName::Plus, cx, |panel, _, cx| panel.stash(String::new(), None, cx)).section("Stash"),
-        ];
-        let panel = cx.entity().downgrade();
-        for stash in &self.stashes {
-            let index = stash.index;
-            let (apply, drop) = (panel.clone(), panel.clone());
-            rows.push(
-                Self::leads_to(model::stash_title(&stash.message), IconName::Stack, self.stash_surface(stash, cx))
-                    .section("Stashes")
-                    .trailing(model::relative_date(&stash.date, now))
-                    .keywords(stash.message.clone())
-                    .action(IconName::Archive, "Apply", move |_, cx| {
-                        apply.update(cx, |panel, cx| panel.stash_action(StashAction::Apply, index, cx)).ok();
-                    })
-                    .destructive_action(IconName::Trash, "Drop", move |_, cx| {
-                        drop.update(cx, |panel, cx| panel.stash_action(StashAction::Drop, index, cx)).ok();
-                    }),
-            );
-        }
-        CommandList::new("Stashes", rows).icon(IconName::Stack).empty("No stashes")
-    }
 
     /// One stash's actions.
-    fn stash_surface(&self, stash: &Stash, cx: &Context<Self>) -> CommandList {
+    pub(crate) fn stash_surface(&self, stash: &Stash, cx: &Context<Self>) -> CommandList {
         let index = stash.index;
         let rows = vec![
             self.row("Show changes", IconName::GitDiff, cx, move |panel, _, cx| panel.open_stash(index, cx)),
@@ -69,32 +40,12 @@ impl GitPanel {
             self.row("Pop", IconName::ArrowUp, cx, move |panel, _, cx| panel.stash_action(StashAction::Pop, index, cx)),
             self.row("Drop", IconName::Trash, cx, move |panel, _, cx| panel.stash_action(StashAction::Drop, index, cx)),
         ];
-        CommandList::new(model::stash_title(&stash.message), rows).icon(IconName::Stack).placeholder("Search actions…").empty("No matching action")
+        CommandList::new(model::stash_title(&stash.message), rows).icon(IconName::Stack).placeholder("Search actions").empty("No matching action")
     }
 
-    /// Remotes: every remote, and what each one can do.
-    pub(crate) fn remotes_surface(&self, cx: &Context<Self>) -> CommandList {
-        let mut rows = vec![
-            self.row("Add remote…", IconName::Plus, cx, |panel, window, cx| panel.start_draft(DraftKind::Remote, window, cx)).section("Remotes"),
-            self.row("Fetch all", IconName::ArrowsClockwise, cx, |panel, _, cx| panel.fetch_remote(None, cx)).section("Remotes"),
-        ];
-        for remote in &self.remotes {
-            let (fetch, name) = (cx.entity().downgrade(), remote.name.clone());
-            rows.push(
-                Self::leads_to(remote.name.clone(), IconName::Globe, self.remote_surface(remote, cx))
-                    .section("Remotes")
-                    .description(remote.url.clone())
-                    .keywords(remote.url.clone())
-                    .action(IconName::ArrowsClockwise, "Fetch", move |_, cx| {
-                        fetch.update(cx, |panel, cx| panel.fetch_remote(Some(name.clone()), cx)).ok();
-                    }),
-            );
-        }
-        CommandList::new("Remotes", rows).icon(IconName::Globe).empty("No remotes")
-    }
 
     /// One remote's actions.
-    fn remote_surface(&self, remote: &Remote, cx: &Context<Self>) -> CommandList {
+    pub(crate) fn remote_surface(&self, remote: &Remote, cx: &Context<Self>) -> CommandList {
         let (name, url) = (remote.name.clone(), remote.url.clone());
         let (fetch, copy_url, copy_name, doomed) = (name.clone(), url.clone(), name.clone(), name.clone());
         let rows = vec![
@@ -106,36 +57,12 @@ impl GitPanel {
                 panel.confirm_remove_remote(doomed.clone(), position, window, cx)
             }),
         ];
-        CommandList::new(name, rows).icon(IconName::Globe).placeholder("Search actions…").empty("No matching action")
+        CommandList::new(name, rows).icon(IconName::Globe).placeholder("Search actions").empty("No matching action")
     }
 
-    /// Tags: every tag, newest first, each leading to its actions.
-    pub(crate) fn tags_surface(&self, cx: &Context<Self>) -> CommandList {
-        let now = view::now_seconds();
-        let mut rows =
-            vec![self.row("New tag…", IconName::Plus, cx, |panel, window, cx| panel.start_draft(DraftKind::Tag, window, cx)).section("Tags")];
-        for (index, tag) in self.tags.iter().enumerate() {
-            let previous = self.tags.get(index + 1);
-            let (panel, name) = (cx.entity().downgrade(), tag.name.clone());
-            let mut row = Self::leads_to(tag.name.clone(), IconName::Tag, self.tag_surface(tag, previous, cx))
-                .section("Tags")
-                .keywords(tag.commit.clone())
-                .action(IconName::Copy, "Copy name", move |_, cx| {
-                    panel.update(cx, |panel, cx| panel.copy(name.clone(), cx)).ok();
-                });
-            if !tag.date.is_empty() {
-                row = row.trailing(model::relative_date(&tag.date, now));
-            }
-            if let Some(message) = tag.message.clone().filter(|message| !message.trim().is_empty()) {
-                row = row.description(message);
-            }
-            rows.push(row);
-        }
-        CommandList::new("Tags", rows).icon(IconName::Tag).empty("No tags")
-    }
 
     /// One tag's actions, the same ones its menu had.
-    fn tag_surface(&self, tag: &Tag, previous: Option<&Tag>, cx: &Context<Self>) -> CommandList {
+    pub(crate) fn tag_surface(&self, tag: &Tag, previous: Option<&Tag>, cx: &Context<Self>) -> CommandList {
         let name = tag.name.clone();
         let remote = self.tag_remote();
         let mut rows = Vec::new();
@@ -175,44 +102,8 @@ impl GitPanel {
                 panel.delete_tag(doomed.clone(), cx)
             })
         }));
-        CommandList::new(name, rows).icon(IconName::Tag).placeholder("Search actions…").empty("No matching action")
+        CommandList::new(name, rows).icon(IconName::Tag).placeholder("Search actions").empty("No matching action")
     }
 
-    /// Every commit loaded, to search and open.
-    pub(crate) fn history_surface(&self, cx: &Context<Self>) -> CommandList {
-        let mut rows: Vec<CommandRow> = self.commits.iter().map(|commit| self.commit_row(commit, cx)).collect();
-        if self.has_more_commits {
-            rows.push(
-                self.row("Load older commits", IconName::ArrowDown, cx, |panel, _, cx| panel.load_more_commits(cx)).section("History"),
-            );
-        }
-        CommandList::new("History", rows).icon(IconName::History).placeholder("Search commits…").empty("No matching commits")
-    }
 
-    fn commit_row(&self, commit: &Commit, cx: &Context<Self>) -> CommandRow {
-        let open = commit.clone();
-        let (panel, hash) = (cx.entity().downgrade(), commit.hash.clone());
-        self.row(commit.summary.clone(), IconName::GitCommit, cx, move |panel, _, cx| panel.open_commit(&open, cx))
-            .section("History")
-            .trailing(model::short_hash(&commit.hash).to_string())
-            .description(commit.author.clone())
-            .keywords(commit.hash.clone())
-            .action(IconName::Copy, "Copy commit SHA", move |_, cx| {
-                panel.update(cx, |panel, cx| panel.copy(hash.clone(), cx)).ok();
-            })
-    }
-}
-
-impl GitPanel {
-    /// One of the footer's surfaces by name, for the command palette's own entries and the
-    /// headless snapshot.
-    pub fn command_surface(&self, which: &str, cx: &Context<Self>) -> Option<CommandList> {
-        Some(match which {
-            "stashes" => self.stashes_surface(cx),
-            "remotes" => self.remotes_surface(cx),
-            "tags" => self.tags_surface(cx),
-            "history" => self.history_surface(cx),
-            _ => return None,
-        })
-    }
 }

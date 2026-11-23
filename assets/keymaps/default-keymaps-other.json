@@ -760,5 +760,10 @@
   "key": "alt+m",
   "command": "window.toggleMenuBar",
   "source": "default"
+ },
+ {
+  "key": "shift+?",
+  "command": "help.shortcuts",
+  "source": "default"
  }
 ]

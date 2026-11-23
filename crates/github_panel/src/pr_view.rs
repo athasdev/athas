@@ -883,7 +883,7 @@ impl PullRequestView {
             .into_any_element()
     }
 
-    fn render_description(&self, page: &Page, colors: &ThemeColors, cx: &mut Context<Self>) -> (AnyElement, Option<AnyElement>) {
+    fn render_description(&self, page: &Page, _colors: &ThemeColors, cx: &mut Context<Self>) -> (AnyElement, Option<AnyElement>) {
         if let Some((editor, _)) = &self.body_editor {
             let body = div()
                 .flex()
@@ -905,12 +905,7 @@ impl PullRequestView {
             return (body, None);
         }
         let body = if page.body.is_empty() {
-            div()
-                .id("pr-body-empty")
-                .text_size(typography::text_sm())
-                .italic()
-                .text_color(colors.subtle_foreground)
-                .child("No description provided")
+            ui::quiet_note("No description provided", cx).id("pr-body-empty")
                 .on_click(cx.listener(|this, _, window, cx| this.start_body_edit(window, cx)))
                 .into_any_element()
         } else {
@@ -1146,7 +1141,7 @@ impl PullRequestView {
         let reviewers = model::reviewers(pr);
         let review_badge = model::review_decision_badge(pr.review_decision.as_deref()).map(|(label, tone)| badge(label, tone, colors).into_any_element());
         let review_body = if reviewers.is_empty() {
-            div().text_color(colors.subtle_foreground).child("No reviewers").into_any_element()
+            ui::quiet_note("No reviewers", cx).into_any_element()
         } else {
             div()
                 .flex()

@@ -318,7 +318,7 @@ impl TeamSessionView {
             .flex_col()
             .gap(px(8.))
             .p(px(12.))
-            .rounded(ui::metrics::island_radius())
+            .rounded(ui::metrics::radius_lg())
             .bg(colors.raised)
             .shadow(cx.theme().shadows.raised.clone())
             .child(div().text_size(typography::text_sm()).font_weight(typography::MEDIUM).child(to.title()))
@@ -365,7 +365,7 @@ impl TeamSessionView {
         }
         div()
             .flex()
-            .gap(px(10.))
+            .gap(px(12.))
             .child(Avatar::person(&Person::new(comment.author_name.clone()).user_id(comment.author_user_id), cx).size(px(24.)))
             .child(
                 div()

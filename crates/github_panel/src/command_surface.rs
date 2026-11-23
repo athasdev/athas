@@ -82,7 +82,7 @@ impl GitHubPanel {
                 .keywords(release.tag_name.clone()),
             );
         }
-        CommandList::new("Releases", rows).icon(IconName::Tag).placeholder("Search releases…").empty("No matching releases")
+        CommandList::new("Releases", rows).icon(IconName::Tag).placeholder("Search releases").empty("No matching releases")
     }
 
     /// Deployments, newest first, under what the list is narrowed to.
@@ -118,7 +118,7 @@ impl GitHubPanel {
                 .keywords(format!("{} {}", deployment.environment, deployment.sha)),
             );
         }
-        CommandList::new("Deployments", rows).icon(IconName::Rocket).placeholder("Search deployments…").empty("No matching deployments")
+        CommandList::new("Deployments", rows).icon(IconName::Rocket).placeholder("Search deployments").empty("No matching deployments")
     }
 }
 

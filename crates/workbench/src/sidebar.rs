@@ -115,12 +115,6 @@ pub(crate) struct InstalledAgent {
 
 /// How many agents are installed, without building their rows: the footer counts them on every
 /// frame.
-fn installed_agent_count(cx: &mut App) -> usize {
-    use agent_ui::agent_registry::AgentRegistry;
-    let registry = AgentRegistry::global(cx);
-    let registry = registry.read(cx);
-    registry.agents().iter().filter(|agent| registry.state(&agent.id).is_installed()).count()
-}
 
 /// The agents installed here, in the registry's order.
 pub(crate) fn installed_agents(cx: &mut App) -> Vec<InstalledAgent> {
@@ -318,7 +312,7 @@ impl Workbench {
         let files_header = view == SidebarView::Files && extension_view.is_none();
         let toolbar = actions.map(|actions| {
             if files_header {
-                return div().flex_none().px(px(8.)).pb(px(2.)).child(SectionLabel::new("Files").trailing(actions));
+                return ui::PanelHeader::new("Files").trailing(actions).into_any_element();
             }
             div()
                 .flex()
@@ -330,6 +324,7 @@ impl Workbench {
                 .invisible()
                 .group_hover("sidebar-pane", |style| style.visible())
                 .child(actions)
+                .into_any_element()
         });
         let body = match view {
             _ if extension_view.is_some() && self.state.active_project().is_none() => self.render_project_tool(view, cx).into_any_element(),
@@ -337,6 +332,13 @@ impl Workbench {
             SidebarView::Agents => self.render_agents_view(window, cx).into_any_element(),
             // Settings needs no project: the sidebar lists its pages and the centre tab shows
             // the one picked.
+            SidebarView::Notifications => div()
+                .flex()
+                .flex_col()
+                .flex_1()
+                .min_h_0()
+                .children(self.inbox.as_ref().map(|(panel, _)| panel.clone()))
+                .into_any_element(),
             SidebarView::Settings => div()
                 .flex()
                 .flex_col()
@@ -422,7 +424,7 @@ impl Workbench {
         };
         let mut cloud = self.cloud_sidebar_groups(cx);
 
-        let mut content = div().flex().flex_col().gap(px(12.)).px(px(8.)).pb(px(8.));
+        let mut content = div().flex().flex_col().gap(px(12.)).px(metrics::sidebar_inset()).pb(px(8.));
 
         let project = self.state.active_project().cloned();
         if project.is_none() {
@@ -434,18 +436,18 @@ impl Workbench {
         }
         // Chats (sessions of no open project) are sessions like any other and share the list.
         let project_id = project.as_ref().map(|project| project.id.clone());
-        let mut actions = div().flex().items_center().gap(px(2.)).child(self.render_session_filter(cx));
-        if let Some(project_id) = project_id.clone() {
-            let menu_key = format!("project-menu:{}", project_id.0);
+        let mut header_actions = div().flex().items_center().gap(px(2.)).child(self.render_session_filter(cx));
+        {
+            let menu_key = "sessions-actions".to_string();
             let menu_open = self.menu_is_open(&menu_key);
-            actions = actions.child(
-                Button::icon("project-actions", IconName::Dots)
+            header_actions = header_actions.child(
+                Button::icon("session-actions", IconName::Dots)
                     .size(ButtonSize::Small)
                     .plane(ui::Plane::Page)
                     .active(menu_open)
-                    .tooltip("Project actions")
+                    .tooltip("Session actions")
                     .on_click(cx.listener(move |this, event: &gpui::ClickEvent, window, cx| {
-                        let entries = this.project_menu_entries(&project_id, cx);
+                        let entries = this.session_list_menu_entries(cx);
                         let position = event.position();
                         let position = point(position.x + px(8.), position.y + px(8.));
                         this.show_menu(&menu_key, entries, position, Anchor::TopRight, window, cx);
@@ -458,16 +460,15 @@ impl Workbench {
             .map(|project| agent_ui::outside_sessions::sidebar_sessions(std::path::Path::new(&project.path), cx))
             .unwrap_or_default();
         let mut section = div().id("project-sessions").flex().flex_col().gap(px(4.));
-        if let Some(project_id) = project_id.clone() {
+        if project_id.is_some() {
             section = section.on_mouse_down(
                 MouseButton::Right,
                 cx.listener(move |this, event: &gpui::MouseDownEvent, window, cx| {
-                    let entries = this.project_menu_entries(&project_id, cx);
-                    this.show_menu("project-context", entries, event.position, Anchor::TopLeft, window, cx);
+                    let entries = this.session_list_menu_entries(cx);
+                    this.show_menu("sessions-context", entries, event.position, Anchor::TopLeft, window, cx);
                 }),
             );
         }
-        section = section.child(SectionLabel::new("Sessions").trailing(actions));
         section = section.child(
             Button::new("project-new-session", "New session")
                 .leading_icon(IconName::Plus)
@@ -499,12 +500,7 @@ impl Workbench {
         if sessions.is_empty() && outside.is_empty() {
             // The New session button above says what to do; a row repeating it read as a session.
             list = list.child(
-                div()
-                    .px(px(6.))
-                    .py(px(2.))
-                    .text_size(ui::typography::text_caption())
-                    .text_color(colors.subtle_foreground)
-                    .child("No sessions yet"),
+                ui::quiet_note("No sessions yet", cx).px(px(6.)).py(px(2.)),
             );
         } else {
             let list_key = project_id.as_ref().map_or_else(|| "chats".to_string(), |id| id.0.clone());
@@ -621,7 +617,8 @@ impl Workbench {
             .flex_col()
             .flex_1()
             .min_h_0()
-            .child(ui::with_scrollbar(list, ui::Scrollbar::new("sessions-scrollbar", &scroll)))
+            .child(ui::PanelHeader::new("Sessions").trailing(header_actions))
+            .child(ui::faded_scroll(ui::with_scrollbar(list, ui::Scrollbar::new("sessions-scrollbar", &scroll)), &scroll, cx.theme().colors.background).flex_1())
             .child(self.render_sessions_footer(cx))
     }
 
@@ -629,32 +626,23 @@ impl Workbench {
     /// clicked, as Source Control's Stashes row does.
     fn render_sessions_footer(&self, cx: &mut Context<Self>) -> impl IntoElement {
         let colors = cx.theme().colors.clone();
-        let usage = crate::agent_usage::rows(cx).len();
-        let accounts = self.connected_accounts(cx);
         let mut rows: Vec<gpui::AnyElement> = Vec::new();
-        let mut add = |id: &'static str, label: &'static str, icon: IconName, count: usize, which: fn() -> crate::secondary::Secondary| {
+        let mut add = |id: &'static str, label: &'static str, icon: IconName, which: fn() -> crate::secondary::Secondary| {
             let item = SidebarListItem::new(id, label)
                 .leading(Icon::new(icon).size(IconSize::XSmall).color(colors.subtle_foreground))
-                .trailing(count.to_string())
                 .active(self.secondary_is(id))
                 .on_click(cx.listener(move |this, _, window, cx| this.toggle_secondary(which(), window, cx)));
-            rows.push(div().flex_none().px(px(8.)).child(item).into_any_element());
+            rows.push(div().flex_none().px(metrics::sidebar_inset()).child(item).into_any_element());
         };
-        add("sessions-usage", "Usage", IconName::Activity, usage, || crate::secondary::Secondary::Usage);
-        add("sessions-accounts", "Accounts", IconName::UserCircle, accounts, || crate::secondary::Secondary::Accounts);
+        add("sessions-usage", "Usage", IconName::Activity, || crate::secondary::Secondary::Usage);
+        add("sessions-accounts", "Accounts", IconName::UserCircle, || crate::secondary::Secondary::Accounts);
         // Archived sits with them, counted the same way whether or not there is anything in it,
         // and opens in the same column.
-        add("sessions-archived", "Archived", IconName::Archive, self.archived_count(), || crate::secondary::Secondary::Archived);
+        add("sessions-archived", "Archived", IconName::Archive, || crate::secondary::Secondary::Archived);
         div().flex().flex_col().flex_none().gap(px(2.)).py(px(4.)).children(rows)
     }
 
-    /// How many accounts the agents run on are connected: the Athas account, GitHub, every ACP
-    /// agent installed here and every provider with an API key.
-    fn connected_accounts(&self, cx: &mut Context<Self>) -> usize {
-        let athas = account::AccountStore::global(cx).is_some_and(|store| store.read(cx).is_signed_in());
-        let github = account::linked_accounts::github(cx).is_some_and(|linked| linked.connected);
-        usize::from(athas) + usize::from(github) + installed_agent_count(cx) + provider_keys(cx).len()
-    }
+
 
     /// What the accounts the agents run on have left, and what the sessions open now have spent.
     /// Allowances come from the accounts that publish one; everything else reports its own spend,
@@ -780,6 +768,10 @@ impl Workbench {
             "usage" => self.toggle_secondary(crate::secondary::Secondary::Usage, window, cx),
             "accounts" => self.toggle_secondary(crate::secondary::Secondary::Accounts, window, cx),
             "archived" => self.toggle_secondary(crate::secondary::Secondary::Archived, window, cx),
+            "archived-filter" => {
+                self.toggle_secondary(crate::secondary::Secondary::Archived, window, cx);
+                self.show_archived_filter_menu(position, window, cx);
+            }
             "filter" => self.show_session_filter_menu(position, window, cx),
             _ => {}
         }
@@ -788,17 +780,20 @@ impl Workbench {
     /// Opens a sidebar tool's command surface, so a headless snapshot can draw it
     /// (`ATHAS_SNAPSHOT_COMMAND_SURFACE`).
     pub fn show_tool_command_surface(&mut self, which: &str, cx: &mut Context<Self>) {
-        let list = match (which, &self.git_panel, &self.github_panel) {
-            ("releases" | "deployments", _, Some((github, _))) => github.update(cx, |panel, cx| panel.command_surface(which, cx)),
-            (_, Some((git, _)), _) => git.update(cx, |panel, cx| panel.command_surface(which, cx)),
-            _ => None,
-        };
-        let Some(list) = list else { return };
+        // Source Control's four open in the secondary column now, not over the window.
+        if let Some(section) = git_panel::GitSection::from_key(which)
+            && let Some((git, _)) = self.git_panel.as_ref()
+        {
+            git.clone().update(cx, |panel, cx| panel.open_section(Some(section), cx));
+            return;
+        }
+        let Some((github, _)) = self.github_panel.as_ref() else { return };
+        let Some(list) = github.clone().update(cx, |panel, cx| panel.command_surface(which, cx)) else { return };
         palette::show_command_list(cx, list);
     }
 
     /// A search field over an open menu's rows, as the Source Control menus have.
-    fn make_menu_searchable(&mut self, key: &str, placeholder: &str, empty: &str, cx: &mut Context<Self>) {
+    pub(crate) fn make_menu_searchable(&mut self, key: &str, placeholder: &str, empty: &str, cx: &mut Context<Self>) {
         if self.menu_is_open(key) && let Some(menu) = self.open_menu.take() {
             self.open_menu = Some(menu.searchable(placeholder.to_string(), empty.to_string(), cx));
         }

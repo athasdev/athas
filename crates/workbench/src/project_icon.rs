@@ -105,7 +105,7 @@ impl ProjectIconPicker {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> Self {
-        let input = cx.new(|cx| TextInput::new(window, cx).placeholder("Search project icons…").appearance(InputAppearance::Bare));
+        let input = cx.new(|cx| TextInput::new(window, cx).placeholder("Search project icons").appearance(InputAppearance::Bare));
         let subscription = cx.subscribe_in(&input, window, |this, _, event: &TextInputEvent, window, cx| match event {
             TextInputEvent::Changed(_) => {
                 this.selected = 0;

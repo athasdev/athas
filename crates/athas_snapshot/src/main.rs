@@ -18,7 +18,6 @@
 //! `ATHAS_SNAPSHOT_SCROLLBARS=1` (every overlay scrollbar's thumb shown, as if hovered),
 //! `ATHAS_SNAPSHOT_SETTINGS_PAGE` (the page `settings` opens on), `ATHAS_SNAPSHOT_SETTINGS_JSON`
 //! (settings to start from), `ATHAS_SNAPSHOT_SETTINGS_QUERY`, `ATHAS_SNAPSHOT_WORKSPACE_SECTION`, `ATHAS_SNAPSHOT_KEYBINDINGS_EDIT=1`,
-//! `ATHAS_SNAPSHOT_SETTINGS_EXTENSION` (an integration's page on Settings' Integrations),
 //! `ATHAS_SNAPSHOT_SETTINGS_ADVANCED=1` (a page's Advanced disclosure open), `ATHAS_SNAPSHOT_REPORT_BUG=1`, `ATHAS_SNAPSHOT_OUTSIDE_SESSIONS=1` (agent sessions outside Athas in the sidebar), `ATHAS_SNAPSHOT_THEME_CREATOR=1` (Create Theme over Settings),
 //! `ATHAS_SNAPSHOT_CUSTOM_THEMES` (a `custom-themes.json` to read), `ATHAS_SNAPSHOT_EXTENSIONS_DIR`
 //! (extensions installed there instead of the app's folder), `ATHAS_SNAPSHOT_FOLDERS` (folders
@@ -27,7 +26,8 @@
 //! `ATHAS_SNAPSHOT_THEME`, `ATHAS_SNAPSHOT_SETTLE_MS`, `ATHAS_SNAPSHOT_GIT_TAB` (the Source Control tab shown), `ATHAS_SNAPSHOT_COMMAND` (a command id run
 //! after the scene, such as `help.showWhatsNew`), `ATHAS_SNAPSHOT_TAB_MENU` (a tab's context menu,
 //! by index), `ATHAS_SNAPSHOT_SESSION_MENU=x,y` (the session in front's More actions menu),
-//! `ATHAS_SNAPSHOT_SIDEBAR_MENU=usage:x,y` (a Sessions sidebar menu: `usage`, `accounts`, `filter`),
+//! `ATHAS_SNAPSHOT_SIDEBAR_MENU=usage:x,y` (a Sessions sidebar menu: `usage`, `accounts`,
+//!   `archived`, `archived-filter`, `filter`),
 //! `ATHAS_SNAPSHOT_COMMAND_SURFACE=stashes` (a sidebar tool's command surface),
 //! `ATHAS_SNAPSHOT_SESSIONS=250` (that many sessions in the workspace), `ATHAS_SNAPSHOT_KEYS` (keystrokes typed after
 //! it, separated by spaces), `ATHAS_SNAPSHOT_RUN_ACTION=new` (the New run action dialog), and `ATHAS_SNAPSHOT_AGENT_EDIT=1`, which
@@ -328,9 +328,6 @@ fn main() -> Result<()> {
                             }
                             if std::env::var_os("ATHAS_SNAPSHOT_THEME_CREATOR").is_some() {
                                 view.create_theme(window, cx);
-                            }
-                            if let Ok(id) = std::env::var("ATHAS_SNAPSHOT_SETTINGS_EXTENSION") {
-                                view.open_integration(&id, window, cx);
                             }
                         });
                     }

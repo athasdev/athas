@@ -755,5 +755,10 @@
   "key": "cmd+q",
   "command": "window.quit",
   "source": "default"
+ },
+ {
+  "key": "shift+?",
+  "command": "help.shortcuts",
+  "source": "default"
  }
 ]

@@ -279,7 +279,6 @@ struct SizeSpec {
     gap: f32,
     text: gpui::Pixels,
     icon: IconSize,
-    radius: Option<gpui::Pixels>,
 }
 
 impl ButtonSize {
@@ -291,7 +290,6 @@ impl ButtonSize {
                 gap: 4.,
                 text: typography::text_caption(),
                 icon: IconSize::XSmall,
-                radius: None,
             },
             ButtonSize::Small => SizeSpec {
                 height: 24.,
@@ -299,7 +297,6 @@ impl ButtonSize {
                 gap: 4.,
                 text: typography::text_chrome(),
                 icon: IconSize::XSmall,
-                radius: None,
             },
             ButtonSize::Medium => SizeSpec {
                 height: 28.,
@@ -307,7 +304,6 @@ impl ButtonSize {
                 gap: 6.,
                 text: typography::text_sm(),
                 icon: IconSize::Small,
-                radius: None,
             },
             ButtonSize::Large => SizeSpec {
                 height: 32.,
@@ -315,7 +311,6 @@ impl ButtonSize {
                 gap: 8.,
                 text: typography::text_base(),
                 icon: IconSize::Medium,
-                radius: None,
             },
         }
     }
@@ -331,12 +326,6 @@ impl RenderOnce for Button {
         let shadows = &cx.theme().shadows;
         let chrome = self.variant == ButtonVariant::Chrome;
         let mut spec = self.size.spec();
-        // The quiet families — toolbar and pane-header icons (`Ghost`), window chrome (`Chrome`) —
-        // take the list row's corner rather than a pill's, so an icon trigger and the row beside it
-        // read as one family. Filled buttons (`Accent`, `Default`, `Outline`) stay pills.
-        if matches!(self.variant, ButtonVariant::Ghost | ButtonVariant::Chrome) {
-            spec.radius = Some(metrics::radius_md());
-        }
         if chrome {
             // Chrome is measured like the row too: its inline padding and gap.
             spec.padding = f32::from(metrics::chrome_padding_inline());
@@ -437,8 +426,11 @@ impl RenderOnce for Button {
             .bg(bg)
             .text_color(fg)
             .when(self.medium_weight, |this| this.font_weight(typography::MEDIUM))
-            .when_some(spec.radius, |this, radius| this.rounded(radius))
-            .when(spec.radius.is_none(), |this| this.rounded_full())
+            // Every button takes the control corner, whatever its variant or size. The shape used
+            // to key off the fill -- quiet buttons took the row's corner, filled ones were pills --
+            // which put a capsule over a list wherever a filled button led one, the very thing the
+            // rule was written to avoid. A button is a control; `radius_md` is what a control is.
+            .rounded(metrics::radius_md())
             .when_some(shadow, |this, shadow| this.shadow(shadow))
             .when(self.icon_only, |this| this.w(px(spec.height)))
             .when(!self.icon_only, |this| this.px(px(spec.padding)))

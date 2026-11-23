@@ -360,7 +360,7 @@ impl SkillsView {
         div()
             .flex()
             .flex_col()
-            .gap(px(10.))
+            .gap(px(12.))
             .child(div().text_size(typography::text_lg()).font_weight(typography::SEMIBOLD).child(if editor.id.is_some() { "Edit skill" } else { "New skill" }))
             .child(div().flex().flex_col().gap(px(4.)).child(label("Title")).child(editor.title.clone()))
             .child(div().flex().flex_col().gap(px(4.)).child(label("Description")).child(editor.description.clone()))
@@ -403,7 +403,7 @@ impl SkillsView {
         div()
             .flex()
             .flex_col()
-            .gap(px(10.))
+            .gap(px(12.))
             .child(
                 div()
                     .flex()

@@ -541,8 +541,16 @@ impl Editor {
         Some(row.offset_for_x(x))
     }
 
+    /// Cmd on macOS, Ctrl elsewhere (`modifiers.platform` is the Super key on Linux, which no
+    /// editor binds); Alt when the multi-cursor modifier took Cmd/Ctrl, as VS Code does.
     pub(crate) fn definition_modifier(&self, modifiers: Modifiers, cx: &App) -> bool {
-        if settings::get(cx).editor_multi_cursor_modifier == "ctrlCmd" { modifiers.alt } else { modifiers.platform }
+        if settings::get(cx).editor_multi_cursor_modifier == "ctrlCmd" {
+            modifiers.alt
+        } else if cfg!(target_os = "macos") {
+            modifiers.platform
+        } else {
+            modifiers.control
+        }
     }
 
     /// Shows the hover card at `offset`: the diagnostics there and the server's hover.

@@ -1000,10 +1000,11 @@ impl AiSettingsView {
         let store = account::AccountStore::global(cx);
         let Some(store) = store.filter(|store| store.read(cx).is_signed_in()) else {
             let signing_in = account::AccountStore::global(cx).is_some_and(|store| store.read(cx).state().login_url().is_some());
-            let sign_in = Button::new("athas-sign-in", if signing_in { "Signing in…" } else { "Sign in" })
+            // Enabled while signing in: `sign_in` opens the waiting session's page again, for a
+            // browser that never came up.
+            let sign_in = Button::new("athas-sign-in", if signing_in { "Open sign-in page" } else { "Sign in" })
                 .variant(ButtonVariant::Accent)
                 .size(ButtonSize::Small)
-                .disabled(signing_in)
                 .on_click(|_, _, cx| {
                     if let Some(store) = account::AccountStore::global(cx) {
                         store.update(cx, |store, cx| store.sign_in(cx));

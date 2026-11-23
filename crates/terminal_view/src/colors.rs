@@ -126,23 +126,31 @@ pub(crate) fn hsla_to_rgb(color: Hsla) -> Rgb {
     Rgb { r: channel(rgba.r), g: channel(rgba.g), b: channel(rgba.b) }
 }
 
+/// A palette the tests of this crate draw and answer queries with.
+#[cfg(test)]
+pub(crate) fn test_palette() -> Palette {
+    use gpui::hsla;
+
+    let mut ansi = [hsla(0., 0., 0., 1.); 16];
+    for (index, color) in ansi.iter_mut().enumerate() {
+        *color = hsla(index as f32 / 16., 0.5, 0.5, 1.);
+    }
+    Palette {
+        ansi,
+        foreground: hsla(0., 0., 0.9, 1.),
+        background: hsla(0., 0., 0.1, 1.),
+        cursor: hsla(0.5, 0.5, 0.5, 1.),
+        selection: hsla(0.6, 0.5, 0.5, 0.3),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use gpui::hsla;
 
     fn palette() -> Palette {
-        let mut ansi = [hsla(0., 0., 0., 1.); 16];
-        for (index, color) in ansi.iter_mut().enumerate() {
-            *color = hsla(index as f32 / 16., 0.5, 0.5, 1.);
-        }
-        Palette {
-            ansi,
-            foreground: hsla(0., 0., 0.9, 1.),
-            background: hsla(0., 0., 0.1, 1.),
-            cursor: hsla(0.5, 0.5, 0.5, 1.),
-            selection: hsla(0.6, 0.5, 0.5, 0.3),
-        }
+        test_palette()
     }
 
     fn rgb(color: Hsla) -> (u8, u8, u8) {

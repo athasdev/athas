@@ -100,8 +100,9 @@ pub struct Settings {
     pub editor_sticky_scroll: bool,
     #[serde(rename = "editorBracketPairColorization")]
     pub editor_bracket_pair_colorization: bool,
-    /// Kept for settings files: the Tauri editor read it but nothing used it, and this build
-    /// scrolls with the platform's own momentum, so it changes nothing.
+    /// Whether a jump -- go to line, a search hit, page up -- glides to its destination instead
+    /// of landing at once. A mouse wheel notch glides whatever this says: the platform hands
+    /// those over as whole lines, and landing one at once is a step, not a preference.
     #[serde(rename = "editorSmoothScrolling")]
     pub editor_smooth_scrolling: bool,
     #[serde(rename = "editorScrollBeyondLastLine")]
@@ -385,8 +386,6 @@ pub struct Settings {
     pub show_git_status_in_file_tree: bool,
     #[serde(rename = "compactGitStatusBadges")]
     pub compact_git_status_badges: bool,
-    #[serde(rename = "collapseEmptyGitSections")]
-    pub collapse_empty_git_sections: bool,
     #[serde(rename = "rememberLastGitPanelMode")]
     pub remember_last_git_panel_mode: bool,
     #[serde(rename = "gitLastPanelMode")]
@@ -559,7 +558,6 @@ impl Default for Settings {
             open_diff_on_click: true,
             show_git_status_in_file_tree: true,
             compact_git_status_badges: false,
-            collapse_empty_git_sections: false,
             remember_last_git_panel_mode: false,
             git_last_panel_mode: "changes".into(),
             git_sidebar_tab_order: vec!["changes".into(), "history".into()],
@@ -624,7 +622,6 @@ pub const SETTINGS_PAGES: &[(&str, &str)] = &[
     ("terminal", "Terminal"),
     ("keyboard", "Keybindings"),
     ("ai", "AI"),
-    ("integrations", "Integrations"),
     ("team", "Team"),
     ("advanced", "Advanced"),
 ];

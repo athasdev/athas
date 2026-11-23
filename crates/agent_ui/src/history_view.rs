@@ -265,7 +265,7 @@ impl HistoryView {
             rows.push(div().flex().flex_wrap().gap(px(4.)).px(metrics::pane_inset()).pb(px(4.)).children(chips).into_any_element());
         }
         rows.extend(self.errors.iter().map(|error| {
-            div().px(metrics::pane_inset()).pb(px(4.)).text_size(typography::text_sm()).text_color(colors.destructive).child(error.clone()).into_any_element()
+            div().px(metrics::pane_inset()).pb(px(4.)).child(ui::ErrorText::new(error.clone())).into_any_element()
         }));
         rows.extend(match &shown {
             Some(sessions) if sessions.is_empty() && !self.errors.is_empty() => Vec::new(),
@@ -368,7 +368,7 @@ impl Render for HistoryView {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let colors = cx.theme().colors.clone();
         let body = match &self.hits {
-            None => div().p(px(16.)).text_color(colors.subtle_foreground).child("Loading sessions…").into_any_element(),
+            None => ui::quiet_note("Loading sessions…", cx).p(px(16.)).into_any_element(),
             Some(hits) if hits.is_empty() => {
                 let (title, message) = if self.query.trim().is_empty() {
                     ("No sessions yet", "Sessions you start are saved here.")

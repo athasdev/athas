@@ -61,8 +61,9 @@ pub fn reset_zoom(cx: &mut App) {
     set_zoom(1.0, cx);
 }
 
-/// Holds the zoom for one test at a time: it is one process-wide factor, and the tests that
-/// read a scaled size would otherwise race the tests that change it.
+/// Holds the sizes for one test at a time: the zoom and the UI font size are each one
+/// process-wide value, and the tests that read a scaled size would otherwise race the tests that
+/// change either of them.
 #[cfg(test)]
 pub(crate) static TEST_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
 

@@ -92,7 +92,7 @@ impl PickerDelegate for IconThemePickerDelegate {
         div()
             .flex()
             .items_center()
-            .gap(px(10.))
+            .gap(px(12.))
             .w_full()
             .min_h(px(40.))
             .mb(px(2.))

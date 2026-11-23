@@ -142,6 +142,11 @@ impl Scrollbar {
 /// Gives a scrolling div its overlay scrollbar in place: `div().id(..).overflow_y_scroll()` gets
 /// `.scrollbar(window, cx)` (a scroll handle kept for it) or `.scrollbar_with(&handle)` (a handle
 /// it already tracks), and the bar shows on its right edge.
+///
+/// There are two ways to put a bar on something, and only two: this trait for a scrolling div,
+/// and [`with_scrollbar`] for a `uniform_list` or `list`, which cannot take a child. Both place
+/// the bar the same way — over the content's right edge, taking no layout room — so a list looks
+/// the same whichever built it. Do not add a `Scrollbar` as a child by hand.
 pub trait WithScrollbar: Sized {
     fn scrollbar(self, window: &mut Window, cx: &mut App) -> Self;
     fn scrollbar_with(self, handle: &ScrollHandle) -> Self;
@@ -171,7 +176,7 @@ fn scrollbar_key(element: &mut gpui::Stateful<gpui::Div>) -> ElementId {
 /// takes the remaining space of a flex column (`flex_1`, `min_h_0`); `content` must scroll itself
 /// and be tracked by `scrollbar`'s source.
 pub fn with_scrollbar(content: impl IntoElement, scrollbar: Scrollbar) -> gpui::Div {
-    div().relative().flex().flex_col().flex_1().min_h_0().min_w_0().child(content).child(scrollbar)
+    div().relative().flex().flex_col().flex_1().min_h_0().min_w_0().child(content).child(scrollbar.inside())
 }
 
 struct Geometry {
@@ -501,6 +506,6 @@ impl RenderOnce for ScrollArea {
                     .track_scroll(&handle)
                     .children(self.children),
             )
-            .child(Scrollbar::new("scrollbar", &handle))
+            .child(Scrollbar::new("scrollbar", &handle).inside())
     }
 }

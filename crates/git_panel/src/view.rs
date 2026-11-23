@@ -12,8 +12,8 @@ use theme::{ActiveTheme, ThemeColors};
 use ui::{Button, ButtonSize, ButtonVariant, EmptyState, Icon, IconName, IconSize, Plane, WithScrollbar as _, metrics, typography};
 
 use crate::{
-    DraftKind, GitPanel, RepoState, Section, Tab,
-    model::{self, ChangeFile, can_discard, filter_files, matches_query, plural, short_hash, status_letter},
+    DraftKind, GitPanel, GitSection, RepoState, Section,
+    model::{self, ChangeFile, can_discard, filter_files, matches_query, plural, short_hash},
     repository::{Commit, FileStatus, RemoteOp},
 };
 
@@ -101,6 +101,8 @@ struct Row {
     selected: bool,
     muted: bool,
     struck: bool,
+    /// The file's Git status as a colour on its name.
+    tone: Option<Hsla>,
     /// The row's right-click menu, opened where the pointer is.
     context: Option<RowMenu>,
 }
@@ -120,6 +122,7 @@ impl Row {
             selected: false,
             muted: false,
             struck: false,
+            tone: None,
             context: None,
         }
     }
@@ -128,6 +131,9 @@ impl Row {
     /// its line, the meta at the end and the actions in its place on hover.
     fn render(self, _colors: &ThemeColors) -> gpui::Stateful<gpui::Div> {
         let mut item = ui::SidebarListItem::new(ElementId::Name(format!("{}-item", self.id).into()), self.title).active(self.selected).struck(self.struck);
+        if let Some(tone) = self.tone {
+            item = item.label_color(tone);
+        }
         if let Some(icon) = self.icon {
             item = item.leading(icon);
         }
@@ -208,115 +214,79 @@ impl GitPanel {
             .into_any_element()
     }
 
-    /// Changes and History as an outline: each unfolds in place, History to its latest commits and
-    /// a "View more" that opens the commit menu.
-    fn render_categories(&self, colors: &ThemeColors, cx: &mut Context<Self>) -> impl IntoElement {
-        let mut list = div().flex().flex_col().gap(px(2.));
-        for (label, icon, count, which) in [
-            ("Changes", IconName::GitDiff, Some(self.file_count()), Tab::Changes),
-            ("History", IconName::History, None, Tab::History),
-        ] {
-            let open = self.expanded.contains(&which);
-            let mut row = ui::AccordionRow::new(
-                gpui::ElementId::Name(format!("git-category-{label}").into()),
-                label,
-                icon,
-                open,
-                cx.listener(move |panel, _: &ClickEvent, _, cx| panel.toggle_tab(which, cx)),
-            );
-            if let Some(count) = count {
-                row = row.count(count);
-            }
-            list = list.child(row);
-            if open {
-                list = list.child(match which {
-                    Tab::Changes => div()
-                        .flex()
-                        .flex_col()
-                        .child(self.render_composer(colors, cx))
-                        .child(self.render_toolbar(self.filter_input.clone(), Some(self.render_compare_button(cx))))
-                        .child(self.render_changes(colors, cx))
-                        .into_any_element(),
-                    Tab::History => self.render_recent_commits(colors, cx).into_any_element(),
-                });
-            }
-        }
-        list
-    }
-
-    /// The latest commits on an indent guide, then "View more" for the full searchable list.
-    fn render_recent_commits(&self, colors: &ThemeColors, cx: &mut Context<Self>) -> impl IntoElement {
-        const SHOWN: usize = 5;
-        let now = now_seconds();
-        let (ahead, _) = self.ahead_behind();
-        let rows: Vec<AnyElement> = self
-            .commits
-            .iter()
-            .take(SHOWN)
-            .enumerate()
-            .map(|(index, commit)| {
-                let open = commit.clone();
-                let unpushed = index < ahead;
-                let dot = div().flex_none().size(px(6.)).rounded_full().bg(colors.primary);
-                let item = ui::SidebarListItem::new(SharedString::from(format!("git-recent-commit-{}", commit.hash)), commit.summary.clone())
-                    .leading(ui::Avatar::new(&commit.author).size(px(16.)).image(git_diff::avatar::author_avatar(&commit.email, cx)))
-                    .indicator(unpushed.then_some(dot))
-                    .trailing(model::relative_date(&commit.date, now))
-                    .active(self.open_commit.as_deref() == Some(commit.hash.as_str()))
-                    .on_click(cx.listener(move |panel, _: &ClickEvent, _, cx| panel.open_commit(&open, cx)));
-                div()
-                    .id(SharedString::from(format!("git-recent-{}", commit.hash)))
-                    .flex_none()
-                    .px(px(8.))
-                    .on_drag(self.commit_drag(commit), |dragged, _, _, cx| dragged.preview(cx))
-                    .child(item)
-                    .into_any_element()
-            })
-            .collect();
-        let empty = rows.is_empty();
-        let more = (self.commits.len() > SHOWN || self.has_more_commits).then(|| {
-            let item = ui::SidebarListItem::new("git-history-more", "View more")
-                .on_click(cx.listener(|panel, _: &ClickEvent, _, cx| {
-                    let list = panel.history_surface(cx);
-                    palette::show_command_list(cx, list);
-                }));
-            div().flex_none().px(px(8.)).child(item)
-        });
+    /// Changes, which is the panel: the composer, the toolbar and the list, with nothing to
+    /// unfold. It was a row you clicked open above its own contents -- a heading for a section
+    /// that had no sibling to be chosen over, so the click only ever cost a click.
+    fn render_changes_section(&self, colors: &ThemeColors, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        // The composer, the toolbar and the footer hold still; only the files move. Scrolling the
+        // commit box off the top to reach a file, and losing the Commit button with it, made the
+        // panel feel like a document rather than a tool.
+        let plane = cx.theme().colors.background;
         div()
-            .relative()
             .flex()
             .flex_col()
-            .flex_none()
-            .pl(px(16.))
-            .gap(px(2.))
-            .child(div().absolute().top(px(2.)).bottom(px(2.)).left(px(20.)).w(px(1.)).bg(colors.border))
-            .children(rows)
-            .when(empty, |this| this.child(caption("No commits yet", colors).px(px(8.)).py(px(4.)).text_size(typography::text_sm())))
-            .children(more)
+            .flex_1()
+            .min_h_0()
+            .min_w_0()
+            .child(self.render_composer(colors, cx))
+            .child(self.render_changes_toolbar(cx))
+            .child(ui::faded_scroll(
+                div()
+                    .id("git-scroll")
+                    .flex()
+                    .flex_col()
+                    .flex_1()
+                    .min_h_0()
+                    // Without this the longest path sets the width and drags the whole list
+                    // sideways, names and all, off the left of the panel.
+                    .min_w_0()
+                    .overflow_x_hidden()
+                    .overflow_y_scroll()
+                    .track_scroll(&self.changes_scroll)
+                    .child(self.render_changes(colors, cx))
+                    .scrollbar(window, cx),
+                &self.changes_scroll,
+                plane,
+            ).flex_1())
     }
 
-    /// The rows under the list: stashes, remotes and tags each open their menu where they were
-    /// clicked, instead of folding open.
+    /// The bar over the list: the file count, the filter behind its button, then Compare.
+    fn render_changes_toolbar(&self, cx: &mut Context<Self>) -> impl IntoElement {
+        let open = self.filter_is_open(cx);
+        let filter = Button::icon("git-filter", IconName::Filter)
+            .size(ButtonSize::Small)
+            .plane(Plane::Page)
+            .active(open)
+            .tooltip(if open { "Hide filter" } else { "Filter changes" })
+            .on_click(cx.listener(|this, _: &ClickEvent, window, cx| this.toggle_filter(window, cx)))
+            .into_any_element();
+        let trailing = div().flex().flex_none().items_center().gap(px(2.)).child(filter).child(self.render_compare_button(cx));
+        match open {
+            true => self.render_toolbar(self.filter_input.clone(), Some(trailing.into_any_element())).into_any_element(),
+            false => div()
+                .flex()
+                .flex_none()
+                .items_center()
+                .gap(px(2.))
+                .h(bar_height())
+                .pl(px(12.))
+                .pr(px(8.))
+                .child(div().flex_1().min_w_0().text_size(typography::text_caption()).text_color(cx.theme().colors.subtle_foreground).child(plural(self.file_count(), "change")))
+                .child(trailing)
+                .into_any_element(),
+        }
+    }
+
+    /// The row under the list. History alone: stashes, remotes and tags were three more rows for
+    /// lists you open now and then, and the remote control's menu already holds them.
     fn render_footer(&self, colors: &ThemeColors, cx: &mut Context<Self>) -> impl IntoElement {
         let mut rows: Vec<AnyElement> = Vec::new();
-        let mut add = |id: &'static str, label: &'static str, icon: IconName, count: usize, open: fn(&GitPanel, &Context<GitPanel>) -> palette::CommandList| {
-            let item = ui::SidebarListItem::new(id, label)
-                .leading(Icon::new(icon).size(IconSize::XSmall).color(colors.subtle_foreground))
-                .trailing(count.to_string())
-                .on_click(cx.listener(move |panel, _: &ClickEvent, _, cx| {
-                    let list = open(panel, cx);
-                    palette::show_command_list(cx, list);
-                }));
+        if self.is_visible("history") {
+            let item = ui::SidebarListItem::new(GitSection::History.row_id(), GitSection::History.title())
+                .leading(Icon::new(IconName::History).size(IconSize::XSmall).color(colors.subtle_foreground))
+                .active(self.open_section == Some(GitSection::History))
+                .on_click(cx.listener(move |panel, _: &ClickEvent, _, cx| panel.toggle_git_section(GitSection::History, cx)));
             rows.push(div().flex_none().px(px(8.)).child(item).into_any_element());
-        };
-        if self.is_visible("stashes") {
-            add("git-stashes", "Stashes", IconName::Stack, self.stashes.len(), GitPanel::stashes_surface);
-        }
-        if self.is_visible("remotes") {
-            add("git-remotes", "Remotes", IconName::Globe, self.remotes.len(), GitPanel::remotes_surface);
-        }
-        if self.is_visible("tags") {
-            add("git-tags", "Tags", IconName::Tag, self.tags.len(), GitPanel::tags_surface);
         }
         div().flex().flex_col().flex_none().gap(px(2.)).py(px(4.)).children(rows)
     }
@@ -325,7 +295,7 @@ impl GitPanel {
     /// name, so the sidebar's tools all start the same way.
     fn render_title_only(&mut self, cx: &mut Context<Self>) -> impl IntoElement {
         let actions = self.render_header_buttons(cx);
-        div().flex_none().px(px(8.)).pb(px(2.)).child(ui::SectionLabel::new("Source Control").trailing(actions))
+        ui::PanelHeader::new("Source Control").trailing(actions)
     }
 
     fn render_identity(&self, colors: &ThemeColors, cx: &mut Context<Self>) -> impl IntoElement {
@@ -385,74 +355,57 @@ impl GitPanel {
             .h(bar_height())
             .px(px(8.))
             .child(context)
-            .child(self.render_sync_button(colors, cx))
             .child(div().flex_1())
-            .child(self.render_header_buttons(cx))
+            .child(self.render_sync_button(cx))
     }
 
-    fn render_sync_button(&self, colors: &ThemeColors, cx: &mut Context<Self>) -> impl IntoElement {
+    /// The remote control at the right of the branch bar: the one action the state calls for,
+    /// named and counted, with the rest a chevron away. "2 Push" says what pressing it does and
+    /// how much it carries; three icons said only which directions exist.
+    fn render_sync_button(&self, cx: &mut Context<Self>) -> impl IntoElement {
         let (ahead, behind) = self.ahead_behind();
-        let suggested = model::suggested_remote(ahead, behind);
         let busy = self.remote_action.is_some();
-        let tone = if behind > 0 {
-            colors.warning
-        } else if ahead > 0 {
-            colors.primary
-        } else {
-            colors.subtle_foreground
+        let spin = cx.theme().colors.subtle_foreground;
+        // Behind first: pulling before pushing is the order that avoids a rejected push.
+        let (op, count) = match (behind, ahead) {
+            (0, 0) => (RemoteOp::Fetch, 0),
+            (0, ahead) => (RemoteOp::Push, ahead),
+            (behind, _) => (RemoteOp::Pull, behind),
         };
-        let count = match suggested {
-            RemoteOp::Pull => behind,
-            RemoteOp::Push => ahead,
-            RemoteOp::Fetch => 0,
+        let (icon, verb, tone) = match op {
+            RemoteOp::Pull => (IconName::ArrowDown, "Pull", ui::ButtonTone::Warning),
+            RemoteOp::Push => (IconName::ArrowUp, "Push", ui::ButtonTone::Accent),
+            RemoteOp::Fetch => (IconName::ArrowsClockwise, "Fetch", ui::ButtonTone::Default),
         };
-        let title = match suggested {
+        let label = match count {
+            0 => verb.to_string(),
+            count => format!("{count} {verb}"),
+        };
+        let tooltip = match op {
             RemoteOp::Fetch => "Fetch from remote".to_string(),
-            RemoteOp::Pull => format!("Pull {}", plural(count, "commit")),
-            RemoteOp::Push => format!("Push {}", plural(count, "commit")),
+            _ => format!("{verb} {}", plural(count, "commit")),
         };
-        let icon = match suggested {
-            _ if busy => IconName::ArrowsClockwise,
-            RemoteOp::Fetch => IconName::ArrowsClockwise,
-            RemoteOp::Pull => IconName::ArrowDown,
-            RemoteOp::Push => IconName::ArrowUp,
-        };
-        let accent = colors.accent;
-        // The halves round their own outer corners: GPUI clips to a rectangle, so a rounded
-        // parent leaves a child's fill (here the hover tint) square in the corners.
-        div()
-            .flex()
-            .flex_none()
-            .h(metrics::chrome_control())
-            .text_size(typography::text_sm())
-            .font_weight(typography::MEDIUM)
-            .text_color(tone)
+        ui::ButtonGroup::new()
             .child(
-                div()
-                    .id("git-sync")
-                    .flex()
-                    .items_center()
-                    .gap(px(2.))
-                    .pl(px(6.))
-                    .pr(px(4.))
-                    .rounded_l(metrics::radius_md())
-                    .when(busy, |this| this.opacity(0.6))
-                    .when(!busy, |this| this.hover(move |style| style.bg(accent)))
-                    .child(if busy { spinning_icon("git-sync-spin", icon, tone) } else { Icon::new(icon).size(IconSize::XSmall).color(tone).into_any_element() })
-                    .when(count > 0, |this| this.child(count.to_string()))
-                    .anchored_tooltip(move || ui::Tooltip::new(title.clone()))
-                    .when(!busy, |this| this.on_click(cx.listener(move |this, _, _, cx| this.run_remote(suggested, cx)))),
+                Button::new("git-sync", label)
+                    .map(|button| match busy {
+                        true => button.leading(spinning_icon("git-sync-spin", IconName::ArrowsClockwise, spin)),
+                        false => button.leading_icon(icon),
+                    })
+                    .variant(ButtonVariant::Ghost)
+                    .size(ButtonSize::Small)
+                    .tone(tone)
+                    .disabled(busy)
+                    .tooltip(tooltip)
+                    .on_click(cx.listener(move |this, _, _, cx| this.run_remote(op, cx))),
             )
+            .child(ui::ButtonGroupSeparator::new())
             .child(
-                div()
-                    .id("git-sync-menu")
-                    .flex()
-                    .items_center()
-                    .px(px(2.))
-                    .rounded_r(metrics::radius_md())
-                    .hover(move |style| style.bg(accent))
-                    .when(self.menu_is_open("git-remote"), |this| this.bg(accent))
-                    .child(Icon::new(IconName::ChevronDown).size(IconSize::XSmall).color(tone))
+                Button::icon("git-remote-menu", IconName::ChevronDown)
+                    .variant(ButtonVariant::Ghost)
+                    .size(ButtonSize::Small)
+                    .active(self.menu_is_open("git-remote"))
+                    .tooltip("More")
                     .on_click(cx.listener(|this, event: &ClickEvent, window, cx| {
                         let entries = this.remote_menu(cx);
                         this.show_menu("git-remote", entries, below(event), Anchor::TopRight, window, cx);
@@ -654,42 +607,43 @@ impl GitPanel {
     /// The History search field shows in the section's sticky area once there are more than five
     /// commits.
     fn section_has_toolbar(&self, section: Section) -> bool {
-        section == Section::History && self.section_open(section, self.commits.len()) && self.commits.len() > 5
+        section == Section::History && self.commits.len() > 5
     }
 
-    /// A section's header: the same row as the tabs, one step in, with its actions on hover.
-    fn render_section_header(&self, section: Section, cx: &mut Context<Self>) -> ui::AccordionRow {
-        let title = Self::section_title(section);
-        let count = self.section_count(section);
-        let open = self.section_open(section, count);
-        let icon = match section {
-            Section::Staged => IconName::CheckCircle,
-            Section::Changes => IconName::PencilLine,
-            Section::History => IconName::History,
-        };
-        let mut row = ui::AccordionRow::new(
-            SharedString::from(format!("git-sub-{title}")),
-            title,
-            icon,
-            open,
-            cx.listener(move |this, _: &ClickEvent, _, cx| this.toggle_section(section, cx)),
-        )
-        .count(count);
+    /// A section's caption: Staged over Changes when both are there. It was an accordion row you
+    /// clicked to unfold what was already the panel's whole point, so it folds no more -- a
+    /// caption that tells the two groups apart, with the section's actions on hover.
+    fn render_section_header(&self, section: Section, cx: &mut Context<Self>) -> AnyElement {
+        let colors = cx.theme().colors.clone();
+        let group = SharedString::from(format!("git-section-{}", Self::section_title(section)));
         let actions = self.section_actions(section, cx);
-        if !actions.is_empty() {
-            row = row.trailing(div().flex().items_center().gap(px(2.)).children(actions));
-        }
-        row
+        div()
+            .group(group.clone())
+            .flex()
+            .flex_none()
+            .items_center()
+            .gap(px(6.))
+            .h(metrics::list_row())
+            .pl(px(14.))
+            .pr(px(8.))
+            .child(caption(Self::section_title(section), &colors))
+            .child(caption(self.section_count(section).to_string(), &colors))
+            .child(div().flex_1())
+            .child(
+                div()
+                    .flex()
+                    .items_center()
+                    .gap(px(2.))
+                    .invisible()
+                    .group_hover(group, |style| style.visible())
+                    .children(actions),
+            )
+            .into_any_element()
     }
 
     /// The History search bar under its header.
     fn render_history_toolbar(&self) -> gpui::Div {
         div().h(bar_height()).pl(px(16.)).pr(px(8.)).flex().items_center().child(self.history_filter_input.clone())
-    }
-
-    /// `collapseEmptyGitSections` keeps a section without rows closed.
-    fn section_open(&self, section: Section, count: usize) -> bool {
-        self.sections.get(section) && !(self.settings.collapse_empty && count == 0)
     }
 
     /// A section's rows: flat with each file's folder beside it, or under folder captions with
@@ -741,7 +695,6 @@ impl GitPanel {
     }
 
     fn render_file_row(&self, file: &ChangeFile, show_dir: bool, colors: &ThemeColors, cx: &mut Context<Self>) -> AnyElement {
-        let (letter, label) = status_letter(file.status);
         let key = file.key.clone();
         let mut actions = Vec::new();
         if can_discard(file) {
@@ -770,22 +723,6 @@ impl GitPanel {
         if !self.settings.compact_badges {
             meta.extend(diff_numbers(file.additions, file.deletions, colors));
         }
-        meta.push(
-            div()
-                .id(SharedString::from(format!("status-{key}")))
-                .flex()
-                .flex_none()
-                .size(px(16.))
-                .items_center()
-                .justify_center()
-                .font_family(typography::MONO_FONT)
-                .font_weight(typography::MEDIUM)
-                .text_color(status_color(file.status, colors))
-                .child(letter)
-                .anchored_tooltip(move || ui::Tooltip::new(label))
-                .into_any_element(),
-        );
-
         let icon = extensions::file_icon(&file.name, px(14.), cx)
             .unwrap_or_else(|| Icon::new(IconName::File).size(IconSize::XSmall).color(colors.subtle_foreground).into_any_element());
         let mut row = Row::new(format!("file-{key}"), icon, file.name.clone());
@@ -794,6 +731,9 @@ impl GitPanel {
         row.actions = actions;
         row.muted = self.busy_keys.contains(&file.key);
         row.struck = file.status == FileStatus::Deleted;
+        // The status was a monospace letter in a 16px box at the end of every row -- a column of
+        // M, A, D you had to learn. The name carries it now, in the colour the diff already uses.
+        row.tone = Some(status_color(file.status, colors));
 
         let open = file.clone();
         let menu_file = file.clone();
@@ -852,19 +792,22 @@ impl GitPanel {
             sections.extend(file_sections);
         }
 
+        // One group on its own needs no caption: the panel is Changes, and a heading over the
+        // only list there is a label for the obvious.
+        let captioned = sections.len() > 1;
         for section in sections {
-            let open = self.section_open(section, self.section_count(section));
-            let mut block = div().flex().flex_col().child(self.render_section_header(section, cx));
-            if open && self.section_has_toolbar(section) {
+            let mut block = div().flex().flex_col();
+            if captioned {
+                block = block.child(self.render_section_header(section, cx));
+            }
+            if self.section_has_toolbar(section) {
                 block = block.child(self.render_history_toolbar());
             }
-            if open {
-                block = block.child(div().child(match section {
-                    Section::Staged => self.render_file_rows(Section::Staged, &staged, colors, cx),
-                    Section::Changes => self.render_file_rows(Section::Changes, &unstaged, colors, cx),
-                    Section::History => self.render_history(now, colors, cx).into_any_element(),
-                }));
-            }
+            block = block.child(div().child(match section {
+                Section::Staged => self.render_file_rows(Section::Staged, &staged, colors, cx),
+                Section::Changes => self.render_file_rows(Section::Changes, &unstaged, colors, cx),
+                Section::History => self.render_history(now, colors, cx).into_any_element(),
+            }));
             children.push(block.into_any_element());
         }
 
@@ -1097,9 +1040,10 @@ impl Render for GitPanel {
                 div().flex().flex_col().flex_1().min_h_0().child(self.render_title_only(cx)).child(missing).into_any_element()
             }
             RepoState::Ready(_) if self.tree.is_some() => {
+                let title = self.render_title_only(cx).into_any_element();
                 let identity = self.render_identity(&colors, cx).into_any_element();
                 let branch_draft = self.render_branch_draft(&colors, cx);
-                let categories = self.render_categories(&colors, cx).into_any_element();
+                let changes = self.render_changes_section(&colors, window, cx).into_any_element();
                 let draft = self.draft.map(|kind| self.render_draft(kind, &colors, cx).into_any_element());
                 let footer = self.render_footer(&colors, cx).into_any_element();
                 div()
@@ -1107,20 +1051,10 @@ impl Render for GitPanel {
                     .flex_col()
                     .flex_1()
                     .min_h_0()
+                    .child(title)
                     .child(identity)
                     .children(branch_draft)
-                    .child(
-                        div()
-                            .id("git-scroll")
-                            .flex()
-                            .flex_col()
-                            .flex_1()
-                            .min_h_0()
-                            .overflow_y_scroll()
-                            .track_scroll(&self.changes_scroll)
-                            .child(categories)
-                            .scrollbar(window, cx),
-                    )
+                    .child(changes)
                     .children(draft.map(|draft| div().flex_none().px(px(8.)).child(draft)))
                     .child(footer)
                     .into_any_element()

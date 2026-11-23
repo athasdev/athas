@@ -96,17 +96,9 @@ pub fn meter(fraction: f32, _cx: &App) -> Div {
 /// The card a dialog floats in: title row, body, then the footer's buttons.
 pub fn dialog(title: impl Into<SharedString>, body: impl IntoElement, footer: Vec<AnyElement>, cx: &App) -> Div {
     let theme = cx.theme();
-    div()
-        .flex()
-        .flex_col()
+    ui::overlay_surface(cx)
         .w(px(520.))
         .max_w_full()
-        .rounded(metrics::overlay_radius())
-        .overflow_hidden()
-        .bg(theme.colors.background)
-        .shadow(theme.shadows.dialog.clone())
-        .font_family(typography::ui_font())
-        .text_color(theme.colors.foreground)
         .child(
             div()
                 .flex()

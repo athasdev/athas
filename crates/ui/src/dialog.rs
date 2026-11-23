@@ -14,8 +14,6 @@ use crate::{Button, ButtonVariant, Icon, IconName, IconSize, TextInput, TextInpu
 
 type Handler = Rc<dyn Fn(&mut Window, &mut App)>;
 
-pub fn dialog_radius() -> Pixels { px(12.) }
-
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub enum DialogSize {
     /// 384px.
@@ -199,7 +197,7 @@ impl RenderOnce for Dialog {
             .max_h(viewport.height * 0.9)
             .when(size == DialogSize::Settings, |this| this.h(px(768.).min(viewport.height - px(64.))))
             .overflow_hidden()
-            .rounded(dialog_radius())
+            .rounded(crate::metrics::overlay_radius())
             .bg(colors.overlay)
             .shadow(theme.shadows.dialog.clone())
             .font_family(typography::ui_font())
@@ -485,7 +483,7 @@ impl Render for AlertDialog {
             .gap(px(20.))
             .w(px(384.).min(viewport.width - px(32.)))
             .p(px(16.))
-            .rounded(dialog_radius())
+            .rounded(crate::metrics::overlay_radius())
             .bg(colors.overlay)
             .shadow(theme.shadows.dialog.clone())
             .font_family(typography::ui_font())

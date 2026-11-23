@@ -157,7 +157,7 @@ impl RenderOnce for Toggle {
             .gap(px(4.))
             .h(side)
             .map(|this| if pressed_with_label { this.px(px(10.)) } else { this.w(side) })
-            .map(|this| if self.size == ToggleSize::Lg { this.rounded(metrics::radius_md()) } else { this.rounded_full() })
+            .rounded(metrics::radius_md())
             .font_family(typography::ui_font())
             .font_weight(typography::MEDIUM)
             .text_size(typography::text_sm())
@@ -188,7 +188,7 @@ pub enum ButtonGroupVariant {
     Ghost,
 }
 
-/// Buttons joined into one pill (`ButtonGroup`); give it ghost buttons and
+/// Buttons joined into one control (`ButtonGroup`); give it ghost buttons and
 /// [`ButtonGroupSeparator`]s between them.
 #[derive(IntoElement, Default)]
 pub struct ButtonGroup {
@@ -227,7 +227,8 @@ impl RenderOnce for ButtonGroup {
             .flex_none()
             .items_stretch()
             .overflow_hidden()
-            .rounded_full()
+            // The group clips its children, so it takes the same corner they do.
+            .rounded(metrics::radius_md())
             .map(|this| if self.vertical { this.flex_col() } else { this.flex_row() })
             .map(|this| match self.variant {
                 ButtonGroupVariant::Default => this.bg(colors.accent),

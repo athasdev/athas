@@ -490,7 +490,7 @@ impl Select {
             .h(crate::metrics::list_row())
             .min_w_0()
             .max_w_full()
-            .rounded_full()
+            .rounded(crate::metrics::radius_md())
             .text_size(typography::text_sm())
             .line_height(gpui::relative(typography::LEADING_ROW))
             .font_weight(typography::MEDIUM)
@@ -549,7 +549,7 @@ impl Select {
             .h(px(28.))
             .min_w_0()
             .w_full()
-            .rounded_full()
+            .rounded(crate::metrics::radius_md())
             .text_size(typography::text_sm())
             .text_color(colors.foreground)
             .when_some(bg, |this, bg| this.bg(bg))
@@ -696,7 +696,7 @@ impl Select {
                     ),
                 )
             })
-            .child(div().relative().flex().flex_col().min_h_0().child(list).child(crate::Scrollbar::new("select-scrollbar", &self.scroll)));
+            .child(div().relative().flex().flex_col().min_h_0().child(crate::faded_scroll(list, &self.scroll, colors.overlay)).child(crate::Scrollbar::new("select-scrollbar", &self.scroll)));
 
         let anchor = if self.open_up { Anchor::BottomLeft } else { Anchor::TopLeft };
         div()

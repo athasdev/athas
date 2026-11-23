@@ -828,7 +828,7 @@ impl ConnectionsView {
         let mut list = div().id("folder-rows").flex().flex_col().h(px(280.)).overflow_y_scroll().px(px(10.)).pb(px(8.));
         match folders {
             None => {
-                list = list.child(div().py(px(16.)).flex().justify_center().text_color(colors.subtle_foreground).child("Loading…"));
+                list = list.child(ui::quiet_note("Loading…", cx).py(px(16.)).flex().justify_center());
             }
             Some(folders) => {
                 let selected = self.selected;
@@ -919,7 +919,7 @@ impl Render for ConnectionsView {
                 div()
                     .flex()
                     .flex_col()
-                    .gap(px(10.))
+                    .gap(px(12.))
                     .px(px(16.))
                     .pb(px(12.))
                     .child(
@@ -1016,22 +1016,16 @@ impl Render for ConnectionsView {
                 ),
         };
 
-        div()
+        ui::overlay_surface(cx)
             .id("remote-connections")
             .track_focus(&self.focus_handle)
             .on_key_down(cx.listener(Self::key_down))
             .occlude()
             .self_start()
-            .flex()
-            .flex_col()
             // The add-remote step is `w-[min(44rem,…)]` in the original.
             .w(px(if matches!(self.stage, Stage::Form { .. }) { 704. } else { 520. }))
             .max_w_full()
-            .rounded(metrics::island_radius())
-            .bg(colors.overlay)
-            .shadow(theme.shadows.dialog.clone())
             .text_size(typography::text_sm())
-            .text_color(colors.foreground)
             .child(
                 div()
                     .flex()

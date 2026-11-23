@@ -471,7 +471,7 @@ pub fn render(blocks: &[Block], id: &str, cx: &App) -> AnyElement {
     div()
         .flex()
         .flex_col()
-        .gap(px(10.))
+        .gap(px(12.))
         .min_w_0()
         .text_size(typography::text_base())
         .line_height(relative(1.6))

@@ -94,6 +94,6 @@ impl WhenActions for gpui::Div {
         if actions.is_empty() {
             return self;
         }
-        self.child(div().flex().flex_wrap().items_center().justify_center().gap(px(10.)).children(actions))
+        self.child(div().flex().flex_wrap().items_center().justify_center().gap(px(12.)).children(actions))
     }
 }

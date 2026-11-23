@@ -28,7 +28,10 @@ const UPDATER_PUBLIC_KEY: &str = "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYy
 const RELEASE_FLATPAK_ID: &str = "com.code.athas";
 const NOTIFICATION_ID: &str = "athas-update";
 const FIRST_CHECK_DELAY: Duration = Duration::from_secs(10);
-const CHECK_INTERVAL: Duration = Duration::from_secs(12 * 60 * 60);
+/// How often the app looks for a newer one. It was twelve hours, which is most of a working day:
+/// a beta published in the morning reached an app left running since the night before only that
+/// evening. The check is one small JSON fetch, so it costs nothing to ask more often.
+const CHECK_INTERVAL: Duration = Duration::from_secs(60 * 60);
 const MAX_DOWNLOAD_BYTES: u64 = 1024 * 1024 * 1024;
 /// Package managers that update Athas themselves put a file with this name next to the binary.
 const PACKAGE_MANAGER_MARKER: &str = "managed-by-package-manager";
@@ -613,8 +616,9 @@ fn put_off(cx: &mut App, preferences: impl FnOnce(&str) -> UpdatePreferences) {
     notifications::close_toast(cx, &NOTIFICATION_ID.into());
 }
 
-/// Checks shortly after launch and then twice a day while `autoCheckForUpdates` is on. Debug
-/// builds and package-managed installs never check on their own.
+/// Checks shortly after launch and then hourly while `autoCheckForUpdates` is on. Debug builds
+/// and package-managed installs never check on their own — a build you are working on should not
+/// offer to replace itself, and a package manager owns the version it installed.
 pub fn start_background_checks(cx: &mut App) {
     if cfg!(debug_assertions) || managed_externally() {
         return;

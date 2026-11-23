@@ -818,7 +818,7 @@ impl Render for Menu {
             .text_size(typography::text_chrome())
             .line_height(px(16.))
             .text_color(colors.foreground)
-            .child(div()
+            .child(crate::faded_scroll(div()
             .id("menu-scroll")
             .flex()
             .flex_col()
@@ -852,7 +852,7 @@ impl Render for Menu {
             .when(self.search.as_ref().is_some_and(MenuSearch::is_searching) && self.actionable().is_empty(), |this| {
                 let empty = self.search.as_ref().map(|search| search.empty.clone()).unwrap_or_default();
                 this.child(div().px(px(8.)).py(px(6.)).text_color(colors.subtle_foreground).child(empty))
-            }))
+            }), &self.scroll, colors.overlay))
             .child(crate::Scrollbar::new("menu-scrollbar", &self.scroll))
             .child(
                 canvas(

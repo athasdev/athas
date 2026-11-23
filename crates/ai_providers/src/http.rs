@@ -56,8 +56,16 @@ impl ResponseHead {
 
 pub type Lines = mpsc::UnboundedReceiver<Result<String, ProviderError>>;
 
-/// The message in a provider's error body: `{"error":{"message":..}}`, `{"error":".."}` or
-/// `{"message":..}`, else the body itself, cut short.
+/// What a FastAPI server (Mistral) says a request was wrong about:
+/// `{"detail":[{"loc":[..],"msg":".."}]}`, also under `message` — the messages, joined.
+fn validation_message(value: &Value) -> Option<String> {
+    let detail = value.get("detail").or_else(|| value.get("message")?.get("detail"))?.as_array()?;
+    let messages: Vec<&str> = detail.iter().filter_map(|entry| entry.get("msg").and_then(Value::as_str)).collect();
+    (!messages.is_empty()).then(|| messages.join("; "))
+}
+
+/// The message in a provider's error body: `{"error":{"message":..}}`, `{"error":".."}`,
+/// `{"message":..}` or a validation `detail`, else the body itself, cut short.
 pub fn error_message(body: &str) -> String {
     let parsed: Option<Value> = serde_json::from_str(body).ok();
     let message = parsed.as_ref().and_then(|value| {
@@ -69,6 +77,7 @@ pub fn error_message(body: &str) -> String {
             .or_else(|| value.get("message").and_then(Value::as_str))
             .or_else(|| value.get("detail").and_then(Value::as_str))
             .map(str::to_string)
+            .or_else(|| validation_message(value))
     });
     let message = message.unwrap_or_else(|| body.trim().to_string());
     let first: String = message.lines().next().unwrap_or_default().chars().take(400).collect();
@@ -106,18 +115,31 @@ mod native {
         send_with(client(), request, &|| false)
     }
 
+    /// The request's headers, one entry per name (the last value of a repeated name wins).
+    fn header_map(headers: &[(String, String)]) -> Result<reqwest::header::HeaderMap, ProviderError> {
+        let mut map = reqwest::header::HeaderMap::with_capacity(headers.len());
+        for (name, value) in headers {
+            let name = reqwest::header::HeaderName::from_bytes(name.as_bytes()).map_err(|_| ProviderError::new(format!("{name} is not a header name")))?;
+            let value = reqwest::header::HeaderValue::from_str(value).map_err(|_| ProviderError::new(format!("The {name} header has an invalid value")))?;
+            map.insert(name, value);
+        }
+        Ok(map)
+    }
+
     /// `cancelled` is asked before each retry: a turn the user stopped is not sent again (and
     /// billed) after the wait.
     fn send_with(client: &reqwest::blocking::Client, request: &HttpRequest, cancelled: &dyn Fn() -> bool) -> Result<reqwest::blocking::Response, ProviderError> {
         let mut attempt = 0;
         loop {
-            let mut builder = match &request.body {
-                Some(body) => client.post(&request.url).json(body),
-                None => client.get(&request.url),
+            let headers = header_map(&request.headers)?;
+            // `headers` replaces, where `header` appends: a provider naming `content-type` itself
+            // must not add a second one beside the one `json` sets. Two of them reach a FastAPI
+            // server (Mistral) as one joined value, which it reads as a plain-text body and
+            // rejects ("Input should be a valid dictionary or object").
+            let builder = match &request.body {
+                Some(body) => client.post(&request.url).json(body).headers(headers),
+                None => client.get(&request.url).headers(headers),
             };
-            for (name, value) in &request.headers {
-                builder = builder.header(name, value);
-            }
             let response = builder.send().map_err(|error| {
                 let host = reqwest::Url::parse(&request.url).ok().and_then(|url| url.host_str().map(str::to_string)).unwrap_or_default();
                 if error.is_timeout() {
@@ -272,5 +294,11 @@ mod tests {
         assert_eq!(error_message(r#"{"error":"Sign in"}"#), "Sign in");
         assert_eq!(error_message(r#"{"message":"Nope"}"#), "Nope");
         assert_eq!(error_message("plain\nsecond line"), "plain");
+    }
+
+    #[test]
+    fn validation_errors_read_as_a_sentence() {
+        assert_eq!(error_message(r#"{"detail":[{"type":"model_attributes_type","loc":["body"],"msg":"Input should be a valid dictionary"}]}"#), "Input should be a valid dictionary");
+        assert_eq!(error_message(r#"{"object":"error","message":{"detail":[{"loc":["body","model"],"msg":"Field required"}]}}"#), "Field required");
     }
 }

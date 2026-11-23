@@ -1260,6 +1260,7 @@ impl Workbench {
                 workspace::SidebarView::GitHub => IconName::Github,
                 workspace::SidebarView::Agents => IconName::ChatBubbleText,
                 workspace::SidebarView::Settings => IconName::Settings,
+                workspace::SidebarView::Notifications => IconName::Bell,
             };
             let weak = weak.clone();
             entries.push(

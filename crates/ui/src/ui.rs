@@ -32,6 +32,7 @@ mod progress;
 mod questionnaire;
 mod resource_drag;
 mod scroll_area;
+mod scroll_fade;
 mod select;
 mod step_slider;
 mod surfaces;
@@ -47,14 +48,14 @@ pub use avatar::{Avatar, Person};
 pub use badge::{Badge, Marker, MarkerVariant, StatusDot, Tone};
 pub use breadcrumb::{Breadcrumb, PathBreadcrumb};
 pub use button::{Button, ButtonSize, ButtonTone, ButtonVariant, Plane};
-pub use card::{Alert, AlertVariant, Card, CardHeader, CardLayout, CardPlane, CardVariant, card_content, card_footer};
+pub use card::{Alert, AlertVariant, Card, CardHeader, CardLayout, CardPlane, CardVariant, ErrorText, card_content, card_footer, quiet_note};
 pub use checkbox::{Checkbox, CheckboxSize};
 pub use controls::{
     ButtonGroup, ButtonGroupSeparator, ButtonGroupVariant, ChoiceCard, ChoiceCardSize, ChoiceCards, Menubar, Tabs, TabsTrigger, TabsVariant, Toggle, ToggleSize,
     ToggleTone, ToggleVariant,
 };
 pub use disclosure::{Accordion, AccordionItem, AccordionTrigger, Collapsible};
-pub use dialog::{AlertAction, AlertDialog, ConfirmOptions, dialog_radius, Dialog, DialogLayout, DialogSize, PromptDialog, focus_ring};
+pub use dialog::{AlertAction, AlertDialog, ConfirmOptions, Dialog, DialogLayout, DialogSize, PromptDialog, focus_ring};
 pub use dropdown::{DropdownAlign, DropdownMenu};
 pub use empty_state::EmptyState;
 pub use field::{Field, FieldOrientation, FieldSeparator, InputGroup, InputGroupVariant, Label, Separator, input_group_text};
@@ -67,12 +68,13 @@ pub use menu::{CloseSubmenu, Menu, MenuEntry, MenuItem, MenuItemTone, MenuQueryS
 pub use message::{Attachment, AttachmentState, Message, ResourceSection, ResourceSummary, message_action};
 pub use number_input::{NumberInput, NumberInputEvent};
 pub use occlusion::occluder;
-pub use pane::{PaneTitle, framed_pane, island, pane_actions, pane_header, shell};
+pub use pane::{PaneTitle, PanelHeader, framed_pane, island, overlay_surface, pane_actions, pane_header, shell};
 pub use popover::{Popover, PopoverHeader, anchored_overlay};
 pub use progress::{Progress, ProgressCircle, ProgressTone, ToggleGroup, ToggleOption};
 pub use questionnaire::{Questionnaire, QuestionnaireChoice, QuestionnaireEvent, QuestionnaireQuestion};
 pub use resource_drag::{DraggedResource, DraggedResourcePreview, WORKTREE_KIND};
 pub use scroll_area::{AlwaysShowScrollbars, ScrollArea, Scrollbar, WithScrollbar, with_scrollbar};
+pub use scroll_fade::{faded_scroll, faded_scroll_x, faded_uniform_scroll};
 pub use select::{Select, SelectEvent, SelectOption, SelectSearch, SelectVariant, SelectWidth};
 pub use step_slider::{StepSlider, StepSliderStep};
 pub use surfaces::{

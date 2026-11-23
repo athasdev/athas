@@ -149,7 +149,7 @@ impl DockerView {
             .flex()
             .flex_none()
             .items_center()
-            .gap(px(10.))
+            .gap(px(12.))
             .h(px(28.))
             .px(px(10.))
             .rounded(metrics::radius_md())

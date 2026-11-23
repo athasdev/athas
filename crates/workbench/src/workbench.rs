@@ -93,6 +93,8 @@ actions!(
         ShowGitHub,
         ToggleMaximize,
         CloseProject,
+        RemoveProject,
+        ShowShortcuts,
         NewChat,
         NextTab,
         PreviousTab,
@@ -185,6 +187,8 @@ const COMMANDS: fn(&mut App) = |cx| {
     keymap::register(cx, "workbench.switchToTab9", SwitchToTab9);
     keymap::register(cx, "remote.connect", OpenRemote);
     keymap::register(cx, "project.close", CloseProject);
+    keymap::register(cx, "project.remove", RemoveProject);
+    keymap::register(cx, "help.shortcuts", ShowShortcuts);
     keymap::register(cx, "file.close", CloseTab);
     keymap::register(cx, "file.reopenClosed", ReopenClosedTab);
     keymap::register(cx, "file.closeAll", CloseAllTabs);
@@ -246,6 +250,8 @@ pub(crate) fn extra_command_info(id: &str) -> Option<(&'static str, &'static str
         "workbench.togglePaneMaximize" => Some(("Toggle Maximized Pane", "View", "Give the editor area the whole window", ui::IconName::ArrowsOut)),
         "remote.connect" => Some(("Open Remote…", "File", "Open a folder on a server over SSH", ui::IconName::Remote)),
         "project.close" => Some(("Close Project", "File", "Close the project in front", ui::IconName::X)),
+        "project.remove" => Some(("Remove Project from Athas", "File", "Close the project in front and forget it", ui::IconName::Trash)),
+        "help.shortcuts" => Some(("Keyboard Shortcuts", "Help", "The keys this window answers", ui::IconName::Keyboard)),
         "workbench.closeWindow" => Some(("Close Window", "Workbench", "Close this window", ui::IconName::X)),
         "cli.uninstallTerminalCommand" => Some(("CLI: Uninstall Terminal Command", "CLI", "Remove the athas command from your PATH", ui::IconName::TerminalWindow)),
         "app.checkForUpdates" => Some(("Check for Updates", "Application", "Look for a newer Athas", ui::IconName::Download)),
@@ -460,8 +466,7 @@ pub struct Workbench {
     settings_panel: Option<(Entity<settings_ui::SettingsView>, Vec<Subscription>)>,
     /// The page list the sidebar shows, drawn from the same view.
     settings_nav: Option<Entity<settings_ui::SettingsNav>>,
-    /// Archived Sessions: its search field, what is ticked there, and where its list is scrolled.
-    archived_search: Option<Entity<ui::TextInput>>,
+    /// Archived Sessions: what is ticked there.
     pub(crate) archived_selected: std::collections::HashSet<SessionId>,
     /// The tool the sidebar was on when Settings took it over, for Escape to go back to.
     settings_return_view: SidebarView,
@@ -528,9 +533,13 @@ pub struct Workbench {
     /// first, and the click after it must not open it again.
     account_menu_pressed: Option<(Point<Pixels>, web_time::Instant)>,
     /// The Inbox beside the sidebar, while it is open (the bell in the activity bar).
-    /// The one secondary column beside the sidebar: the Inbox, or one of the lists the sidebar's
-    /// footer opens. One slot, so opening one puts the last away.
+    /// The one secondary column beside the sidebar: one of the lists the sidebar's footer opens.
+    /// One slot, so opening one puts the last away.
     pub(crate) secondary: Option<crate::secondary::Secondary>,
+    /// Where the secondary column's list has scrolled, so its clipped edge can fade.
+    pub(crate) secondary_scroll: gpui::ScrollHandle,
+    /// The Inbox, which the bell shows in the sidebar itself.
+    pub(crate) inbox: Option<(Entity<notifications::InboxPanel>, Subscription)>,
     /// What the next team session tab opens to do: a review or a hand-off.
     pending_team_send: Option<collaboration::SendTo>,
     /// The agent History shows when it opens next (AI: Import Agent Session).
@@ -750,7 +759,6 @@ impl Workbench {
             file_tree: None,
             settings_panel: None,
             settings_nav: None,
-            archived_search: None,
             archived_selected: Default::default(),
             settings_return_view: SidebarView::Agents,
             git_panel: None,
@@ -787,6 +795,8 @@ impl Workbench {
             account_menu: None,
             account_menu_pressed: None,
             secondary: None,
+            secondary_scroll: gpui::ScrollHandle::new(),
+            inbox: None,
             pending_team_send: None,
             pending_history_agent: None,
             pending_terminals: HashMap::new(),
@@ -1079,7 +1089,9 @@ impl Workbench {
         if view == SidebarView::Settings {
             self.ensure_settings_panel(None, window, cx);
         }
-        self.ensure_archived_search(window, cx);
+        if view == SidebarView::Notifications {
+            self.ensure_inbox(window, cx);
+        }
 
         self.sync_centre_views(window, cx);
         if settings::get(cx).show_outline {
@@ -1113,6 +1125,11 @@ impl Workbench {
                 GitPanelEvent::OpenFile(path) => {
                     let path = path.to_string_lossy().into_owned();
                     this.update_state(cx, |state| state.open_file(&path));
+                }
+                // The footer rows drive the column the sessions footer drives.
+                GitPanelEvent::OpenSection(section) => {
+                    this.secondary = section.map(crate::secondary::Secondary::Git);
+                    cx.notify();
                 }
             });
             // The selected repository, for views that follow it (`context-references.ts`).
@@ -1321,22 +1338,13 @@ impl Workbench {
                     }
                 })
                 .into(),
-            open("Changelog", ui::IconName::History, account::service_urls::GITHUB_RELEASES_URL.into()),
             open("Documentation", ui::IconName::BookOpen, urls.docs()),
             open("Community", ui::IconName::ChatBubbleText, account::service_urls::COMMUNITY_URL.into()),
             MenuEntry::Separator,
             MenuItem::new("Keyboard Shortcuts")
                 .icon(ui::IconName::Keyboard)
-                .on_select({
-                    let weak = cx.weak_entity();
-                    move |window, cx| {
-                        weak.update(cx, |this, cx| {
-                            let dialog = cx.new(shortcuts_dialog::ShortcutsDialog::new);
-                            this.open_modal(dialog, window, cx);
-                        })
-                        .ok();
-                    }
-                })
+                .shortcut("⇧?")
+                .on_select(|window, cx| window.dispatch_action(Box::new(ShowShortcuts), cx))
                 .into(),
             MenuItem::new("Send Feedback")
                 .icon(ui::IconName::Megaphone)
@@ -1918,25 +1926,38 @@ impl Workbench {
 
     /// The bell: opens the Inbox beside the sidebar, or closes it.
     fn show_notifications(&mut self, _: &ShowNotifications, window: &mut Window, cx: &mut Context<Self>) {
-        if matches!(self.secondary, Some(crate::secondary::Secondary::Inbox { .. })) {
-            self.close_secondary(window, cx);
+        self.toggle_sidebar_view(SidebarView::Notifications, window, cx);
+    }
+
+    /// The Inbox the sidebar shows, built on first use and kept afterwards.
+    pub(crate) fn ensure_inbox(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        if self.inbox.is_some() {
             return;
         }
         let panel = cx.new(notifications::InboxPanel::new);
-        let subscription = cx.subscribe_in(&panel, window, |this, _, _: &gpui::DismissEvent, window, cx| this.close_secondary(window, cx));
-        self.remember_focus(window, cx);
-        window.focus(&panel.focus_handle(cx), cx);
-        self.secondary = Some(crate::secondary::Secondary::Inbox { panel, _subscription: subscription });
-        cx.notify();
+        // Escape in the Inbox hands the sidebar back to the tool it took over.
+        let subscription = cx.subscribe_in(&panel, window, |this, _, _: &gpui::DismissEvent, window, cx| {
+            this.close_sidebar_view(SidebarView::Notifications, window, cx);
+        });
+        self.inbox = Some((panel, subscription));
     }
 
     pub(crate) fn close_secondary(&mut self, window: &mut Window, cx: &mut Context<Self>) {
-        if let Some(crate::secondary::Secondary::Inbox { panel, .. }) = self.secondary.take()
-            && panel.focus_handle(cx).contains_focused(window, cx)
-        {
-            self.restore_focus(window, cx);
-        }
+        self.secondary = None;
+        self.clear_git_section(cx);
+        let _ = window;
         cx.notify();
+    }
+
+    /// The Git panel draws its own footer, so it keeps its own note of which list is open to
+    /// light the row. This puts it out when the column shows something else or closes.
+    pub(crate) fn clear_git_section(&mut self, cx: &mut Context<Self>) {
+        if matches!(self.secondary, Some(crate::secondary::Secondary::Git(_))) {
+            return;
+        }
+        if let Some((git, _)) = self.git_panel.as_ref() {
+            git.clone().update(cx, |panel, cx| panel.open_section(None, cx));
+        }
     }
 
     /// The Inbox as a column beside the sidebar, with a resize edge as the sidebar has.
@@ -1944,6 +1965,9 @@ impl Workbench {
         let panel = self.render_secondary_panel(cx)?;
         let resizing = matches!(self.drag, Some(Drag::Inbox { .. }));
         let line = if resizing { cx.theme().colors.primary } else { cx.theme().colors.border_strong };
+        // The hairline is always there, as the sidebar's is: the column has no surface of its
+        // own, so without it there is nothing between it and the centre.
+        let hairline = cx.theme().colors.border;
         Some(
             div()
                 .relative()
@@ -1966,7 +1990,14 @@ impl Workbench {
                         .justify_center()
                         .cursor_col_resize()
                         .group("inbox-resize")
-                        .child(div().w(px(1.)).h_full().when(resizing, |this| this.bg(line)).group_hover("inbox-resize", move |style| style.bg(line)))
+                        .child(
+                            div()
+                                .w(px(1.))
+                                .h_full()
+                                .bg(hairline)
+                                .when(resizing, |this| this.bg(line))
+                                .group_hover("inbox-resize", move |style| style.bg(line)),
+                        )
                         .on_mouse_down(
                             MouseButton::Left,
                             cx.listener(|this, event: &gpui::MouseDownEvent, _, cx| {
@@ -2005,6 +2036,9 @@ impl Workbench {
                         .flex()
                         .flex_col()
                         .rounded(metrics::island_radius())
+                        // Over the centre it really does float, so here it keeps a surface, a
+                        // corner and a shadow; docked beside the sidebar it has none of them.
+                        .bg(gpui::Hsla { a: 1., ..cx.theme().colors.surface })
                         .shadow(cx.theme().shadows.popover.clone())
                         .occlude()
                         .child(panel),
@@ -2539,7 +2573,54 @@ impl Workbench {
         entries
     }
 
-    fn project_menu_entries(&self, id: &ProjectId, cx: &mut Context<Self>) -> Vec<MenuEntry> {
+    /// What the Sessions list offers: starting one, and the places the agents' own work is kept.
+    /// Nothing about the project — a list of sessions is no place to reveal a folder, copy its
+    /// path or pick its icon, and the project's own menu in the title strip has all of that.
+    pub(crate) fn session_list_menu_entries(&self, cx: &mut Context<Self>) -> Vec<MenuEntry> {
+        let weak = cx.weak_entity();
+        let project = self.state.active_project().cloned();
+        let mut entries: Vec<MenuEntry> = vec![
+            MenuItem::new("New session")
+                .icon(ui::IconName::Plus)
+                .on_select({
+                    let weak = weak.clone();
+                    let id = project.as_ref().map(|project| project.id.clone());
+                    move |_, cx| {
+                        weak.update(cx, |this, cx| this.start_session(id.clone(), cx)).ok();
+                    }
+                })
+                .into(),
+            MenuItem::new("New chat")
+                .icon(ui::IconName::ChatBubbleText)
+                .on_select({
+                    let weak = weak.clone();
+                    move |_, cx| {
+                        weak.update(cx, |this, cx| this.start_session(None, cx)).ok();
+                    }
+                })
+                .into(),
+        ];
+        if let Some(project) = project.filter(|project| !project.is_remote()) {
+            let path = project.path.clone();
+            let tool = |label: &'static str, icon: ui::IconName, kind: &'static str, title: &'static str| -> MenuEntry {
+                let weak = weak.clone();
+                let path = path.clone();
+                MenuItem::new(label)
+                    .icon(icon)
+                    .on_select(move |_, cx| {
+                        weak.update(cx, |this, cx| this.update_state(cx, |state| state.open_resource(kind, &path, title))).ok();
+                    })
+                    .into()
+            };
+            entries.push(MenuEntry::Separator);
+            entries.push(tool("Skills", ui::IconName::BookOpen, agent_ui::skills::RESOURCE_KIND, "Skills"));
+            entries.push(tool("Cloud agents", ui::IconName::Cloud, agent_ui::cloud::RUNS_KIND, "Cloud Agents"));
+            entries.push(tool("History", ui::IconName::History, "history", "History"));
+        }
+        entries
+    }
+
+    pub(crate) fn project_menu_entries(&self, id: &ProjectId, cx: &mut Context<Self>) -> Vec<MenuEntry> {
         let weak = cx.weak_entity();
         let Some(project) = self.state.project(id).cloned() else { return Vec::new() };
         let path = project.path.clone();
@@ -2554,37 +2635,7 @@ impl Workbench {
                     }
                 })
                 .into(),
-            MenuItem::new("New session")
-                .icon(ui::IconName::Plus)
-                .on_select({
-                    let weak = weak.clone();
-                    let id = id.clone();
-                    move |_, cx| {
-                        weak.update(cx, |this, cx| this.start_session(Some(id.clone()), cx)).ok();
-                    }
-                })
-                .into(),
         ];
-        if !project.is_remote() {
-            let tool = |label: &'static str, icon: ui::IconName, kind: &'static str, title: &'static str| -> MenuEntry {
-                let weak = weak.clone();
-                let id = id.clone();
-                let path = path.clone();
-                MenuItem::new(label)
-                    .icon(icon)
-                    .on_select(move |_, cx| {
-                        weak.update(cx, |this, cx| {
-                            this.activate_project(id.clone(), cx);
-                            this.update_state(cx, |state| state.open_resource(kind, &path, title));
-                        })
-                        .ok();
-                    })
-                    .into()
-            };
-            entries.push(tool("Skills", ui::IconName::BookOpen, agent_ui::skills::RESOURCE_KIND, "Skills"));
-            entries.push(tool("Cloud agents", ui::IconName::Cloud, agent_ui::cloud::RUNS_KIND, "Cloud Agents"));
-        }
-        entries.push(MenuEntry::Separator);
         if !project.is_remote() && self.platform != Platform::Web {
             let path = path.clone();
             entries.push(
@@ -2623,33 +2674,6 @@ impl Workbench {
                     .into(),
             );
         }
-        entries.push(MenuEntry::Separator);
-        entries.push(
-            MenuItem::new("Close project")
-                .icon(ui::IconName::X)
-                .on_select({
-                    let weak = weak.clone();
-                    let id = id.clone();
-                    move |window, cx| {
-                        let id = id.clone();
-                        weak.update(cx, |this, cx| this.close_tabs_guarded(move |state| state.close_project(&id), window, cx)).ok();
-                    }
-                })
-                .into(),
-        );
-        entries.push(
-            MenuItem::new("Remove from Athas")
-                .icon(ui::IconName::Trash)
-                .destructive()
-                .on_select({
-                    let id = id.clone();
-                    move |window, cx| {
-                        let id = id.clone();
-                        weak.update(cx, |this, cx| this.close_tabs_guarded(move |state| state.remove_project(&id), window, cx)).ok();
-                    }
-                })
-                .into(),
-        );
         entries
     }
 
@@ -2916,6 +2940,17 @@ impl Render for Workbench {
             .on_action(cx.listener(|this, _: &CloseProject, window, cx| {
                 if let Some(id) = this.state.active_project.clone() {
                     this.close_tabs_guarded(move |state| state.close_project(&id), window, cx);
+                }
+            }))
+            // Forgetting a project is a project action, not one to keep behind a `...` over the
+            // sessions list, where it sat next to Rename and New session.
+            .on_action(cx.listener(|this, _: &ShowShortcuts, window, cx| {
+                let dialog = cx.new(shortcuts_dialog::ShortcutsDialog::new);
+                this.open_modal(dialog, window, cx);
+            }))
+            .on_action(cx.listener(|this, _: &RemoveProject, window, cx| {
+                if let Some(id) = this.state.active_project.clone() {
+                    this.close_tabs_guarded(move |state| state.remove_project(&id), window, cx);
                 }
             }))
             .on_action(cx.listener(|this, _: &NewChat, _, cx| this.start_session(None, cx)))

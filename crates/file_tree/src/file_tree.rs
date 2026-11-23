@@ -75,7 +75,9 @@ actions!(
 );
 
 /// Rows start this far in, then step in by the indent size per level (`FILE_TREE_BASE_INDENT`).
-const BASE_INDENT: f32 = 10.;
+/// It is the inset a `SidebarListItem` gives its own content, so a file name begins where a
+/// session title does and both begin under their tool's heading.
+const BASE_INDENT: f32 = 6.;
 /// An indent guide runs this far right of its level's start, under the parent's icon.
 const GUIDE_OFFSET: f32 = 7.;
 fn viewport_padding() -> Pixels { px(4.) }
@@ -2356,7 +2358,14 @@ impl FileTree {
             .text_size(typography::text_sm())
             .text_color(colors.destructive)
             .child(Icon::new(IconName::WarningCircle).size(IconSize::Small).color(colors.destructive))
-            .child(div().flex_1().min_w_0().child(message))
+            .child(div().flex_1().min_w_0().child(message.clone()))
+            .child(
+                Button::icon("files-error-copy", IconName::Copy)
+                    .size(ButtonSize::XSmall)
+                    .tooltip("Copy message")
+                    // A banner's text cannot be selected, so the only way out of it is a button.
+                    .on_click(move |_, _, cx| cx.write_to_clipboard(gpui::ClipboardItem::new_string(message.to_string()))),
+            )
             .child(
                 Button::icon("files-error-dismiss", IconName::X)
                     .size(ButtonSize::XSmall)
@@ -2387,17 +2396,24 @@ impl Render for FileTree {
                 .justify_center()
                 .text_size(typography::text_sm())
                 .text_color(cx.theme().colors.subtle_foreground)
-                .child("Loading files")
+                .child("Loading files…")
                 .into_any_element()
         } else {
-            ui::with_scrollbar(
-                uniform_list("file-tree-rows", self.rows.len(), cx.processor(Self::render_rows))
-                    .track_scroll(&self.scroll_handle)
-                    .flex_1()
-                    .pt(viewport_padding())
-                    .px(metrics::chrome_padding_inline()),
-                ui::Scrollbar::uniform("file-tree-scrollbar", &self.scroll_handle),
+            ui::faded_uniform_scroll(
+                ui::with_scrollbar(
+                    uniform_list("file-tree-rows", self.rows.len(), cx.processor(Self::render_rows))
+                        .track_scroll(&self.scroll_handle)
+                        .flex_1()
+                        .pt(viewport_padding())
+                        // The inset every sidebar list uses, so a row's hover sits where the
+                        // sessions' does.
+                        .px(ui::metrics::sidebar_inset()),
+                    ui::Scrollbar::uniform("file-tree-scrollbar", &self.scroll_handle),
+                ),
+                &self.scroll_handle,
+                cx.theme().colors.background,
             )
+            .flex_1()
             .into_any_element()
         };
         let root = self.root.clone();

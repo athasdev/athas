@@ -417,7 +417,7 @@ fn render_contributions(entry: &CatalogEntry, colors: &ThemeColors, cx: &mut Con
     for contribution in manifest.icon_themes() {
         let loaded = extensions::get(cx).icon_theme(&contribution.id).cloned();
         let value = div().flex().flex_col().gap(px(6.)).child(contribution.name.clone()).children(loaded.map(|theme| {
-            div().flex().items_center().gap(px(10.)).children(ICON_PREVIEW.iter().filter_map(|(name, is_dir)| {
+            div().flex().items_center().gap(px(12.)).children(ICON_PREVIEW.iter().filter_map(|(name, is_dir)| {
                 let source = theme.icon(name, *is_dir, false, dark)?;
                 Some(
                     div()

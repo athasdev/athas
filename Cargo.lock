@@ -8351,7 +8351,6 @@ dependencies = [
  "collaboration",
  "dirs 6.0.0",
  "extensions",
- "extensions_ui",
  "file_tree",
  "github_panel",
  "gpui",

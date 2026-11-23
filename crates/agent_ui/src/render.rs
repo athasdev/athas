@@ -67,7 +67,7 @@ impl Render for SessionView {
                 .flex_col()
                 .items_center()
                 .justify_center()
-                .gap(px(10.))
+                .gap(px(12.))
                 .px(px(24.))
                 .child(busy_spinner("agent-loading", colors.subtle_foreground))
                 .child(
@@ -328,7 +328,7 @@ impl SessionView {
                     .w_full()
                     .max_w(px(CONTENT_WIDTH))
                     .min_w_0()
-                    .when(matched, |this| this.p(px(6.)).rounded(metrics::island_radius()).border_1().border_color(if active { colors.primary } else { colors.border }))
+                    .when(matched, |this| this.p(px(6.)).rounded(metrics::radius_lg()).border_1().border_color(if active { colors.primary } else { colors.border }))
                     .child(content)
             })
             .into_any_element()
@@ -1620,7 +1620,7 @@ impl SessionView {
                             .child(div().text_color(colors.muted_foreground).child(format!(
                                 "Install it here or from Settings > AI > Agents, or run: {hint}"
                             )))
-                            .children(install_error.map(|error| div().text_color(colors.destructive).child(error))),
+                            .children(install_error.map(ui::ErrorText::new)),
                     )
                     .child(div().flex_1())
                     .when(installable, |this| {
@@ -2032,7 +2032,7 @@ impl SessionView {
                     }
                     Link::Refused(reason) => {
                         body.push(div().text_size(typography::text_caption()).text_color(colors.muted_foreground).child(url.clone()).into_any_element());
-                        body.push(div().text_color(colors.destructive).child(reason.clone()).into_any_element());
+                        body.push(ui::ErrorText::new(reason.clone()).into_any_element());
                     }
                 }
             }
@@ -2128,7 +2128,7 @@ impl SessionView {
                         body.push(input.clone().into_any_element());
                     }
                     if let Some(error) = &pending.error {
-                        body.push(div().text_color(colors.destructive).child(error.clone()).into_any_element());
+                        body.push(ui::ErrorText::new(error.clone()).into_any_element());
                     }
                     let last = step + 1 == total;
                     body.push(
@@ -2187,7 +2187,7 @@ impl SessionView {
                 .w_full()
                 .flex()
                 .flex_col()
-                .gap(px(10.))
+                .gap(px(12.))
                 .p(px(10.))
                 .rounded(metrics::radius_xl())
                 .bg(colors.raised)
@@ -2689,7 +2689,7 @@ impl SessionView {
             div()
                 .flex()
                 .items_center()
-                .gap(px(10.))
+                .gap(px(12.))
                 .px(px(12.))
                 .py(px(8.))
                 .min_w_0()
@@ -3913,7 +3913,7 @@ fn link_card(href: &str, root: Option<&std::path::Path>, details: Option<&GitHub
         div()
             .flex()
             .items_start()
-            .gap(px(10.))
+            .gap(px(12.))
             .min_w_0()
             .child(div().mt(px(2.)).flex_none().child(Icon::new(icon).size(IconSize::Small).color(icon_color)))
             .child(

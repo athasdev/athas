@@ -7,29 +7,32 @@
 //! an island, a `pane_header` with a `PaneTitle` and `pane_actions`, an optional row of filters,
 //! a hairline, then the body. The Inbox is still the exemplar; these follow it.
 
-use gpui::{AnyElement, Context, Entity, IntoElement, ParentElement, Styled, Subscription, Window, div, prelude::*};
+use gpui::{AnyElement, Context, IntoElement, ParentElement, Styled, Window, div, prelude::*};
 use theme::ActiveTheme;
 use ui::scale::px;
-use ui::{Button, ButtonSize, ButtonVariant, EmptyState, Icon, IconName, IconSize, PaneTitle, SidebarListItem, island, pane_actions, pane_header, typography};
+use ui::{Button, ButtonSize, ButtonVariant, EmptyState, Icon, IconName, IconSize, SidebarListItem, pane_actions, typography};
 
 use crate::Workbench;
 
 /// What the one secondary column is showing.
 pub(crate) enum Secondary {
-    Inbox { panel: Entity<notifications::InboxPanel>, _subscription: Subscription },
     Usage,
     Accounts,
     Archived,
+    /// One of the Source Control footer's lists: History, stashes, remotes or tags. They opened
+    /// the Command surface -- a palette over the whole window for a list that belongs beside the
+    /// sidebar that opened it.
+    Git(git_panel::GitSection),
 }
 
 impl Secondary {
     /// The footer row that opens it, for the row to light up while it is open.
     pub(crate) fn row_id(&self) -> &'static str {
         match self {
-            Secondary::Inbox { .. } => "notifications",
             Secondary::Usage => "sessions-usage",
             Secondary::Accounts => "sessions-accounts",
             Secondary::Archived => "sessions-archived",
+            Secondary::Git(section) => section.row_id(),
         }
     }
 }
@@ -39,42 +42,57 @@ impl Secondary {
 pub(crate) fn panel(
     id: &'static str,
     title: &'static str,
-    icon: IconName,
     detail: Option<String>,
     actions: Vec<AnyElement>,
     filters: Option<AnyElement>,
     body: AnyElement,
     cx: &mut Context<Workbench>,
 ) -> AnyElement {
-    let colors = cx.theme().colors.clone();
-    let header = pane_header(cx)
-        .child(PaneTitle::new(title).icon(icon).when_some(detail, |this, detail| this.detail(detail)))
-        .child(
-            pane_actions().children(actions).child(
-                Button::icon("secondary-close", IconName::X)
-                    .variant(ButtonVariant::Ghost)
-                    .size(ButtonSize::Small)
-                    .tooltip(format!("Close {title}"))
-                    .on_click(cx.listener(|this, _, window, cx| this.close_secondary(window, cx))),
-            ),
-        );
-    island(cx)
+    let header = ui::PanelHeader::new(title).when_some(detail, |this, detail| this.detail(detail)).trailing(
+        pane_actions().children(actions).child(
+            Button::icon("secondary-close", IconName::X)
+                .variant(ButtonVariant::Ghost)
+                .size(ButtonSize::Small)
+                .tooltip(format!("Close {title}"))
+                .on_click(cx.listener(|this, _, window, cx| this.close_secondary(window, cx))),
+        ),
+    );
+    // Flat, like the sidebar beside it: this column sits inside the shell, it does not float
+    // over it, so it takes no rounding and no shadow of its own.
+    div()
         .id(id)
+        .flex()
+        .flex_col()
         .size_full()
-        .bg(colors.surface)
+        .min_h_0()
+        .min_w_0()
+        .overflow_hidden()
+        .pt(ui::metrics::workbench_gap())
         .child(header)
         .children(filters)
-        .child(div().h(px(1.)).flex_none().bg(colors.divider))
-        .child(div().flex().flex_col().flex_1().min_h_0().pt(px(4.)).child(body))
+        .child(div().flex().flex_col().flex_1().min_h_0().child(body))
         .into_any_element()
 }
 
 /// A list in one of these panels: its rows, or a word when it has none.
-pub(crate) fn list(id: &'static str, rows: Vec<AnyElement>, empty: EmptyState) -> AnyElement {
+pub(crate) fn list(id: &'static str, rows: Vec<AnyElement>, empty: EmptyState, scroll: &gpui::ScrollHandle, cx: &Context<Workbench>) -> AnyElement {
     if rows.is_empty() {
         return div().flex().flex_1().items_center().justify_center().p(px(16.)).child(empty).into_any_element();
     }
-    div().id(id).flex().flex_col().flex_1().min_h_0().overflow_y_scroll().px(px(6.)).pb(px(8.)).gap(px(2.)).children(rows).into_any_element()
+    let body = div()
+        .id(id)
+        .flex()
+        .flex_col()
+        .flex_1()
+        .min_h_0()
+        .min_w_0()
+        .overflow_y_scroll()
+        .track_scroll(scroll)
+        .px(ui::metrics::sidebar_inset())
+        .pb(px(8.))
+        .gap(px(2.))
+        .children(rows);
+    ui::faded_scroll(body, scroll, cx.theme().colors.background).flex_1().into_any_element()
 }
 
 /// A heading between groups of rows, as the Inbox's categories read.
@@ -85,7 +103,7 @@ pub(crate) fn group(label: impl Into<gpui::SharedString>, cx: &Context<Workbench
 fn heading(label: impl Into<gpui::SharedString>, colour: gpui::Hsla) -> AnyElement {
     div()
         .flex_none()
-        .px(px(8.))
+        .px(ui::metrics::sidebar_inset() + px(6.))
         .pt(px(8.))
         .pb(px(2.))
         .text_size(typography::text_caption())
@@ -109,6 +127,7 @@ impl Workbench {
             crate::sidebar::refresh_provider_keys(cx);
         }
         self.secondary = Some(which);
+        self.clear_git_section(cx);
         cx.notify();
     }
 
@@ -120,11 +139,25 @@ impl Workbench {
     /// The panel the column draws, whichever list is open.
     pub(crate) fn render_secondary_panel(&self, cx: &mut Context<Self>) -> Option<AnyElement> {
         match self.secondary.as_ref()? {
-            Secondary::Inbox { panel, .. } => Some(panel.clone().into_any_element()),
             Secondary::Usage => Some(self.render_usage_panel(cx)),
             Secondary::Accounts => Some(self.render_accounts_panel(cx)),
             Secondary::Archived => Some(self.render_archived_panel(cx)),
+            Secondary::Git(section) => self.render_git_panel_section(*section, cx),
         }
+    }
+
+    /// One of the Source Control footer's lists. The panel is the same shell as the rest; the
+    /// rows and their actions come from the Git panel, which owns the repository.
+    fn render_git_panel_section(&self, section: git_panel::GitSection, cx: &mut Context<Self>) -> Option<AnyElement> {
+        let git = self.git_panel.as_ref()?.0.clone();
+        let body = git.update(cx, |panel, cx| panel.section_body(section, cx));
+        let id = match section {
+            git_panel::GitSection::History => "git-history-panel",
+            git_panel::GitSection::Stashes => "git-stashes-panel",
+            git_panel::GitSection::Remotes => "git-remotes-panel",
+            git_panel::GitSection::Tags => "git-tags-panel",
+        };
+        Some(panel(id, section.title(), None, body.actions, body.filters, list(id, body.rows, body.empty, &self.secondary_scroll, cx), cx))
     }
 
     /// Usage: what each account has left this period, then what the sessions open now have spent.
@@ -179,7 +212,10 @@ impl Workbench {
         let empty = EmptyState::new("Nothing to show")
             .icon(IconName::Activity)
             .message("No account here publishes an allowance, and no session open now has said what it spent.");
-        panel("usage-panel", "Usage", IconName::Activity, None, actions, None, list("usage-list", rows, empty), cx)
+        panel(
+            "usage-panel",
+            "Usage",
+            None, actions, None, list("usage-list", rows, empty, &self.secondary_scroll, cx), cx)
     }
 
     /// Accounts: the Athas account, GitHub, the agents installed here and the providers with a
@@ -291,6 +327,9 @@ impl Workbench {
                 .into_any_element(),
         ];
         let empty = EmptyState::new("No accounts").icon(IconName::UserCircle).message("Sign in, connect GitHub or add an API key.");
-        panel("accounts-panel", "Accounts", IconName::UserCircle, None, actions, None, list("accounts-list", rows, empty), cx)
+        panel(
+            "accounts-panel",
+            "Accounts",
+            None, actions, None, list("accounts-list", rows, empty, &self.secondary_scroll, cx), cx)
     }
 }

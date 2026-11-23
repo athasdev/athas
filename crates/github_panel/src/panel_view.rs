@@ -207,14 +207,12 @@ impl GitHubPanel {
             }
         }
         div()
-            .relative()
             .flex()
             .flex_col()
             .flex_1()
             .min_h_0()
             .overflow_hidden()
-            .child(column)
-            .child(ui::Scrollbar::new("github-list-scrollbar", &self.list_scroll))
+            .child(ui::with_scrollbar(column, ui::Scrollbar::new("github-list-scrollbar", &self.list_scroll)))
     }
 
     /// The rows under the list: releases and deployments, each opening its command surface
@@ -294,7 +292,7 @@ impl GitHubPanel {
     /// the tool's name, so the sidebar's tools all start the same way.
     fn render_title_only(&mut self, cx: &mut Context<Self>) -> impl IntoElement {
         let actions = self.render_header_buttons(cx);
-        div().flex_none().px(px(8.)).pb(px(2.)).child(ui::SectionLabel::new("GitHub").trailing(actions))
+        ui::PanelHeader::new("GitHub").trailing(actions)
     }
 
     fn render_bar(&self, colors: &ThemeColors, cx: &mut Context<Self>) -> impl IntoElement {
@@ -304,7 +302,6 @@ impl GitHubPanel {
         };
         let accent = colors.accent;
         let tooltip = self.repository().map(|repo| format!("{}\n{}", repo.slug.full_name(), repo.root.display())).unwrap_or_default();
-        let buttons = self.render_header_buttons(cx);
         div().flex().flex_none().items_center().gap(px(2.)).h(bar_height()).px(px(8.)).child(
             div()
                 .id("github-repo-button")
@@ -336,7 +333,6 @@ impl GitHubPanel {
                 })),
         )
         .child(div().flex_1())
-        .child(buttons)
     }
 
     fn repo_menu(&self, cx: &Context<Self>) -> Vec<MenuEntry> {
@@ -932,6 +928,9 @@ impl Render for GitHubPanel {
                     .flex_col()
                     .flex_1()
                     .min_h_0()
+                    // The tool's name first, as Files' and Sessions' is; the repository keeps its
+                    // own row under it.
+                    .child(self.render_title_only(cx))
                     .child(self.render_bar(&colors, cx))
                     .child(self.render_toolbar())
                     .child(self.render_accordion(&colors, cx))

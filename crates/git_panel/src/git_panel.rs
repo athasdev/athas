@@ -10,6 +10,7 @@ mod command_surface;
 mod commit_message;
 mod model;
 mod repository;
+mod section_panel;
 mod view;
 
 use std::{
@@ -37,6 +38,7 @@ pub use repository::discover as discover_repository;
 pub use repository::set_discover;
 #[cfg(not(target_family = "wasm"))]
 pub use repository::{RemoteInit, set_remote_init};
+pub use section_panel::SectionBody;
 pub use commit_message::{CommitMessageGenerator, CommitMessageRequest, set_commit_message_generator};
 
 gpui::actions!(git, [StageAll, UnstageAll, CommitChanges, Push, Pull, Fetch, DiscardAll, Refresh]);
@@ -75,7 +77,6 @@ pub(crate) struct GitSettings {
     pub remember_mode: bool,
     pub last_mode: String,
     pub compact_badges: bool,
-    pub collapse_empty: bool,
     /// Views and repository items hidden from the sidebar (`hiddenGitSidebarItems`).
     pub hidden_items: Vec<String>,
 }
@@ -95,7 +96,6 @@ impl GitSettings {
             remember_mode: settings.remember_last_git_panel_mode,
             last_mode: settings.git_last_panel_mode.clone(),
             compact_badges: settings.compact_git_status_badges,
-            collapse_empty: settings.collapse_empty_git_sections,
             hidden_items: settings.hidden_git_sidebar_items.clone(),
         }
     }
@@ -126,6 +126,8 @@ pub enum GitCommand {
 pub enum GitPanelEvent {
     /// Open the file at this path in the centre.
     OpenFile(PathBuf),
+    /// Show this list in the secondary column, or close the column when it is `None`.
+    OpenSection(Option<GitSection>),
 }
 
 enum RepoState {
@@ -143,11 +145,56 @@ enum Reload {
     Full,
 }
 
-/// The groups of the Source Control sidebar that fold.
+/// The lists the Source Control sidebar's footer opens in the secondary column: History, then
+/// the three that used to open a command surface. Changes is not among them -- it is the panel
+/// itself, always open, so it needs no row to unfold it.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
-enum Tab {
-    Changes,
+pub enum GitSection {
     History,
+    Stashes,
+    Remotes,
+    Tags,
+}
+
+impl GitSection {
+    /// The footer row that opens it, so the row reads as pressed while it is open.
+    pub fn row_id(self) -> &'static str {
+        match self {
+            GitSection::History => "git-history",
+            GitSection::Stashes => "git-stashes",
+            GitSection::Remotes => "git-remotes",
+            GitSection::Tags => "git-tags",
+        }
+    }
+
+    /// The name under `hiddenGitSidebarItems`, and the one a snapshot asks for.
+    pub fn key(self) -> &'static str {
+        match self {
+            GitSection::History => "history",
+            GitSection::Stashes => "stashes",
+            GitSection::Remotes => "remotes",
+            GitSection::Tags => "tags",
+        }
+    }
+
+    pub fn title(self) -> &'static str {
+        match self {
+            GitSection::History => "History",
+            GitSection::Stashes => "Stashes",
+            GitSection::Remotes => "Remotes",
+            GitSection::Tags => "Tags",
+        }
+    }
+
+    pub fn from_key(key: &str) -> Option<Self> {
+        Some(match key {
+            "history" => GitSection::History,
+            "stashes" => GitSection::Stashes,
+            "remotes" => GitSection::Remotes,
+            "tags" => GitSection::Tags,
+            _ => return None,
+        })
+    }
 }
 
 /// What the two-field form at the top of the Worktrees, Remotes and Tags tabs creates.
@@ -176,69 +223,6 @@ enum Section {
     Staged,
     Changes,
     History,
-}
-
-/// Which sections are open (`athas:git-stream-sections`): kept between runs, Stashes closed at
-/// first.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
-#[serde(default)]
-struct Sections {
-    staged: bool,
-    changes: bool,
-    stashes: bool,
-    history: bool,
-}
-
-impl Default for Sections {
-    fn default() -> Self {
-        Self { staged: true, changes: true, stashes: false, history: true }
-    }
-}
-
-/// Where the open sections are kept, as the original's `localStorage` key.
-#[cfg(not(any(test, target_family = "wasm")))]
-fn sections_path() -> Option<PathBuf> {
-    dirs::data_dir().map(|dir| dir.join(paths::APP_ID).join("git-stream-sections.json"))
-}
-
-#[cfg(any(test, target_family = "wasm"))]
-fn sections_path() -> Option<PathBuf> {
-    None
-}
-
-impl Sections {
-    fn load() -> Self {
-        sections_path()
-            .and_then(|path| std::fs::read_to_string(path).ok())
-            .and_then(|text| serde_json::from_str(&text).ok())
-            .unwrap_or_default()
-    }
-
-    fn save(&self) {
-        let Some(path) = sections_path() else { return };
-        if let Some(parent) = path.parent() {
-            let _ = std::fs::create_dir_all(parent);
-        }
-        if let Ok(text) = serde_json::to_string(self) {
-            let _ = std::fs::write(path, text);
-        }
-    }
-
-    fn get(&self, section: Section) -> bool {
-        match section {
-            Section::Staged => self.staged,
-            Section::Changes => self.changes,
-            Section::History => self.history,
-        }
-    }
-
-    fn set(&mut self, section: Section, open: bool) {
-        match section {
-            Section::Staged => self.staged = open,
-            Section::Changes => self.changes = open,
-            Section::History => self.history = open,
-        }
-    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -368,10 +352,15 @@ pub struct GitPanel {
     open_commit_totals: Option<CommitTotals>,
     reloading: bool,
     queued_reload: Option<Reload>,
-    /// The category open in the secondary sidebar.
-    /// The groups unfolded in the sidebar.
-    expanded: HashSet<Tab>,
-    sections: Sections,
+    /// Which of the footer's lists is open in the secondary column, for its row to read as
+    /// pressed. The column itself is the workbench's; this follows it.
+    open_section: Option<GitSection>,
+    /// Whether the filter field over Changes is showing. It lives behind a button: the field was
+    /// a row of its own under a heading that is always open now, and a filter you are not using
+    /// should not cost a row.
+    filter_open: bool,
+    /// The same, for the History panel's search field in the secondary column.
+    history_filter_open: bool,
     /// Folder captions closed in the folder view of Changes and Staged (`staged:dir`, `changes:dir`).
     pub(crate) collapsed_folders: HashSet<String>,
     /// Whether the open commit's tab has been in front since it was opened, so leaving it collapses
@@ -520,8 +509,9 @@ impl GitPanel {
             open_commit_totals: None,
             reloading: false,
             queued_reload: None,
-            expanded: HashSet::from([Tab::Changes, Tab::History]),
-            sections: Sections::load(),
+            open_section: None,
+            filter_open: false,
+            history_filter_open: false,
             collapsed_folders: HashSet::new(),
             commit_shown: false,
             changes_scroll: gpui::ScrollHandle::new(),
@@ -614,7 +604,6 @@ impl GitPanel {
                 self.set_staged(files, false, cx);
             }
             GitCommand::Commit => {
-                self.expanded.insert(Tab::Changes);
                 if self.can_commit(cx) {
                     self.commit(false, false, cx);
                 } else {
@@ -650,14 +639,10 @@ impl GitPanel {
         &self.root
     }
 
-    /// Unfolds a group by name (`changes`, `history`), for headless snapshots. Other names are ignored.
+    /// Opens one of the footer's lists by name, for headless snapshots. Other names are ignored.
     pub fn open_tab(&mut self, name: &str, cx: &mut Context<Self>) {
-        match name {
-            "changes" => self.expanded.insert(Tab::Changes),
-            "history" => self.expanded.insert(Tab::History),
-            _ => return,
-        };
-        cx.notify();
+        let Some(section) = GitSection::from_key(name) else { return };
+        self.open_section(Some(section), cx);
     }
 
     /// The tool's buttons at the end of the sidebar's top row.
@@ -1363,7 +1348,6 @@ impl GitPanel {
 
     /// Shows another repository of the workspace (`selectRepository`).
     pub(crate) fn switch_repository(&mut self, path: PathBuf, cx: &mut Context<Self>) {
-        self.expanded.insert(Tab::Changes);
         self.discover(path, cx);
     }
 
@@ -1928,20 +1912,14 @@ impl GitPanel {
         !self.root.as_os_str().is_empty()
     }
 
+
     /// The repository is checked out in a linked worktree, not its main one (`isLinkedWorktree`).
     pub(crate) fn is_linked_worktree(&self) -> bool {
         self.worktrees.iter().position(|worktree| worktree.is_current).is_some_and(|index| index > 0)
     }
 
-    fn copy(&self, text: String, cx: &mut Context<Self>) {
+    pub(crate) fn copy(&self, text: String, cx: &mut Context<Self>) {
         cx.write_to_clipboard(ClipboardItem::new_string(text));
-    }
-
-    fn toggle_section(&mut self, section: Section, cx: &mut Context<Self>) {
-        let open = !self.sections.get(section);
-        self.sections.set(section, open);
-        self.sections.save();
-        cx.notify();
     }
 
     /// Opens or closes a folder caption in the folder view.
@@ -1952,10 +1930,57 @@ impl GitPanel {
         cx.notify();
     }
 
-    /// A group's row in the sidebar: folds or unfolds it.
-    fn toggle_tab(&mut self, tab: Tab, cx: &mut Context<Self>) {
-        if !self.expanded.remove(&tab) {
-            self.expanded.insert(tab);
+    /// A footer row: opens its list in the secondary column, or closes the column when it is the
+    /// one already open.
+    pub(crate) fn toggle_git_section(&mut self, section: GitSection, cx: &mut Context<Self>) {
+        let next = (self.open_section != Some(section)).then_some(section);
+        self.open_section(next, cx);
+    }
+
+    /// Follows the secondary column: the workbench calls this when the column closes or shows
+    /// something else, so a footer row never reads as pressed over a column that moved on.
+    pub fn open_section(&mut self, section: Option<GitSection>, cx: &mut Context<Self>) {
+        if self.open_section == section {
+            return;
+        }
+        self.open_section = section;
+        cx.emit(GitPanelEvent::OpenSection(section));
+        cx.notify();
+    }
+
+    /// Whether the History panel's search field is showing.
+    pub(crate) fn history_filter_is_open(&self, cx: &gpui::App) -> bool {
+        self.history_filter_open || !self.history_filter_input.read(cx).text().trim().is_empty()
+    }
+
+    /// The History panel's search button, the twin of the Changes filter.
+    pub(crate) fn toggle_history_filter(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        self.history_filter_open = !self.history_filter_is_open(cx);
+        match self.history_filter_open {
+            true => {
+                let focus = self.history_filter_input.focus_handle(cx);
+                window.focus(&focus, cx);
+            }
+            false => self.history_filter_input.update(cx, |input, cx| input.set_text(String::new(), cx)),
+        }
+        cx.notify();
+    }
+
+    /// Whether the filter field over Changes is showing. A filter still in force keeps it open
+    /// whatever the button says, so a narrowed list never looks like the whole list.
+    pub(crate) fn filter_is_open(&self, cx: &gpui::App) -> bool {
+        self.filter_open || !self.filter_input.read(cx).text().trim().is_empty()
+    }
+
+    /// The filter button: shows the field and puts the caret in it, or hides it and clears it.
+    pub(crate) fn toggle_filter(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        self.filter_open = !self.filter_is_open(cx);
+        match self.filter_open {
+            true => {
+                let focus = self.filter_input.focus_handle(cx);
+                window.focus(&focus, cx);
+            }
+            false => self.filter_input.update(cx, |input, cx| input.set_text(String::new(), cx)),
         }
         cx.notify();
     }
@@ -2166,7 +2191,23 @@ impl GitPanel {
                 .icon(ui::IconName::ArrowCounterClockwise)
                 .disabled(busy)
                 .into(),
+            MenuEntry::Separator,
+            // The three that used to be rows under the file list. They open beside the sidebar,
+            // as History does.
+            self.section_item(GitSection::Remotes, ui::IconName::Globe, cx),
+            self.section_item(GitSection::Tags, ui::IconName::Tag, cx),
+            self.section_item(GitSection::Stashes, ui::IconName::Stack, cx),
         ]
+    }
+
+    /// A menu entry that opens one of the footer's lists in the secondary column.
+    fn section_item(&self, section: GitSection, icon: ui::IconName, cx: &Context<Self>) -> MenuEntry {
+        self.item(section.title(), cx, move |this, _, cx| {
+            this.open_menu = None;
+            this.open_section(Some(section), cx);
+        })
+        .icon(icon)
+        .into()
     }
 
     fn commit_menu(&self, cx: &Context<Self>) -> Vec<MenuEntry> {
@@ -2192,14 +2233,8 @@ impl GitPanel {
             }).icon(icon).checked(visible).keep_open().into()
         };
         MenuItem::new("Visibility").icon(ui::IconName::Eye).submenu(vec![
-            MenuEntry::Label("Views".into()),
             item("changes", "Changes", ui::IconName::GitDiff),
             item("history", "History", ui::IconName::History),
-            MenuEntry::Separator,
-            MenuEntry::Label("Repository".into()),
-            item("remotes", "Remotes", ui::IconName::Nodes),
-            item("tags", "Tags", ui::IconName::Tag),
-            item("stashes", "Stashes", ui::IconName::Archive),
         ])
     }
 
@@ -2251,27 +2286,9 @@ impl GitPanel {
                 .disabled(busy)
                 .into(),
             MenuEntry::Separator,
-            self.item("Remotes…", cx, |this, _, cx| {
-                this.open_menu = None;
-                let list = this.remotes_surface(cx);
-                palette::show_command_list(cx, list)
-            })
-            .icon(ui::IconName::HardDrives)
-            .into(),
-            self.item("Tags…", cx, |this, _, cx| {
-                this.open_menu = None;
-                let list = this.tags_surface(cx);
-                palette::show_command_list(cx, list)
-            })
-            .icon(ui::IconName::Tag)
-            .into(),
-            self.item("Stashes…", cx, |this, _, cx| {
-                this.open_menu = None;
-                let list = this.stashes_surface(cx);
-                palette::show_command_list(cx, list)
-            })
-            .icon(ui::IconName::Archive)
-            .into(),
+            self.section_item(GitSection::Remotes, ui::IconName::HardDrives, cx),
+            self.section_item(GitSection::Tags, ui::IconName::Tag, cx),
+            self.section_item(GitSection::Stashes, ui::IconName::Archive, cx),
             MenuEntry::Separator,
             self.visibility_menu(cx).into(),
             refresh.into(),
@@ -2325,16 +2342,6 @@ mod tests {
     fn git_errors_lose_their_prefixes() {
         assert_eq!(super::clean_git_error("Git push failed: fatal: the remote end hung up"), "The remote end hung up");
         assert_eq!(super::clean_git_error("error: pathspec 'x' did not match"), "Pathspec 'x' did not match");
-    }
-
-    #[test]
-    fn open_sections_read_like_the_original() {
-        use super::Sections;
-        assert_eq!(Sections::default(), Sections { staged: true, changes: true, stashes: false, history: true });
-        let saved: Sections = serde_json::from_str(r#"{"history":false}"#).unwrap();
-        assert_eq!(saved, Sections { history: false, ..Sections::default() });
-        let round_trip: Sections = serde_json::from_str(&serde_json::to_string(&saved).unwrap()).unwrap();
-        assert_eq!(round_trip, saved);
     }
 
     use gpui::TestAppContext;

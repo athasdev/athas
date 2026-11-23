@@ -2,7 +2,7 @@
 
 use std::collections::HashMap;
 
-use crate::repository::{DiffStat, FileStatus, RemoteOp, StatusEntry};
+use crate::repository::{DiffStat, FileStatus, StatusEntry};
 
 /// A changed file as a row shows it.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -121,16 +121,6 @@ pub fn filter_files<'a>(files: &'a [ChangeFile], query: &str) -> Vec<&'a ChangeF
     files.iter().filter(|file| matches_query(query, [file.path.as_str()])).collect()
 }
 
-/// The letter a row shows for its change, and what it means.
-pub fn status_letter(status: FileStatus) -> (&'static str, &'static str) {
-    match status {
-        FileStatus::Modified => ("M", "Modified"),
-        FileStatus::Added => ("A", "Added"),
-        FileStatus::Deleted => ("D", "Deleted"),
-        FileStatus::Untracked => ("U", "Untracked"),
-        FileStatus::Renamed => ("R", "Renamed"),
-    }
-}
 
 /// Discard turns a file back into its committed version, so untracked files have nothing to go
 /// back to, and staged rows are unstaged first.
@@ -138,16 +128,6 @@ pub fn can_discard(file: &ChangeFile) -> bool {
     !file.staged && file.status != FileStatus::Untracked
 }
 
-/// The one-click remote action: pull when behind, push when ahead, otherwise fetch.
-pub fn suggested_remote(ahead: usize, behind: usize) -> RemoteOp {
-    if behind > 0 {
-        RemoteOp::Pull
-    } else if ahead > 0 {
-        RemoteOp::Push
-    } else {
-        RemoteOp::Fetch
-    }
-}
 
 pub fn plural(count: usize, word: &str) -> String {
     format!("{count} {word}{}", if count == 1 { "" } else { "s" })
@@ -451,15 +431,6 @@ mod tests {
     }
 
     #[test]
-    fn maps_status_letters() {
-        assert_eq!(status_letter(FileStatus::Modified).0, "M");
-        assert_eq!(status_letter(FileStatus::Added).0, "A");
-        assert_eq!(status_letter(FileStatus::Deleted).0, "D");
-        assert_eq!(status_letter(FileStatus::Untracked), ("U", "Untracked"));
-        assert_eq!(status_letter(FileStatus::Renamed).0, "R");
-    }
-
-    #[test]
     fn only_tracked_unstaged_changes_discard() {
         let files = change_files(
             &[
@@ -482,13 +453,6 @@ mod tests {
         assert_eq!(filter_files(&files, "GIT panel")[0].path, "src/git_panel.rs");
         assert_eq!(filter_files(&files, "gitpanel").len(), 1);
         assert!(filter_files(&files, "missing").is_empty());
-    }
-
-    #[test]
-    fn suggests_the_remote_action() {
-        assert_eq!(suggested_remote(0, 0), RemoteOp::Fetch);
-        assert_eq!(suggested_remote(2, 0), RemoteOp::Push);
-        assert_eq!(suggested_remote(2, 1), RemoteOp::Pull);
     }
 
     #[test]

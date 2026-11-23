@@ -110,7 +110,7 @@ impl ProviderKeyDialog {
     pub fn with_secrets(provider: Option<&str>, secrets: Arc<dyn SecretStore>, window: &mut Window, cx: &mut Context<Self>) -> Self {
         let providers = providers();
         let selected = provider.and_then(|id| providers.iter().find(|candidate| candidate.id == id)).or(providers.first()).map(|provider| provider.id);
-        let search = cx.new(|cx| TextInput::new(window, cx).placeholder("Search API key providers…").leading_icon(IconName::Search));
+        let search = cx.new(|cx| TextInput::new(window, cx).placeholder("Search API key providers").leading_icon(IconName::Search));
         let key = cx.new(|cx| TextInput::new(window, cx).masked().placeholder(selected.map_or("API key", placeholder)));
         let subscriptions = vec![
             cx.subscribe(&search, |this, _, event: &TextInputEvent, cx| match event {

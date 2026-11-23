@@ -4,12 +4,11 @@
 use std::{ops::Range, path::PathBuf, sync::atomic::Ordering, time::Duration};
 
 use alacritty_terminal::{
-    event::{Event as AlacEvent, WindowSize},
+    event::Event as AlacEvent,
     grid::Dimensions,
     index::{Column, Line, Point as AlacPoint, Side},
     selection::SelectionType,
     term::TermMode,
-    vte::ansi::{Color, NamedColor},
 };
 use futures::{StreamExt as _, channel::mpsc::UnboundedReceiver};
 use ui::scale::px;
@@ -18,11 +17,11 @@ use gpui::{
     IntoElement, KeyDownEvent, MouseDownEvent, MouseMoveEvent, MouseUpEvent, Pixels, Point, Render, ScrollEvent,
     Subscription, Task, TouchPhase, UTF16Selection, WeakEntity, Window, anchored, deferred, div, prelude::*,
 };
-use theme::ActiveTheme;
+use theme::{ActiveTheme, GlobalTheme};
 use ui::{IconName, MenuEntry, MenuItem, OpenMenu, typography};
 
 use crate::{
-    colors::{Palette, hsla_to_rgb},
+    colors::Palette,
     element::TerminalElement,
     find::FindState,
     keys::to_esc_str,
@@ -140,6 +139,12 @@ impl TerminalView {
             subscriptions.push(cx.observe_global::<settings::SettingsStore>(|this, cx| {
                 this.terminal.set_options(TermOptions::from_settings(settings::get(cx)));
                 cx.notify();
+            }));
+        }
+        if cx.has_global::<GlobalTheme>() {
+            terminal.set_palette(Palette::from_theme(cx.theme()));
+            subscriptions.push(cx.observe_global::<GlobalTheme>(|this, cx| {
+                this.terminal.set_palette(Palette::from_theme(cx.theme()));
             }));
         }
 
@@ -281,30 +286,8 @@ impl TerminalView {
                 let text = cx.read_from_clipboard().and_then(|item| item.text()).unwrap_or_default();
                 self.terminal.write(format(&text));
             }
-            AlacEvent::ColorRequest(index, format) => {
-                let palette = Palette::from_theme(cx.theme());
-                let color = {
-                    let term = self.terminal.term.lock();
-                    let overrides = term.colors();
-                    match index {
-                        0..=255 => palette.resolve(Color::Indexed(index as u8), overrides),
-                        256 => palette.resolve(Color::Named(NamedColor::Foreground), overrides),
-                        257 => palette.resolve(Color::Named(NamedColor::Background), overrides),
-                        _ => palette.resolve(Color::Named(NamedColor::Cursor), overrides),
-                    }
-                };
-                self.terminal.write(format(hsla_to_rgb(color)));
-            }
-            AlacEvent::TextAreaSizeRequest(format) => {
-                if let Some(layout) = self.layout {
-                    self.terminal.write(format(WindowSize {
-                        num_lines: layout.lines as u16,
-                        num_cols: layout.columns as u16,
-                        cell_width: f32::from(layout.cell_width) as u16,
-                        cell_height: f32::from(layout.line_height) as u16,
-                    }));
-                }
-            }
+            // Colour and text area queries are answered where the output is read; they never
+            // reach the view.
             _ => {}
         }
     }

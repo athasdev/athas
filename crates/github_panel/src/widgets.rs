@@ -239,7 +239,7 @@ impl Render for Preview {
                     div()
                         .flex()
                         .items_start()
-                        .gap(px(10.))
+                        .gap(px(12.))
                         .px(px(12.))
                         .pt(px(12.))
                         .child(div().mt(px(2.)).flex_none().child(leading))
@@ -420,7 +420,7 @@ pub fn section(title: impl Into<SharedString>, action: Option<AnyElement>, body:
     div()
         .flex()
         .flex_col()
-        .gap(px(10.))
+        .gap(px(12.))
         .min_w_0()
         .child(
             div()

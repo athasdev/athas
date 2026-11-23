@@ -283,7 +283,7 @@ impl AccountMenu {
                     div()
                         .flex()
                         .items_center()
-                        .gap(px(10.))
+                        .gap(px(12.))
                         .child(Avatar::new(&name).size(px(32.)).image(avatar))
                         .child(
                             div()

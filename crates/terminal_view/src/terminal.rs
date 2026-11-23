@@ -4,7 +4,7 @@
 use std::{
     path::PathBuf,
     sync::{
-        Arc,
+        Arc, Mutex,
         atomic::{AtomicBool, Ordering},
         mpsc,
     },
@@ -13,7 +13,7 @@ use std::{
 
 use alacritty_terminal::{
     Term,
-    event::{Event as AlacEvent, EventListener},
+    event::{Event as AlacEvent, EventListener, WindowSize},
     grid::{Dimensions, Scroll},
     index::{Column, Direction, Line, Point as AlacPoint, Side},
     selection::{Selection, SelectionType},
@@ -25,13 +25,14 @@ use alacritty_terminal::{
     },
     vte::{
         self,
-        ansi::{ClearMode, CursorShape, CursorStyle, Handler, Processor, StdSyncHandler},
+        ansi::{ClearMode, Color, CursorShape, CursorStyle, Handler, NamedColor, Processor, Rgb, StdSyncHandler},
     },
 };
 use anyhow::Result;
 use futures::channel::mpsc::{UnboundedReceiver, UnboundedSender, unbounded};
 
 use crate::{
+    colors::{Palette, hsla_to_rgb},
     keys::paste_bytes,
     pty::{self, Pty, PtyIo, PtySize},
     shell::ShellCommand,
@@ -170,19 +171,103 @@ impl Dimensions for GridSize {
     }
 }
 
+/// Something a program asked for and is waiting on: the cursor position or the device
+/// attributes (`PtyWrite`, already written out by the emulator), a palette colour, or the size of
+/// the text area.
+enum Answer {
+    Bytes(Vec<u8>),
+    Color(usize, Arc<dyn Fn(Rgb) -> String + Sync + Send>),
+    TextAreaSize(Arc<dyn Fn(WindowSize) -> String + Sync + Send>),
+}
+
+/// The queries a chunk of output asked, and what they are answered with.
+///
+/// Answers go back on the thread that read the output, as soon as the emulator lets go of the
+/// grid, and in the order they were asked. Both matter: a program that asks for a colour reads
+/// the answer with a timeout of a few milliseconds, which a round trip through the UI thread
+/// misses, and one that asks for a colour and then for its device attributes takes the
+/// attributes coming back first as "no colour is coming". Either way the answer arrives after
+/// the program has given up, and the shell it returns to shows `rgb:dbdb/d7d7/caca` on its
+/// prompt as if the user had typed it.
+pub(crate) struct Queries {
+    pending: Mutex<Vec<Answer>>,
+    state: Mutex<QueryState>,
+}
+
+/// What a query is answered with: the theme's colours (the view keeps them current) and the size
+/// the PTY was last given.
+struct QueryState {
+    palette: Palette,
+    size: PtySize,
+}
+
+impl Queries {
+    fn new(palette: Palette, size: PtySize) -> Self {
+        Self { pending: Mutex::new(Vec::new()), state: Mutex::new(QueryState { palette, size }) }
+    }
+
+    pub fn set_palette(&self, palette: Palette) {
+        self.state.lock().unwrap().palette = palette;
+    }
+
+    fn set_size(&self, size: PtySize) {
+        self.state.lock().unwrap().size = size;
+    }
+
+    fn push(&self, answer: Answer) {
+        self.pending.lock().unwrap().push(answer);
+    }
+
+    /// Writes out what the output just parsed asked for. Called with the grid locked, so the
+    /// colours a program set itself (OSC 4/10/11) are the ones it gets back.
+    fn answer(&self, term: &Term<Listener>, input: &mpsc::Sender<Vec<u8>>) {
+        let pending = std::mem::take(&mut *self.pending.lock().unwrap());
+        if pending.is_empty() {
+            return;
+        }
+        let state = self.state.lock().unwrap();
+        for answer in pending {
+            let bytes = match answer {
+                Answer::Bytes(bytes) => bytes,
+                Answer::Color(index, format) => {
+                    let overrides = term.colors();
+                    let color = match index {
+                        0..=255 => state.palette.resolve(Color::Indexed(index as u8), overrides),
+                        256 => state.palette.resolve(Color::Named(NamedColor::Foreground), overrides),
+                        257 => state.palette.resolve(Color::Named(NamedColor::Background), overrides),
+                        _ => state.palette.resolve(Color::Named(NamedColor::Cursor), overrides),
+                    };
+                    format(hsla_to_rgb(color)).into_bytes()
+                }
+                Answer::TextAreaSize(format) => {
+                    let size = state.size;
+                    format(WindowSize {
+                        num_lines: size.rows,
+                        num_cols: size.cols,
+                        cell_width: size.cell_width,
+                        cell_height: size.cell_height,
+                    })
+                    .into_bytes()
+                }
+            };
+            input.send(bytes).ok();
+        }
+    }
+}
+
 #[derive(Clone)]
 pub(crate) struct Listener {
     events: UnboundedSender<TerminalEvent>,
-    input: mpsc::Sender<Vec<u8>>,
+    queries: Arc<Queries>,
 }
 
 impl EventListener for Listener {
     fn send_event(&self, event: AlacEvent) {
         match event {
-            // Answers to queries (cursor position, device attributes) go straight back.
-            AlacEvent::PtyWrite(text) => {
-                self.input.send(text.into_bytes()).ok();
-            }
+            // Queries are answered where the output was read, in the order they were asked.
+            AlacEvent::PtyWrite(text) => self.queries.push(Answer::Bytes(text.into_bytes())),
+            AlacEvent::ColorRequest(index, format) => self.queries.push(Answer::Color(index, format)),
+            AlacEvent::TextAreaSizeRequest(format) => self.queries.push(Answer::TextAreaSize(format)),
             AlacEvent::Wakeup | AlacEvent::MouseCursorDirty | AlacEvent::CursorBlinkingChange => {}
             event => {
                 self.events.unbounded_send(TerminalEvent::Alacritty(event)).ok();
@@ -199,6 +284,8 @@ pub(crate) struct Terminal {
     input: mpsc::Sender<Vec<u8>>,
     /// Set by the reader thread when it asks for a redraw, cleared once the view has it.
     pub wakeup_pending: Arc<AtomicBool>,
+    /// What the emulator answers a program's queries with.
+    queries: Arc<Queries>,
     size: PtySize,
     shell_name: String,
     /// The title the program set (OSC 0/2).
@@ -267,8 +354,12 @@ impl CommandMarks {
 }
 
 impl Terminal {
-    pub fn spawn_command(command: &ShellCommand, options: TermOptions) -> Result<(Self, UnboundedReceiver<TerminalEvent>)> {
-        Self::spawn_configured(command.name(), command.cwd.clone(), options, |size, io| pty::spawn(command, size, io))
+    pub fn spawn_command(
+        command: &ShellCommand,
+        options: TermOptions,
+        palette: Palette,
+    ) -> Result<(Self, UnboundedReceiver<TerminalEvent>)> {
+        Self::spawn_configured(command.name(), command.cwd.clone(), options, palette, |size, io| pty::spawn(command, size, io))
     }
 
     /// A terminal on the process `spawn` starts, such as a shell on a remote server.
@@ -276,6 +367,7 @@ impl Terminal {
         shell_name: String,
         cwd: PathBuf,
         options: TermOptions,
+        palette: Palette,
         spawn: impl FnOnce(PtySize, PtyIo) -> Result<Box<dyn Pty>>,
     ) -> Result<(Self, UnboundedReceiver<TerminalEvent>)> {
         let (events_tx, events_rx) = unbounded();
@@ -283,14 +375,21 @@ impl Terminal {
         let size = PtySize { rows: 24, cols: 80, cell_width: 8, cell_height: 16 };
 
         let config = options.config();
-        let listener = Listener { events: events_tx.clone(), input: input_tx.clone() };
+        let queries = Arc::new(Queries::new(palette, size));
+        let listener = Listener { events: events_tx.clone(), queries: queries.clone() };
         let grid = GridSize { columns: size.cols as usize, lines: size.rows as usize };
         let term = Arc::new(FairMutex::new(Term::new(config, &grid, listener)));
         let wakeup_pending = Arc::new(AtomicBool::new(false));
 
         let io = PtyIo {
             input: input_rx,
-            output: Box::new(output_processor(term.clone(), events_tx.clone(), wakeup_pending.clone())),
+            output: Box::new(output_processor(
+                term.clone(),
+                events_tx.clone(),
+                wakeup_pending.clone(),
+                queries.clone(),
+                input_tx.clone(),
+            )),
             exited: Box::new(move |status| {
                 events_tx.unbounded_send(TerminalEvent::Exited(status)).ok();
             }),
@@ -302,6 +401,7 @@ impl Terminal {
             pty,
             input: input_tx,
             wakeup_pending,
+            queries,
             size,
             shell_name,
             title: None,
@@ -329,7 +429,9 @@ impl Terminal {
     /// Typed input: scrolls back to the prompt, as every terminal does.
     /// Shows `bytes` as if the process had printed them.
     pub(crate) fn write_output(&self, bytes: &[u8]) {
-        Processor::<StdSyncHandler>::new().advance(&mut *self.term.lock(), bytes);
+        let mut term = self.term.lock();
+        Processor::<StdSyncHandler>::new().advance(&mut *term, bytes);
+        self.queries.answer(&term, &self.input);
     }
 
     pub fn input(&self, bytes: impl Into<Vec<u8>>) {
@@ -351,6 +453,7 @@ impl Terminal {
             return;
         }
         self.size = size;
+        self.queries.set_size(size);
         self.term.lock().resize(GridSize { columns: size.cols as usize, lines: size.rows as usize });
         self.pty.resize(size);
     }
@@ -361,6 +464,12 @@ impl Terminal {
 
     pub fn set_options(&self, options: TermOptions) {
         self.term.lock().set_options(options.config());
+    }
+
+    /// The colours a program's palette query is answered with; the view sets them again whenever
+    /// the theme changes.
+    pub(crate) fn set_palette(&self, palette: Palette) {
+        self.queries.set_palette(palette);
     }
 
     /// Every match of `query` in the scrollback and screen, oldest first; `None` when the pattern
@@ -608,6 +717,8 @@ fn output_processor(
     term: TermLock,
     events: UnboundedSender<TerminalEvent>,
     wakeup_pending: Arc<AtomicBool>,
+    queries: Arc<Queries>,
+    input: mpsc::Sender<Vec<u8>>,
 ) -> impl FnMut(&[u8]) + Send {
     let mut processor = Processor::<StdSyncHandler>::new();
     let mut parser = vte::Parser::new();
@@ -632,6 +743,9 @@ fn output_processor(
             if processor.sync_timeout().sync_timeout().is_some_and(|deadline| deadline <= Instant::now()) {
                 processor.stop_sync(&mut *term);
             }
+            // Still holding the grid: what these bytes asked for goes back before the program
+            // that asked gives up on it.
+            queries.answer(&term, &input);
         }
         for (mark, line) in found {
             events.unbounded_send(TerminalEvent::Shell(mark, line)).ok();
@@ -783,7 +897,8 @@ mod tests {
     fn exit_status_reaches_the_view() {
         let wait = |code: &str| {
             let command = crate::shell::program_command("/bin/sh".into(), vec!["-c".into(), format!("exit {code}")]);
-            let (_terminal, mut events) = Terminal::spawn_command(&command, TermOptions::default()).unwrap();
+            let (_terminal, mut events) =
+                Terminal::spawn_command(&command, TermOptions::default(), crate::colors::test_palette()).unwrap();
             let deadline = std::time::Instant::now() + std::time::Duration::from_secs(10);
             loop {
                 match events.try_recv() {
@@ -801,6 +916,31 @@ mod tests {
         assert!(wait("0").is_clean());
         let signalled = crate::pty::ExitStatus { code: None, signal: Some("SIGKILL".into()) };
         assert_eq!(signalled.describe(), "Terminal process exited unexpectedly (signal SIGKILL).");
+    }
+
+    /// A program asks for the background colour and then for the device attributes, the way a
+    /// program checks whether an answer is coming at all. Both answers go back, in that order:
+    /// the attributes arriving first reads as "no colour is coming", and the colour then lands on
+    /// the shell's prompt as typed input.
+    #[test]
+    fn colour_queries_are_answered_in_order() {
+        let (events_tx, _events) = unbounded();
+        let (input_tx, input_rx) = mpsc::channel();
+        let size = PtySize { rows: 24, cols: 80, cell_width: 7, cell_height: 15 };
+        let queries = Arc::new(Queries::new(crate::colors::test_palette(), size));
+        let grid = GridSize { columns: size.cols as usize, lines: size.rows as usize };
+        let listener = Listener { events: events_tx, queries: queries.clone() };
+        let mut term = Term::new(Config::default(), &grid, listener);
+
+        Processor::<StdSyncHandler>::new().advance(&mut term, b"\x1b]11;?\x1b\\\x1b[c\x1b[14t");
+        assert!(input_rx.try_recv().is_err(), "nothing goes out while the emulator still has the grid");
+
+        queries.answer(&term, &input_tx);
+        let answer = |bytes: Vec<u8>| String::from_utf8(bytes).unwrap();
+        assert_eq!(answer(input_rx.try_recv().unwrap()), "\x1b]11;rgb:1a1a/1a1a/1a1a\x1b\\");
+        assert_eq!(answer(input_rx.try_recv().unwrap()), "\x1b[?6c");
+        assert_eq!(answer(input_rx.try_recv().unwrap()), "\x1b[4;360;560t");
+        assert!(input_rx.try_recv().is_err());
     }
 
     #[test]

@@ -634,7 +634,7 @@ impl SessionView {
                         ),
                     )
                 })
-                .children(self.auth_error.clone().map(|error| div().text_color(colors.destructive).child(error)))
+                .children(self.auth_error.clone().map(ui::ErrorText::new))
                 .into_any_element(),
         )
     }
@@ -684,18 +684,18 @@ impl SessionView {
         }
         let waiting_command = waiting.and_then(|id| methods.iter().find(|method| method.id == id)).and_then(|method| auth_command_line(program, method));
         let hint = match (&self.auth_error, waiting_command) {
-            (Some(error), _) => div().text_size(typography::text_caption()).text_color(colors.destructive).truncate().child(error.clone()),
-            (None, Some(command)) => div().text_size(typography::text_caption()).font_family(typography::MONO_FONT).text_color(colors.muted_foreground).truncate().child(command),
-            (None, None) => div().text_size(typography::text_caption()).text_color(colors.muted_foreground).truncate().child("Choose how to sign in. The chat continues once you're done."),
+            (Some(error), _) => ui::ErrorText::new(error.clone()).caption().truncate().into_any_element(),
+            (None, Some(command)) => div().text_size(typography::text_caption()).font_family(typography::MONO_FONT).text_color(colors.muted_foreground).truncate().child(command).into_any_element(),
+            (None, None) => div().text_size(typography::text_caption()).text_color(colors.muted_foreground).truncate().child("Choose how to sign in. The chat continues once you're done.").into_any_element(),
         };
         Some(
             div()
                 .flex()
                 .items_center()
-                .gap(px(10.))
+                .gap(px(12.))
                 .px(px(12.))
                 .py(px(8.))
-                .rounded(ui::metrics::island_radius())
+                .rounded(ui::metrics::radius_lg())
                 .border_1()
                 .border_color(colors.border)
                 .bg(colors.raised)
@@ -739,10 +739,10 @@ impl SessionView {
             div()
                 .flex()
                 .items_center()
-                .gap(px(10.))
+                .gap(px(12.))
                 .px(px(12.))
                 .py(px(8.))
-                .rounded(ui::metrics::island_radius())
+                .rounded(ui::metrics::radius_lg())
                 .border_1()
                 .border_color(colors.border)
                 .bg(colors.raised)

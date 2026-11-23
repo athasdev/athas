@@ -24,7 +24,6 @@ collaboration = { path = "../collaboration" }
 agent_ui = { path = "../agent_ui" }
 workbench_api = { path = "../workbench_api" }
 palette = { path = "../palette" }
-extensions_ui = { path = "../extensions_ui" }
 extensions = { path = "../extensions" }
 terminal_view = { path = "../terminal_view" }
 telemetry = { path = "../telemetry" }

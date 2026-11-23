@@ -71,6 +71,12 @@ impl Workbench {
                         .into()
                 })
                 .collect();
+            // What the project in front offers — its dashboard, its folder, its icon — belongs
+            // here, where projects are switched, not under a list of sessions.
+            if let Some(id) = this.state.active_project.clone() {
+                entries.push(ui::MenuEntry::Separator);
+                entries.extend(this.project_menu_entries(&id, cx));
+            }
             if !entries.is_empty() {
                 entries.push(ui::MenuEntry::Separator);
             }

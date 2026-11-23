@@ -422,7 +422,7 @@ impl<D: PickerDelegate> Render for Picker<D> {
             .flex()
             .flex_none()
             .items_center()
-            .gap(px(10.))
+            .gap(px(12.))
             .h(px(28.))
             .px(px(8.))
             .border_t_1()
@@ -465,7 +465,7 @@ impl<D: PickerDelegate> Render for Picker<D> {
             .children(rows);
 
         let viewport = window.viewport_size();
-        div()
+        ui::overlay_surface(cx)
             .id("picker")
             .key_context("Picker")
             .on_action(cx.listener(Self::select_next))
@@ -477,19 +477,18 @@ impl<D: PickerDelegate> Render for Picker<D> {
             .on_action(cx.listener(|this, _: &NextTab, window, cx| this.step_tab(true, window, cx)))
             .on_action(cx.listener(|this, _: &PreviousTab, window, cx| this.step_tab(false, window, cx)))
             .occlude()
-            .flex()
-            .flex_col()
             .w((viewport.width - px(32.)).min(px(620.)))
             .max_h((viewport.height * 0.6).min(px(440.)))
-            .rounded(metrics::overlay_radius())
-            .bg(colors.overlay)
-            .shadow(theme.shadows.dialog.clone())
-            .overflow_hidden()
-            .font_family(typography::ui_font())
-            .text_color(colors.foreground)
             .child(header)
             .children(tab_bar)
-            .child(ui::with_scrollbar(list, ui::Scrollbar::new("picker-scrollbar", &self.scroll).always().priority(3)))
+            .child(
+                ui::faded_scroll(
+                    ui::with_scrollbar(list, ui::Scrollbar::new("picker-scrollbar", &self.scroll).always().priority(3)),
+                    &self.scroll,
+                    colors.overlay,
+                )
+                .flex_1(),
+            )
             .child(footer)
             .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
     }

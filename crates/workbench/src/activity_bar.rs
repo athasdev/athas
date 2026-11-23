@@ -146,6 +146,7 @@ impl Workbench {
                 SidebarView::Git => Button::icon("activity-git", IconName::GitBranch),
                 SidebarView::GitHub => Button::new("activity-github", "").icon_path("icons/github.svg").icon_only(),
                 SidebarView::Settings => Button::icon("activity-settings", IconName::Settings),
+                SidebarView::Notifications => Button::icon("activity-notifications", IconName::Bell),
             };
             button
                 .size(ButtonSize::Medium)
@@ -192,6 +193,19 @@ impl Workbench {
                     .children(update_control)
                     .children(self.render_diagnostics_control(cx))
                     .child(
+                        Button::icon("integrations", IconName::PuzzlePiece)
+                            .size(ButtonSize::Medium)
+                            .variant(ui::ButtonVariant::Chrome)
+                            .filled_when_active()
+                            .active(matches!(
+                                self.state.focused_tabs().and_then(|tabs| tabs.active_item()),
+                                Some(workspace::TabItem::Resource { kind, .. }) if kind == "extensions"
+                            ))
+                            .tooltip("Integrations")
+                            .tooltip_side(ui::TooltipSide::Right)
+                            .on_click(|_, window, cx| window.dispatch_action(Box::new(crate::ShowExtensions), cx)),
+                    )
+                    .child(
                         Button::icon("run-actions", IconName::Play)
                             .size(ButtonSize::Medium)
                             .variant(ui::ButtonVariant::Chrome)
@@ -223,7 +237,7 @@ impl Workbench {
                                     .variant(ui::ButtonVariant::Chrome)
                                     .tooltip("Inbox")
                                     .filled_when_active()
-                                    .active(matches!(self.secondary, Some(crate::secondary::Secondary::Inbox { .. })))
+                                    .active(active_view == Some(SidebarView::Notifications))
                                     .tooltip_side(ui::TooltipSide::Right)
                                     .on_click(|_, window, cx| window.dispatch_action(Box::new(ShowNotifications), cx)),
                             )
@@ -241,7 +255,6 @@ impl Workbench {
                                 )
                             }),
                     )
-                    .child(item(SidebarView::Settings, cx))
                     .child(
                         Button::icon("help", IconName::Question)
                             .size(ButtonSize::Medium)

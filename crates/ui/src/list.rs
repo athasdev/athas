@@ -2,7 +2,7 @@ use std::rc::Rc;
 
 use crate::scale::px;
 use gpui::{
-    AnyElement, App, ClickEvent, ElementId, InteractiveElement, IntoElement, MouseButton,
+    AnyElement, App, ClickEvent, ElementId, Hsla, InteractiveElement, IntoElement, MouseButton,
     MouseDownEvent, ParentElement, RenderOnce, SharedString, StatefulInteractiveElement, Styled,
     Window, div, prelude::FluentBuilder,
 };
@@ -37,6 +37,7 @@ pub struct SidebarListItem {
     /// Dimmed text on the label's line, after it (a branch's upstream, a tag's pre-release).
     detail: Option<SharedString>,
     struck: bool,
+    label_color: Option<Hsla>,
     active: bool,
     emphasized: bool,
     tone: SidebarListItemTone,
@@ -58,6 +59,7 @@ impl SidebarListItem {
             description: None,
             detail: None,
             struck: false,
+            label_color: None,
             active: false,
             emphasized: false,
             tone: SidebarListItemTone::Default,
@@ -112,6 +114,13 @@ impl SidebarListItem {
     }
 
     /// Strikes the label through, for something gone (a branch whose upstream was deleted).
+    /// Colours the label itself. For a row whose state is the point of it -- a changed file,
+    /// where the colour says modified, added or deleted without spending a column on a letter.
+    pub fn label_color(mut self, color: Hsla) -> Self {
+        self.label_color = Some(color);
+        self
+    }
+
     pub fn struck(mut self, struck: bool) -> Self {
         self.struck = struck;
         self
@@ -235,6 +244,7 @@ impl RenderOnce for SidebarListItem {
                                     .when(self.description.is_some(), |this| {
                                         this.text_color(colors.foreground).font_weight(typography::MEDIUM)
                                     })
+                                    .when_some(self.label_color, |this, color| this.text_color(color))
                                     .when(self.struck, |this| this.line_through().text_color(colors.subtle_foreground))
                                     .child(self.label),
                             )

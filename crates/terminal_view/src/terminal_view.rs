@@ -47,6 +47,7 @@ pub use crate::{
     session::TerminalSessions,
 };
 use crate::{
+    colors::Palette,
     layout::{Layouts, MIN_PANE_SIZE, PaneNode, Placement, SplitAxis, flatten},
     profiles::{ResolvedLaunch, SYSTEM_DEFAULT_PROFILE_ID},
     session::{PersistedPane, PersistedSession, PersistedTerminal},
@@ -853,12 +854,15 @@ impl TerminalPanel {
         let settings = terminal_settings(cx);
         let options = TermOptions::from_settings(settings);
         let integration = settings.terminal_shell_integration;
+        // The colours a program's palette query is answered with, on the thread that reads its
+        // output; the view keeps them current from there on.
+        let palette = Palette::from_theme(cx.theme());
         let cwd = launch.cwd.clone().or_else(|| self.cwd.clone());
         let start = cwd.as_deref().zip(self.starter.as_ref()).and_then(|(cwd, starter)| starter(cwd));
         match start {
             Some(TerminalStart::Pty { name, spawn }) => {
                 let folder = cwd.unwrap_or_default();
-                let task = cx.background_spawn(async move { Terminal::spawn_configured(name, folder, options, spawn) });
+                let task = cx.background_spawn(async move { Terminal::spawn_configured(name, folder, options, palette, spawn) });
                 self.starting += 1;
                 cx.notify();
                 cx.spawn_in(window, async move |this, cx| {
@@ -874,7 +878,7 @@ impl TerminalPanel {
             }
             Some(TerminalStart::Program { program, args }) => {
                 let command = shell::program_command(program, args);
-                let spawned = Terminal::spawn_command(&command, options);
+                let spawned = Terminal::spawn_command(&command, options, palette.clone());
                 self.add_terminal(spawned, launch, split, window, cx)
             }
             None => {
@@ -886,7 +890,7 @@ impl TerminalPanel {
                 for (key, value) in &launch.env {
                     command.set_env(key, value.clone());
                 }
-                let spawned = Terminal::spawn_command(&command, options);
+                let spawned = Terminal::spawn_command(&command, options, palette);
                 self.add_terminal(spawned, launch, split, window, cx)
             }
         }

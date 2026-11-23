@@ -337,18 +337,21 @@ mod tests {
 
     #[test]
     fn tooltip_sits_centred_four_pixels_above() {
+        let _held = crate::scale::TEST_LOCK.lock().unwrap_or_else(|held| held.into_inner());
         let origin = tooltip_origin(bounds(100., 100., 28., 28.), size(px(60.), px(24.)), size(px(1400.), px(900.)), TooltipSide::Top);
         assert_eq!(origin, point(px(84.), px(72.)));
     }
 
     #[test]
     fn tooltip_flips_below_at_the_top_edge_and_shifts_inside() {
+        let _held = crate::scale::TEST_LOCK.lock().unwrap_or_else(|held| held.into_inner());
         let origin = tooltip_origin(bounds(2., 4., 28., 28.), size(px(60.), px(24.)), size(px(1400.), px(900.)), TooltipSide::Top);
         assert_eq!(origin, point(px(8.), px(36.)));
     }
 
     #[test]
     fn right_side_tooltip_flips_left_at_the_window_edge() {
+        let _held = crate::scale::TEST_LOCK.lock().unwrap_or_else(|held| held.into_inner());
         let origin = tooltip_origin(bounds(1380., 100., 20., 20.), size(px(60.), px(20.)), size(px(1400.), px(900.)), TooltipSide::Right);
         assert_eq!(origin, point(px(1316.), px(100.)));
     }

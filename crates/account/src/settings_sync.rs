@@ -39,8 +39,7 @@ pub const SYNCABLE_KEYS: &[&str] = &[
     "showGitignoredFilesInFileTree", "hiddenFilePatterns", "hiddenDirectoryPatterns", "searchExcludePatterns",
     "largeFileThresholdMB", "gitChangesFolderView", "confirmBeforeDiscard", "autoRefreshGitStatus", "gitAutoFetchInterval",
     "gitPullRebase", "gitSignOffCommits", "gitDefaultBranchName", "showUntrackedFiles", "showStagedFirst", "gitDefaultDiffView",
-    "openDiffOnClick", "showGitStatusInFileTree", "compactGitStatusBadges", "collapseEmptyGitSections",
-    "rememberLastGitPanelMode", "gitLastPanelMode", "gitSidebarTabOrder", "hiddenGitSidebarItems",
+    "openDiffOnClick", "showGitStatusInFileTree", "compactGitStatusBadges",     "rememberLastGitPanelMode", "gitLastPanelMode", "gitSidebarTabOrder", "hiddenGitSidebarItems",
     "githubSidebarSectionOrder", "enableInlineGitBlame", "telemetry",
 ];
 

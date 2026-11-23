@@ -354,11 +354,16 @@ impl Workbench {
 
     /// Puts the sidebar back on the tool Settings took it over from.
     pub(crate) fn close_settings_sidebar(&mut self, window: &mut Window, cx: &mut Context<Self>) {
-        if self.state.layout.sidebar_view != SidebarView::Settings {
+        self.close_sidebar_view(SidebarView::Settings, window, cx);
+    }
+
+    /// Hands the sidebar back to the tool `view` took it over from, if it is still the one shown.
+    pub(crate) fn close_sidebar_view(&mut self, view: SidebarView, window: &mut Window, cx: &mut Context<Self>) {
+        if self.state.layout.sidebar_view != view {
             return;
         }
         let back = self.settings_return_view;
-        self.show_sidebar_view(if back == SidebarView::Settings { SidebarView::Agents } else { back }, window, cx);
+        self.show_sidebar_view(if back == view { SidebarView::Agents } else { back }, window, cx);
     }
 
     /// Shows Settings in the sidebar on a page and hands back its view.

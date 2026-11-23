@@ -504,7 +504,7 @@ impl DebuggerView {
             RowKind::Scope => base
                 .child(div().flex_1().min_w_0().truncate().font_weight(typography::MEDIUM).text_color(colors.muted_foreground).child(tree_row.name))
                 .into_any_element(),
-            RowKind::Loading => base.child(div().text_color(colors.subtle_foreground).child("Loading…")).into_any_element(),
+            RowKind::Loading => base.child(ui::quiet_note("Loading…", cx)).into_any_element(),
             RowKind::Failed(error) => base.child(div().flex_1().min_w_0().truncate().text_color(colors.destructive).child(error)).into_any_element(),
             RowKind::Variable { value, kind } => {
                 let value_color = value_color(&value, kind.as_deref(), &colors);

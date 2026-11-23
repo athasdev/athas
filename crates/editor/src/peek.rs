@@ -299,7 +299,7 @@ impl Editor {
         let preview = match peek.files.get(&selected.path) {
             Some(PeekFile::Ready(text)) => self.peek_preview(text, &selected, preview_rows, line_height, &mono, &theme, cx),
             Some(PeekFile::Error) => div().px(px(12.)).py(px(8.)).text_color(colors.subtle_foreground).child(format!("Could not read {}", selected.path.display())).into_any_element(),
-            _ => div().px(px(12.)).py(px(8.)).text_color(colors.subtle_foreground).child("Loading…").into_any_element(),
+            _ => ui::quiet_note("Loading…", cx).px(px(12.)).py(px(8.)).into_any_element(),
         };
 
         let mut list = div()

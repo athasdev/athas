@@ -170,7 +170,7 @@ pub fn apply_import(import: &keymap::KeybindingsImport, cx: &mut App) {
 
 impl KeybindingsEditor {
     pub fn new(window: &mut Window, cx: &mut Context<Self>) -> Self {
-        let search = cx.new(|cx| TextInput::new(window, cx).placeholder("Search keybindings...").leading_icon(IconName::Search).clearable());
+        let search = cx.new(|cx| TextInput::new(window, cx).placeholder("Search keybindings").leading_icon(IconName::Search).clearable());
         let subscription = cx.subscribe(&search, |this, _, event: &TextInputEvent, cx| {
             if let TextInputEvent::Changed(query) = event {
                 this.query = query.clone();
@@ -672,7 +672,7 @@ impl Render for KeybindingsEditor {
             .flex_col()
             .flex_1()
             .min_h_0()
-            .gap(px(10.))
+            .gap(px(12.))
             .child(self.render_toolbar(cx))
             .child(
                 div()

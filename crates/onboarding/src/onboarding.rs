@@ -108,6 +108,13 @@ impl OnboardingView {
 
     /// What's New for `version`: the notes kept for it, completed from the update manifest or
     /// GitHub, and marked read.
+    /// The notes already in hand, for a headless shot of the page (`ATHAS_SNAPSHOT_WHATS_NEW`).
+    pub fn whats_new_with(info: WhatsNewInfo, cx: &mut Context<Self>) -> Self {
+        let mut view = Self::new(cx);
+        view.release_notes = Some(ReleaseNotes { info, loading: false });
+        view
+    }
+
     pub fn whats_new(version: &str, cx: &mut Context<Self>) -> Self {
         let store = WhatsNewStore::default_location();
         let info = store.hydrate(version);
@@ -387,7 +394,7 @@ impl OnboardingView {
         div()
             .flex()
             .flex_col()
-            .rounded(metrics::island_radius())
+            .rounded(metrics::radius_lg())
             .bg(theme.colors.raised)
             .shadow(theme.shadows.raised.clone())
             .children(rows)
@@ -516,10 +523,139 @@ fn cli_installed() -> Option<bool> {
     None
 }
 
+impl OnboardingView {
+    /// What's New: a release, read top to bottom. The notes sit in a card of their own, under a
+    /// heading that says which version and when, with the way out and the full release at the
+    /// foot — where the eye ends up, rather than floating under a short page.
+    fn render_whats_new(&mut self, info: &WhatsNewInfo, window: &mut Window, cx: &mut Context<Self>) -> AnyElement {
+        let colors = cx.theme().colors.clone();
+        let released = info.date.as_deref().map(whats_new::format_release_date);
+        let version = info.version.clone();
+        let release_url = format!("{}/tag/v{version}", whats_new::GITHUB_RELEASES_URL);
+        let loading = self.release_notes.as_ref().is_some_and(|notes| notes.loading) && !has_notes(info);
+
+        let eyebrow = div()
+            .flex()
+            .items_center()
+            .gap(px(8.))
+            .child(
+                div()
+                    .flex_none()
+                    .px(px(8.))
+                    .py(px(2.))
+                    .rounded_full()
+                    .bg(colors.primary_soft)
+                    .text_size(typography::text_caption())
+                    .font_weight(typography::MEDIUM)
+                    .text_color(colors.primary)
+                    .child(format!("Athas {version}")),
+            )
+            .children(released.map(|date| {
+                div().text_size(typography::text_caption()).text_color(colors.subtle_foreground).child(date)
+            }));
+
+        let body = if loading {
+            div()
+                .flex()
+                .justify_center()
+                .items_center()
+                .min_h(px(120.))
+                .child(Spinner::new("release-notes-loading").label("Loading release notes").show_label())
+                .into_any_element()
+        } else if has_notes(info) {
+            div()
+                .flex()
+                .flex_col()
+                .p(px(20.))
+                .rounded(metrics::radius_lg())
+                .bg(colors.raised)
+                .child(release_notes::render(&whats_new::normalize_release_notes(info.body.as_deref().unwrap_or_default()), cx))
+                .into_any_element()
+        } else {
+            div()
+                .flex()
+                .flex_col()
+                .items_center()
+                .gap(px(4.))
+                .py(px(40.))
+                .rounded(metrics::radius_lg())
+                .bg(colors.raised)
+                .child(div().text_size(typography::text_sm()).text_color(colors.foreground).child("No notes came with this update"))
+                .child(
+                    div()
+                        .text_size(typography::text_sm())
+                        .text_color(colors.subtle_foreground)
+                        .child("The GitHub release has the downloads and the full changelog."),
+                )
+                .into_any_element()
+        };
+
+        div()
+            .id("whats-new")
+            .track_focus(&self.focus_handle)
+            .size_full()
+            .overflow_y_scroll()
+            .child(
+                div()
+                    .flex()
+                    .flex_col()
+                    .mx_auto()
+                    .w_full()
+                    .max_w(px(720.))
+                    .px(px(32.))
+                    .py(px(48.))
+                    .gap(px(24.))
+                    .child(
+                        div()
+                            .flex()
+                            .flex_col()
+                            .gap(px(8.))
+                            .child(eyebrow)
+                            .child(
+                                div()
+                                    .text_size(typography::text_lg())
+                                    .font_weight(typography::SEMIBOLD)
+                                    .text_color(colors.foreground)
+                                    .child("What's new"),
+                            ),
+                    )
+                    .child(body)
+                    .child(
+                        div()
+                            .flex()
+                            .items_center()
+                            .gap(px(8.))
+                            .child(
+                                Button::new("whats-new-release", "View the full release")
+                                    .variant(ButtonVariant::Ghost)
+                                    .trailing_icon(IconName::ArrowRight)
+                                    .on_click(move |_, _, cx| cx.open_url(&release_url)),
+                            )
+                            .child(div().flex_1())
+                            .child(
+                                Button::new("onboarding-done", "Done")
+                                    .variant(ButtonVariant::Accent)
+                                    .on_click(cx.listener(|this, _, _, cx| this.finish(false, cx))),
+                            ),
+                    ),
+            )
+            .scrollbar(window, cx)
+            .into_any_element()
+    }
+}
+
+/// Whether a release came with notes to show.
+fn has_notes(info: &WhatsNewInfo) -> bool {
+    info.body.as_deref().is_some_and(|body| !body.trim().is_empty())
+}
+
 impl Render for OnboardingView {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let colors = cx.theme().colors.clone();
         let release = self.release_notes.as_ref().map(|notes| notes.info.clone());
+        if let Some(info) = &release {
+            return self.render_whats_new(info, window, cx).into_any_element();
+        }
         let (title, description) = match &release {
             Some(info) => (SharedString::from(format!("What's new in Athas {}", info.version)), SharedString::from("The latest changes, improvements, and fixes.")),
             None => (STEPS[self.step].title.into(), STEPS[self.step].description.into()),
@@ -618,6 +754,7 @@ impl Render for OnboardingView {
             )
             .scrollbar(window, cx)
             .children(self.open_menu.as_ref().map(|menu| menu.render()))
+            .into_any_element()
     }
 }
 

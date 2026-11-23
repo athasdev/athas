@@ -77,7 +77,7 @@ fn banner(icon: IconName, title: String, message: Option<String>, action: Option
     div()
         .flex()
         .items_center()
-        .gap(px(10.))
+        .gap(px(12.))
         .p(px(12.))
         .rounded(metrics::radius_lg())
         .border_1()
@@ -373,7 +373,7 @@ impl CloudAgentsView {
         div()
             .flex()
             .flex_col()
-            .gap(px(10.))
+            .gap(px(12.))
             .p(px(12.))
             .rounded(metrics::radius_lg())
             .border_1()
@@ -538,7 +538,7 @@ impl CloudAgentsView {
     fn render_runs(&self, cx: &mut Context<Self>) -> AnyElement {
         let colors = cx.theme().colors.clone();
         match &self.runs {
-            Runs::Loading => div().text_color(colors.subtle_foreground).child("Loading runs…").into_any_element(),
+            Runs::Loading => ui::quiet_note("Loading runs…", cx).into_any_element(),
             Runs::Failed(error) => {
                 let title = if *error == CloudError::SignedOut { "Sign in to run agents in the cloud".to_string() } else { "Cloud runs are unavailable".to_string() };
                 let message = if *error == CloudError::SignedOut {
@@ -564,7 +564,7 @@ impl CloudAgentsView {
                         .id(("cloud-run-row", index))
                         .flex()
                         .items_center()
-                        .gap(px(10.))
+                        .gap(px(12.))
                         .px(px(12.))
                         .py(px(8.))
                         .when(index > 0, |this| this.border_t_1().border_color(colors.border))
@@ -600,7 +600,7 @@ impl CloudAgentsView {
         div()
             .flex()
             .flex_col()
-            .gap(px(10.))
+            .gap(px(12.))
             .p(px(12.))
             .rounded(metrics::radius_lg())
             .border_1()
@@ -797,7 +797,7 @@ impl CloudAgentsView {
                     .id(("task-row", index))
                     .flex()
                     .items_center()
-                    .gap(px(10.))
+                    .gap(px(12.))
                     .px(px(12.))
                     .py(px(8.))
                     .child(Switch::new(("task-enabled", index), task.enabled).on_change(move |enabled, _, cx| {
@@ -1115,7 +1115,7 @@ impl Render for CloudRunView {
         let colors = cx.theme().colors.clone();
         let header = pane_header(cx).gap(px(8.)).child(Icon::new(IconName::Cloud).size(IconSize::Small).color(colors.muted_foreground));
         let (header, body) = match &self.run {
-            None => (header.child("Cloud run"), div().p(px(16.)).text_color(colors.subtle_foreground).child("Loading…").into_any_element()),
+            None => (header.child("Cloud run"), ui::quiet_note("Loading…", cx).p(px(16.)).into_any_element()),
             Some(Err(error)) => (
                 header.child("Cloud run"),
                 div().p(px(16.)).child(banner(IconName::CloudSlash, "This run is unavailable".into(), Some(error.to_string()), error_action(error), cx)).into_any_element(),
@@ -1196,7 +1196,7 @@ impl Render for CloudRunView {
                     .min_h_0()
                     .flex()
                     .flex_col()
-                    .gap(px(10.))
+                    .gap(px(12.))
                     .p(px(16.))
                     .child(div().text_size(typography::text_sm()).text_color(colors.muted_foreground).child(facts))
                     .when_some(run.prompt.clone(), |this, prompt| {

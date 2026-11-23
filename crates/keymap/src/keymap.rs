@@ -686,6 +686,19 @@ pub fn bind(cx: &mut App, preset: &str, user: &[Keybinding]) {
 mod tests {
     use super::*;
 
+    /// The cheat sheet answers Shift-?, the key the Help menu prints beside it, on both
+    /// platforms' defaults and with a command entry so the palette can find it.
+    #[test]
+    fn the_cheat_sheet_is_bound_to_shift_question() {
+        for json in [default_bindings_json(true), default_bindings_json(false)] {
+            let bindings: Vec<Keybinding> = serde_json::from_str(json).unwrap();
+            let bound: Vec<&Keybinding> = bindings.iter().filter(|binding| binding.command == "help.shortcuts").collect();
+            assert_eq!(bound.len(), 1, "one default binding");
+            assert_eq!(normalize_key(&bound[0].key), normalize_key("shift+?"));
+        }
+        assert!(command("help.shortcuts").is_some());
+    }
+
     #[test]
     fn the_catalogs_load() {
         assert!(commands().len() > 200);

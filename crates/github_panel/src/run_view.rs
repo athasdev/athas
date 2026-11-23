@@ -649,7 +649,7 @@ impl RunView {
                             .flex_wrap()
                             .items_center()
                             .pl(px(20.))
-                            .gap_x(px(10.))
+                            .gap_x(px(12.))
                             .gap_y(px(2.))
                             .text_size(typography::text_sm())
                             .text_color(colors.subtle_foreground)

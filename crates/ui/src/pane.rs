@@ -1,6 +1,6 @@
 use crate::scale::px;
 use gpui::{
-    App, Div, IntoElement, ParentElement, RenderOnce, SharedString, Styled, Window, div,
+    AnyElement, App, Div, IntoElement, ParentElement, RenderOnce, SharedString, Styled, Window, div,
 };
 use theme::ActiveTheme;
 
@@ -118,4 +118,89 @@ impl RenderOnce for PaneTitle {
                     .map(|detail| div().flex_none().text_color(colors.subtle_foreground).child(detail)),
             )
     }
+}
+
+/// The one header every sidebar tool and side panel wears: the name, a quiet reading after it,
+/// then whatever buttons the tool has.
+///
+/// There used to be two. Sidebar tools (Sessions, Files, Source Control, GitHub) wore a
+/// `SectionLabel` — quiet, no icon, no rule under it — while the side panels (the Inbox and the
+/// lists the sessions footer opens) wore `pane_header` with a `PaneTitle` and a divider beneath.
+/// Side by side they read as two different apps. This is the sidebar's version, because that is
+/// the quieter of the two and there are more of them: no icon (the rail and the row that opened
+/// the panel both show it already) and no rule (nothing else in a sidebar has one).
+#[derive(IntoElement)]
+pub struct PanelHeader {
+    label: SharedString,
+    detail: Option<SharedString>,
+    trailing: Option<AnyElement>,
+}
+
+impl PanelHeader {
+    pub fn new(label: impl Into<SharedString>) -> Self {
+        Self { label: label.into(), detail: None, trailing: None }
+    }
+
+    /// A quiet reading after the name: "3 new", "2 selected", "12 archived".
+    pub fn detail(mut self, detail: impl Into<SharedString>) -> Self {
+        self.detail = Some(detail.into());
+        self
+    }
+
+    pub fn trailing(mut self, element: impl IntoElement) -> Self {
+        self.trailing = Some(element.into_any_element());
+        self
+    }
+}
+
+impl RenderOnce for PanelHeader {
+    fn render(self, _window: &mut Window, cx: &mut App) -> impl IntoElement {
+        let colors = &cx.theme().colors;
+        div().flex_none().px(metrics::sidebar_inset()).pb(px(2.)).child(
+            div()
+                .flex()
+                .items_center()
+                .min_w_0()
+                .h(metrics::chrome_control())
+                .gap(metrics::chrome_gap())
+                .pl(px(6.))
+                .pr(px(2.))
+                .text_size(typography::text_sm())
+                .font_weight(typography::MEDIUM)
+                .text_color(colors.muted_foreground)
+                .child(div().flex_none().truncate().child(self.label))
+                .children(self.detail.map(|detail| {
+                    div()
+                        .flex_none()
+                        .min_w_0()
+                        .truncate()
+                        .font_weight(gpui::FontWeight::NORMAL)
+                        .text_size(typography::text_caption())
+                        .text_color(colors.subtle_foreground)
+                        .child(detail)
+                }))
+                .child(div().flex_1().min_w_0())
+                .children(self.trailing.map(|trailing| div().flex().flex_none().items_center().gap(px(2.)).child(trailing))),
+        )
+    }
+}
+
+/// The plane a thing floats on, clear of the window: the command palette, a command surface, a
+/// dialog. It carries the corner, the fill, the shadow and the UI face; the caller gives it only
+/// its size and its content.
+///
+/// The four surfaces that float were each writing those four lines out, and had drifted: three
+/// filled with `overlay` and one with `background`, while [`Dialog`](crate::Dialog) rounded at
+/// its own 12px against their 16.
+pub fn overlay_surface(cx: &App) -> Div {
+    let theme = cx.theme();
+    div()
+        .flex()
+        .flex_col()
+        .overflow_hidden()
+        .rounded(metrics::overlay_radius())
+        .bg(theme.colors.overlay)
+        .shadow(theme.shadows.dialog.clone())
+        .font_family(typography::ui_font())
+        .text_color(theme.colors.foreground)
 }

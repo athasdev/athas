@@ -59,8 +59,7 @@ const ADVANCED: &[&str] = &[
     // Git > Git View. What the panel shows stays; how it arranges itself goes.
     "gitChangesFolderView",
     "compactGitStatusBadges",
-    "collapseEmptyGitSections",
-    "rememberLastGitPanelMode",
+        "rememberLastGitPanelMode",
     // Terminal > Typography.
     "terminalLetterSpacing",
     "terminalScrollback",

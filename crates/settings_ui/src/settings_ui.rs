@@ -194,13 +194,6 @@ fn visible_with_access(def: &SettingDef, enterprise: bool, collaboration: bool) 
 }
 
 /// The catalog category an Integrations section stands for (`ExtensionKind::id`).
-fn integrations_category(def: &SettingDef) -> Option<&'static str> {
-    match def.section? {
-        "Agents" => Some("agent"),
-        "MCP Servers" => Some("mcp"),
-        _ => None,
-    }
-}
 
 /// The search target of a row a page's view draws: the first row of its section the page draws
 /// itself, or the view.
@@ -239,7 +232,6 @@ pub struct SettingsView {
     terminal_profiles: Option<Entity<TerminalProfiles>>,
     github: Option<Entity<GitHubCredentials>>,
     team: Option<Entity<TeamSettings>>,
-    integrations: Option<Entity<extensions_ui::ExtensionsView>>,
     report_bug: Option<(Entity<Picker<ReportBugDelegate>>, Subscription)>,
     theme_creator: Option<(Entity<custom_theme_creator::CustomThemeCreator>, Subscription)>,
     reset_settings: Entity<TypedConfirm>,
@@ -286,7 +278,6 @@ fn page_icon(page: &str) -> IconName {
         "terminal" => IconName::TerminalWindow,
         "keyboard" => IconName::Keyboard,
         "ai" => IconName::Sparkle,
-        "integrations" => IconName::PuzzlePiece,
         "team" => IconName::Users,
         _ => IconName::Gear,
     }
@@ -297,8 +288,8 @@ fn page_title(page: &str) -> &'static str {
 }
 
 /// The order the page list shows the pages in (`SETTINGS_NAVIGATION_ORDER`).
-const NAVIGATION_ORDER: [&str; 13] =
-    ["general", "appearance", "notifications", "keyboard", "editor", "file-explorer", "terminal", "git", "ai", "integrations", "account", "team", "advanced"];
+const NAVIGATION_ORDER: [&str; 12] =
+    ["general", "appearance", "notifications", "keyboard", "editor", "file-explorer", "terminal", "git", "ai", "account", "team", "advanced"];
 
 /// Pages merged into others, with the page that took them in (`MERGED_SETTINGS_TABS`), so an
 /// old link, command or saved last page still opens.
@@ -552,7 +543,6 @@ impl SettingsView {
             terminal_profiles: None,
             github: None,
             team: None,
-            integrations: None,
             report_bug: None,
             theme_creator: None,
             reset_settings,
@@ -693,23 +683,13 @@ impl SettingsView {
     fn open_result(&mut self, index: usize, cx: &mut Context<Self>) {
         let Some(def) = SETTING_DEFS.get(index) else { return };
         self.set_page(def.tab, cx);
-        // An Integrations section is a category of the catalog, which opens showing it. The
-        // page may not have been built yet, and then the stored filter is all it takes.
-        if def.tab == "integrations"
-            && let Some(category) = integrations_category(def)
-        {
-            match self.integrations.clone() {
-                Some(view) => view.update(cx, |view, cx| view.show_category(category, cx)),
-                None => settings::update(cx, |settings| settings.extensions_active_tab = category.to_string()),
-            }
-        }
         // Hidden is not gone: a row the page keeps behind Advanced opens it to be scrolled to.
         if settings::is_advanced(def) {
             self.advanced_open = true;
         }
         let target = if def.kind == SettingKind::View { view_target(def) } else { JumpTarget::Row(index) };
         // The theme cards head Appearance, and the catalog its own categories; both open at the top.
-        let at_top = def.tab == "integrations" || (def.tab == "appearance" && def.section == Some("Theme") && def.kind == SettingKind::View);
+        let at_top = def.tab == "appearance" && def.section == Some("Theme") && def.kind == SettingKind::View;
         self.jump = (!at_top).then_some(Jump { target, attempts: 6 });
         self.jump_bounds.set(None);
         self.flash = Some(index);
@@ -1590,39 +1570,6 @@ impl SettingsView {
         elements
     }
 
-    /// The catalog of the Integrations page. It flows in the page and the page scrolls it; it
-    /// used to sit in a 560px box with a scroller of its own inside the page's.
-    fn integrations_view(&mut self, window: &mut Window, cx: &mut Context<Self>) -> Entity<extensions_ui::ExtensionsView> {
-        let scroll = self.scroll.clone();
-        self.integrations
-            .get_or_insert_with(|| {
-                let view = cx.new(|cx| extensions_ui::ExtensionsView::new(window, cx));
-                view.update(cx, |view, cx| view.embed_in_page(scroll, cx));
-                // The page draws the view's toolbar itself, so a filter or a search the view
-                // takes has to redraw the page around it.
-                cx.observe(&view, |_, _, cx| cx.notify()).detach();
-                view
-            })
-            .clone()
-    }
-
-    /// The bar a page pins over its content, above the scroller so it stays in sight:
-    /// Integrations' categories, updates and search.
-    fn page_toolbar(&mut self, window: &mut Window, cx: &mut Context<Self>) -> Option<AnyElement> {
-        if self.page != "integrations" || self.importer.is_some() {
-            return None;
-        }
-        let view = self.integrations_view(window, cx);
-        view.update(cx, |view, cx| view.page_toolbar(cx))
-    }
-
-    /// Opens an integration's page on Integrations; for previews.
-    pub fn open_integration(&mut self, id: &str, window: &mut Window, cx: &mut Context<Self>) {
-        self.set_page("integrations", cx);
-        let view = self.integrations_view(window, cx);
-        view.update(cx, |view, cx| view.open_extension(id, cx));
-    }
-
     fn keybindings_editor(&mut self, window: &mut Window, cx: &mut Context<Self>) -> Entity<KeybindingsEditor> {
         let editor = self.keybindings.get_or_insert_with(|| cx.new(|cx| KeybindingsEditor::new(window, cx))).clone();
         // The table has no room for five columns in a stacked page (the sidebar).
@@ -1655,7 +1602,6 @@ impl SettingsView {
                 let team = self.team.get_or_insert_with(|| cx.new(|cx| TeamSettings::new(window, cx)));
                 vec![team.clone().into_any_element()]
             }
-            "integrations" => vec![self.integrations_view(window, cx).into_any_element()],
             _ => Vec::new(),
         }
     }
@@ -1698,12 +1644,7 @@ impl SettingsView {
             let results = self.search_results(cx);
             if results.is_empty() {
                 vec![
-                    div()
-                        .px(px(8.))
-                        .py(px(6.))
-                        .text_size(typography::text_sm())
-                        .text_color(colors.muted_foreground)
-                        .child("No matching settings")
+                    ui::quiet_note("No matching settings", cx).px(px(8.)).py(px(6.))
                         .into_any_element(),
                 ]
             } else {
@@ -1795,7 +1736,24 @@ impl SettingsView {
             .when(!narrow && in_window, |this| this.w(px(208.)).h_full().bg(colors.window))
             // In the workbench the pane around it sets the surface and the width.
             .when(!in_window, |this| this.size_full().min_h_0())
-            .p(px(8.))
+            .when(!in_window, |this| {
+                this.child(
+                    ui::PanelHeader::new("Settings").trailing(
+                        Button::icon("settings-close", IconName::X)
+                            .variant(ButtonVariant::Ghost)
+                            .size(ButtonSize::Small)
+                            .tooltip("Close Settings")
+                            .on_click(cx.listener(|_, _, _, cx| cx.emit(DismissEvent))),
+                    ),
+                )
+            })
+            .child(
+                div()
+                    .flex()
+                    .flex_col()
+                    .flex_1()
+                    .min_h_0()
+                    .p(px(8.))
             // In its own window the pages run to the top, under the traffic lights, on the window
             // plane like the workbench's sidebar.
             .map(|this| if in_window { this.pt(standalone_top()) } else { this.pt(px(0.)) })
@@ -1805,30 +1763,6 @@ impl SettingsView {
                     .flex()
                     .flex_col()
                     .gap(px(8.))
-                    .when(!in_window, |this| {
-                        this.child(
-                            div()
-                                .flex()
-                                .items_center()
-                                .gap(px(2.))
-                                .h(px(28.))
-                                .pr(px(6.))
-                                // Settings took the sidebar and the centre over; this hands both
-                                // back to the tool they were on, as Escape does.
-                                .child(
-                                    Button::icon("settings-back", IconName::ArrowLeft)
-                                        .size(ButtonSize::Small)
-                                        .tooltip("Close Settings")
-                                        .on_click(cx.listener(|_, _, _, cx| cx.emit(DismissEvent))),
-                                )
-                                .child(
-                                    div()
-                                        .text_size(typography::text_base())
-                                        .font_weight(typography::MEDIUM)
-                                        .child("Settings"),
-                                ),
-                        )
-                    })
                     .child(self.search.clone())
                     .children(page_dropdown),
             )
@@ -1846,7 +1780,8 @@ impl SettingsView {
                         .children(nav)
                         .scrollbar_with(&self.nav_scroll),
                 )
-            })
+            }),
+            )
             .into_any_element()
     }
 
@@ -1866,7 +1801,6 @@ impl SettingsView {
         let narrow = width <= px(680.);
         self.stacked = width - px(48.) <= px(640.);
 
-        let page_toolbar = self.page_toolbar(window, cx);
         let importing = self.importer.as_ref().map(|(importer, _)| importer.clone());
         let table_page = importing.is_none() && self.page == "keyboard" && self.keybindings.as_ref().is_some_and(|editor| editor.read(cx).is_editing());
         let mut content: Vec<AnyElement> = Vec::new();
@@ -1954,14 +1888,6 @@ impl SettingsView {
                 )
             })
             .when(importing.is_none() || in_window, |this| this.pt(if in_window { standalone_top() } else { px(16.) }))
-            .children(page_toolbar.map(|toolbar| {
-                div()
-                    .flex()
-                    .flex_none()
-                    .px(if narrow { px(12.) } else { px(24.) })
-                    .pb(px(16.))
-                    .child(div().w_full().max_w(px(PAGE_WIDTH)).mx_auto().child(toolbar))
-            }))
             .child(
                 // The page scrolls with the overlay scrollbar (`ScrollArea`).
                 div()
@@ -1970,7 +1896,7 @@ impl SettingsView {
                     .flex_col()
                     .flex_1()
                     .min_h_0()
-                    .child(
+                    .child(ui::with_scrollbar(
                         div()
                             .id("settings-content")
                             .flex()
@@ -1998,8 +1924,8 @@ impl SettingsView {
                                     .map(|this| if table_page { this.flex_1().min_h_0() } else { this.flex_none() })
                                     .children(content),
                             ),
-                    )
-                    .child(ui::Scrollbar::new("settings-scrollbar", &self.scroll)),
+                        ui::Scrollbar::new("settings-scrollbar", &self.scroll),
+                    ))
             )
             .children(self.open_menu.as_ref().map(|menu| menu.render()))
             // Create Theme and Report a Bug are dialogs in their own right. In a tab they float

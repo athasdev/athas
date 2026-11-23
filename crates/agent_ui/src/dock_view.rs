@@ -313,7 +313,7 @@ impl SessionDockView {
             .min_w_0()
             .px(px(12.))
             .py(px(10.))
-            .rounded(ui::metrics::island_radius())
+            .rounded(ui::metrics::radius_lg())
             .bg(colors.surface.opacity(0.55))
             .child(
                 div()

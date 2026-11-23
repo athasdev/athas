@@ -120,7 +120,7 @@ impl ExtensionsView {
     pub fn new(window: &mut Window, cx: &mut Context<Self>) -> Self {
         let search = cx.new(|cx| {
             TextInput::new(window, cx)
-                .placeholder("Search integrations...")
+                .placeholder("Search integrations")
                 .appearance(InputAppearance::Field)
                 .leading_icon(IconName::Search)
         });

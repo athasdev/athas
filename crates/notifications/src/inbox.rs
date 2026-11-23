@@ -11,8 +11,8 @@ use gpui::{
 };
 use theme::ActiveTheme;
 use ui::{
-    Button, ButtonSize, ButtonVariant, EmptyState, Icon, IconName, IconSize, PaneTitle, WithScrollbar, island, metrics,
-    pane_actions, pane_header, typography,
+    Button, ButtonSize, ButtonVariant, EmptyState, Icon, IconName, IconSize, WithScrollbar, metrics,
+    pane_actions, typography,
 };
 use workspace::{now_ms, relative_time};
 
@@ -201,7 +201,7 @@ impl InboxPanel {
                 div()
                     .flex()
                     .items_center()
-                    .gap(px(10.))
+                    .gap(px(12.))
                     .min_w_0()
                     .child(icon_box)
                     .child(
@@ -282,7 +282,7 @@ impl InboxPanel {
             div()
                 .flex()
                 .items_center()
-                .gap(px(10.))
+                .gap(px(12.))
                 .px(px(8.))
                 .py(px(6.))
                 .child(ui::Skeleton::new(("inbox-skeleton-icon", index)).size(px(28.)))
@@ -301,18 +301,17 @@ impl InboxPanel {
 
 impl Render for InboxPanel {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
-        let colors = cx.theme().colors.clone();
         let items: Vec<Notification> = cx.try_global::<Notifications>().map(|store| store.items.clone()).unwrap_or_default();
         let shown: Vec<&Notification> = items.iter().filter(|item| self.category.is_none_or(|category| item.category == category)).collect();
         let has_local = items.iter().any(|item| item.category != NotificationCategory::GitHub);
         let fresh = items.iter().filter(|item| self.fresh.contains(&item.id)).count();
 
         let loading = cx.try_global::<Notifications>().is_some_and(|store| store.is_loading(self.category));
-        let header = pane_header(cx)
-            .child(PaneTitle::new("Inbox").icon(IconName::Bell).when(fresh > 0, |title| title.detail(format!("{fresh} new"))))
-            .when(loading && !shown.is_empty(), |this| this.child(ui::Spinner::new("inbox-loading").label("Loading").compact()))
-            .child(
+        let header = ui::PanelHeader::new("Inbox")
+            .when(fresh > 0, |header| header.detail(format!("{fresh} new")))
+            .trailing(
                 pane_actions()
+                    .when(loading && !shown.is_empty(), |this| this.child(ui::Spinner::new("inbox-loading").label("Loading").compact()))
                     .when(has_local, |this| {
                         this.child(
                             Button::icon("inbox-clear", IconName::Trash)
@@ -327,13 +326,6 @@ impl Render for InboxPanel {
                                 })),
                         )
                     })
-                    .child(
-                        Button::icon("inbox-close", IconName::X)
-                            .variant(ButtonVariant::Ghost)
-                            .size(ButtonSize::Small)
-                            .tooltip("Close Inbox")
-                            .on_click(cx.listener(|this, _, _, cx| this.dismiss(cx))),
-                    ),
             );
 
         let body = if shown.is_empty() && loading {
@@ -357,7 +349,7 @@ impl Render for InboxPanel {
                 .flex_1()
                 .min_h_0()
                 .overflow_y_scroll()
-                .px(px(6.))
+                .px(metrics::sidebar_inset())
                 .pb(px(8.))
                 .gap(px(2.))
                 .children(rows)
@@ -365,8 +357,12 @@ impl Render for InboxPanel {
                 .into_any_element()
         };
 
-        island(cx)
+        // It is a sidebar tool now, not a panel floating beside one: the sidebar sets the
+        // surface, so this takes no island, no rounding and no rule under its header.
+        div()
             .id("inbox")
+            .flex()
+            .flex_col()
             .key_context("Inbox")
             .track_focus(&self.focus)
             .on_key_down(cx.listener(|this, event: &gpui::KeyDownEvent, _, cx| {
@@ -376,10 +372,9 @@ impl Render for InboxPanel {
                 }
             }))
             .size_full()
-            .bg(colors.surface)
+            .min_h_0()
             .child(header)
             .child(self.render_filters(&items, cx))
-            .child(div().h(px(1.)).flex_none().bg(colors.divider))
             .child(div().flex().flex_col().flex_1().min_h_0().pt(px(4.)).child(body))
     }
 }

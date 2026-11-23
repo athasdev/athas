@@ -168,7 +168,7 @@ impl Focusable for DiagnosticsPanel {
 impl DiagnosticsPanel {
     pub fn new(project_root: Option<PathBuf>, window: &mut Window, cx: &mut Context<Self>) -> Self {
         lsp_client::init(cx);
-        let search = cx.new(|cx| TextInput::new(window, cx).placeholder("Search problems...").appearance(InputAppearance::Bare));
+        let search = cx.new(|cx| TextInput::new(window, cx).placeholder("Search problems").appearance(InputAppearance::Bare));
         let subscriptions = vec![
             cx.observe_global::<DiagnosticsStore>(|this, cx| {
                 this.regroup(cx);

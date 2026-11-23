@@ -111,6 +111,7 @@ pub enum SidebarView {
     #[serde(rename = "github-prs")]
     GitHub,
     Settings,
+    Notifications,
 }
 
 impl SidebarView {
@@ -123,9 +124,13 @@ impl SidebarView {
             SidebarView::Git => "Source Control",
             SidebarView::GitHub => "GitHub",
             SidebarView::Settings => "Settings",
+            SidebarView::Notifications => "Inbox",
         }
     }
 }
+
+/// How long a session holds its place in the sidebar's lists while it is working.
+const TOUCH_SETTLE_MS: u64 = 5_000;
 
 /// Who a set of tabs and the dock belong to: a session, or a project's classic view.
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -1265,7 +1270,13 @@ impl WorkspaceState {
     pub fn touch_session(&mut self, id: &SessionId, at: u64) {
         let in_front = self.focus == Some(Owner::Session(id.clone()));
         if let Some(session) = self.session_mut(id) {
-            session.last_activity_at = at;
+            // An agent writing a reply reports activity for every chunk of it — several times a
+            // second — and the lists are ordered by what happened last. Moving the stamp each
+            // time reshuffled the rows under the pointer while they were being read, so a
+            // session keeps its place until it has been quiet for a moment.
+            if at.saturating_sub(session.last_activity_at) >= TOUCH_SETTLE_MS {
+                session.last_activity_at = at;
+            }
             session.message_count += 1;
             if !in_front {
                 session.unread = true;
@@ -1950,6 +1961,20 @@ impl WorkspaceState {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// A working agent reports activity many times a second; the lists are ordered by it, so the
+    /// stamp only moves once the session has been quiet for a moment.
+    #[test]
+    fn a_working_session_keeps_its_place_in_the_list() {
+        let mut state = WorkspaceState::default();
+        let id = state.new_session(None, "claude");
+        let started = state.session(&id).unwrap().last_activity_at;
+        state.touch_session(&id, started + 10);
+        state.touch_session(&id, started + 500);
+        assert_eq!(state.session(&id).unwrap().last_activity_at, started, "a burst of chunks does not reorder the list");
+        state.touch_session(&id, started + TOUCH_SETTLE_MS);
+        assert_eq!(state.session(&id).unwrap().last_activity_at, started + TOUCH_SETTLE_MS, "once it settles, it moves");
+    }
 
     #[test]
     fn editor_views_are_remembered_and_saved() {

@@ -271,6 +271,41 @@ pub(crate) enum Autoscroll {
     Center,
 }
 
+/// A glide of the vertical offset: where it started, where it is going, and how long it takes.
+///
+/// Two things start one. A jump -- go to line, a search hit, page up -- eases in when
+/// `editorSmoothScrolling` asks for it. A mouse wheel notch always does: the platform hands us
+/// whole lines at a time (three, on Linux and Windows), and landing them at once is the step
+/// every wheel user sees. A trackpad sends pixels with its own momentum and is left alone.
+#[derive(Clone, Copy, Debug)]
+pub(crate) struct ScrollGlide {
+    pub(crate) from: Pixels,
+    pub(crate) to: Pixels,
+    pub(crate) started: web_time::Instant,
+    pub(crate) seconds: f32,
+}
+
+/// How long a jump takes to land.
+pub(crate) const JUMP_GLIDE: f32 = 0.18;
+/// How long one wheel notch takes. Short enough that notches in quick succession keep up with
+/// the hand, long enough that one of them reads as a movement rather than a cut.
+pub(crate) const WHEEL_GLIDE: f32 = 0.09;
+
+impl ScrollGlide {
+    /// Where a wheel notch is heading. It adds to the glide already in flight rather than to
+    /// where the glide has got to, so spinning the wheel covers the distance of every notch
+    /// instead of restarting from wherever the last one had eased to.
+    pub(crate) fn wheel_target(resting: Pixels, in_flight: Option<Pixels>, delta_y: Pixels, max: Pixels) -> Pixels {
+        (in_flight.unwrap_or(resting) - delta_y).clamp(px(0.), max)
+    }
+
+    /// How far along the glide is, 0 to 1, eased so it leaves quickly and settles softly.
+    pub(crate) fn eased(&self, elapsed: f32) -> Pixels {
+        let t = (elapsed / self.seconds).min(1.);
+        self.from + (self.to - self.from) * (1. - (1. - t).powi(3))
+    }
+}
+
 /// What a mouse drag extends.
 #[derive(Clone, Debug)]
 pub(crate) enum Drag {
@@ -474,9 +509,9 @@ pub struct Editor {
     wrap_override: Option<bool>,
     pub(crate) autoscroll: Option<Autoscroll>,
     /// Smooth Scrolling (`editorSmoothScrolling`): a jump the next frame eases into, from the
-    /// offset it starts at, and the glide under way (from, to, started).
+    /// offset it starts at, and the glide under way.
     pub(crate) smooth_from: Option<Pixels>,
-    pub(crate) scroll_animation: Option<(Pixels, Pixels, web_time::Instant)>,
+    pub(crate) scroll_animation: Option<ScrollGlide>,
     /// Where the last frame drew things, for mouse hits and the IME.
     pub(crate) layout: Option<HitLayout>,
     pub(crate) cursor_visible: bool,
@@ -1928,7 +1963,10 @@ impl Editor {
             self.notice.clone()?
         };
         // The banner is one line high: a message with line breaks (a server's output) would
-        // draw its lines over each other. Show the first line; the rest stays in the logs.
+        // draw its lines over each other. Show the first line, and keep the whole thing for the
+        // Copy button -- a banner's text cannot be selected, and the line shown is often a
+        // truncated version of the one worth pasting into a search or a bug report.
+        let full = message.clone();
         let message = message.lines().map(str::trim).find(|line| !line.is_empty()).unwrap_or_default().to_string();
         let entity = cx.entity();
         Some(
@@ -1949,6 +1987,12 @@ impl Editor {
                         move |_, _, cx| entity.update(cx, |editor, cx| editor.reload(cx))
                     }))
                 })
+                .child(
+                    Button::icon("editor-notice-copy", IconName::Copy)
+                        .size(ButtonSize::XSmall)
+                        .tooltip("Copy message")
+                        .on_click(move |_, _, cx| cx.write_to_clipboard(ClipboardItem::new_string(full.clone()))),
+                )
                 .child(Button::icon("editor-dismiss", IconName::X).size(ButtonSize::XSmall).on_click(move |_, _, cx| {
                     entity.update(cx, |editor, cx| {
                         editor.changed_on_disk = false;
@@ -1967,6 +2011,7 @@ impl Editor {
             Status::Error(error) => ("Cannot open file", error.clone()),
         };
         let background = cx.theme().colors.background;
+        let copy = message.clone();
         Some(
             div()
                 .flex()
@@ -1976,7 +2021,14 @@ impl Editor {
                 .justify_center()
                 .bg(background)
                 .rounded_b(ui::metrics::island_radius())
-                .child(EmptyState::new(title).icon(IconName::FileText).message(message)),
+                .child(
+                    EmptyState::new(title).icon(IconName::FileText).message(message).action(
+                        Button::new("editor-status-copy", "Copy message")
+                            .leading_icon(IconName::Copy)
+                            .size(ButtonSize::Small)
+                            .on_click(move |_, _, cx| cx.write_to_clipboard(ClipboardItem::new_string(copy.clone()))),
+                    ),
+                ),
         )
     }
 }
@@ -2210,5 +2262,44 @@ impl Render for Editor {
             .children(blame_card)
             .children(self.context_menu.as_ref().map(|menu| menu.render()))
             .into_any_element()
+    }
+}
+
+#[cfg(test)]
+mod scroll_glide_tests {
+    use super::{JUMP_GLIDE, ScrollGlide, WHEEL_GLIDE};
+    use gpui::px;
+
+    fn glide(from: f32, to: f32, seconds: f32) -> ScrollGlide {
+        ScrollGlide { from: px(from), to: px(to), started: web_time::Instant::now(), seconds }
+    }
+
+    #[test]
+    fn a_notch_adds_to_the_glide_already_in_flight() {
+        let max = px(1000.);
+        // Nothing in flight: the notch leaves from where the view is resting.
+        assert_eq!(ScrollGlide::wheel_target(px(100.), None, px(-54.), max), px(154.));
+        // A second notch covers its own distance from the first one's target, not from wherever
+        // the first has eased to -- otherwise spinning the wheel loses most of what it asked for.
+        assert_eq!(ScrollGlide::wheel_target(px(110.), Some(px(154.)), px(-54.), max), px(208.));
+    }
+
+    #[test]
+    fn a_notch_stops_at_the_ends() {
+        assert_eq!(ScrollGlide::wheel_target(px(20.), None, px(54.), px(1000.)), px(0.));
+        assert_eq!(ScrollGlide::wheel_target(px(980.), None, px(-54.), px(1000.)), px(1000.));
+    }
+
+    #[test]
+    fn a_glide_leaves_at_once_and_lands_exactly() {
+        let wheel = glide(0., 100., WHEEL_GLIDE);
+        assert_eq!(wheel.eased(0.), px(0.));
+        assert_eq!(wheel.eased(WHEEL_GLIDE), px(100.));
+        // Past its end it stays put rather than overshooting.
+        assert_eq!(wheel.eased(WHEEL_GLIDE * 4.), px(100.));
+        // Eased out: half the time is well past half the distance.
+        assert!(wheel.eased(WHEEL_GLIDE / 2.) > px(80.));
+        // A jump takes longer than a notch, so the two read as different movements.
+        assert!(JUMP_GLIDE > WHEEL_GLIDE);
     }
 }
