@@ -458,7 +458,6 @@ pub struct Workbench {
     pub(crate) dashboard_all_sessions: bool,
     /// Where the floating title controls end, so a header under them makes room.
     title_leading_end: Rc<Cell<Pixels>>,
-    title_controls_start: Rc<Cell<Pixels>>,
     centre_maximized: bool,
     /// Switch between the light and dark theme with the system.
     pub follow_system_appearance: bool,
@@ -756,7 +755,6 @@ impl Workbench {
             sidebar_overlay_open: false,
             dashboard_all_sessions: false,
             title_leading_end: Rc::new(Cell::new(px(0.))),
-            title_controls_start: Rc::new(Cell::new(px(0.))),
             centre_maximized: false,
             follow_system_appearance: true,
             file_tree: None,
@@ -2871,7 +2869,7 @@ impl Render for Workbench {
         // The window chrome frames the workbench: a title strip the whole way across, then the
         // activity bar beside the shell. The window controls live in the strip, so no pane has to
         // keep a row clear for them.
-        let title_row = div().id("title-row").h(metrics::pane_header()).w_full().flex_none();
+        let title_row = self.drag_region(div().id("title-row").h(metrics::pane_header()).w_full().flex_none(), cx);
         // The sidebar and the centre are one panel inside that frame, split by a hairline.
         let shell = ui::shell(cx, gpui::px(settings::get(cx).shell_border_width as f32))
             .when(sidebar_column, |this| this.child(self.render_sidebar_column(window, cx)))
@@ -2892,12 +2890,6 @@ impl Render for Workbench {
             .child(shell);
 
         let window_tab_row = (!window_tabs.is_empty()).then(|| self.render_window_tabs(window_tabs, window, cx));
-        // Drag area over buttons swallows first clicks on Windows
-        let drag_start = self.title_leading_end.get() + metrics::workbench_gap();
-        let drag_end = self.title_controls_start.get() - metrics::workbench_gap();
-        let title_drag = (drag_end > drag_start).then(|| {
-            self.drag_region(div().id("title-drag").absolute().top_0().left(drag_start).w(drag_end - drag_start).h(metrics::pane_header()), cx)
-        });
         let content = div()
             .relative()
             .flex()
@@ -2908,7 +2900,6 @@ impl Render for Workbench {
             .child(body)
             .children(self.render_sidebar_overlay(narrow, window, cx))
             .children(self.render_inbox_overlay(narrow, cx))
-            .children(title_drag)
             .child(self.render_title_leading(sidebar_column, traffic_lights, window, cx))
             .children(self.render_window_controls(window, cx));
 
