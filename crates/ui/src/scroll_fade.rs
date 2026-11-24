@@ -59,6 +59,8 @@ pub fn faded_scroll_x(content: impl IntoElement, handle: &ScrollHandle, plane: H
         .flex()
         .min_h_0()
         .min_w_0()
+        .overflow_hidden()
+        .rounded_b(crate::metrics::island_radius())
         .child(content)
         .when(before, |this| this.child(side_fade(plane, clear, true)))
         .when(after, |this| this.child(side_fade(plane, clear, false)))
@@ -73,6 +75,7 @@ fn fade(plane: Hsla, clear: Hsla, top: bool) -> Div {
         .right_0()
         .h(px(DEPTH))
         .map(|this| if top { this.top_0() } else { this.bottom_0() })
+        .when(!top, |this| this.rounded_b(crate::metrics::island_radius()))
         .bg(linear_gradient(angle, linear_color_stop(plane, 0.), linear_color_stop(clear, 1.)))
 }
 
@@ -84,6 +87,7 @@ fn side_fade(plane: Hsla, clear: Hsla, left: bool) -> Div {
         .bottom_0()
         .w(px(DEPTH))
         .map(|this| if left { this.left_0() } else { this.right_0() })
+        .rounded_b(crate::metrics::island_radius())
         .bg(linear_gradient(angle, linear_color_stop(plane, 0.), linear_color_stop(clear, 1.)))
 }
 

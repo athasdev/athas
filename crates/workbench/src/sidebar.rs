@@ -200,6 +200,8 @@ impl Workbench {
             .flex_none()
             .h_full()
             .w(width)
+            .overflow_hidden()
+            .rounded_b(metrics::island_radius())
             .flex_row()
             .child(div().flex().flex_col().flex_1().min_w_0().h_full().child(self.render_sidebar(false, window, cx)))
             // Inside the shell the sidebar and the centre share a surface; a hairline divides

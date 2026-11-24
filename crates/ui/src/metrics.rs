@@ -151,6 +151,15 @@ pub fn radius_lg() -> Pixels { scale::px(8.) }
 pub fn radius_xl() -> Pixels { scale::px(12.) }
 /// What floats clear of the window: the command palette and the surfaces like it.
 pub fn overlay_radius() -> Pixels { scale::px(16.) }
+
+pub fn window_radius() -> Pixels {
+    #[cfg(target_os = "macos")]
+    { gpui::px(12.) }
+    #[cfg(target_os = "windows")]
+    { gpui::px(8.) }
+    #[cfg(not(any(target_os = "macos", target_os = "windows")))]
+    { gpui::px(0.) }
+}
 /// The macOS window buttons, as AppKit draws them. It holds its own size and spacing whatever
 /// the window is zoomed to, so these do not scale. Measure them again with
 /// `cargo run -p ui --example traffic_lights`.

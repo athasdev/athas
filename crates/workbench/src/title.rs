@@ -116,14 +116,17 @@ impl Workbench {
                     .shortcut(platform.shortcut("⌘B", "Ctrl+B"))
                     .on_click(|_, window, cx| window.dispatch_action(Box::new(ToggleSidebar), cx)),
             ))
-            .child(keep_press().child(
-                Button::icon("global-search", IconName::Search)
+            .child(keep_press().child({
+                let search_active = self.search_tab_active();
+                Button::icon("global-search", if search_active { IconName::X } else { IconName::Search })
                     .size(ButtonSize::Medium)
                     .variant(ui::ButtonVariant::Chrome)
-                    .tooltip("Search")
+                    .active(search_active)
+                    .filled_when_active()
+                    .tooltip(if search_active { "Close Search" } else { "Search" })
                     .shortcut(platform.shortcut("⇧⌘F", "Ctrl+Shift+F"))
-                    .on_click(|_, window, cx| window.dispatch_action(Box::new(ShowGlobalSearch), cx)),
-            ))
+                    .on_click(|_, window, cx| window.dispatch_action(Box::new(ShowGlobalSearch), cx))
+            }))
             .child(keep_press().flex().min_w_0().flex_shrink(1.).overflow_hidden().child(switcher))
             .child(
                 canvas(
@@ -173,9 +176,11 @@ impl Workbench {
         Some(
             div()
                 .absolute()
-                .top(metrics::workbench_gap() + px(4.))
-                .right(metrics::workbench_gap() + px(4.))
+                .top_0()
+                .right(metrics::workbench_gap())
+                .h(metrics::pane_header())
                 .flex()
+                .items_center()
                 .gap(px(2.))
                 .child(control("window-minimize", IconName::Minus, WindowControlArea::Min, "Minimize", shortcut(&["window.minimize.alt", "window.minimize"])))
                 .child(control("window-maximize", max_icon, WindowControlArea::Max, max_label, shortcut(&["window.maximize"])))
