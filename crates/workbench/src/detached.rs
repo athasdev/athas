@@ -340,6 +340,7 @@ impl DetachedWindow {
         window.set_background_appearance(Self::background(&content, cx));
         subscriptions.push(cx.observe_global_in::<settings::SettingsStore>(window, |this, window, cx| {
             window.set_background_appearance(Self::background(&this.content, cx));
+            ui::scale::set_zoom(ui::scale::from_setting(settings::get(cx).zoom_level), cx);
             cx.notify();
         }));
         let root_focus = cx.focus_handle();
@@ -392,6 +393,7 @@ impl DetachedWindow {
             Some(in_) => ui::scale::zoom_by(in_, cx),
             None => ui::scale::reset_zoom(cx),
         }
+        settings::update(cx, |settings| settings.zoom_level = ui::scale::to_setting(ui::scale::zoom()));
     }
 
     /// Draws the window chrome of another platform, for previews.
@@ -553,6 +555,13 @@ impl Render for DetachedWindow {
                 })
             })
             .relative()
+            .map(|this| {
+                if window.is_fullscreen() {
+                    this.rounded_b(gpui::px(0.))
+                } else {
+                    this.rounded_b(metrics::window_radius())
+                }
+            })
             .when(!overlay, |this| this.child(self.render_title_bar(window.is_maximized(), cx)))
             .child(body)
             // Over the view, so the view runs under it to the window's top.

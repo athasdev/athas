@@ -64,8 +64,8 @@ pub use buffer::LineEnding;
 pub use inline_completion::{InlineCompletionInput, is_sensitive_path, next_suggestion_word};
 pub use commands::{
     FormatSelection, JumpToSelection, RemoveBrackets, RemoveSecondaryCursors, ResetZoom, RestartLanguageServers, SelectPreviousOccurrence,
-    SelectToBracket, ShowLanguageServerStatus, StopLanguageServers, ToggleLineNumbers, ToggleRenderWhitespace, ZOOM_LEVELS, ZoomIn, ZoomOut,
-    external_editor_command, reset_editor_zoom, zoom_editors, zoom_level,
+    SelectToBracket, ShowLanguageServerStatus, StopLanguageServers, ToggleLineNumbers, ToggleRenderWhitespace, ZoomIn, ZoomOut,
+    external_editor_command,
 };
 pub use fs::{FileBackend, Loaded, LocalFs, is_snapshot, is_untitled, new_untitled_path, register_snapshot};
 pub use git::{GitHunk, HunkKind, set_author_avatar_lookup};

@@ -593,7 +593,7 @@ impl FrameSettings {
         }
         Self {
             font: base,
-            font_size: px((settings.font_size as f32).clamp(6., 72.) * crate::zoom_level(cx)),
+            font_size: px((settings.font_size as f32).clamp(6., 72.)),
             line_height_factor: (settings.editor_line_height as f32).clamp(1., 3.),
             line_numbers: settings.line_numbers,
             relative_numbers: settings.vim_mode && settings.vim_relative_line_numbers,

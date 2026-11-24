@@ -36,6 +36,8 @@ pub static SETTING_DEFS: &[SettingDef] = &[
     SettingDef { tab: "appearance", section: Some("Theme"), label: "Custom Themes", description: None, key: None, kind: SettingKind::Action },
     SettingDef { tab: "appearance", section: Some("Typography"), label: "UI Font Family", description: None, key: Some("uiFontFamily"), kind: SettingKind::Font { monospace: false } },
     SettingDef { tab: "appearance", section: Some("Typography"), label: "UI Font Size", description: None, key: Some("uiFontSize"), kind: SettingKind::Number { min: 11.0, max: 24.0, step: 0.5 } },
+    SettingDef { tab: "appearance", section: Some("Interface"), label: "Window Zoom (%)", description: Some("Scales text, controls and spacing together"), key: Some("zoomLevel"), kind: SettingKind::Number { min: 50.0, max: 300.0, step: 5.0 } },
+    SettingDef { tab: "appearance", section: Some("Interface"), label: "Panel Border Width (px)", description: Some("Thickness of the line around the workbench panel"), key: Some("shellBorderWidth"), kind: SettingKind::Number { min: 0.0, max: 5.0, step: 1.0 } },
     SettingDef { tab: "appearance", section: Some("Interface"), label: "Native Menu Bar", description: None, key: Some("nativeMenuBar"), kind: SettingKind::Toggle },
     SettingDef { tab: "appearance", section: Some("Interface"), label: "Compact Menu Bar", description: None, key: Some("compactMenuBar"), kind: SettingKind::Toggle },
     SettingDef { tab: "appearance", section: Some("Tabs"), label: "Show Tab Icons", description: None, key: Some("showTabIcons"), kind: SettingKind::Toggle },

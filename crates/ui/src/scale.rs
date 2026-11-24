@@ -14,14 +14,23 @@ use std::sync::atomic::{AtomicU32, Ordering};
 
 use gpui::{App, Pixels};
 
-/// The zoom steps, as the editor's own zoom uses (`ZOOM_LEVELS`).
-pub const ZOOM_STEPS: [f32; 11] = [0.5, 0.75, 0.9, 1.0, 1.1, 1.25, 1.5, 1.75, 2.0, 2.5, 3.0];
+pub const ZOOM_STEPS: [f32; 51] = [
+    0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95, 1.0, 1.05, 1.1, 1.15, 1.2, 1.25, 1.3, 1.35, 1.4, 1.45, 1.5, 1.55, 1.6, 1.65, 1.7, 1.75, 1.8, 1.85, 1.9, 1.95, 2.0, 2.05, 2.1, 2.15, 2.2, 2.25, 2.3, 2.35, 2.4, 2.45, 2.5, 2.55, 2.6, 2.65, 2.7, 2.75, 2.8, 2.85, 2.9, 2.95, 3.0,
+];
 
 static ZOOM: AtomicU32 = AtomicU32::new(1.0f32.to_bits());
 
 /// What the window is drawn at: 1.0 is 100%.
 pub fn zoom() -> f32 {
     f32::from_bits(ZOOM.load(Ordering::Relaxed))
+}
+
+pub fn from_setting(value: f64) -> f32 {
+    if value <= 3.0 { value as f32 } else { (value / 100.0) as f32 }
+}
+
+pub fn to_setting(zoom: f32) -> f64 {
+    (zoom as f64 * 100.0).round()
 }
 
 /// A size in pixels at 100%, scaled to the zoom the app is drawn at.
@@ -84,8 +93,17 @@ mod tests {
         assert_eq!(stepped(3.0, true), 3.0);
         assert_eq!(stepped(0.5, false), 0.5);
         // A level between steps moves to the next one either way.
-        assert_eq!(stepped(1.2, true), 1.25);
-        assert_eq!(stepped(1.2, false), 1.1);
+        assert_eq!(stepped(1.27, true), 1.3);
+        assert_eq!(stepped(1.27, false), 1.25);
+    }
+
+    #[test]
+    fn settings_are_percentages_but_old_factors_still_read() {
+        assert_eq!(from_setting(100.0), 1.0);
+        assert_eq!(from_setting(150.0), 1.5);
+        assert_eq!(from_setting(1.25), 1.25);
+        assert_eq!(to_setting(1.0), 100.0);
+        assert_eq!(to_setting(1.25), 125.0);
     }
 
     #[test]
