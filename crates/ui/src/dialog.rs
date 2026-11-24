@@ -5,12 +5,12 @@ use std::rc::Rc;
 
 use crate::scale::px;
 use gpui::{
-    AnyElement, App, BoxShadow, ClickEvent, Context, DismissEvent, ElementId, Entity, EventEmitter, FocusHandle,
-    Focusable, KeyDownEvent, MouseButton, Pixels, SharedString, Window, div, point, prelude::*, relative,
+    AnyElement, App, ClickEvent, Context, DismissEvent, ElementId, Entity, EventEmitter, FocusHandle,
+    Focusable, KeyDownEvent, MouseButton, Pixels, SharedString, Window, div, prelude::*, relative,
 };
 use theme::ActiveTheme;
 
-use crate::{Button, ButtonVariant, Icon, IconName, IconSize, TextInput, TextInputEvent, typography};
+use crate::{Button, ButtonVariant, Icon, IconName, IconSize, Plane, TextInput, TextInputEvent, typography};
 
 type Handler = Rc<dyn Fn(&mut Window, &mut App)>;
 
@@ -253,14 +253,21 @@ impl RenderOnce for Dialog {
 /// the focus by keyboard without the halo a 3px ring made.
 pub fn focus_ring(focused: bool, cx: &App) -> gpui::Div {
     let ring = cx.theme().colors.focus_ring;
-    div().flex_none().rounded_full().when(focused, |this| {
-        this.shadow(vec![BoxShadow {
-            color: ring,
-            offset: point(px(0.), px(0.)),
-            blur_radius: px(0.),
-            spread_radius: px(2.),
-            inset: false,
-        }])
+    let width = px(2.);
+    // A border, not a spread shadow: GPUI paints a shadow under the whole box, so it tinted the
+    // translucent fill of the button inside.
+    div().relative().flex_none().when(focused, |this| {
+        this.child(
+            div()
+                .absolute()
+                .top(-width)
+                .left(-width)
+                .right(-width)
+                .bottom(-width)
+                .rounded(crate::metrics::radius_md() + width)
+                .border_2()
+                .border_color(ring),
+        )
     })
 }
 
@@ -304,6 +311,9 @@ pub struct AlertDialog {
     destructive_media: bool,
     actions: Vec<AlertAction>,
     focused: usize,
+    /// The ring shows once the keyboard has moved the focus, as `:focus-visible` did: opened by
+    /// mouse, the default button reads as just a button.
+    focus_visible: bool,
 }
 
 impl EventEmitter<DismissEvent> for AlertDialog {}
@@ -338,6 +348,7 @@ impl AlertDialog {
             destructive_media: false,
             actions: Vec::new(),
             focused: 0,
+            focus_visible: false,
         }
     }
 
@@ -449,6 +460,9 @@ impl AlertDialog {
             "left" => self.focused = (self.focused + count - 1) % count,
             _ => return,
         }
+        if matches!(event.keystroke.key.as_str(), "tab" | "left" | "right") {
+            self.focus_visible = true;
+        }
         cx.stop_propagation();
         cx.notify();
     }
@@ -464,8 +478,8 @@ impl Render for AlertDialog {
             .iter()
             .enumerate()
             .map(|(index, action)| {
-                focus_ring(index == self.focused, cx)
-                    .child(Button::new(("alert-action", index), action.label.clone()).variant(action.variant).on_click(
+                focus_ring(self.focus_visible && index == self.focused, cx)
+                    .child(Button::new(("alert-action", index), action.label.clone()).variant(action.variant).plane(Plane::Overlay).on_click(
                         cx.listener(move |this, _: &ClickEvent, window, cx| this.press(index, window, cx)),
                     ))
                     .into_any_element()
@@ -599,7 +613,7 @@ impl Render for PromptDialog {
                 entity.update(cx, |_, cx| cx.emit(DismissEvent)).ok();
             })
             .footer([
-                Button::new("prompt-cancel", self.cancel_label.clone()).on_click(dismiss).into_any_element(),
+                Button::new("prompt-cancel", self.cancel_label.clone()).plane(Plane::Overlay).on_click(dismiss).into_any_element(),
                 Button::new("prompt-confirm", self.confirm_label.clone())
                     .variant(ButtonVariant::Accent)
                     .on_click(submit)

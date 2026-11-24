@@ -64,6 +64,9 @@ pub enum Plane {
     #[default]
     Content,
     Page,
+    /// A dialog's card. The theme's accent grey can sit at or under the overlay's own tone, so
+    /// the neutral fill there is a tint of the foreground, as `Destructive` tints its red.
+    Overlay,
 }
 
 type ClickHandler = Rc<dyn Fn(&ClickEvent, &mut Window, &mut App)>;
@@ -335,6 +338,9 @@ impl RenderOnce for Button {
 
         // (fill, text, hover fill, hover text)
         let (mut bg, mut fg, mut hover_bg, mut hover_fg): (Hsla, Hsla, Hsla, Hsla) = match self.variant {
+            ButtonVariant::Default if self.plane == Plane::Overlay => {
+                (colors.foreground.opacity(0.08), colors.foreground, colors.foreground.opacity(0.14), colors.foreground)
+            }
             ButtonVariant::Default => (colors.accent, colors.foreground, colors.selected, colors.foreground),
             ButtonVariant::Accent => {
                 (colors.primary, colors.primary_foreground, colors.primary_hover, colors.primary_foreground)
