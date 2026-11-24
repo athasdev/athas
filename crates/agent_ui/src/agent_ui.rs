@@ -87,6 +87,7 @@ pub mod persistence;
 pub mod project_suggestions;
 pub mod provider_key_dialog;
 pub mod pull_request;
+mod quote;
 mod render;
 pub mod review;
 mod selection;

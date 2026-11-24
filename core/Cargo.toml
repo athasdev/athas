@@ -4,23 +4,33 @@
 [workspace]
 members = [
   "runtime",
-  "tooling",
-  "lsp",
-  "remote",
   "wsl",
   "project",
   "version-control",
-  "extensions",
-  "terminal",
-  "ai",
   "exec-path",
   "github",
   "fff-search",
-  "debugger",
   "browser",
   "docker",
   "claude-ide",
   "test-support",
+]
+# The Tauri-era crates the GPUI app has replaced: `ai` by crates/agent_ui and the
+# crates/ai_* set, `lsp` by crates/lsp_client, `terminal` by crates/terminal_view,
+# `remote` by crates/remote, `extensions` by crates/extension_host, `debugger` by
+# crates/dap, `tooling` by crates/tooling. Nothing in `crates/` depends on them.
+# They stay on disk as the port's reference, and out of the workspace so their
+# `tauri -> gtk -> glib` tree stays out of Cargo.lock: that tree is the whole reason
+# Dependabot kept opening an unresolvable glib security update against a dependency
+# the app never builds.
+exclude = [
+  "ai",
+  "debugger",
+  "extensions",
+  "lsp",
+  "remote",
+  "terminal",
+  "tooling",
 ]
 resolver = "2"
 

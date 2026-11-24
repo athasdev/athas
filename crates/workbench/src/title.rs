@@ -86,6 +86,12 @@ impl Workbench {
             this.show_menu(PROJECT_SWITCHER_MENU, entries, position, Anchor::TopLeft, window, cx);
         }));
 
+        // The strip moves the window on a press and a drag, and on Windows the whole drag region
+        // answers the hit test as the title bar, so the window takes the press and the release
+        // never reaches the button. Its controls keep their press, as the pane header's tabs and
+        // buttons do.
+        let keep_press = || div().on_mouse_down(gpui::MouseButton::Left, |_, _, cx| cx.stop_propagation());
+
         let row = div()
             .id("title-leading")
             .absolute()
@@ -99,8 +105,8 @@ impl Workbench {
             .flex()
             .items_center()
             .gap(if platform == Platform::Mac { metrics::chrome_gap_tight() } else { metrics::chrome_gap() })
-            .children(self.render_window_menu_button(cx))
-            .child(
+            .children(self.render_window_menu_button(cx).map(|button| keep_press().child(button)))
+            .child(keep_press().child(
                 Button::icon("toggle-sidebar", IconName::Sidebar)
                     .size(ButtonSize::Medium)
                     .variant(ui::ButtonVariant::Chrome)
@@ -109,16 +115,16 @@ impl Workbench {
                     .tooltip(if sidebar_visible { "Hide Sidebar" } else { "Show Sidebar" })
                     .shortcut(platform.shortcut("⌘B", "Ctrl+B"))
                     .on_click(|_, window, cx| window.dispatch_action(Box::new(ToggleSidebar), cx)),
-            )
-            .child(
+            ))
+            .child(keep_press().child(
                 Button::icon("global-search", IconName::Search)
                     .size(ButtonSize::Medium)
                     .variant(ui::ButtonVariant::Chrome)
                     .tooltip("Search")
                     .shortcut(platform.shortcut("⇧⌘F", "Ctrl+Shift+F"))
                     .on_click(|_, window, cx| window.dispatch_action(Box::new(ShowGlobalSearch), cx)),
-            )
-            .child(div().flex().min_w_0().flex_shrink(1.).overflow_hidden().child(switcher))
+            ))
+            .child(keep_press().flex().min_w_0().flex_shrink(1.).overflow_hidden().child(switcher))
             .child(
                 canvas(
                     move |bounds, _, _| leading_end.set(bounds_right(bounds)),
@@ -151,6 +157,8 @@ impl Workbench {
                 .h(metrics::rail_control())
                 .rounded(metrics::radius_md())
                 .window_control_area(area)
+                // The title row under them moves the window on a press; the control keeps it.
+                .on_mouse_down(gpui::MouseButton::Left, |_, _, cx| cx.stop_propagation())
                 .hover(move |style| style.bg(hover))
                 .anchored_tooltip(move || ui::Tooltip::new(label).shortcut(shortcut.clone()))
                 .child(Icon::new(icon).size(IconSize::Small).color(colors.subtle_foreground))

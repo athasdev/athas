@@ -416,6 +416,10 @@ impl DetachedWindow {
                 .w(px(36.))
                 .h_full()
                 .window_control_area(area)
+                // The bar moves the window on a press and a drag, and on Windows it answers the
+                // hit test as the title bar; without this the window takes the press and Close
+                // never fires.
+                .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
                 .hover(move |style| style.bg(hover))
                 .anchored_tooltip({ let text: gpui::SharedString = (label).into(); move || ui::Tooltip::new(text.clone()) })
                 .child(Icon::new(icon).size(IconSize::Small).color(colors.subtle_foreground))

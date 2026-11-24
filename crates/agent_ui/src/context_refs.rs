@@ -37,6 +37,9 @@ pub enum ContextRef {
     /// A tab open in the centre: a file (its text goes along) or a tool's view, such as a pull
     /// request (named only).
     Tab { title: String, path: Option<PathBuf>, kind: Option<String>, id: Option<String> },
+    /// A passage quoted out of the transcript, with what the user wrote back to it. The agent
+    /// reads it as the part of its own answer the next prompt is about.
+    Quote { text: String, reply: String },
 }
 
 /// The GitHub views among open tabs, which the Add context menu lists apart.
@@ -127,6 +130,7 @@ impl ContextRef {
                 let lines = if start_line == end_line { format!("{start_line}") } else { format!("{start_line}-{end_line}") };
                 (format!("{name}:{lines}"), relative(path, root))
             }
+            ContextRef::Quote { text, .. } => ("Quote".into(), quote_summary(text)),
             ContextRef::Tab { title, path: Some(path), .. } => (title.clone(), relative(path, root)),
             ContextRef::Tab { title, kind, id, .. } => {
                 let id = id.as_deref().unwrap_or_default();
@@ -149,6 +153,29 @@ impl ContextRef {
         format!("{name} ({description})")
     }
 }
+
+/// The quoted passage on one line, short enough for a chip's tooltip and the attachment list.
+fn quote_summary(text: &str) -> String {
+    let line = text.split_whitespace().collect::<Vec<_>>().join(" ");
+    let mut taken: String = line.chars().take(QUOTE_SUMMARY_CHARS).collect();
+    if line.chars().count() > QUOTE_SUMMARY_CHARS {
+        taken.push('\u{2026}');
+    }
+    taken
+}
+
+const QUOTE_SUMMARY_CHARS: usize = 80;
+
+/// What the prompt carries for a quote: the passage as a blockquote, then the reply under it.
+/// Markdown's own quoting, so an agent reads the two apart without a convention of ours.
+pub fn format_quote(text: &str, reply: &str) -> String {
+    let quoted: Vec<String> = text.lines().map(|line| if line.is_empty() { ">".to_string() } else { format!("> {line}") }).collect();
+    let body = fit(&quoted.join("\n"), QUOTE_BUDGET).0;
+    if reply.trim().is_empty() { body } else { format!("{body}\n\n{}", reply.trim()) }
+}
+
+/// A quote is a passage, not a file: it gets a smaller share of the budget than a folder.
+const QUOTE_BUDGET: usize = 2_000;
 
 fn relative(path: &Path, root: Option<&Path>) -> String {
     root.and_then(|root| path.strip_prefix(root).ok()).map(|path| path.to_string_lossy().replace('\\', "/")).filter(|path| !path.is_empty()).unwrap_or_else(|| path.display().to_string())
@@ -579,5 +606,24 @@ mod tests {
         assert_eq!(selection.describe(Some(Path::new("/p"))).0, "a.rs:3-5");
         assert_eq!(project_folders(&["src/a/b.rs".into(), "README.md".into(), "target/x".into()]), vec!["src", "src/a"]);
         assert_eq!(fit("abcdefghij", 1), ("abcd\n[Truncated]".to_string(), true));
+    }
+
+    #[test]
+    fn a_quote_reads_as_markdown_with_the_reply_under_it() {
+        let quote = ContextRef::Quote { text: "one\n\ntwo".into(), reply: "  why?  ".into() };
+        let (name, description) = quote.describe(None);
+        assert_eq!((name.as_str(), description.as_str()), ("Quote", "one two"));
+        assert_eq!(format_quote("one\n\ntwo", "  why?  "), "> one\n>\n> two\n\nwhy?");
+        // No reply: the passage alone, with no trailing blank.
+        assert_eq!(format_quote("one", "   "), "> one");
+    }
+
+    #[test]
+    fn a_long_quote_is_summed_up_on_one_line() {
+        let text = "word ".repeat(40);
+        let summary = quote_summary(&text);
+        assert_eq!(summary.chars().count(), QUOTE_SUMMARY_CHARS + 1);
+        assert!(summary.ends_with('\u{2026}'));
+        assert!(!summary.contains("  "));
     }
 }
