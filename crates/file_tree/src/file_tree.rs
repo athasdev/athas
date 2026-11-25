@@ -2152,7 +2152,7 @@ impl FileTree {
     // Rendering.
 
     fn render_rows(&mut self, range: Range<usize>, window: &mut Window, cx: &mut Context<Self>) -> Vec<AnyElement> {
-        let last = range.end;
+        let last = self.rows.len();
         let focused = self.focus_handle.is_focused(window);
         let highlighted = if focused { self.selected.clone() } else { self.active.clone().or_else(|| self.selected.clone()) };
         range
@@ -2321,10 +2321,7 @@ impl FileTree {
                 if editing.is_some() || highlighted {
                     this.text_color(colors.foreground)
                 } else {
-                    // GPUI panics on a second .hover()
-                    let hover_fill = colors.accent;
-                    let foreground = colors.foreground;
-                    this.text_color(colors.muted_foreground).hover(move |style| style.bg(hover_fill).text_color(foreground))
+                    ui::sidebar_row(this, false, false, cx)
                 }
             })
             .child(content)
