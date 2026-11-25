@@ -1,3 +1,6 @@
+// Release builds on Windows are GUI apps; a console window would stream logs and close the app with it.
+#![cfg_attr(all(windows, not(debug_assertions)), windows_subsystem = "windows")]
+
 use std::io::IsTerminal as _;
 
 use gpui::App;
