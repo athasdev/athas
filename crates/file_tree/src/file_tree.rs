@@ -1843,6 +1843,9 @@ impl FileTree {
     }
 
     fn hover_row(&mut self, row: &Row, hovered: bool, cx: &mut Context<Self>) {
+        if !Self::wants_directory_size(row) {
+            return;
+        }
         if hovered {
             self.hovered = Some(row.path.clone());
         } else if self.hovered.as_ref() == Some(&row.path) {
@@ -2149,6 +2152,7 @@ impl FileTree {
     // Rendering.
 
     fn render_rows(&mut self, range: Range<usize>, window: &mut Window, cx: &mut Context<Self>) -> Vec<AnyElement> {
+        let last = self.rows.len();
         let focused = self.focus_handle.is_focused(window);
         let highlighted = if focused { self.selected.clone() } else { self.active.clone().or_else(|| self.selected.clone()) };
         range
@@ -2159,7 +2163,7 @@ impl FileTree {
                 let is_highlighted = !row.draft
                     && if self.multi.is_empty() { highlighted.as_ref() == Some(&row.path) } else { self.multi.contains(&row.path) };
                 let has_ring = is_highlighted && focused && self.keyboard_navigation;
-                Some(self.render_row(index, row, previous_depth, next_depth, is_highlighted, has_ring, cx))
+                Some(self.render_row(index, row, previous_depth, next_depth, is_highlighted, has_ring, index + 1 == last, cx))
             })
             .collect()
     }
@@ -2173,6 +2177,7 @@ impl FileTree {
         next_depth: usize,
         highlighted: bool,
         has_ring: bool,
+        bottom: bool,
         cx: &mut Context<Self>,
     ) -> AnyElement {
         let theme = cx.theme().clone();
@@ -2291,10 +2296,11 @@ impl FileTree {
             .gap(px(6.))
             .pl(px(BASE_INDENT + row.depth as f32 * indent))
             .pr(px(6.))
-            .rounded(metrics::radius())
+            .rounded(metrics::radius_md())
             .border_1()
             .border_color(if has_ring { colors.focus_ring } else { gpui::transparent_black() })
             .when(highlighted, |this| ui::sidebar_row(this, true, false, cx))
+            .when(bottom, |this| this.rounded_b(metrics::island_radius()))
             .when(row.ignored, |this| this.opacity(0.5))
             .when(cut, |this| this.italic().opacity(0.4))
             .children(arrow)
@@ -2310,6 +2316,7 @@ impl FileTree {
             .h(self.type_scale().row_height())
             .text_size(self.type_scale().sm())
             .line_height(gpui::relative(typography::LEADING_ROW))
+            .rounded(metrics::radius_md())
             .map(|this| {
                 if editing.is_some() || highlighted {
                     this.text_color(colors.foreground)
@@ -2318,7 +2325,8 @@ impl FileTree {
                 }
             })
             .child(content)
-            .children(guides.into_iter().flatten());
+            .children(guides.into_iter().flatten())
+            .when(bottom, |this| this.rounded_b(metrics::island_radius()));
         if editing.is_none() && !row.draft {
             let clicked = row.clone();
             let hovered = row.clone();
