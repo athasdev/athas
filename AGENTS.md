@@ -4,9 +4,16 @@ Athas is a native Rust app built on GPUI (desktop + wasm). Work happens on the `
 `main` still holds the old React/TypeScript/Tauri app, kept for reference.
 
 - `crates/`: the app.
-- `core/`: the original Athas Rust crates (git, LSP, terminal, database, ACP, ...), a workspace
-  of its own that the app uses by path. Edit them here like any other code.
-- `extensions/official/`: the extension manifests (embedded by `core/ai`, read by tests).
+- `core/`: the original Athas Rust crates, a workspace of its own. Its members -- git, project,
+  github, docker, wsl, browser, claude-ide, runtime, ... -- are the ones the app still uses by
+  path; edit them here like any other code.
+- `core/`'s excluded directories (`ai`, `lsp`, `terminal`, `remote`, `extensions`, `tooling`,
+  `debugger`) are the Tauri-era originals the GPUI app has replaced, kept as the port's
+  reference. Nothing builds them: they are out of the workspace so their `tauri -> gtk -> glib`
+  tree stays out of `core/Cargo.lock`, where it drew a security alert for a dependency the app
+  never ships. Read them; do not add a dependency on one.
+- `extensions/official/`: the extension manifests (read by `crates/extensions`,
+  `crates/lsp_client` and `crates/agent_ui`, and by tests).
 
 Working notes live in `.notes/`, untracked (excluded in `.git/info/exclude`): remaining work and
 test findings (`REMAINING.md`, `BUGS.md`, `BUGHUNT.md`), the task log (`WORKLOG.md`), port status

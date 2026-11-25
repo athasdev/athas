@@ -165,9 +165,17 @@ impl Render for SessionView {
             .capture_any_mouse_down(cx.listener(|this, event: &gpui::MouseDownEvent, _, cx| {
                 if event.button == MouseButton::Left {
                     this.clear_text_selection(event.modifiers.shift, cx);
+                    this.close_quote_card(cx);
                 }
             }))
-            .on_mouse_up(MouseButton::Left, cx.listener(|this, _: &gpui::MouseUpEvent, _, _| this.end_text_selection()))
+            // Letting go of a selection raises the Copy/Quote card where the pointer was.
+            .on_mouse_up(
+                MouseButton::Left,
+                cx.listener(|this, event: &gpui::MouseUpEvent, _, cx| {
+                    this.end_text_selection();
+                    this.open_quote_card(event.position, cx);
+                }),
+            )
             .on_action(cx.listener(SessionView::copy_text_selection))
             .on_action(cx.listener(|this, _: &crate::review::KeepAllAgentChanges, _, cx| this.review_all(true, cx)))
             .on_action(cx.listener(|this, _: &crate::review::RejectAllAgentChanges, _, cx| this.review_all(false, cx)))
@@ -190,6 +198,7 @@ impl Render for SessionView {
             .child(body)
             .child(self.render_session_drop_hint(cx))
             .children(self.render_effort_popover(cx))
+            .children(self.render_quote_card(cx))
             .children(self.open_menu.as_ref().map(|menu| menu.render()))
     }
 }
@@ -2199,6 +2208,55 @@ impl SessionView {
         )
     }
 
+    /// Quotes do not fit a chip. A chip is a name -- a file, a folder, a diff -- and a quote is
+    /// the passage itself; truncated to 180px it says nothing about which part of the answer the
+    /// prompt is about. They sit above the chips as what they are: the passage behind its rule,
+    /// the reply under it.
+    fn render_quote_attachments(&self, cx: &mut Context<Self>) -> Vec<AnyElement> {
+        let colors = colors(cx);
+        self.attachments
+            .iter()
+            .enumerate()
+            .filter_map(|(index, attachment)| {
+                let crate::mentions::Attachment::Context { reference: crate::context_refs::ContextRef::Quote { text, reply }, .. } = attachment else {
+                    return None;
+                };
+                let indices = vec![index];
+                Some(
+                    div()
+                        .id(SharedString::from(format!("quote-attachment-{index}")))
+                        .flex()
+                        .items_start()
+                        .gap(px(6.))
+                        .w_full()
+                        .child(
+                            div()
+                                .flex_1()
+                                .min_w_0()
+                                .flex()
+                                .flex_col()
+                                .gap(px(4.))
+                                .child(crate::quote::quote_block(text, cx))
+                                .when(!reply.trim().is_empty(), |this| {
+                                    this.child(div().text_size(typography::text_sm()).line_height(gpui::relative(typography::LEADING_ROW)).text_color(colors.foreground).child(reply.trim().to_string()))
+                                }),
+                        )
+                        .child(
+                            Button::icon(SharedString::from(format!("remove-quote-{index}")), IconName::X)
+                                .variant(ButtonVariant::Ghost)
+                                .size(ButtonSize::XSmall)
+                                .tooltip("Remove quote from context")
+                                .on_click(cx.listener(move |this, _: &ClickEvent, _, cx| {
+                                    cx.stop_propagation();
+                                    this.remove_attachments(&indices, cx);
+                                })),
+                        )
+                        .into_any_element(),
+                )
+            })
+            .collect()
+    }
+
     /// The attachments summed up by kind; a group opens on its items, each removable
     /// (`ComposerAttachments`).
     /// The composer's attachments. A handful show one chip each — its icon, its name and a way to
@@ -2206,7 +2264,9 @@ impl SessionView {
     /// per kind that opens on its items.
     fn render_attachment_groups(&self, cx: &mut Context<Self>) -> Option<AnyElement> {
         use crate::attachment_groups;
-        let groups = attachment_groups::groups(&self.attachments);
+        let mut groups = attachment_groups::groups(&self.attachments);
+        // `render_quote_attachments` has already drawn these in full.
+        groups.retain(|group| group.kind != attachment_groups::Kind::Quotes);
         if groups.is_empty() {
             return None;
         }
@@ -2493,6 +2553,7 @@ impl SessionView {
             vec![send_button("Send message", cx)]
         };
         let composer = self.composer.clone();
+        let quotes = self.render_quote_attachments(cx);
         let attachments = self.render_attachment_groups(cx);
         let composer_box = div()
             .id("composer-box")
@@ -2514,7 +2575,7 @@ impl SessionView {
             .drag_over::<file_tree::DraggedEntry>(move |style, _, _, _| style.border_1().border_color(colors.primary))
             .on_drop(cx.listener(|this, entry: &file_tree::DraggedEntry, _, cx| this.attach_dragged_entry(entry, cx)))
             .on_mouse_down(MouseButton::Left, move |_, window, cx| composer.update(cx, |composer, cx| composer.focus(window, cx)))
-            .when(!terminal_mode, |this| this.children(attachments))
+            .when(!terminal_mode, |this| this.children(quotes).children(attachments))
             .when(terminal_mode, |this| {
                 // The Terminal badge and the folder the command runs in.
                 let folder = self.info.cwd.as_ref().and_then(|cwd| cwd.file_name()).map(|name| name.to_string_lossy().into_owned());
@@ -3251,6 +3312,7 @@ fn attachment_kind_icon(kind: crate::attachment_groups::Kind) -> IconName {
         Kind::Diffs => IconName::GitDiff,
         Kind::Images => IconName::Image,
         Kind::Selections => IconName::TextAlignLeft,
+        Kind::Quotes => IconName::ChatBubbleText,
         Kind::Terminals => IconName::Terminal,
         Kind::GitHub => IconName::Github,
         Kind::Problems => IconName::Warning,

@@ -43,6 +43,7 @@ impl SessionView {
         let content = match &reference {
             ContextRef::Problems if root.is_none() => Some(context_refs::format_problems(&context_refs::current_problems(cx), None)),
             ContextRef::Selection { path, text, .. } => Some(context_refs::format_selection(path, text)),
+            ContextRef::Quote { text, reply } => Some(context_refs::format_quote(text, reply)),
             ContextRef::Tab { path: None, .. } => Some(context_refs::resolve_tab(&reference, root.as_deref())),
             ContextRef::Problems | ContextRef::Folder(_) | ContextRef::GitDiff { .. } | ContextRef::Tab { .. } => None,
         };
