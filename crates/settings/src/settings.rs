@@ -177,6 +177,10 @@ pub struct Settings {
     pub system_accent_color: bool,
     #[serde(rename = "uiFontSize")]
     pub ui_font_size: f64,
+    #[serde(rename = "zoomLevel")]
+    pub zoom_level: f64,
+    #[serde(rename = "shellBorderWidth")]
+    pub shell_border_width: f64,
     #[serde(rename = "showTabIcons")]
     pub show_tab_icons: bool,
     #[serde(rename = "tabCloseButtonVisibility")]
@@ -463,6 +467,8 @@ impl Default for Settings {
             ui_font_family: "Inter".into(),
             system_accent_color: true,
             ui_font_size: 13.0,
+            zoom_level: 100.0,
+            shell_border_width: 1.0,
             show_tab_icons: true,
             tab_close_button_visibility: "active".into(),
             theme: "athas-dark".into(),

@@ -372,15 +372,16 @@ pub fn background_appearance(cx: &App) -> gpui::WindowBackgroundAppearance {
     if theme::glass(cx) { gpui::WindowBackgroundAppearance::Blurred } else { gpui::WindowBackgroundAppearance::Opaque }
 }
 
-/// `uiFontFamily` and `uiFontSize` for views that read `typography::ui`.
-pub fn apply_ui_typography(cx: &mut App) {
+pub fn apply_ui_settings(cx: &mut App) {
     let Some(settings) = cx.try_global::<settings::SettingsStore>().map(|_| settings::get(cx)) else { return };
     let family = settings.ui_font_family.trim();
+    let zoom = ui::scale::from_setting(settings.zoom_level);
     let ui = typography::UiTypography {
         family: if family.is_empty() { typography::UI_FONT.into() } else { SharedString::from(family.to_string()) },
         size: settings.ui_font_size.clamp(10., 24.) as f32,
     };
     typography::set_ui(cx, ui);
+    ui::scale::set_zoom(zoom, cx);
 }
 
 /// Follows the window's light or dark appearance with the Athas theme.
@@ -720,7 +721,7 @@ impl Workbench {
             let glass_before = theme::glass(cx);
             apply_theme(appearance, cx);
             window.set_background_appearance(background_appearance(cx));
-            apply_ui_typography(cx);
+            apply_ui_settings(cx);
             if !this.tool_available(this.state.layout.sidebar_view, cx) {
                 this.state.layout.sidebar_view = SidebarView::Files;
                 this.save();
@@ -735,7 +736,7 @@ impl Workbench {
             cx.notify();
         })
         .detach();
-        apply_ui_typography(cx);
+        apply_ui_settings(cx);
         let continuous = agent_ui::cloud::ContinuousAgents::global(cx);
         cx.subscribe_in(&continuous, window, |this, _, event: &agent_ui::cloud::ContinuousEvent, window, cx| this.launch_continuous(event, window, cx))
             .detach();
@@ -1720,12 +1721,22 @@ impl Workbench {
         }
     }
 
-    fn show_global_search(&mut self, _: &ShowGlobalSearch, _: &mut Window, cx: &mut Context<Self>) {
+    pub(crate) fn search_tab_active(&self) -> bool {
+        self.state.focused_tabs().is_some_and(|tabs| {
+            tabs.active.is_some_and(|index| matches!(tabs.tabs.get(index), Some(TabItem::Resource { kind, .. }) if kind == "search"))
+        })
+    }
+
+    fn show_global_search(&mut self, _: &ShowGlobalSearch, window: &mut Window, cx: &mut Context<Self>) {
         // Search puts away a menu or picker over the workbench, such as Run Actions; Quick Open,
         // the palette, the project picker and the database dialog replace it as modals.
         self.modal = None;
         self.open_menu = None;
-        self.update_state(cx, |state| state.open_resource("search", "project", "Search"));
+        if self.search_tab_active() {
+            self.focus_front_tab(window, cx);
+        } else {
+            self.update_state(cx, |state| state.open_resource("search", "project", "Search"));
+        }
     }
 
     /// Floats a view over the workbench until it emits `DismissEvent`.
@@ -1809,6 +1820,7 @@ impl Workbench {
             Some(in_) => ui::scale::zoom_by(in_, cx),
             None => ui::scale::reset_zoom(cx),
         }
+        settings::update(cx, |settings| settings.zoom_level = ui::scale::to_setting(ui::scale::zoom()));
     }
 
     /// Switch to Tab 1–9: the tab at that place in the group in front.
@@ -2855,9 +2867,20 @@ impl Render for Workbench {
         // The window chrome frames the workbench: a title strip the whole way across, then the
         // activity bar beside the shell. The window controls live in the strip, so no pane has to
         // keep a row clear for them.
-        let title_row = self.drag_region(div().id("title-row").h(metrics::pane_header()).w_full().flex_none(), cx);
+        let title_row = div()
+            .id("title-row")
+            .h(metrics::pane_header())
+            .w_full()
+            .flex_none()
+            .flex()
+            .items_center()
+            .pr(metrics::workbench_gap())
+            .child(self.render_title_leading(sidebar_column, traffic_lights, window, cx))
+            .child(div().flex_1().min_w_0())
+            .children(self.render_window_controls(window, cx));
+        let title_row = self.drag_region(title_row, cx);
         // The sidebar and the centre are one panel inside that frame, split by a hairline.
-        let shell = ui::shell(cx)
+        let shell = ui::shell(cx, gpui::px(settings::get(cx).shell_border_width as f32))
             .when(sidebar_column, |this| this.child(self.render_sidebar_column(window, cx)))
             .when(!narrow && !pane_fullscreen, |this| this.children(self.render_inbox_column(cx)))
             .child(self.render_centre(window, cx));
@@ -2868,6 +2891,7 @@ impl Render for Workbench {
             .flex_1()
             .min_h_0()
             .overflow_hidden()
+            .rounded_b(metrics::island_radius() + metrics::workbench_gap())
             .px(metrics::workbench_gap())
             .pb(metrics::workbench_gap())
             .gap(metrics::workbench_gap())
@@ -2884,9 +2908,7 @@ impl Render for Workbench {
             .child(title_row)
             .child(body)
             .children(self.render_sidebar_overlay(narrow, window, cx))
-            .children(self.render_inbox_overlay(narrow, cx))
-            .child(self.render_title_leading(sidebar_column, traffic_lights, window, cx))
-            .children(self.render_window_controls(window, cx));
+            .children(self.render_inbox_overlay(narrow, cx));
 
         let root = div()
             .id("workbench")
@@ -3073,6 +3095,13 @@ impl Render for Workbench {
             .size_full()
             .flex()
             .flex_col()
+            .map(|this| {
+                if window.is_fullscreen() || window.is_maximized() {
+                    this.rounded(gpui::px(0.))
+                } else {
+                    this.rounded(metrics::window_radius())
+                }
+            })
             .overflow_hidden()
             .bg(theme.colors.window)
             .font_family(typography::ui(cx).family)

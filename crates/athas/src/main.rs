@@ -34,6 +34,7 @@ fn main() {
         ui::init(cx);
         let settings_path = settings::default_path();
         settings::init(cx, settings::load(settings_path.clone(), settings::legacy_path()), settings_path);
+        workbench::apply_ui_settings(cx);
         account::init(cx);
         telemetry::init(cx, telemetry::TelemetryConfig::new(account::urls(cx).api_base, env!("CARGO_PKG_VERSION")));
         extensions::init(cx);

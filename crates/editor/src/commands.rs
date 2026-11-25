@@ -32,41 +32,6 @@ actions!(
     ]
 );
 
-/// The editor zoom steps (`ZOOM_LEVELS` in `zoom.store.ts`).
-pub const ZOOM_LEVELS: [f32; 11] = [0.5, 0.75, 0.9, 1.0, 1.1, 1.25, 1.5, 1.75, 2.0, 2.5, 3.0];
-
-/// The app-wide editor zoom (`editorZoomLevel`), multiplying the font size and line height.
-struct EditorZoom(f32);
-
-impl Global for EditorZoom {}
-
-pub fn zoom_level(cx: &App) -> f32 {
-    cx.try_global::<EditorZoom>().map_or(1.0, |zoom| zoom.0)
-}
-
-pub(crate) fn zoom_step(level: f32, up: bool) -> f32 {
-    if up {
-        ZOOM_LEVELS.iter().copied().find(|step| *step > level + 0.001).unwrap_or(ZOOM_LEVELS[ZOOM_LEVELS.len() - 1])
-    } else {
-        ZOOM_LEVELS.iter().rev().copied().find(|step| *step < level - 0.001).unwrap_or(ZOOM_LEVELS[0])
-    }
-}
-
-fn set_zoom(cx: &mut App, level: f32) {
-    cx.set_global(EditorZoom(level));
-    cx.refresh_windows();
-}
-
-/// Zooms the editors a step in or out. The window routes Zoom In and Zoom Out to the view that
-/// has the keyboard ("the zoom level of the focused view"), so this runs only for an editor.
-pub fn zoom_editors(cx: &mut App, in_: bool) {
-    set_zoom(cx, zoom_step(zoom_level(cx), in_));
-}
-
-pub fn reset_editor_zoom(cx: &mut App) {
-    set_zoom(cx, 1.0);
-}
-
 /// The terminal command that opens `path` in the external editor the settings name
 /// (`externalEditor`, `customEditorCommand`), with the path relative to the project root; `None`
 /// when files open in the built-in editor.
@@ -239,12 +204,4 @@ mod tests {
         assert_eq!(external_editor_command(&settings, path, None).unwrap(), "emacs -nw \"/p/src/main.rs\"");
     }
 
-    #[test]
-    fn zoom_steps_through_the_levels() {
-        assert_eq!(zoom_step(1.0, true), 1.1);
-        assert_eq!(zoom_step(1.0, false), 0.9);
-        assert_eq!(zoom_step(3.0, true), 3.0);
-        assert_eq!(zoom_step(0.5, false), 0.5);
-        assert_eq!(zoom_step(1.05, true), 1.1);
-    }
 }

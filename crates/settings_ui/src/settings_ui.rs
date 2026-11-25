@@ -1532,6 +1532,7 @@ impl SettingsView {
                     }
                 }
                 let danger = tab == "advanced" && title == Some("Reset");
+                let card_radius = metrics::island_radius() + gpui::px(settings::get(cx).shell_border_width as f32);
                 elements.push(div()
                     .flex()
                     .flex_col()
@@ -1552,8 +1553,7 @@ impl SettingsView {
                         div()
                             .flex()
                             .flex_col()
-                            .rounded(metrics::radius_lg())
-                            // A card on a plane, as every other card of the page is: it used to
+                            .rounded(card_radius)
                             // take the content plane, which the centre the page now fills is.
                             .bg(colors.raised)
                             .shadow(shadow.clone())

@@ -287,7 +287,7 @@ impl Workbench {
                         let key = menu_key(index);
                         Button::new(gpui::ElementId::Name(format!("window-menu-{name}").into()), name)
                             .variant(ui::ButtonVariant::Ghost)
-                            .size(ButtonSize::Small)
+                            .size(ButtonSize::Medium)
                             .plane(Plane::Page)
                             .active(self.menu_is_open(key))
                             .on_click(cx.listener(move |this, event: &gpui::ClickEvent, window, cx| {

@@ -387,7 +387,7 @@ impl Editor {
         // Each hunk's lens is a quiet row of text actions above it (`.cm-agent-edit-lens`: 0.85em,
         // subtle, 0.75em apart, underlined on hover), its removed lines below that.
         let last = self.document.buffer.line_count().saturating_sub(1);
-        let font_size = px((settings::get(cx).font_size as f32).clamp(6., 72.) * crate::zoom_level(cx));
+        let font_size = px((settings::get(cx).font_size as f32).clamp(6., 72.));
         let action = |id: (&'static str, usize), label: &'static str, tooltip: &'static str| {
             div()
                 .id(id)

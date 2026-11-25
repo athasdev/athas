@@ -14,7 +14,9 @@ use std::sync::atomic::{AtomicU32, Ordering};
 
 use gpui::{App, Pixels};
 
-/// The zoom steps, as the editor's own zoom uses (`ZOOM_LEVELS`).
+/// The ladder Zoom In and Zoom Out walk. The Appearance setting is a percentage in 5% steps and
+/// does not snap to this: `set_zoom` only holds a level inside the ladder's ends. Keeping the
+/// rungs wide is what makes Cmd-+ worth pressing -- at 5% a person taps it ten times to reach 150%.
 pub const ZOOM_STEPS: [f32; 11] = [0.5, 0.75, 0.9, 1.0, 1.1, 1.25, 1.5, 1.75, 2.0, 2.5, 3.0];
 
 static ZOOM: AtomicU32 = AtomicU32::new(1.0f32.to_bits());
@@ -22,6 +24,14 @@ static ZOOM: AtomicU32 = AtomicU32::new(1.0f32.to_bits());
 /// What the window is drawn at: 1.0 is 100%.
 pub fn zoom() -> f32 {
     f32::from_bits(ZOOM.load(Ordering::Relaxed))
+}
+
+pub fn from_setting(value: f64) -> f32 {
+    if value <= 3.0 { value as f32 } else { (value / 100.0) as f32 }
+}
+
+pub fn to_setting(zoom: f32) -> f64 {
+    (zoom as f64 * 100.0).round()
 }
 
 /// A size in pixels at 100%, scaled to the zoom the app is drawn at.
@@ -86,6 +96,18 @@ mod tests {
         // A level between steps moves to the next one either way.
         assert_eq!(stepped(1.2, true), 1.25);
         assert_eq!(stepped(1.2, false), 1.1);
+        // A percentage the setting allows but the ladder has no rung for still steps.
+        assert_eq!(stepped(1.05, true), 1.1);
+        assert_eq!(stepped(1.05, false), 1.0);
+    }
+
+    #[test]
+    fn settings_are_percentages_but_old_factors_still_read() {
+        assert_eq!(from_setting(100.0), 1.0);
+        assert_eq!(from_setting(150.0), 1.5);
+        assert_eq!(from_setting(1.25), 1.25);
+        assert_eq!(to_setting(1.0), 100.0);
+        assert_eq!(to_setting(1.25), 125.0);
     }
 
     #[test]
