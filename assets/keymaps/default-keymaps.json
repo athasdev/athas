@@ -759,6 +759,7 @@
  {
   "key": "shift+?",
   "command": "help.shortcuts",
+  "when": "!editorFocus && !terminalFocus && !agentSessionFocus && !textInputFocus",
   "source": "default"
  }
 ]

@@ -226,6 +226,7 @@ fn gpui_name(name: &str) -> String {
         "terminalFocus" => "Terminal".into(),
         "browserFocus" => "Browser".into(),
         "agentSessionFocus" => "AgentSession".into(),
+        "textInputFocus" => "TextInput".into(),
         "sidebarFocus" => "FileTree".into(),
         "findWidgetVisible" => "EditorFind".into(),
         "agentEditHunks" => "agent_hunk".into(),
