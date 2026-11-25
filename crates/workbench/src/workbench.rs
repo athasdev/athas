@@ -1732,10 +1732,8 @@ impl Workbench {
         // the palette, the project picker and the database dialog replace it as modals.
         self.modal = None;
         self.open_menu = None;
-        let search_front = self.search_tab_active();
-        if search_front {
-            let Some(index) = self.state.focused_tabs().and_then(|tabs| tabs.active) else { return };
-            self.close_tabs_guarded(move |state| state.close_tab(index), window, cx);
+        if self.search_tab_active() {
+            self.focus_front_tab(window, cx);
         } else {
             self.update_state(cx, |state| state.open_resource("search", "project", "Search"));
         }
@@ -2869,7 +2867,18 @@ impl Render for Workbench {
         // The window chrome frames the workbench: a title strip the whole way across, then the
         // activity bar beside the shell. The window controls live in the strip, so no pane has to
         // keep a row clear for them.
-        let title_row = self.drag_region(div().id("title-row").h(metrics::pane_header()).w_full().flex_none(), cx);
+        let title_row = div()
+            .id("title-row")
+            .h(metrics::pane_header())
+            .w_full()
+            .flex_none()
+            .flex()
+            .items_center()
+            .pr(metrics::workbench_gap())
+            .child(self.render_title_leading(sidebar_column, traffic_lights, window, cx))
+            .child(div().flex_1().min_w_0())
+            .children(self.render_window_controls(window, cx));
+        let title_row = self.drag_region(title_row, cx);
         // The sidebar and the centre are one panel inside that frame, split by a hairline.
         let shell = ui::shell(cx, gpui::px(settings::get(cx).shell_border_width as f32))
             .when(sidebar_column, |this| this.child(self.render_sidebar_column(window, cx)))
@@ -2899,9 +2908,7 @@ impl Render for Workbench {
             .child(title_row)
             .child(body)
             .children(self.render_sidebar_overlay(narrow, window, cx))
-            .children(self.render_inbox_overlay(narrow, cx))
-            .child(self.render_title_leading(sidebar_column, traffic_lights, window, cx))
-            .children(self.render_window_controls(window, cx));
+            .children(self.render_inbox_overlay(narrow, cx));
 
         let root = div()
             .id("workbench")

@@ -7,7 +7,7 @@ use gpui::{
 use theme::ActiveTheme;
 use ui::{Button, ButtonSize, Icon, IconName, IconSize, metrics};
 
-use crate::{Platform, ShowGlobalSearch, ToggleSidebar, Workbench, bounds_right};
+use crate::{Platform, ToggleSidebar, Workbench, bounds_right};
 
 const PROJECT_SWITCHER_MENU: &str = "project-switcher";
 
@@ -94,11 +94,8 @@ impl Workbench {
 
         let row = div()
             .id("title-leading")
-            .absolute()
-            // Fills the title strip, so its controls centre on the traffic lights.
-            .top_0()
-            .left_0()
-            .h(metrics::pane_header())
+            // Fills the title row, so its controls centre with the window controls.
+            .h_full()
             .pl(inset)
             .pr(px(4.))
             .max_w(max_width)
@@ -125,7 +122,16 @@ impl Workbench {
                     .filled_when_active()
                     .tooltip(if search_active { "Close Search" } else { "Search" })
                     .shortcut(platform.shortcut("⇧⌘F", "Ctrl+Shift+F"))
-                    .on_click(|_, window, cx| window.dispatch_action(Box::new(ShowGlobalSearch), cx))
+                    .on_click(cx.listener(|this, _, window, cx| {
+                        if this.search_tab_active() {
+                            let Some(index) = this.state.focused_tabs().and_then(|tabs| tabs.active) else { return };
+                            this.close_tabs_guarded(move |state| state.close_tab(index), window, cx);
+                        } else {
+                            this.modal = None;
+                            this.open_menu = None;
+                            this.update_state(cx, |state| state.open_resource("search", "project", "Search"));
+                        }
+                    }))
             }))
             .child(keep_press().flex().min_w_0().flex_shrink(1.).overflow_hidden().child(switcher))
             .child(
@@ -135,7 +141,7 @@ impl Workbench {
                 )
                 .size_0(),
             );
-        self.drag_region(row, cx)
+        row
     }
 
     /// Minimise, maximise and close for Windows and Linux, where Athas draws its own title bar
@@ -175,10 +181,8 @@ impl Workbench {
         let (max_icon, max_label) = if maximized { (IconName::ArrowsIn, "Restore") } else { (IconName::ArrowsOut, "Maximize") };
         Some(
             div()
-                .absolute()
-                .top_0()
-                .right(metrics::workbench_gap())
-                .h(metrics::pane_header())
+                .h_full()
+                .flex_none()
                 .flex()
                 .items_center()
                 .gap(px(2.))
