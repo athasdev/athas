@@ -695,6 +695,7 @@ mod tests {
             let bound: Vec<&Keybinding> = bindings.iter().filter(|binding| binding.command == "help.shortcuts").collect();
             assert_eq!(bound.len(), 1, "one default binding");
             assert_eq!(normalize_key(&bound[0].key), normalize_key("shift+?"));
+            assert!(bound[0].when.as_deref().is_some_and(|when| when.contains("textInputFocus")), "help must stay out of text inputs");
         }
         assert!(command("help.shortcuts").is_some());
     }
