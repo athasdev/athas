@@ -467,12 +467,14 @@ impl Composer {
                 cx.notify();
                 true
             }
-            "c" | "x" if cmd || (ctrl && cfg!(not(target_os = "macos"))) => {
-                if !self.selected_range.is_empty() {
-                    cx.write_to_clipboard(ClipboardItem::new_string(self.content[self.selected_range.clone()].to_string()));
-                    if keystroke.key == "x" {
-                        self.replace_selection("", cx);
-                    }
+            // Only claimed with something selected here. The composer holds the focus for the
+            // whole chat, so claiming an empty Copy swallowed the keystroke and the transcript's
+            // own `CopyTranscriptSelection` never ran: text selected in the transcript could not
+            // be copied at all. Unhandled, it falls through to the session's binding.
+            "c" | "x" if (cmd || (ctrl && cfg!(not(target_os = "macos")))) && !self.selected_range.is_empty() => {
+                cx.write_to_clipboard(ClipboardItem::new_string(self.content[self.selected_range.clone()].to_string()));
+                if keystroke.key == "x" {
+                    self.replace_selection("", cx);
                 }
                 true
             }

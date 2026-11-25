@@ -212,6 +212,10 @@ pub struct SessionView {
     markdown: RefCell<HashMap<usize, (usize, Rc<Vec<Block>>)>>,
     /// Text the user has selected across the transcript with the mouse.
     pub(crate) text_selection: Option<crate::selection::TextSelection>,
+    /// The Copy/Quote card over that selection, while it is up.
+    pub(crate) quote_card: Option<crate::quote::QuoteCard>,
+    /// Keeps the card's reply field subscribed for as long as the card is up.
+    pub(crate) quote_subscription: Option<gpui::Subscription>,
     /// The runs of text the transcript has drawn, which is what copying the selection reads.
     pub(crate) drawn_runs: RefCell<crate::selection::DrawnRuns>,
     /// Decoded thumbnails of the images sent with prompts, by their base64 data.
@@ -633,6 +637,8 @@ impl SessionView {
             plan_collapsed: false,
             markdown: RefCell::default(),
             text_selection: None,
+            quote_card: None,
+            quote_subscription: None,
             drawn_runs: RefCell::default(),
             thumbnails: RefCell::default(),
             cloud_tool_calls: HashMap::new(),

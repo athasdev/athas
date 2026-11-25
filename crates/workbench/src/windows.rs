@@ -317,6 +317,7 @@ impl Workbench {
         let only_tab = tabs.len() == 1;
         let inset = if window.is_fullscreen() { metrics::workbench_gap() + metrics::chrome_padding_inline() } else { metrics::traffic_lights_inset() };
         let muted = cx.theme().colors.subtle_foreground;
+        let keep_press = || div().on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation());
         let items: Vec<gpui::AnyElement> = tabs
             .into_iter()
             .map(|tab| {
@@ -325,7 +326,7 @@ impl Workbench {
                     crate::project_icon::project_glyph(Some(path), tab.custom_icon.as_deref(), ui::IconSize::XSmall.pixels(), muted)
                 });
                 let weak = cx.weak_entity();
-                Tab::new(gpui::ElementId::Name(format!("window-tab-{}", id.as_u64()).into()), tab.title.clone())
+                let tab_element = Tab::new(gpui::ElementId::Name(format!("window-tab-{}", id.as_u64()).into()), tab.title.clone())
                     .stretch()
                     .active(tab.active)
                     .show_close(false)
@@ -351,8 +352,11 @@ impl Workbench {
                             this.show_menu("window-tab", entries, position, gpui::Anchor::TopLeft, window, cx);
                         })
                         .ok();
-                    })
-                    .into_any_element()
+                    });
+                // The row moves the window on a press and a drag; a tab keeps its own press so a
+                // slight move between down and up does not swallow the click. The wrapper takes
+                // the stretched tab's place in the strip.
+                keep_press().flex_1().min_w_0().child(tab_element).into_any_element()
             })
             .collect();
         let row = div()
@@ -377,13 +381,13 @@ impl Workbench {
                     .overflow_x_scroll()
                     .children(items),
             )
-            .child(
+            .child(keep_press().child(
                 Button::icon("window-new-tab", IconName::Plus)
                     .size(ButtonSize::Small)
                     .plane(Plane::Page)
                     .tooltip("New Tab")
                     .on_click(|_, window, cx| window.dispatch_action(Box::new(NewWindowTab), cx)),
-            )
+            ))
             .on_mouse_down(MouseButton::Middle, |_, _, cx| cx.stop_propagation());
         self.drag_region(row, cx).into_any_element()
     }
