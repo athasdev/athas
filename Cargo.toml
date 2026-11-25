@@ -39,6 +39,26 @@ debug = "line-tables-only"
 "*" = { debug = false }
 gpui_macros = { opt-level = 3 }
 derive_refineable = { opt-level = 3 }
+# The crates that run once per frame, or once per character of a frame: unoptimized, they are
+# what makes a `cargo run` build stutter while it scrolls (#797). Optimizing them costs one
+# longer first build and nothing after it -- they are dependencies, so an edit to `crates/`
+# never rebuilds them, and the iteration loop stays as fast as it was.
+cosmic-text = { opt-level = 3 }
+rustybuzz = { opt-level = 3 }
+swash = { opt-level = 3 }
+zeno = { opt-level = 3 }
+ttf-parser = { opt-level = 3 }
+taffy = { opt-level = 3 }
+etagere = { opt-level = 3 }
+lyon = { opt-level = 3 }
+naga = { opt-level = 3 }
+wgpu-hal = { opt-level = 3 }
+wgpu-core = { opt-level = 3 }
+ropey = { opt-level = 3 }
+tree-sitter = { opt-level = 3 }
+unicode-segmentation = { opt-level = 3 }
+png = { opt-level = 3 }
+image = { opt-level = 3 }
 
 # Shipping desktop builds (`scripts/bundle-mac.sh --release`, the release workflow).
 # opt-level 3: the editor's text layout and rendering want speed more than a few MB.

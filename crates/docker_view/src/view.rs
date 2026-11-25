@@ -113,7 +113,7 @@ impl TableRow {
             .rounded(metrics::radius_md())
             .text_size(typography::text_sm())
             .text_color(colors.muted_foreground)
-            .hover(|style| style.bg(colors.accent))
+            .hover(|style| style.bg(colors.accent).text_color(colors.foreground))
             .when(self.busy, |this| this.opacity(0.55))
             .child(div().flex().flex_none().w(px(16.)).justify_center().child(self.leading))
             .child(div().flex().flex_1().min_w_0().items_center().children(self.cells))

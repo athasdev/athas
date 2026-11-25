@@ -197,7 +197,8 @@ impl ProjectIconPicker {
 
 impl Render for ProjectIconPicker {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
-        let colors = cx.theme().colors.clone();
+        let theme = cx.theme().clone();
+        let colors = theme.colors.clone();
         let options = self.options(cx);
         let tabs = [
             (ProjectIconCategory::Files, "Project Files"),
@@ -208,16 +209,16 @@ impl Render for ProjectIconPicker {
             let active = self.category == category;
             div()
                 .id(("icon-tab", index))
-                .px(px(10.))
-                .h(px(24.))
+                .px(px(12.))
+                .h(ui::metrics::chrome_control())
                 .flex()
                 .items_center()
                 .rounded_full()
                 .text_size(typography::text_chrome())
                 .font_weight(typography::MEDIUM)
                 .text_color(if active { colors.foreground } else { colors.subtle_foreground })
-                .when(active, |this| this.bg(colors.selected))
-                .hover(|style| style.text_color(colors.foreground))
+                .when(active, |this| this.bg(colors.segment_knob).shadow(theme.shadows.raised_inset.clone()))
+                .when(!active, |this| this.hover(|style| style.text_color(colors.foreground)))
                 .on_click(cx.listener(move |this, _, _, cx| this.set_category(category, cx)))
                 .child(label)
         }));

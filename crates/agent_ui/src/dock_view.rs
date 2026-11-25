@@ -646,7 +646,7 @@ impl Render for SessionDockView {
                     .id("side-changes-total")
                     .px(px(4.))
                     .mr(px(-4.))
-                    .rounded(ui::metrics::radius())
+                    .rounded(ui::metrics::radius_md())
                     .hover(|style| style.bg(colors.accent))
                     .tooltip(ui::Tooltip::text("Review all changes"))
                     .on_click(|_, window, cx| {

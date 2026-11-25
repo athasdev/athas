@@ -284,10 +284,11 @@ impl MarkdownEditor {
                     .flex()
                     .items_center()
                     .gap(px(8.))
-                    .h(px(26.))
+                    .h(metrics::list_row())
                     .px(px(8.))
-                    .rounded(metrics::radius())
-                    .when(selected, |this| this.bg(colors.selected))
+                    .rounded(metrics::radius_md())
+                    .text_color(if selected { colors.primary_foreground } else { colors.foreground })
+                    .when(selected, |this| this.bg(colors.primary))
                     .on_mouse_move(cx.listener(move |this, _, _, cx| {
                         if let Some(slash) = this.slash.as_mut().filter(|slash| slash.selected != index) {
                             slash.selected = index;
@@ -295,9 +296,9 @@ impl MarkdownEditor {
                         }
                     }))
                     .on_click(cx.listener(move |this, _, window, cx| this.run_slash(command, window, cx)))
-                    .child(Icon::new(definition.icon).size(IconSize::Small).color(colors.muted_foreground))
+                    .child(Icon::new(definition.icon).size(IconSize::Small).color(if selected { colors.primary_foreground } else { colors.muted_foreground }))
                     .child(div().flex_1().child(definition.label))
-                    .when(selected, |this| this.child(ui::Kbd::new("↵")))
+                    .when(selected, |this| this.child(ui::Kbd::new("↵").on_primary(true)))
                     .into_any_element(),
             );
         }
@@ -532,6 +533,7 @@ impl Render for LabelPicker {
                     .when(matching.is_empty(), |this| this.child(div().px(px(8.)).py(px(6.)).text_size(typography::text_sm()).text_color(colors.subtle_foreground).child(empty)))
                     .children(matching.into_iter().enumerate().map(|(index, label)| {
                         let checked = self.selected.contains(&label.name);
+                        let highlighted = index == self.highlighted;
                         let name = label.name.clone();
                         let swatch = crate::model::label_rgb(&label.color).map(|(r, g, b)| gpui::Rgba { r, g, b, a: 1. }.into()).unwrap_or(colors.subtle_foreground);
                         div()
@@ -539,16 +541,24 @@ impl Render for LabelPicker {
                             .flex()
                             .items_center()
                             .gap(px(8.))
-                            .h(px(28.))
+                            .h(metrics::list_row())
                             .px(px(8.))
                             .rounded(metrics::radius_md())
                             .text_size(typography::text_sm())
-                            .text_color(colors.foreground)
-                            .when(index == self.highlighted, |this| this.bg(colors.accent))
-                            .hover(|style| style.bg(colors.accent))
+                            .text_color(if highlighted { colors.primary_foreground } else { colors.foreground })
+                            // The pointer moves the same cursor the keys do, as `ui::Select` does:
+                            // one highlight, never a hovered row beside a highlighted one.
+                            .when(highlighted, |this| this.bg(colors.primary))
+                            .when(!highlighted && checked, |this| this.bg(colors.selected))
+                            .on_hover(cx.listener(move |this, hovered: &bool, _, cx| {
+                                if *hovered && this.highlighted != index {
+                                    this.highlighted = index;
+                                    cx.notify();
+                                }
+                            }))
                             .child(div().size(px(10.)).flex_none().rounded_full().bg(swatch))
                             .child(div().flex_1().min_w_0().truncate().child(label.name.clone()))
-                            .when(checked, |this| this.child(Icon::new(IconName::Check).size(IconSize::Small).color(colors.foreground)))
+                            .when(checked, |this| this.child(Icon::new(IconName::Check).size(IconSize::Small).color(if highlighted { colors.primary_foreground } else { colors.primary })))
                             .on_click(cx.listener(move |this, _, _, cx| this.toggle(&name, cx)))
                     })),
             )

@@ -381,7 +381,7 @@ impl RenderOnce for Tabs {
                 .when(trigger.disabled, |this| this.opacity(0.5))
                 .when(!active && !trigger.disabled, |this| this.hover(move |style| style.text_color(hover_text)))
                 .children(trigger.icon.map(|icon| {
-                    let icon = Icon::new(icon).size(IconSize::Custom(px(14.))).color(text);
+                    let icon = Icon::new(icon).size(IconSize::Small).color(text);
                     if hoverable { icon.group_hover_color("ui-tabs-trigger", hover_text) } else { icon }
                 }))
                 .child(trigger.label)

@@ -271,8 +271,8 @@ impl ProviderKeyDialog {
                     .px(px(8.))
                     .rounded(ui::metrics::radius_md())
                     .text_size(typography::text_sm())
-                    .when(selected, |this| this.bg(colors.accent))
-                    .when(!selected, |this| this.hover(|style| style.bg(colors.accent)))
+                    .when(selected, |this| this.bg(colors.selected))
+                    .when(!selected, |this| this.hover(|style| style.bg(colors.accent).text_color(colors.foreground)))
                     .child(crate::model_vendor::provider_mark(id, px(14.), colors.subtle_foreground))
                     .child(div().flex_1().min_w_0().truncate().child(provider.name))
                     .child(

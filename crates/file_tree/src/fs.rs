@@ -72,7 +72,10 @@ pub trait Fs: Send + Sync {
         None
     }
     /// Watches `root` until the returned guard is dropped.
-    fn watch(&self, root: &Path, on_change: ChangeCallback) -> Result<Box<dyn Any>>;
+    ///
+    /// Setting a watch up reads the tree on Linux (one watch per directory), so callers run this
+    /// off the main thread; the guard is `Send` so it can come back from there.
+    fn watch(&self, root: &Path, on_change: ChangeCallback) -> Result<Box<dyn Any + Send>>;
 }
 
 /// The local disk.
@@ -220,7 +223,7 @@ mod native {
             local_fs::symlink_info(path, Some(root.to_string_lossy().into_owned())).ok()?.target
         }
 
-        fn watch(&self, root: &Path, on_change: ChangeCallback) -> Result<Box<dyn Any>> {
+        fn watch(&self, root: &Path, on_change: ChangeCallback) -> Result<Box<dyn Any + Send>> {
             let watcher = FileWatcher::new(Arc::new(Sink(on_change)));
             watcher.watch_root(root, Subscriber::Window("file-tree".into()))?;
             Ok(Box::new(watcher))
@@ -308,7 +311,7 @@ mod unsupported {
         fn remove(&self, _: &Path) -> Result<()> {
             bail!("no file system in this build")
         }
-        fn watch(&self, _: &Path, _: ChangeCallback) -> Result<Box<dyn Any>> {
+        fn watch(&self, _: &Path, _: ChangeCallback) -> Result<Box<dyn Any + Send>> {
             bail!("no file system in this build")
         }
     }

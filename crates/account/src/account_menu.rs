@@ -212,8 +212,10 @@ impl AccountMenu {
 
     fn render_item(&self, index: usize, item: Item, cx: &mut Context<Self>) -> AnyElement {
         let colors = cx.theme().colors.clone();
-        let text = colors.foreground;
         let highlighted = self.highlighted == Some(index);
+        // The menu's own cursor fill, as `ui::Menu` and `ui::Select` draw it.
+        let text = if highlighted { colors.primary_foreground } else { colors.foreground };
+        let quiet = if highlighted { colors.primary_foreground } else { colors.subtle_foreground };
         let label = item.label.clone();
         let icon = item.icon;
         let trailing = item.trailing.clone();
@@ -226,23 +228,23 @@ impl AccountMenu {
             .flex()
             .items_center()
             .gap(px(8.))
-            .h(px(28.))
+            .h(metrics::list_row())
             .px(px(8.))
             .rounded(metrics::radius_md())
             .text_size(typography::text_sm())
             .text_color(text)
-            .when(highlighted, |this| this.bg(colors.accent))
+            .when(highlighted, |this| this.bg(colors.primary))
             .on_hover(cx.listener(move |this, hovered: &bool, _, cx| {
                 if *hovered && this.highlighted != Some(index) {
                     this.highlighted = Some(index);
                     cx.notify();
                 }
             }))
-            .child(Icon::new(icon).size(IconSize::Small).color(colors.subtle_foreground))
+            .child(Icon::new(icon).size(IconSize::Small).color(quiet))
             .child(div().flex_1().min_w_0().truncate().child(label))
-            .children(trailing.map(|trailing| div().text_size(typography::text_caption()).text_color(colors.subtle_foreground).child(trailing)))
-            .children(shortcut.map(|shortcut| div().text_size(typography::text_caption()).text_color(colors.subtle_foreground).child(shortcut)))
-            .when(external, |this| this.child(Icon::new(IconName::OpenExternal).size(IconSize::Small).color(colors.subtle_foreground)))
+            .children(trailing.map(|trailing| div().text_size(typography::text_caption()).text_color(quiet).child(trailing)))
+            .children(shortcut.map(|shortcut| div().text_size(typography::text_caption()).text_color(quiet).child(shortcut)))
+            .when(external, |this| this.child(Icon::new(IconName::OpenExternal).size(IconSize::Small).color(quiet)))
             .on_click(cx.listener(move |this, _, window, cx| {
                 if let Some(item) = item.borrow_mut().take() {
                     this.activate(item, window, cx);

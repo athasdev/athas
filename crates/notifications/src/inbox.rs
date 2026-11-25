@@ -191,8 +191,8 @@ impl InboxPanel {
             .px(px(8.))
             .py(px(6.))
             .rounded(metrics::radius_lg())
-            .when(open, |this| this.bg(colors.accent.opacity(0.6)))
-            .hover(|style| style.bg(colors.accent.opacity(0.6)))
+            .when(open, |this| this.bg(colors.selected))
+            .hover(|style| style.bg(colors.accent))
             .on_click(cx.listener(move |this, _, window, cx| match &action {
                 Some(action) => (action.handler)(window, cx),
                 None => this.toggle(id.clone(), cx),

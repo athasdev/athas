@@ -152,7 +152,6 @@ impl Row {
 
 impl GitPanel {
     pub(crate) fn render_header_buttons(&self, cx: &mut Context<Self>) -> AnyElement {
-        let menu_open = self.menu_is_open("git-actions");
         div()
             .flex()
             .items_center()
@@ -165,17 +164,21 @@ impl GitPanel {
                     .disabled(self.reloading)
                     .on_click(cx.listener(|this, _, _, cx| this.refresh(cx))),
             )
-            .child(
-                Button::icon("git-actions", IconName::Dots)
-                    .size(ButtonSize::Small)
-                    .plane(Plane::Page)
-                    .active(menu_open)
-                    .tooltip("Git actions")
-                    .on_click(cx.listener(|this, event: &ClickEvent, window, cx| {
-                        let entries = this.actions_menu(cx);
-                        this.show_menu("git-actions", entries, below(event), Anchor::TopRight, window, cx);
-                    })),
-            )
+            .into_any_element()
+    }
+
+    /// Git actions, the button that sits against the tool's name.
+    pub(crate) fn render_more_button(&self, cx: &mut Context<Self>) -> AnyElement {
+        let menu_open = self.menu_is_open("git-actions");
+        Button::icon("git-actions", IconName::Dots)
+            .size(ButtonSize::Small)
+            .plane(Plane::Page)
+            .active(menu_open)
+            .tooltip("Git actions")
+            .on_click(cx.listener(|this, event: &ClickEvent, window, cx| {
+                let entries = this.actions_menu(cx);
+                this.show_menu("git-actions", entries, below(event), Anchor::TopRight, window, cx);
+            }))
             .into_any_element()
     }
 
@@ -289,7 +292,8 @@ impl GitPanel {
     /// name, so the sidebar's tools all start the same way.
     fn render_title_only(&mut self, cx: &mut Context<Self>) -> impl IntoElement {
         let actions = self.render_header_buttons(cx);
-        ui::PanelHeader::new("Source Control").trailing(actions)
+        let more = self.render_more_button(cx);
+        ui::PanelHeader::new("Source Control").more(more).trailing(actions)
     }
 
     fn render_identity(&self, colors: &ThemeColors, cx: &mut Context<Self>) -> impl IntoElement {
@@ -528,7 +532,7 @@ impl GitPanel {
                                         .bg(colors.primary)
                                         .hover(move |style| style.bg(hover))
                                         .anchored_tooltip(move || ui::Tooltip::new("More commit options"))
-                                        .child(Icon::new(IconName::ChevronDown).size(IconSize::Custom(px(12.))).color(colors.primary_foreground))
+                                        .child(Icon::new(IconName::ChevronDown).size(IconSize::XSmall).color(colors.primary_foreground))
                                         .on_click(cx.listener(|this, event: &ClickEvent, window, cx| {
                                             let entries = this.commit_menu(cx);
                                             this.show_menu("git-commit", entries, below(event), Anchor::TopRight, window, cx);

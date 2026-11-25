@@ -128,17 +128,18 @@ impl RenderOnce for PaneTitle {
 /// lists the sessions footer opens) wore `pane_header` with a `PaneTitle` and a divider beneath.
 /// Side by side they read as two different apps. This is the sidebar's version, because that is
 /// the quieter of the two and there are more of them: no icon (the rail and the row that opened
-/// the panel both show it already) and no rule (nothing else in a sidebar has one).
+/// the panel both show it already), and one full-width rule under the row to close it off.
 #[derive(IntoElement)]
 pub struct PanelHeader {
     label: SharedString,
     detail: Option<SharedString>,
+    more: Option<AnyElement>,
     trailing: Option<AnyElement>,
 }
 
 impl PanelHeader {
     pub fn new(label: impl Into<SharedString>) -> Self {
-        Self { label: label.into(), detail: None, trailing: None }
+        Self { label: label.into(), detail: None, more: None, trailing: None }
     }
 
     /// A quiet reading after the name: "3 new", "2 selected", "12 archived".
@@ -147,6 +148,16 @@ impl PanelHeader {
         self
     }
 
+    /// The tool's More actions button, which sits against the name. Everything the menu holds is
+    /// about the thing the name says, so it reads as part of the name rather than as one more
+    /// control in the row; and where the row's other buttons change with what the tool is
+    /// showing, this one is always there, so a fixed place at the end would be the wrong one.
+    pub fn more(mut self, element: impl IntoElement) -> Self {
+        self.more = Some(element.into_any_element());
+        self
+    }
+
+    /// The tool's own buttons, at the row's end.
     pub fn trailing(mut self, element: impl IntoElement) -> Self {
         self.trailing = Some(element.into_any_element());
         self
@@ -156,32 +167,40 @@ impl PanelHeader {
 impl RenderOnce for PanelHeader {
     fn render(self, _window: &mut Window, cx: &mut App) -> impl IntoElement {
         let colors = &cx.theme().colors;
-        div().flex_none().px(metrics::sidebar_inset()).pb(px(2.)).child(
-            div()
-                .flex()
-                .items_center()
-                .min_w_0()
-                .h(metrics::chrome_control())
-                .gap(metrics::chrome_gap())
-                .pl(px(6.))
-                .pr(px(2.))
-                .text_size(typography::text_sm())
-                .font_weight(typography::MEDIUM)
-                .text_color(colors.muted_foreground)
-                .child(div().flex_none().truncate().child(self.label))
-                .children(self.detail.map(|detail| {
-                    div()
-                        .flex_none()
-                        .min_w_0()
-                        .truncate()
-                        .font_weight(gpui::FontWeight::NORMAL)
-                        .text_size(typography::text_caption())
-                        .text_color(colors.subtle_foreground)
-                        .child(detail)
-                }))
-                .child(div().flex_1().min_w_0())
-                .children(self.trailing.map(|trailing| div().flex().flex_none().items_center().gap(px(2.)).child(trailing))),
-        )
+        // The row keeps the sidebar's inset; the rule does not, so it runs the panel's full width.
+        div()
+            .flex_none()
+            .pb(px(4.))
+            .mb(px(4.))
+            .border_b_1()
+            .border_color(colors.border)
+            .child(
+                div()
+                    .flex()
+                    .items_center()
+                    .min_w_0()
+                    .h(metrics::chrome_control())
+                    .gap(metrics::chrome_gap())
+                    .pl(metrics::sidebar_inset() + px(6.))
+                    .pr(metrics::sidebar_inset() + px(2.))
+                    .text_size(typography::text_sm())
+                    .font_weight(typography::MEDIUM)
+                    .text_color(colors.muted_foreground)
+                    .child(div().flex_none().min_w_0().truncate().child(self.label))
+                    .children(self.detail.map(|detail| {
+                        div()
+                            .flex_none()
+                            .min_w_0()
+                            .truncate()
+                            .font_weight(gpui::FontWeight::NORMAL)
+                            .text_size(typography::text_caption())
+                            .text_color(colors.subtle_foreground)
+                            .child(detail)
+                    }))
+                    .children(self.more.map(|more| div().flex().flex_none().items_center().child(more)))
+                    .child(div().flex_1().min_w_0())
+                    .children(self.trailing.map(|trailing| div().flex().flex_none().items_center().gap(px(2.)).child(trailing))),
+            )
     }
 }
 

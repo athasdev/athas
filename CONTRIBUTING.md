@@ -17,7 +17,8 @@ cargo run -p athas
 ```
 
 The development build keeps its data in its own folder (`dev.athas.gpui`), apart from an
-installed Athas.
+installed Athas. It is unoptimized, so frames are slow and scrolling stutters; to *use* the
+build rather than work on it, pass `--release`.
 
 ## Project layout
 

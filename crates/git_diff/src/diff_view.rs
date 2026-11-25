@@ -988,7 +988,7 @@ impl DiffView {
         let collapsed = self.folds.collapsed_hunks.contains(&(file_index, hunk_index));
         let current = self.current_hunk == Some(row);
         let (additions, deletions) = hunk.counts();
-        let accent = colors.accent;
+        let (accent, hover) = (colors.accent, colors.foreground);
         let range = format!("-{} +{}", hunk.old_start, hunk.new_start);
         let line = hunk.first_changed_line();
         let file_target = self.file_target(file_index);
@@ -1059,7 +1059,7 @@ impl DiffView {
             .font_family(typography::MONO_FONT)
             .text_size(typography::text_sm())
             .text_color(colors.subtle_foreground)
-            .hover(move |style| style.bg(accent))
+            .hover(move |style| style.bg(accent).text_color(hover))
             .child(
                 div()
                     .flex()

@@ -166,7 +166,7 @@ impl Fs for WslFs {
         athas_wsl::delete_path(&target.distro, &target.linux_path, true).map_err(text_error)
     }
 
-    fn watch(&self, root: &Path, on_change: Box<dyn Fn(Changes) + Send + Sync>) -> Result<Box<dyn Any>> {
+    fn watch(&self, root: &Path, on_change: Box<dyn Fn(Changes) + Send + Sync>) -> Result<Box<dyn Any + Send>> {
         let root = wsl_path(root)?;
         let stop = Arc::new(AtomicBool::new(false));
         let (stopped, listed) = (stop.clone(), self.listed.clone());

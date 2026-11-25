@@ -256,7 +256,7 @@ impl Fs for RemoteFs {
         self.sh(&target, REMOVE_SCRIPT, &[&target.path])
     }
 
-    fn watch(&self, root: &Path, on_change: Box<dyn Fn(Changes) + Send + Sync>) -> Result<Box<dyn Any>> {
+    fn watch(&self, root: &Path, on_change: Box<dyn Fn(Changes) + Send + Sync>) -> Result<Box<dyn Any + Send>> {
         let root = remote_path(root)?;
         let stop = Arc::new(AtomicBool::new(false));
         let listed = self.listed.clone();

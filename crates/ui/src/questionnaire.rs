@@ -203,7 +203,7 @@ impl Render for Questionnaire {
                 .map(|this| if question.multiple { this.rounded(metrics::radius()) } else { this.rounded_full() })
                 .border_color(if checked { colors.primary } else { colors.border_strong })
                 .bg(if checked { colors.primary } else { colors.background })
-                .when(checked && question.multiple, |this| this.child(Icon::new(IconName::Check).size(IconSize::Custom(px(12.))).color(colors.primary_foreground)))
+                .when(checked && question.multiple, |this| this.child(Icon::new(IconName::Check).size(IconSize::XSmall).color(colors.primary_foreground)))
                 .when(checked && !question.multiple, |this| this.child(div().size(px(6.)).rounded_full().bg(colors.primary_foreground)));
             div()
                 .id(SharedString::from(format!("questionnaire-choice-{index}")))

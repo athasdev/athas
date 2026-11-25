@@ -125,7 +125,7 @@ impl Fs for RemoteFs {
         self.remove_path(path)
     }
 
-    fn watch(&self, root: &Path, on_change: Box<dyn Fn(Changes) + Send + Sync>) -> Result<Box<dyn Any>> {
+    fn watch(&self, root: &Path, on_change: Box<dyn Fn(Changes) + Send + Sync>) -> Result<Box<dyn Any + Send>> {
         let root = root.to_path_buf();
         let guard = self.events.watch(Box::new(move |changes: Changes| {
             let paths: Vec<PathBuf> = changes.paths.into_iter().filter(|path| path.starts_with(&root)).collect();

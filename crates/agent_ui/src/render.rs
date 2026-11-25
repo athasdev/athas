@@ -2104,7 +2104,7 @@ impl SessionView {
                                 .gap(px(8.))
                                 .px(px(8.))
                                 .py(px(4.))
-                                .rounded(metrics::radius_lg())
+                                .rounded(metrics::radius_md())
                                 .when(chosen, |this| this.bg(colors.selected))
                                 .hover(|this| this.bg(colors.accent))
                                 .on_click(cx.listener(move |this, _: &ClickEvent, _, cx| this.choose_elicitation_option(&name, &value, cx)))
@@ -2321,7 +2321,7 @@ impl SessionView {
                     .rounded(metrics::radius_md())
                     .text_size(typography::text_sm())
                     .text_color(if active { colors.foreground } else { colors.muted_foreground })
-                    .when(active, |this| this.bg(colors.accent))
+                    .when(active, |this| this.bg(colors.selected))
                     .hover(|style| style.bg(colors.accent).text_color(colors.foreground))
                     .on_click(cx.listener(move |this, _: &ClickEvent, _, cx| {
                         this.open_attachment_group = if this.open_attachment_group == Some(kind) { None } else { Some(kind) };
@@ -2423,7 +2423,7 @@ impl SessionView {
                             this.remove_attachments(&indices, cx);
                         })),
                 )
-                .when_some(open, |this, open| this.cursor_pointer().on_click(move |_: &ClickEvent, _, cx| open(cx)))
+                .when_some(open, |this, open| this.on_click(move |_: &ClickEvent, _, cx| open(cx)))
                 .into_any_element(),
         )
     }
@@ -2475,7 +2475,7 @@ impl SessionView {
                             this.remove_attachments(&indices, cx);
                         })),
                 )
-                .when_some(open, |this, open| this.cursor_pointer().on_click(move |_: &ClickEvent, _, cx| open(cx)))
+                .when_some(open, |this, open| this.on_click(move |_: &ClickEvent, _, cx| open(cx)))
                 .into_any_element(),
         )
     }

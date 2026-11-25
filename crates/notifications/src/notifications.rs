@@ -498,11 +498,11 @@ pub fn render_toast(notification: &Notification, on_close: impl Fn(&mut Window, 
                 .items_center()
                 .justify_center()
                 .size(px(18.))
-                .rounded(ui::metrics::radius())
+                .rounded(ui::metrics::radius_md())
                 .invisible()
                 .group_hover(group, |style| style.visible())
                 .hover(|style| style.bg(colors.accent))
-                .child(Icon::new(IconName::X).size(IconSize::Custom(px(14.))).color(colors.subtle_foreground))
+                .child(Icon::new(IconName::X).size(IconSize::Small).color(colors.subtle_foreground))
                 .on_click(move |_, window, cx| close(window, cx)),
         )
         .into_any_element()

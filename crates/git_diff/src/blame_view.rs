@@ -140,7 +140,7 @@ impl BlameView {
                     .w_full()
                     .min_w_0()
                     .px(px(8.))
-                    .rounded(ui::metrics::radius())
+                    .rounded(ui::metrics::radius_md())
                     .hover(move |style| style.bg(hover))
                     .child(Avatar::new(&commit.author).size(px(14.)).image(crate::avatar::author_avatar(&commit.email, cx)))
                     .child(div().flex_none().max_w(px(90.)).truncate().text_color(colors.muted_foreground).child(commit.author.clone()))

@@ -82,8 +82,13 @@ To build Athas from source, install [Rust](https://rustup.rs) (the toolchain in
 ```bash
 git clone https://github.com/athasdev/athas.git
 cd athas
-cargo run -p athas
+cargo run --release -p athas
 ```
+
+`--release` is what a build to *use* wants: the dev profile is unoptimized, and the text
+shaping and rendering that draw every frame are slow enough without optimization to make
+scrolling stutter. Drop it (`cargo run -p athas`) while working on the code, where a fast
+rebuild is worth more than a fast frame.
 
 On Linux, install the libraries the app links against first. On Debian and Ubuntu:
 

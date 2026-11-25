@@ -132,7 +132,7 @@ fn theme_swatch(theme: &Theme, key: &'static str, active: bool, cx: &App) -> Any
                         .text_color(colors.foreground)
                         .when(active, |this| this.font_weight(typography::MEDIUM))
                         .child(div().min_w_0().truncate().child(theme.name.clone()))
-                        .when(active, |this| this.child(Icon::new(IconName::Check).size(IconSize::Custom(px(12.))).color(theme.own_primary()))),
+                        .when(active, |this| this.child(Icon::new(IconName::Check).size(IconSize::XSmall).color(theme.own_primary()))),
                 )
                 .child(
                     div()

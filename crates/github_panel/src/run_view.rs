@@ -815,7 +815,7 @@ impl RunView {
                                 .id("run-log-problems")
                                 .px(px(4.))
                                 .py(px(1.))
-                                .rounded(metrics::radius())
+                                .rounded(metrics::radius_md())
                                 .whitespace_nowrap()
                                 .text_size(typography::text_caption())
                                 .text_color(tone)

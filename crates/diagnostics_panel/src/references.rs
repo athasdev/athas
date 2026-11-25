@@ -242,7 +242,7 @@ impl Render for ReferencesView {
                             .child(multibuffer::file_icon(&name, multibuffer::Tone::Subtle, cx))
                             .child(div().min_w_0().truncate().child(name)),
                     )
-                    .child(Icon::new(if expanded { IconName::ChevronDown } else { IconName::ChevronRight }).size(IconSize::Custom(px(12.))).color(colors.subtle_foreground))
+                    .child(Icon::new(if expanded { IconName::ChevronDown } else { IconName::ChevronRight }).size(IconSize::XSmall).color(colors.subtle_foreground))
                     .on_click(cx.listener(move |this, _, _, cx| {
                         if !this.collapsed.remove(&toggled) {
                             this.collapsed.insert(toggled.clone());

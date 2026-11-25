@@ -4,7 +4,7 @@
 use ui::scale::px;
 use gpui::{
     AnyElement, AnyView, App, Context, Div, ElementId, Hsla, IntoElement, ParentElement, Render, SharedString,
-    Stateful, Styled, Window, div, prelude::*, relative,
+    Stateful, Styled, Window, div, prelude::*,
 };
 use theme::{ActiveTheme, ThemeColors};
 use ui::{Avatar, Icon, IconName, IconSize, metrics, typography};
@@ -114,64 +114,21 @@ impl Row {
         Self { id: id.into(), leading: leading.into_any_element(), title: title.into(), secondary: None, meta: None, action: None, selected: false }
     }
 
-    pub fn render(self, colors: &ThemeColors) -> Stateful<Div> {
-        let hover = colors.foreground;
-        let has_action = self.action.is_some();
-        div()
-            .id(self.id)
-            .group("github-row")
-            .relative()
-            .flex()
-            .items_center()
-            .gap(px(8.))
-            .h(metrics::list_row())
-            .px(px(8.))
-            .rounded(metrics::radius_md())
-            .text_size(typography::text_sm())
-            .line_height(relative(typography::LEADING_ROW))
-            .text_color(if self.selected { colors.foreground } else { colors.muted_foreground })
-            .when(self.selected, |this| this.bg(colors.selected))
-            .hover(move |style| style.text_color(hover))
-            .child(div().flex().flex_none().items_center().justify_center().size(px(18.)).child(self.leading))
-            .child(
-                div()
-                    .flex_shrink(1.)
-                    .min_w_0()
-                    .truncate()
-                    .when(self.selected, |this| this.font_weight(typography::MEDIUM))
-                    .child(self.title),
-            )
-            .child(
-                div()
-                    .flex_1()
-                    .min_w(px(24.))
-                    .truncate()
-                    .text_size(typography::text_caption())
-                    .text_color(colors.subtle_foreground)
-                    .children(self.secondary),
-            )
-            .children(self.meta.map(|meta| {
-                div()
-                    .flex()
-                    .flex_none()
-                    .items_center()
-                    .text_size(typography::text_caption())
-                    .text_color(colors.subtle_foreground)
-                    .when(has_action, |this| this.group_hover("github-row", |style| style.invisible()))
-                    .child(meta)
-            }))
-            .children(self.action.map(|action| {
-                div()
-                    .absolute()
-                    .top_0()
-                    .bottom_0()
-                    .right(px(4.))
-                    .flex()
-                    .items_center()
-                    .invisible()
-                    .group_hover("github-row", |style| style.visible())
-                    .child(action)
-            }))
+    /// Delegates to the shared sidebar row, so a pull request sits and highlights exactly like
+    /// a file in the tree or a session in the sidebar.
+    pub fn render(self, _colors: &ThemeColors) -> Stateful<Div> {
+        let mut item = ui::SidebarListItem::new(ElementId::Name(format!("{}-item", self.id).into()), self.title).active(self.selected);
+        item = item.leading(self.leading);
+        if let Some(secondary) = self.secondary {
+            item = item.detail(secondary);
+        }
+        if let Some(meta) = self.meta {
+            item = item.trailing(meta);
+        }
+        if let Some(action) = self.action {
+            item = item.hover_trailing(action);
+        }
+        div().id(self.id).relative().w_full().flex_none().child(item)
     }
 }
 
@@ -275,7 +232,7 @@ impl Render for Preview {
                             .flex()
                             .gap(px(12.))
                             .when_some(action, |this, action| {
-                                this.mx(px(-4.)).px(px(4.)).rounded(metrics::radius()).hover(move |style| style.bg(hover)).on_click(move |_, window, cx| action(window, cx))
+                                this.mx(px(-4.)).px(px(4.)).rounded(metrics::radius_md()).hover(move |style| style.bg(hover)).on_click(move |_, window, cx| action(window, cx))
                             })
                             .child(div().w(px(76.)).flex_none().text_color(colors.subtle_foreground).child(label.clone()))
                             .child(

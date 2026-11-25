@@ -517,12 +517,47 @@ pub struct FileTree {
     type_to_find: (String, Option<Instant>),
     focus_handle: FocusHandle,
     scroll_handle: UniformListScrollHandle,
-    _watcher: Option<Box<dyn Any>>,
+    _watcher: Option<Box<dyn Any + Send>>,
     /// Watchers of folders added to the workspace, sending into the root watcher's channel.
-    extra_watchers: HashMap<PathBuf, Box<dyn Any>>,
+    extra_watchers: HashMap<PathBuf, Box<dyn Any + Send>>,
+    /// Setting a watch up is the one blocking call the tree makes; these hold those tasks.
+    _watch_setup: Vec<Task<()>>,
     watch_sender: futures::channel::mpsc::UnboundedSender<Changes>,
     _watch_task: Option<Task<()>>,
     _settings_subscription: Option<Subscription>,
+}
+
+/// Registers a watch of `root` off the main thread and keeps its guard once it is up. `extra` is
+/// the key of a folder added to the workspace; `None` is the tree's own root.
+///
+/// `Fs::watch` blocks: on Linux it walks the tree to register a watch per directory, and over a
+/// mounted remote filesystem that walk is network-bound. Called on the main thread it froze the
+/// whole window (#805).
+fn watch_in_background(
+    fs: Arc<dyn Fs>,
+    root: PathBuf,
+    sender: futures::channel::mpsc::UnboundedSender<Changes>,
+    extra: Option<PathBuf>,
+    cx: &mut Context<FileTree>,
+) -> Task<()> {
+    cx.spawn(async move |this, cx| {
+        let watcher = cx
+            .background_spawn(async move {
+                fs.watch(&root, Box::new(move |changes| {
+                    sender.unbounded_send(changes).ok();
+                }))
+                .ok()
+            })
+            .await;
+        let Some(watcher) = watcher else { return };
+        this.update(cx, |this, _| match extra {
+            Some(key) => {
+                this.extra_watchers.insert(key, watcher);
+            }
+            None => this._watcher = Some(watcher),
+        })
+        .ok();
+    })
 }
 
 impl EventEmitter<FileTreeEvent> for FileTree {}
@@ -543,14 +578,10 @@ impl FileTree {
         init(cx);
         let (sender, mut receiver) = futures::channel::mpsc::unbounded::<Changes>();
         let watch_sender = sender.clone();
-        let watcher = fs
-            .watch(
-                &root,
-                Box::new(move |changes| {
-                    sender.unbounded_send(changes).ok();
-                }),
-            )
-            .ok();
+        // Not here: on Linux a watch is one registration per directory, so setting one up reads
+        // the whole tree. Over a mounted remote filesystem that read can take minutes, and this
+        // runs while the sidebar builds the tree -- the window froze with it (#805).
+        let watch_setup = watch_in_background(fs.clone(), root.clone(), sender, None, cx);
         let watch_task = cx.spawn(async move |this: WeakEntity<Self>, cx| {
             while let Some(mut changes) = receiver.next().await {
                 while let Ok(more) = receiver.try_recv() {
@@ -611,8 +642,9 @@ impl FileTree {
             type_to_find: (String::new(), None),
             focus_handle: cx.focus_handle(),
             scroll_handle: UniformListScrollHandle::new(),
-            _watcher: watcher,
+            _watcher: None,
             extra_watchers: HashMap::new(),
+            _watch_setup: vec![watch_setup],
             watch_sender,
             _watch_task: Some(watch_task),
             _settings_subscription: settings_subscription,
@@ -644,11 +676,7 @@ impl FileTree {
             }
             self.model.add_root(root.clone());
             let sender = self.watch_sender.clone();
-            if let Ok(watcher) = self.fs.watch(&root, Box::new(move |changes| {
-                sender.unbounded_send(changes).ok();
-            })) {
-                self.extra_watchers.insert(root.clone(), watcher);
-            }
+            self._watch_setup.push(watch_in_background(self.fs.clone(), root.clone(), sender, Some(root.clone()), cx));
             added.push(root);
         }
         self.load_dirs(added, cx);
@@ -709,12 +737,7 @@ impl FileTree {
 
     /// The tool's buttons at the end of the sidebar's top row.
     pub fn render_header_actions(&mut self, _: &mut Window, cx: &mut Context<Self>) -> AnyElement {
-        let open = |key: &str| self.open_menu.as_ref().is_some_and(|menu| menu.key.as_ref() == key);
-        let (new_open, more_open) = (open("new"), open("more"));
-        let menu_at = |event: &ClickEvent| {
-            let position = event.position();
-            point(position.x + px(8.), position.y + px(8.))
-        };
+        let new_open = self.menu_is_open("new");
         div()
             .flex()
             .items_center()
@@ -725,17 +748,31 @@ impl FileTree {
                     .plane(Plane::Page)
                     .active(new_open)
                     .tooltip("New File or Folder")
-                    .on_click(cx.listener(move |this, event: &ClickEvent, window, cx| this.show_new_menu(menu_at(event), window, cx))),
-            )
-            .child(
-                Button::icon("files-more", IconName::Dots)
-                    .size(ButtonSize::Small)
-                    .plane(Plane::Page)
-                    .active(more_open)
-                    .tooltip("More Actions")
-                    .on_click(cx.listener(move |this, event: &ClickEvent, window, cx| this.show_more_menu(menu_at(event), window, cx))),
+                    .on_click(cx.listener(move |this, event: &ClickEvent, window, cx| this.show_new_menu(Self::menu_at(event), window, cx))),
             )
             .into_any_element()
+    }
+
+    /// More Actions, the button that sits against the tool's name.
+    pub fn render_more_action(&mut self, cx: &mut Context<Self>) -> AnyElement {
+        let more_open = self.menu_is_open("more");
+        Button::icon("files-more", IconName::Dots)
+            .size(ButtonSize::Small)
+            .plane(Plane::Page)
+            .active(more_open)
+            .tooltip("More Actions")
+            .on_click(cx.listener(move |this, event: &ClickEvent, window, cx| this.show_more_menu(Self::menu_at(event), window, cx)))
+            .into_any_element()
+    }
+
+    fn menu_is_open(&self, key: &str) -> bool {
+        self.open_menu.as_ref().is_some_and(|menu| menu.key.as_ref() == key)
+    }
+
+    /// A header menu opens just off the button that asked for it.
+    fn menu_at(event: &ClickEvent) -> Point<Pixels> {
+        let position = event.position();
+        point(position.x + px(8.), position.y + px(8.))
     }
 
     /// New File and New Folder, at the root.

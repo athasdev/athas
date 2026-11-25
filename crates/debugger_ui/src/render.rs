@@ -57,7 +57,9 @@ fn value_color(value: &str, kind: Option<&str>, colors: &ThemeColors) -> Hsla {
 
 /// A compact row of a debug list.
 fn row(id: impl Into<ElementId>, depth: usize, colors: &ThemeColors) -> gpui::Stateful<gpui::Div> {
-    let hover = colors.accent;
+    // Muted at rest, brightening into the hover fill: the row look the sidebars and the panels
+    // share. Labels inside leave the colour to the row so the brighten reaches them.
+    let (hover, hover_text) = (colors.accent, colors.foreground);
     div()
         .id(id)
         .flex()
@@ -71,7 +73,8 @@ fn row(id: impl Into<ElementId>, depth: usize, colors: &ThemeColors) -> gpui::St
         .pr(px(6.))
         .rounded(metrics::radius_md())
         .text_size(typography::text_sm())
-        .hover(move |style| style.bg(hover))
+        .text_color(colors.muted_foreground)
+        .hover(move |style| style.bg(hover).text_color(hover_text))
 }
 
 fn chevron(expanded: bool, visible: bool, colors: &ThemeColors) -> impl IntoElement {
@@ -310,7 +313,7 @@ impl DebuggerView {
                     .py(px(8.))
                     .text_size(typography::text_sm())
                     .text_color(colors.subtle_foreground)
-                    .child(Icon::new(IconName::FolderOpen).size(IconSize::Custom(px(12.))).color(colors.subtle_foreground))
+                    .child(Icon::new(IconName::FolderOpen).size(IconSize::XSmall).color(colors.subtle_foreground))
                     .child(div().min_w_0().truncate().child(self.project_root().display().to_string())),
             )
     }
@@ -366,7 +369,7 @@ impl DebuggerView {
             .pl(metrics::pane_inset())
             .pr(host_actions_width())
             .on_mouse_down(MouseButton::Right, cx.listener(|this, event: &MouseDownEvent, window, cx| this.show_bar_menu(event, window, cx)))
-            .child(Icon::new(IconName::Bug).size(IconSize::Custom(px(14.))).color(colors.subtle_foreground))
+            .child(Icon::new(IconName::Bug).size(IconSize::Small).color(colors.subtle_foreground))
             .child(
                 div().flex().flex_1().min_w_0().overflow_hidden().child(
                     div()
@@ -502,7 +505,7 @@ impl DebuggerView {
         };
         match tree_row.kind {
             RowKind::Scope => base
-                .child(div().flex_1().min_w_0().truncate().font_weight(typography::MEDIUM).text_color(colors.muted_foreground).child(tree_row.name))
+                .child(div().flex_1().min_w_0().truncate().font_weight(typography::MEDIUM).child(tree_row.name))
                 .into_any_element(),
             RowKind::Loading => base.child(ui::quiet_note("Loading…", cx)).into_any_element(),
             RowKind::Failed(error) => base.child(div().flex_1().min_w_0().truncate().text_color(colors.destructive).child(error)).into_any_element(),
@@ -784,7 +787,7 @@ impl DebuggerView {
                                     this.bg(colors.primary).child(Icon::new(IconName::Check).size(IconSize::Custom(px(10.))).color(colors.primary_foreground))
                                 }),
                         )
-                        .child(div().flex_1().min_w_0().truncate().text_color(colors.muted_foreground).child(filter.label.clone()))
+                        .child(div().flex_1().min_w_0().truncate().child(filter.label.clone()))
                         .when_some(filter.description.clone(), |this, description| this.anchored_tooltip({ let text: gpui::SharedString = (description).into(); move || ui::Tooltip::new(text.clone()) }))
                         .on_click(cx.listener(move |this, _: &ClickEvent, _, cx| this.set_exception_filter(name.clone(), !enabled, cx)))
                         .into_any_element(),

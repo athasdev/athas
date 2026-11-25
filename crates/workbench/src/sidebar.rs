@@ -297,7 +297,7 @@ impl Workbench {
             SidebarView::Files => self
                 .file_tree
                 .as_ref()
-                .map(|(tree, _)| tree.update(cx, |tree, cx| tree.render_header_actions(window, cx))),
+                .map(|(tree, _)| tree.update(cx, |tree, cx| (tree.render_more_action(cx), tree.render_header_actions(window, cx)))),
             // Source Control and GitHub put their buttons in their own header, beside the
             // section switcher.
             _ => None,
@@ -312,9 +312,9 @@ impl Workbench {
         // Files gets a titled header, as the Sessions list has: its two buttons (New, More) stay
         // visible, where a hidden row of five used to leave an empty band over the tree.
         let files_header = view == SidebarView::Files && extension_view.is_none();
-        let toolbar = actions.map(|actions| {
+        let toolbar = actions.map(|(more, actions)| {
             if files_header {
-                return ui::PanelHeader::new("Files").trailing(actions).into_any_element();
+                return ui::PanelHeader::new("Files").more(more).trailing(actions).into_any_element();
             }
             div()
                 .flex()
@@ -326,6 +326,7 @@ impl Workbench {
                 .invisible()
                 .group_hover("sidebar-pane", |style| style.visible())
                 .child(actions)
+                .child(more)
                 .into_any_element()
         });
         let body = match view {
@@ -438,24 +439,22 @@ impl Workbench {
         }
         // Chats (sessions of no open project) are sessions like any other and share the list.
         let project_id = project.as_ref().map(|project| project.id.clone());
-        let mut header_actions = div().flex().items_center().gap(px(2.)).child(self.render_session_filter(cx));
-        {
+        let header_actions = div().flex().items_center().gap(px(2.)).child(self.render_session_filter(cx));
+        let header_more = {
             let menu_key = "sessions-actions".to_string();
             let menu_open = self.menu_is_open(&menu_key);
-            header_actions = header_actions.child(
-                Button::icon("session-actions", IconName::Dots)
-                    .size(ButtonSize::Small)
-                    .plane(ui::Plane::Page)
-                    .active(menu_open)
-                    .tooltip("Session actions")
-                    .on_click(cx.listener(move |this, event: &gpui::ClickEvent, window, cx| {
-                        let entries = this.session_list_menu_entries(cx);
-                        let position = event.position();
-                        let position = point(position.x + px(8.), position.y + px(8.));
-                        this.show_menu(&menu_key, entries, position, Anchor::TopRight, window, cx);
-                    })),
-            );
-        }
+            Button::icon("session-actions", IconName::Dots)
+                .size(ButtonSize::Small)
+                .plane(ui::Plane::Page)
+                .active(menu_open)
+                .tooltip("Session actions")
+                .on_click(cx.listener(move |this, event: &gpui::ClickEvent, window, cx| {
+                    let entries = this.session_list_menu_entries(cx);
+                    let position = event.position();
+                    let position = point(position.x + px(8.), position.y + px(8.));
+                    this.show_menu(&menu_key, entries, position, Anchor::TopRight, window, cx);
+                }))
+        };
         let sessions: Vec<&Session> = lists.project.iter().chain(lists.chats.iter()).copied().collect();
         let outside = project
             .as_ref()
@@ -619,7 +618,7 @@ impl Workbench {
             .flex_col()
             .flex_1()
             .min_h_0()
-            .child(ui::PanelHeader::new("Sessions").trailing(header_actions))
+            .child(ui::PanelHeader::new("Sessions").more(header_more).trailing(header_actions))
             .child(ui::faded_scroll(ui::with_scrollbar(list, ui::Scrollbar::new("sessions-scrollbar", &scroll)), &scroll, cx.theme().colors.background).flex_1())
             .child(self.render_sessions_footer(cx))
     }

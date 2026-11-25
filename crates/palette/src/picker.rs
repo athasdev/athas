@@ -373,7 +373,7 @@ impl<D: PickerDelegate> Render for Picker<D> {
                     .items_center()
                     .justify_center()
                     .size(px(20.))
-                    .rounded(metrics::radius())
+                    .rounded(metrics::radius_md())
                     .hover(|style| style.bg(colors.accent))
                     .child(Icon::new(IconName::X).size(IconSize::XSmall).color(colors.subtle_foreground))
                     .on_click(cx.listener(|this, _, window, cx| this.dismiss(window, cx))),
@@ -395,7 +395,7 @@ impl<D: PickerDelegate> Render for Picker<D> {
                     .text_color(text)
                     .when(active, |this| this.bg(colors.segment_knob).shadow(theme.shadows.raised_inset.clone()))
                     .when(!active, |this| this.hover(|style| style.text_color(colors.foreground)))
-                    .children(self.delegate.tab_icon(index).map(|icon| Icon::new(icon).size(IconSize::Custom(px(14.))).color(text)))
+                    .children(self.delegate.tab_icon(index).map(|icon| Icon::new(icon).size(IconSize::Small).color(text)))
                     .child(label)
                     .on_click(cx.listener(move |this, _, window, cx| this.switch_tab(index, window, cx)))
             });

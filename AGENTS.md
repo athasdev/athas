@@ -24,12 +24,25 @@ test findings (`REMAINING.md`, `BUGS.md`, `BUGHUNT.md`), the task log (`WORKLOG.
 
 ## Iteration loop (the user tests the running app)
 
+**The app restarts itself.** `.notes/scripts/watch.sh` runs `cargo watch`: it kills the running
+app, rebuilds and relaunches on every change under `crates/`, `core/` or `extensions/`. Check it
+is up at the start of a session (`pgrep -f cargo-watch`); if it is not, start it and leave it
+running for the rest of the session:
+
+```
+nohup .notes/scripts/watch.sh > /tmp/athas-watch.log 2>&1 &
+```
+
+So do not run `cargo run -p athas` yourself, and do not ask the user to restart: the window they
+are looking at is already the current code. Read `/tmp/athas-watch.log` for build errors and
+panics, in place of a run log of your own.
+
 Keep the loop short. For a UI change the user asked for:
 
 1. Edit.
-2. `cargo check -p <crate>` for the crate you changed.
-3. Restart the app: `RUST_BACKTRACE=1 cargo run -p athas`, in the background, log to a file.
-   Only restart when the user asked to see it or asked you to run it.
+2. `cargo check -p <crate>` for the crate you changed. The watcher shares one `target/`, so a
+   check queues behind a rebuild in flight rather than doubling the GBs.
+3. Nothing: the watcher has already put the change on screen.
 
 Run the slower checks once per batch, not after every edit:
 - `cargo test -p <crate> --lib` for the crates you touched.
@@ -38,7 +51,8 @@ Run the slower checks once per batch, not after every edit:
 - The wasm check (`cargo check --target wasm32-unknown-unknown -p athas_web`) only before
   handing off a larger change.
 
-Batch the user's feedback: do every item of a message, then one restart.
+Batch the user's feedback: do every item of a message before the watcher's rebuild settles, so
+the user sees one new window rather than one per edit.
 
 Don't spawn subagents for this kind of interactive UI work: they share `target/`, wait on each
 other's build lock, and one agent's half-finished edit breaks the other's build. Do it yourself.

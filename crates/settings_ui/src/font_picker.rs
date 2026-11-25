@@ -176,7 +176,9 @@ impl FontPicker {
                         .h(px(30.))
                         .px(px(8.))
                         .rounded(metrics::radius_md())
-                        .when(selected, |this| this.bg(colors.accent))
+                        // The picker's cursor, as `ui::Select` and the palette draw it.
+                        .text_color(if selected { colors.primary_foreground } else { colors.foreground })
+                        .when(selected, |this| this.bg(colors.primary))
                         .on_mouse_move(cx.listener(move |this, _, _, cx| {
                             if this.selected != index {
                                 this.selected = index;
@@ -188,7 +190,7 @@ impl FontPicker {
                             this.confirm(cx);
                         }))
                         .child(div().size(px(12.)).flex_none().when(current, |this| {
-                            this.child(Icon::new(IconName::Check).size(IconSize::XSmall).color(colors.foreground))
+                            this.child(Icon::new(IconName::Check).size(IconSize::XSmall).color(if selected { colors.primary_foreground } else { colors.primary }))
                         }))
                         // Every name in the UI font, so the list reads evenly (a symbol or display
                         // face can't make a name unreadable); the sample shows the face itself.
@@ -198,7 +200,7 @@ impl FontPicker {
                                 .min_w_0()
                                 .truncate()
                                 .text_size(typography::text_sm())
-                                .text_color(colors.foreground)
+                                .text_color(if selected { colors.primary_foreground } else { colors.foreground })
                                 .child(display_name(&family)),
                         )
                         .child(
@@ -206,7 +208,7 @@ impl FontPicker {
                                 .flex_none()
                                 .font_family(family)
                                 .text_size(typography::text_sm())
-                                .text_color(colors.subtle_foreground)
+                                .text_color(if selected { colors.primary_foreground } else { colors.subtle_foreground })
                                 .child("Aa"),
                         )
                         .into_any_element(),

@@ -54,7 +54,7 @@ impl RenderOnce for AccordionTrigger {
     fn render(self, _: &mut Window, cx: &mut App) -> impl IntoElement {
         let colors = cx.theme().colors.clone();
         let open = self.open;
-        let chevron = Icon::new(if open { IconName::ChevronDown } else { IconName::ChevronRight }).size(IconSize::Custom(px(12.))).color(colors.subtle_foreground);
+        let chevron = Icon::new(if open { IconName::ChevronDown } else { IconName::ChevronRight }).size(IconSize::XSmall).color(colors.subtle_foreground);
         let (hover_bg, hover_text) = (colors.accent, colors.foreground);
         div()
             .flex()

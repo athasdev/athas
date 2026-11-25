@@ -167,11 +167,20 @@ pub(crate) fn restore_all(cx: &mut App) -> bool {
 
 /// Opens a new workbench window for the workbench's New Window, New Window Tab and Open in New
 /// Window, and for requests from the `athas` command and links that ask for one.
+/// Reads something off an open window without leasing its root view.
+///
+/// `WindowHandle::update` hands out `&mut Workbench` as well as the window, so it aborts when the
+/// window it names is the one whose root view is already being updated. That is exactly the case
+/// while a workbench opens a second window: with a project already open, Open Folder runs
+/// `open_folder_in_new_window` inside the workbench's own update, and the parent it measures here
+/// is itself (#810).
+fn with_window<V: 'static + gpui::Render, R>(handle: WindowHandle<V>, cx: &mut App, read: impl FnOnce(&mut gpui::Window) -> R) -> Option<R> {
+    cx.update_window(handle.into(), |_, window, _| read(window)).ok()
+}
+
 pub(crate) fn open_new(request: NewWindowRequest, cx: &mut App) -> Option<WindowHandle<Workbench>> {
     let parent = crate::target_window(cx);
-    let parent_fullscreen = parent
-        .and_then(|parent| parent.update(cx, |_, window, _| window.is_fullscreen()).ok())
-        .unwrap_or(false);
+    let parent_fullscreen = parent.and_then(|parent| with_window(parent, cx, |window| window.is_fullscreen())).unwrap_or(false);
     let id = cx.global_mut::<PlatformState>().set.allocate();
     let bounds = WindowBounds::Windowed(Bounds::centered(None, size(px(NEW_WINDOW_SIZE.0), px(NEW_WINDOW_SIZE.1)), cx));
     let store = store(&id);
@@ -207,13 +216,11 @@ pub(crate) fn open_new(request: NewWindowRequest, cx: &mut App) -> Option<Window
     }
     // A new window follows a full-screen one into its own space instead of floating over it; a
     // tab joins its window's space on its own.
-    handle
-        .update(cx, |_, window, _| {
-            if parent_fullscreen && !window.is_fullscreen() {
-                window.toggle_fullscreen();
-            }
-        })
-        .ok();
+    with_window(handle, cx, |window| {
+        if parent_fullscreen && !window.is_fullscreen() {
+            window.toggle_fullscreen();
+        }
+    });
     Some(handle)
 }
 
@@ -264,20 +271,17 @@ fn add_as_tab(parent: WindowHandle<Workbench>, tab: WindowHandle<Workbench>, cx:
         use raw_window_handle::{HasWindowHandle, RawWindowHandle};
 
         let ns_view = |handle: WindowHandle<Workbench>, cx: &mut App| {
-            handle
-                .update(cx, |_, window, _| match HasWindowHandle::window_handle(window).map(|handle| handle.as_raw()) {
-                    Ok(RawWindowHandle::AppKit(appkit)) => Some(appkit.ns_view.as_ptr() as usize),
-                    _ => None,
-                })
-                .ok()
-                .flatten()
+            with_window(handle, cx, |window| match HasWindowHandle::window_handle(window).map(|handle| handle.as_raw()) {
+                Ok(RawWindowHandle::AppKit(appkit)) => Some(appkit.ns_view.as_ptr() as usize),
+                _ => None,
+            })
+            .flatten()
         };
         let (Some(parent_view), Some(tab_view)) = (ns_view(parent, cx), ns_view(tab, cx)) else { return };
-        let grouped = tab
-            .update(cx, |_, window, _| {
-                window.tabbed_windows().is_some_and(|tabs| tabs.iter().any(|other| other.id == parent.window_id()))
-            })
-            .unwrap_or(false);
+        let grouped = with_window(tab, cx, |window| {
+            window.tabbed_windows().is_some_and(|tabs| tabs.iter().any(|other| other.id == parent.window_id()))
+        })
+        .unwrap_or(false);
         if !grouped {
             native_tabs::add_tabbed_window(parent_view, tab_view);
         }
@@ -415,5 +419,35 @@ mod tests {
         assert_eq!(loaded, set);
         assert_eq!(loaded.to_restore()[1].bounds, Some(bounds(300.)));
         assert_eq!(load(&dir.path().join("missing.json")), WindowSet::default());
+    }
+}
+
+#[cfg(test)]
+mod window_lease_tests {
+    use super::with_window;
+    use gpui::{AppContext as _, Context, IntoElement, Render, TestAppContext, Window, div};
+
+    struct Root;
+
+    impl Render for Root {
+        fn render(&mut self, _: &mut Window, _: &mut Context<Self>) -> impl IntoElement {
+            div()
+        }
+    }
+
+    /// Opening a second window measures the parent, and the parent is the window whose root view
+    /// is already being updated: Open Folder with a project open runs `open_folder_in_new_window`
+    /// inside the workbench's own entity update (#810). `WindowHandle::update` would lease that
+    /// root a second time and abort the app; reading the window alone does not touch it.
+    #[gpui::test]
+    fn a_window_is_readable_while_its_root_view_is_being_updated(cx: &mut TestAppContext) {
+        let handle = cx.add_window(|_, _| Root);
+        let root = cx.update(|cx| handle.root(cx).unwrap());
+        cx.update(|cx| {
+            root.update(cx, |_, cx| {
+                let fullscreen = with_window(handle, cx, |window| window.is_fullscreen());
+                assert_eq!(fullscreen, Some(false), "the parent's window state is readable while its root view is leased");
+            });
+        });
     }
 }

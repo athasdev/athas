@@ -957,7 +957,7 @@ impl SearchView {
 
     fn render_load_more(&self, cx: &mut Context<Self>) -> AnyElement {
         let colors = cx.theme().colors.clone();
-        let hover = colors.accent;
+        let (hover, hover_text) = (colors.accent, colors.foreground);
         div()
             .id("search-load-more")
             .flex()
@@ -965,10 +965,10 @@ impl SearchView {
             .justify_center()
             .h(row_height())
             .my(px(8.))
-            .rounded(metrics::radius())
+            .rounded(metrics::radius_md())
             .text_size(typography::text_sm())
             .text_color(colors.subtle_foreground)
-            .hover(move |style| style.bg(hover))
+            .hover(move |style| style.bg(hover).text_color(hover_text))
             .child(format!("Showing {} results. Load more", self.match_count()))
             .on_click(cx.listener(|this, _, _, cx| this.load_more(cx)))
             .into_any_element()

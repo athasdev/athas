@@ -647,7 +647,9 @@ impl GitPanel {
 
     /// The tool's buttons at the end of the sidebar's top row.
     pub fn render_header_actions(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> AnyElement {
-        self.render_header_buttons(cx)
+        use gpui::{IntoElement as _, ParentElement as _, Styled as _};
+        let more = self.render_more_button(cx);
+        gpui::div().flex().items_center().gap(ui::scale::px(2.)).child(self.render_header_buttons(cx)).child(more).into_any_element()
     }
 
     fn on_filter_event(&mut self, input: Entity<TextInput>, event: &TextInputEvent, cx: &mut Context<Self>) {

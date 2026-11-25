@@ -80,7 +80,6 @@ impl Section {
 
 impl GitHubPanel {
     pub(crate) fn render_header_buttons(&self, cx: &mut Context<Self>) -> AnyElement {
-        let menu_open = menus::is_open(&self.open_menu, "github-actions");
         div()
             .flex()
             .items_center()
@@ -93,17 +92,21 @@ impl GitHubPanel {
                     .disabled(self.is_loading())
                     .on_click(cx.listener(|this, _, _, cx| this.refresh(cx))),
             )
-            .child(
-                Button::icon("github-actions", IconName::Dots)
-                    .size(ButtonSize::Small)
-                    .plane(Plane::Page)
-                    .active(menu_open)
-                    .tooltip("GitHub actions")
-                    .on_click(cx.listener(|this, event: &ClickEvent, window, cx| {
-                        let entries = this.actions_menu(cx);
-                        menus::show(this, "github-actions", entries, below(event), Anchor::TopRight, window, cx);
-                    })),
-            )
+            .into_any_element()
+    }
+
+    /// GitHub actions, the button that sits against the tool's name.
+    pub(crate) fn render_more_button(&self, cx: &mut Context<Self>) -> AnyElement {
+        let menu_open = menus::is_open(&self.open_menu, "github-actions");
+        Button::icon("github-actions", IconName::Dots)
+            .size(ButtonSize::Small)
+            .plane(Plane::Page)
+            .active(menu_open)
+            .tooltip("GitHub actions")
+            .on_click(cx.listener(|this, event: &ClickEvent, window, cx| {
+                let entries = this.actions_menu(cx);
+                menus::show(this, "github-actions", entries, below(event), Anchor::TopRight, window, cx);
+            }))
             .into_any_element()
     }
 
@@ -292,7 +295,8 @@ impl GitHubPanel {
     /// the tool's name, so the sidebar's tools all start the same way.
     fn render_title_only(&mut self, cx: &mut Context<Self>) -> impl IntoElement {
         let actions = self.render_header_buttons(cx);
-        ui::PanelHeader::new("GitHub").trailing(actions)
+        let more = self.render_more_button(cx);
+        ui::PanelHeader::new("GitHub").more(more).trailing(actions)
     }
 
     fn render_bar(&self, colors: &ThemeColors, cx: &mut Context<Self>) -> impl IntoElement {
