@@ -143,6 +143,19 @@ fn no_surface_shadows_a_command_out_of_every_surface(cx: &mut TestAppContext) {
 }
 
 #[gpui::test]
+fn question_mark_help_stays_out_of_text_fields(cx: &mut TestAppContext) {
+    cx.update(|cx| {
+        let bound = Bound::new(cx);
+        let surface = |name: &str| surfaces().into_iter().find(|(label, _)| *label == name).unwrap().1;
+        assert!(bound.runs_first("shift+?", "help.shortcuts", &surface("the workbench itself")));
+        for name in ["an editor", "a terminal", "an agent session", "the find field"] {
+            let commands = bound.resolve("shift+?", &surface(name));
+            assert!(!commands.iter().any(|command| command == "help.shortcuts"), "help.shortcuts fired in {name}");
+        }
+    });
+}
+
+#[gpui::test]
 fn a_detached_window_closes_with_the_key_that_closes_a_tab(cx: &mut TestAppContext) {
     cx.update(|cx| {
         let bound = Bound::new(cx);
