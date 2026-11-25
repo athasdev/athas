@@ -717,23 +717,28 @@ impl Render for OnboardingView {
             .id("onboarding")
             .track_focus(&self.focus_handle)
             .size_full()
-            .overflow_y_scroll()
+            .flex()
+            .flex_col()
+            .items_center()
+            .justify_center()
+            .py(px(24.))
             .child(
                 div()
                     .flex()
                     .flex_col()
-                    .mx_auto()
                     .w_full()
                     .max_w(px(720.))
-                    .px(px(32.))
-                    .py(px(48.))
+                    .h_full()
+                    .max_h(px(720.))
                     .gap(px(32.))
                     .child(
                         div()
                             .flex()
                             .flex_col()
+                            .flex_none()
                             .items_center()
                             .gap(px(8.))
+                            .px(px(32.))
                             .text_center()
                             .children(dots)
                             .child(div().text_size(typography::text_lg()).font_weight(typography::SEMIBOLD).text_color(colors.foreground).child(title))
@@ -749,10 +754,9 @@ impl Render for OnboardingView {
                                     .when_some(released, |this, date| this.child("·").child(format!("Released {date}"))),
                             ),
                     )
-                    .child(body)
-                    .child(div().flex().justify_center().items_center().gap(px(8.)).children(buttons)),
+                    .child(div().id("onboarding-body").flex_1().min_h_0().overflow_y_scroll().child(div().px(px(32.)).child(body)).scrollbar(window, cx))
+                    .child(div().flex().flex_none().justify_center().items_center().gap(px(8.)).px(px(32.)).children(buttons)),
             )
-            .scrollbar(window, cx)
             .children(self.open_menu.as_ref().map(|menu| menu.render()))
             .into_any_element()
     }

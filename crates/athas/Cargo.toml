@@ -5,6 +5,9 @@ version.workspace = true
 license.workspace = true
 publish.workspace = true
 
+[target.'cfg(windows)'.build-dependencies]
+winres = "0.1"
+
 [dependencies]
 gpui.workspace = true
 gpui_platform.workspace = true
