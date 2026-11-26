@@ -62,7 +62,10 @@ pub fn set_window_opener(cx: &mut App, opener: impl Fn(NewWindowRequest, &mut Ap
 
 pub fn open_window(request: NewWindowRequest, cx: &mut App) {
     match cx.try_global::<WindowOpener>().cloned() {
-        Some(opener) => (opener.0)(request, cx),
+        // Callers are mostly inside a workbench's update, and opening reads the window in front
+        // (is it full screen? which tab group?): that is the same workbench, so it waits for the
+        // update to end (#810).
+        Some(opener) => cx.defer(move |cx| (opener.0)(request, cx)),
         None => {
             notifications::info(cx, "New windows need the desktop app");
         }
