@@ -536,6 +536,8 @@ pub struct Editor {
     pub(crate) git: GitState,
     pub(crate) breakpoints: Entity<dap::BreakpointStore>,
     pub(crate) minimap_hovered: bool,
+    /// The fold chevrons show while the pointer is over the gutter, as VS Code's do.
+    pub(crate) gutter_hovered: bool,
     pub(crate) context_menu: Option<ui::OpenMenu>,
     /// Selections before each expand-selection, for shrinking back.
     pub(crate) selection_stack: Vec<Vec<Selection>>,
@@ -645,6 +647,7 @@ impl Editor {
             git: GitState::default(),
             breakpoints,
             minimap_hovered: false,
+            gutter_hovered: false,
             context_menu: None,
             selection_stack: Vec::new(),
             selection_ranges: Default::default(),

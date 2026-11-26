@@ -30,13 +30,13 @@ use crate::{
 };
 
 /// Space between the gutter and the first column.
-fn text_padding() -> Pixels { px(6.) }
-/// The gutter, left to right: breakpoints (and diagnostics), folds, line numbers with git changes
-/// in their right padding.
-fn breakpoint_lane() -> Pixels { px(18.) }
-fn fold_lane() -> Pixels { px(10.) }
-fn number_pad_left() -> Pixels { px(16.) }
-fn number_gap() -> Pixels { px(12.) }
+fn text_padding() -> Pixels { px(4.) }
+/// The gutter, left to right: breakpoints (and diagnostics), line numbers, git changes in the gap
+/// after them, then folds next to the text, as VS Code lays it out.
+fn breakpoint_lane() -> Pixels { px(16.) }
+fn fold_lane() -> Pixels { px(12.) }
+fn number_pad_left() -> Pixels { px(4.) }
+fn number_gap() -> Pixels { px(6.) }
 fn git_bar() -> Pixels { px(3.) }
 fn scrollbar_width() -> Pixels { px(10.) }
 /// The minimap is at most this wide, and a sixth of the editor when that is narrower.
@@ -443,9 +443,17 @@ impl EditorElement {
         window.on_mouse_event({
             let editor = self.editor.clone();
             let text = text.clone();
+            let gutter = gutter.clone();
             move |event: &MouseMoveEvent, phase, window, cx| {
                 if phase != DispatchPhase::Bubble {
                     return;
+                }
+                let over_gutter = gutter.is_hovered(window);
+                if editor.read(cx).gutter_hovered != over_gutter {
+                    editor.update(cx, |editor, cx| {
+                        editor.gutter_hovered = over_gutter;
+                        cx.notify();
+                    });
                 }
                 let over_minimap = editor.read(cx).layout.as_ref().and_then(|layout| layout.minimap).is_some_and(|minimap| minimap.bounds.contains(&event.position));
                 if editor.read(cx).minimap_hovered != over_minimap {
@@ -651,12 +659,12 @@ impl Editor {
         let buffer = self.document.buffer.clone();
         let line_count = buffer.line_count();
         let digits = line_count.to_string().len().max(2);
-        let numbers_width = if frame.line_numbers { number_pad_left() + char_width * digits as f32 + number_gap() } else { git_bar() * 2. };
-        let gutter_width = breakpoint_lane() + fold_lane() + numbers_width;
+        let numbers_width = if frame.line_numbers { number_pad_left() + char_width * digits as f32 } else { px(0.) } + number_gap();
+        let gutter_width = breakpoint_lane() + numbers_width + fold_lane();
         let gutter_bounds = Bounds::new(bounds.origin, size(gutter_width, bounds.size.height));
-        let fold_left = gutter_bounds.left() + breakpoint_lane();
-        let numbers_right = gutter_bounds.right() - if frame.line_numbers { number_gap() } else { git_bar() * 2. };
-        let git_left = gutter_bounds.right() - git_bar() * 2.;
+        let fold_left = gutter_bounds.left() + breakpoint_lane() + numbers_width;
+        let numbers_right = fold_left - number_gap();
+        let git_left = fold_left - (number_gap() + git_bar()) / 2.;
         let minimap_width = if frame.minimap && bounds.size.width > px(240.) { minimap_max_width().min(bounds.size.width / 6.).round() } else { px(0.) };
         let text_right = bounds.right() - if minimap_width > px(0.) { minimap_width + scrollbar_width() } else { px(0.) };
         let text_bounds = Bounds::from_corners(point(bounds.left() + gutter_width, bounds.top()), point(text_right, bounds.bottom()));
@@ -1316,7 +1324,7 @@ impl Editor {
                 gutter_icons.push((Bounds::new(point(lane_center - icon / 2., middle - icon / 2.), size(icon, icon)), IconName::ArrowRight.path().into(), colors.warning));
             }
             let folded = self.folds.is_folded(plan.line);
-            if folded || fold_ranges.iter().any(|range| range.start == plan.line) {
+            if folded || (self.gutter_hovered && fold_ranges.iter().any(|range| range.start == plan.line)) {
                 let icon = px(12.);
                 let path = if folded { IconName::ChevronRight } else { IconName::ChevronDown }.path();
                 let color = if folded { colors.foreground } else { colors.subtle_foreground };
