@@ -29,12 +29,10 @@ use crate::{
     syntax::SyntaxKind,
 };
 
-/// Space between the gutter and the first column.
-fn text_padding() -> Pixels { px(4.) }
 /// The gutter, left to right: breakpoints (and diagnostics), line numbers, git changes in the gap
 /// after them, then folds next to the text, as VS Code lays it out.
 fn breakpoint_lane() -> Pixels { px(16.) }
-fn fold_lane() -> Pixels { px(12.) }
+fn fold_lane() -> Pixels { px(16.) }
 fn number_pad_left() -> Pixels { px(4.) }
 fn number_gap() -> Pixels { px(6.) }
 fn git_bar() -> Pixels { px(3.) }
@@ -668,7 +666,7 @@ impl Editor {
         let minimap_width = if frame.minimap && bounds.size.width > px(240.) { minimap_max_width().min(bounds.size.width / 6.).round() } else { px(0.) };
         let text_right = bounds.right() - if minimap_width > px(0.) { minimap_width + scrollbar_width() } else { px(0.) };
         let text_bounds = Bounds::from_corners(point(bounds.left() + gutter_width, bounds.top()), point(text_right, bounds.bottom()));
-        let text_width = text_bounds.size.width - text_padding() - if minimap_width > px(0.) { px(0.) } else { scrollbar_width() };
+        let text_width = text_bounds.size.width - if minimap_width > px(0.) { px(0.) } else { scrollbar_width() };
         let viewport_height = bounds.size.height;
 
         let wrap = self.soft_wrap(cx);
@@ -1000,7 +998,7 @@ impl Editor {
             }
         }
         self.scroll.x = self.scroll.x.clamp(px(0.), max_scroll_x.max(self.scroll.x.min(px(0.))));
-        let origin = point(text_bounds.left() + text_padding() - self.scroll.x, text_bounds.top() - self.scroll.y);
+        let origin = point(text_bounds.left() - self.scroll.x, text_bounds.top() - self.scroll.y);
         let row_origin = |row: &RowHit| point(origin.x, row.top);
 
         // Decorations under the text.
@@ -1595,7 +1593,7 @@ impl Editor {
                         runs.push(TextRun { len: display_at(text.len()) - display_at(at), font: frame.font.clone(), color: colors.foreground, background_color: None, underline: None, strikethrough: None });
                     }
                     let shaped = text_system.shape_line(SharedString::from(display), font_size, &runs, None);
-                    sticky_rows.push((shaped, point(text_bounds.left() + text_padding() - self.scroll.x, top)));
+                    sticky_rows.push((shaped, point(text_bounds.left() - self.scroll.x, top)));
                     if frame.line_numbers {
                         let number = shape_number(*line, false);
                         sticky_rows.push((number.clone(), point(numbers_right - number.width, top)));
