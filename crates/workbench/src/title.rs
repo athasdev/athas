@@ -86,11 +86,9 @@ impl Workbench {
             this.show_menu(PROJECT_SWITCHER_MENU, entries, position, Anchor::TopLeft, window, cx);
         }));
 
-        // The strip moves the window on a press and a drag, and on Windows the whole drag region
-        // answers the hit test as the title bar, so the window takes the press and the release
-        // never reaches the button. Its controls keep their press, as the pane header's tabs and
-        // buttons do.
-        let keep_press = || div().on_mouse_down(gpui::MouseButton::Left, |_, _, cx| cx.stop_propagation());
+        // The strip moves the window on a press and a drag; its controls keep their press, as the
+        // pane header's tabs and buttons do, and on Windows they lie above the drag region.
+        let keep_press = || crate::over_drag_region(div().on_mouse_down(gpui::MouseButton::Left, |_, _, cx| cx.stop_propagation()));
 
         let row = div()
             .id("title-leading")

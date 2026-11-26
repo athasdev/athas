@@ -438,7 +438,7 @@ impl Workbench {
         };
         // The header moves the window on a press and drag; its buttons keep their press so a
         // slight move between down and up does not swallow the click (Fullscreen, New, More).
-        let actions = pane_actions()
+        let actions = crate::over_drag_region(pane_actions().id(gpui::ElementId::Name(format!("centre-actions-{group_id}").into())))
             .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
             .when_some(vim_editor, |this, editor| this.child(editor::VimModeIndicator::new(editor)))
             .when_some(front_session, |this, id| {
@@ -528,7 +528,9 @@ impl Workbench {
                     .h_full()
                     .items_center()
                     .child(
-                        div()
+                        // The strip itself lies above the drag region on Windows, so the wheel
+                        // still scrolls it while a tab takes its own press.
+                        crate::over_drag_region(div()
                             .id(gpui::ElementId::Name(format!("centre-tabs-{group_id}").into()))
                             .flex()
                             .flex_1()
@@ -538,7 +540,7 @@ impl Workbench {
                             .overflow_x_scroll()
                             .when(!settings::get(cx).horizontal_tab_scroll, |this| this.restrict_scroll_to_axis())
                             .track_scroll(&scroll)
-                            .children(tab_elements),
+                            .children(tab_elements)),
                     )
                     .when(offset < px(-1.), |this| this.child(fade(true)))
                     .when(max > px(0.) && -offset < max - px(1.), |this| this.child(fade(false)))

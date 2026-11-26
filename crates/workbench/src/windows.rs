@@ -320,7 +320,7 @@ impl Workbench {
         let only_tab = tabs.len() == 1;
         let inset = if window.is_fullscreen() { metrics::workbench_gap() + metrics::chrome_padding_inline() } else { metrics::traffic_lights_inset() };
         let muted = cx.theme().colors.subtle_foreground;
-        let keep_press = || div().on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation());
+        let keep_press = || crate::over_drag_region(div().on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation()));
         let items: Vec<gpui::AnyElement> = tabs
             .into_iter()
             .map(|tab| {

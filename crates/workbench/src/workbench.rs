@@ -2774,7 +2774,8 @@ impl Workbench {
 
     // Window chrome.
 
-    /// Makes an element a place to drag the window from, as the title rows are.
+    /// Makes an element a place to drag the window from, as the title rows are. Controls inside
+    /// one go through [`over_drag_region`].
     fn drag_region<E: InteractiveElement + StatefulInteractiveElement>(&self, element: E, cx: &mut Context<Self>) -> E {
         element
             .window_control_area(gpui::WindowControlArea::Drag)
@@ -3179,6 +3180,15 @@ pub(crate) fn resize_edge(vertical: bool, hairline: gpui::Hsla, grab: gpui::Stat
         ))
 }
 
+
+/// A control, or a group of them, inside a [`Workbench::drag_region`]. On Windows a drag region
+/// answers the system's hit test as the title bar, and the system then runs its own move loop
+/// on a press there: the press reached the button, the release never did, and a click on a
+/// title-bar button did nothing (#804). Over these the region gives way, so the press is the
+/// button's. Elsewhere the region moves the window itself, from a drag rather than a press.
+pub(crate) fn over_drag_region<E: InteractiveElement>(element: E) -> E {
+    if cfg!(target_os = "windows") { element.occlude() } else { element }
+}
 
 /// A workspace with projects and sessions in it, for previews and screenshots.
 pub fn demo_state() -> WorkspaceState {
