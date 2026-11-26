@@ -205,13 +205,12 @@ impl Workbench {
             .flex_row()
             .child(div().flex().flex_col().flex_1().min_w_0().h_full().child(self.render_sidebar(false, window, cx)))
             // Inside the shell the sidebar and the centre share a surface; a hairline divides
-            // them, in a gutter of its own so nothing in the sidebar sits over the grab area.
-            .child(
+            // them, and both sit flush against it.
+            .child(crate::resize_edge(
+                true,
+                hairline,
                 div()
                     .id("sidebar-resize")
-                    .flex_none()
-                    .h_full()
-                    .w(metrics::workbench_gap())
                     .flex()
                     .justify_center()
                     .cursor_col_resize()
@@ -220,7 +219,6 @@ impl Workbench {
                         div()
                             .w(px(1.))
                             .h_full()
-                            .bg(hairline)
                             .when(resizing, |this| this.bg(line))
                             .group_hover("sidebar-resize", move |style| style.bg(line)),
                     )
@@ -242,7 +240,7 @@ impl Workbench {
                             });
                         }
                     })),
-            )
+            ))
     }
 
     /// In a narrow window the sidebar floats over the centre, below the title row.

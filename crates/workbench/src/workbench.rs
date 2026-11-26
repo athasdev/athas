@@ -1982,22 +1982,17 @@ impl Workbench {
         let hairline = cx.theme().colors.border;
         Some(
             div()
-                .relative()
                 .flex()
-                .flex_col()
+                .flex_row()
                 .flex_none()
                 .h_full()
                 .w(px(self.state.layout.inbox_width.clamp(INBOX_MIN_WIDTH, INBOX_MAX_WIDTH)))
-                .pr(metrics::workbench_gap())
-                .child(panel)
-                .child(
+                .child(div().flex().flex_col().flex_1().min_w_0().h_full().child(panel))
+                .child(resize_edge(
+                    true,
+                    hairline,
                     div()
                         .id("inbox-resize")
-                        .absolute()
-                        .top_0()
-                        .bottom_0()
-                        .right_0()
-                        .w(metrics::workbench_gap())
                         .flex()
                         .justify_center()
                         .cursor_col_resize()
@@ -2006,7 +2001,6 @@ impl Workbench {
                             div()
                                 .w(px(1.))
                                 .h_full()
-                                .bg(hairline)
                                 .when(resizing, |this| this.bg(line))
                                 .group_hover("inbox-resize", move |style| style.bg(line)),
                         )
@@ -2023,7 +2017,7 @@ impl Workbench {
                                 this.update_state(cx, |state| state.layout.inbox_width = f32::from(notifications::inbox_width()));
                             }
                         })),
-                ),
+                )),
         )
     }
 
@@ -3163,6 +3157,25 @@ pub fn forget_window(window: gpui::WindowId, cx: &mut App) {
 
 pub(crate) fn bounds_right(bounds: Bounds<Pixels>) -> Pixels {
     bounds.origin.x + bounds.size.width
+}
+
+/// A 1px divider between two areas, flush with both, and `grab`, the wider strip that resizes
+/// them, laid over it. The strip is deferred so it paints after the areas on both sides: it
+/// takes no room of its own, and its hit area wins over theirs.
+pub(crate) fn resize_edge(vertical: bool, hairline: gpui::Hsla, grab: gpui::Stateful<gpui::Div>) -> gpui::Div {
+    let reach = metrics::workbench_gap();
+    let overhang = -(reach - px(1.)) / 2.;
+    div()
+        .relative()
+        .flex_none()
+        .bg(hairline)
+        .when(vertical, |this| this.w(px(1.)).h_full())
+        .when(!vertical, |this| this.h(px(1.)).w_full())
+        .child(gpui::deferred(
+            grab.absolute()
+                .when(vertical, |this| this.top_0().bottom_0().left(overhang).w(reach))
+                .when(!vertical, |this| this.left_0().right_0().top(overhang).h(reach)),
+        ))
 }
 
 

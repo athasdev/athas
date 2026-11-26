@@ -192,17 +192,16 @@ impl Workbench {
                         }
                     }))
                     .flex()
-                    .flex_none()
                     .items_center()
                     .justify_center()
                     .group("split-handle")
-                    .when(horizontal, |this| this.w(metrics::workbench_gap()).h_full().cursor_col_resize())
-                    .when(!horizontal, |this| this.h(metrics::workbench_gap()).w_full().cursor_row_resize())
+                    .when(horizontal, |this| this.cursor_col_resize())
+                    .when(!horizontal, |this| this.cursor_row_resize())
                     .child(
                         div()
                             .when(horizontal, |this| this.w(px(1.)).h_full())
                             .when(!horizontal, |this| this.h(px(1.)).w_full())
-                            .bg(if resizing || focused { line } else { divider })
+                            .when(resizing || focused, |this| this.bg(line))
                             .group_hover("split-handle", move |style| style.bg(line)),
                     )
                     .on_mouse_down(
@@ -240,7 +239,7 @@ impl Workbench {
                             .min_h_0()
                             .child(self.render_pane_node(first, layout, window, cx)),
                     )
-                    .child(handle)
+                    .child(crate::resize_edge(horizontal, divider, handle))
                     .child(
                         div()
                             .flex()
@@ -1066,19 +1065,13 @@ impl Workbench {
             .flex_col()
             .flex_none()
             .h(height)
-            .pt(metrics::workbench_gap())
             // Inside the shell the bottom pane has no edge of its own; a hairline marks where the
             // centre ends, as the sidebar's divider does.
-            .border_t_1()
-            .border_color(cx.theme().colors.border)
-            .child(
+            .child(crate::resize_edge(
+                false,
+                cx.theme().colors.border,
                 div()
                     .id("bottom-resize")
-                    .absolute()
-                    .top_0()
-                    .left_0()
-                    .right_0()
-                    .h(metrics::workbench_gap())
                     .flex()
                     .items_center()
                     .cursor_row_resize()
@@ -1101,7 +1094,7 @@ impl Workbench {
                             cx.notify();
                         }),
                     ),
-            )
+            ))
             .child(
                 div()
                     .id("bottom-pane-content")
