@@ -234,11 +234,15 @@ impl<D: PickerDelegate> Picker<D> {
         (0..=index).filter(|ix| self.delegate.section_label(*ix).is_some()).count() + index
     }
 
-    /// Scrolls a match into view, with the section title above it when it starts a section.
+    /// Scrolls a match into view along with the items on either side of it, so the edge fades
+    /// fall on a neighbour (or its section title) rather than on the match.
     fn reveal(&self, index: usize) {
         let child = self.child_index(index);
         self.list.scroll_to_reveal_item(child);
-        if self.delegate.section_label(index).is_some() {
+        if child + 1 < self.list.item_count() {
+            self.list.scroll_to_reveal_item(child + 1);
+        }
+        if child > 0 {
             self.list.scroll_to_reveal_item(child - 1);
         }
     }
