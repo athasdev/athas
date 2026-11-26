@@ -1,8 +1,8 @@
 use ui::scale::px;
 use gpui::{
     Action, AnyElement, App, Context, DismissEvent, Entity, EventEmitter, FocusHandle, Focusable,
-    KeyBinding, MouseButton, ScrollHandle, SharedString, Subscription, Window, actions, div,
-    prelude::*, relative,
+    KeyBinding, ListAlignment, ListSizingBehavior, ListState, MouseButton, SharedString, Subscription, Window,
+    actions, div, list, prelude::*, relative,
 };
 use theme::ActiveTheme;
 use ui::{Icon, IconName, IconSize, InputAppearance, Kbd, TextInput, TextInputEvent, metrics, typography};
@@ -120,12 +120,25 @@ pub trait PickerDelegate: Sized + 'static {
 pub struct Picker<D: PickerDelegate> {
     pub delegate: D,
     input: Entity<TextInput>,
-    scroll: ScrollHandle,
+    list: ListState,
+    /// The list's items: a section title before the match it heads, or a match.
+    entries: Vec<Entry>,
     query: SharedString,
     confirmed: bool,
     /// A row to bring into view once the list has laid out its rows.
     pending_scroll: Option<usize>,
     _subscription: Subscription,
+}
+
+#[derive(Clone, PartialEq)]
+enum Entry {
+    Section(SharedString),
+    Match(usize),
+}
+
+/// A row's height before it is measured, so the scrollbar is about right from the first frame.
+fn row_height_hint() -> gpui::Pixels {
+    px(36.)
 }
 
 impl<D: PickerDelegate> EventEmitter<DismissEvent> for Picker<D> {}
@@ -145,7 +158,7 @@ impl<D: PickerDelegate> Picker<D> {
                 this.query = query.clone();
                 this.delegate.update_matches(query, window, cx);
                 this.delegate.set_selected_index(0, cx);
-                this.scroll.scroll_to_item(0);
+                this.list.scroll_to_reveal_item(0);
                 cx.notify();
             }
             TextInputEvent::Confirmed => this.confirm_selected(window, cx),
@@ -156,7 +169,8 @@ impl<D: PickerDelegate> Picker<D> {
         let mut picker = Self {
             delegate,
             input,
-            scroll: ScrollHandle::new(),
+            list: ListState::new(0, ListAlignment::Top, px(200.)),
+            entries: Vec::new(),
             query: SharedString::default(),
             confirmed: false,
             pending_scroll: None,
@@ -211,13 +225,79 @@ impl<D: PickerDelegate> Picker<D> {
         }
         let index = index.min(count - 1);
         self.delegate.set_selected_index(index, cx);
-        self.scroll.scroll_to_item(self.child_index(index));
+        self.reveal(index);
         cx.notify();
     }
 
     /// The list's children include section titles; this finds a match's child.
     fn child_index(&self, index: usize) -> usize {
         (0..=index).filter(|ix| self.delegate.section_label(*ix).is_some()).count() + index
+    }
+
+    /// Scrolls a match into view, with the section title above it when it starts a section.
+    fn reveal(&self, index: usize) {
+        let child = self.child_index(index);
+        self.list.scroll_to_reveal_item(child);
+        if self.delegate.section_label(index).is_some() {
+            self.list.scroll_to_reveal_item(child - 1);
+        }
+    }
+
+    /// Rebuilds the list's items when the matches changed, which a delegate may do from a task.
+    fn sync_entries(&mut self) {
+        let count = self.delegate.match_count();
+        let mut entries = Vec::with_capacity(count + 8);
+        for index in 0..count {
+            if let Some(label) = self.delegate.section_label(index) {
+                entries.push(Entry::Section(label));
+            }
+            entries.push(Entry::Match(index));
+        }
+        if entries != self.entries {
+            self.list.reset_with_uniform_height(entries.len(), row_height_hint());
+            self.entries = entries;
+            if count > 0 {
+                self.reveal(self.delegate.selected_index().min(count - 1));
+            }
+        }
+    }
+
+    fn render_entry(&mut self, ix: usize, window: &mut Window, cx: &mut Context<Self>) -> AnyElement {
+        let colors = cx.theme().colors.clone();
+        // The list's own padding sits outside the scrolled rows, so the inset is on each item.
+        let last = ix + 1 == self.entries.len();
+        let item = div().pl(px(4.)).pr(px(8.)).when(ix == 0, |this| this.pt(px(4.))).when(last, |this| this.pb(px(4.)));
+        match self.entries.get(ix).cloned() {
+            Some(Entry::Section(label)) => item
+                .child(
+                    div()
+                        .px(px(8.))
+                        .pt(px(6.))
+                        .pb(px(2.))
+                        .text_size(typography::text_caption())
+                        .font_weight(typography::MEDIUM)
+                        .text_color(colors.subtle_foreground)
+                        .child(label),
+                )
+                .into_any_element(),
+            Some(Entry::Match(index)) => {
+                let row = self.delegate.render_match(index, index == self.delegate.selected_index(), window, cx);
+                item.child(
+                    div()
+                        .id(("picker-row", index))
+                        .on_mouse_move(cx.listener(move |this, _, _, cx| {
+                            if this.delegate.selected_index() != index {
+                                this.delegate.set_selected_index(index, cx);
+                                cx.notify();
+                            }
+                        }))
+                        .on_click(cx.listener(move |this, _, window, cx| this.confirm_index(index, window, cx)))
+                        .child(row),
+                )
+                .into_any_element()
+            }
+            None => item.into_any_element(),
+        }
     }
 
     /// Searches again with the current query, after the delegate's items change.
@@ -236,7 +316,7 @@ impl<D: PickerDelegate> Picker<D> {
         self.delegate.set_selected_index(0, cx);
         let placeholder = self.delegate.placeholder();
         self.input.update(cx, |input, cx| input.set_placeholder(placeholder, cx));
-        self.scroll.scroll_to_item(0);
+        self.list.scroll_to_reveal_item(0);
         cx.notify();
     }
 
@@ -286,9 +366,10 @@ impl<D: PickerDelegate> Picker<D> {
 
 impl<D: PickerDelegate> Render for Picker<D> {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        self.sync_entries();
         if let Some(child) = self.pending_scroll {
-            self.scroll.scroll_to_item(child);
-            if self.scroll.bounds_for_item(child).is_some() {
+            self.list.scroll_to_reveal_item(child);
+            if self.list.bounds_for_item(child).is_some() {
                 self.pending_scroll = None;
             } else {
                 cx.notify();
@@ -297,38 +378,6 @@ impl<D: PickerDelegate> Render for Picker<D> {
         let theme = cx.theme().clone();
         let colors = &theme.colors;
         let count = self.delegate.match_count();
-        let selected = self.delegate.selected_index();
-
-        let mut rows: Vec<AnyElement> = Vec::with_capacity(count + 8);
-        for index in 0..count {
-            if let Some(label) = self.delegate.section_label(index) {
-                rows.push(
-                    div()
-                        .px(px(8.))
-                        .pt(px(6.))
-                        .pb(px(2.))
-                        .text_size(typography::text_caption())
-                        .font_weight(typography::MEDIUM)
-                        .text_color(colors.subtle_foreground)
-                        .child(label)
-                        .into_any_element(),
-                );
-            }
-            let row = self.delegate.render_match(index, index == selected, window, cx);
-            rows.push(
-                div()
-                    .id(("picker-row", index))
-                    .on_mouse_move(cx.listener(move |this, _, _, cx| {
-                        if this.delegate.selected_index() != index {
-                            this.delegate.set_selected_index(index, cx);
-                            cx.notify();
-                        }
-                    }))
-                    .on_click(cx.listener(move |this, _, window, cx| this.confirm_index(index, window, cx)))
-                    .child(row)
-                    .into_any_element(),
-            );
-        }
 
         let tabs = self.delegate.tabs();
         let actions = self.delegate.header_actions(window, cx);
@@ -440,29 +489,19 @@ impl<D: PickerDelegate> Render for Picker<D> {
                 }))
             });
 
-        let list = div()
-            .id("picker-list")
-            .flex()
-            .flex_col()
+        let empty = (count == 0).then(|| {
+            div()
+                .px(px(8.))
+                .py(px(10.))
+                .text_center()
+                .text_size(typography::text_sm())
+                .text_color(colors.muted_foreground)
+                .child(self.delegate.empty_message())
+        });
+        let list = list(self.list.clone(), cx.processor(|this, ix, window, cx| this.render_entry(ix, window, cx)))
+            .with_sizing_behavior(ListSizingBehavior::Infer)
             .flex_1()
-            .min_h_0()
-            .overflow_y_scroll()
-            .track_scroll(&self.scroll)
-            .p(px(4.))
-            // Room for the scrollbar, so a row's meta does not sit under the thumb.
-            .pr(px(8.))
-            .when(count == 0, |this| {
-                this.child(
-                    div()
-                        .px(px(8.))
-                        .py(px(10.))
-                        .text_center()
-                        .text_size(typography::text_sm())
-                        .text_color(colors.muted_foreground)
-                        .child(self.delegate.empty_message()),
-                )
-            })
-            .children(rows);
+            .min_h_0();
 
         let viewport = window.viewport_size();
         ui::overlay_surface(cx)
@@ -481,14 +520,17 @@ impl<D: PickerDelegate> Render for Picker<D> {
             .max_h((viewport.height * 0.6).min(px(440.)))
             .child(header)
             .children(tab_bar)
-            .child(
-                ui::faded_scroll(
-                    ui::with_scrollbar(list, ui::Scrollbar::new("picker-scrollbar", &self.scroll).always().priority(3)),
-                    &self.scroll,
-                    colors.overlay,
+            .children(empty)
+            .when(count > 0, |this| {
+                this.child(
+                    ui::faded_list_scroll(
+                        ui::with_scrollbar(list, ui::Scrollbar::list("picker-scrollbar", &self.list).always().priority(3)),
+                        &self.list,
+                        colors.overlay,
+                    )
+                    .flex_1(),
                 )
-                .flex_1(),
-            )
+            })
             .child(footer)
             .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
     }

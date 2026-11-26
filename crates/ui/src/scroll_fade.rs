@@ -29,8 +29,15 @@ pub fn faded_scroll(content: impl IntoElement, handle: &ScrollHandle, plane: Hsl
     // `offset().y` is 0 at the top and goes negative as the content rises; `max_offset().y` is
     // how far it can go. Both are 0 before the first layout, which reads as "nothing hidden" --
     // the right answer for a frame that has not measured anything yet.
-    let scrolled = -handle.offset().y;
-    let furthest = handle.max_offset().y;
+    faded_vertical(content, -handle.offset().y, handle.max_offset().y, plane)
+}
+
+/// The same for a `list`, which only knows the rows it has measured.
+pub fn faded_list_scroll(content: impl IntoElement, state: &gpui::ListState, plane: Hsla) -> Div {
+    faded_vertical(content, -state.scroll_px_offset_for_scrollbar().y, state.max_offset_for_scrollbar().y, plane)
+}
+
+fn faded_vertical(content: impl IntoElement, scrolled: gpui::Pixels, furthest: gpui::Pixels, plane: Hsla) -> Div {
     let above = scrolled > px(SLACK);
     let below = scrolled < furthest - px(SLACK);
     let clear = Hsla { a: 0., ..plane };
