@@ -255,35 +255,22 @@ impl Workbench {
         if !narrow || !self.sidebar_overlay_open {
             return None;
         }
-        let top = metrics::workbench_gap() + metrics::pane_header();
         Some(
-            div()
+            island(cx)
                 .absolute()
-                .inset_0()
-                .child(
-                    div()
-                        .id("sidebar-backdrop")
-                        .absolute()
-                        .inset_0()
-                        .on_click(cx.listener(|this, _, _, cx| {
-                            this.sidebar_overlay_open = false;
-                            cx.notify();
-                        })),
-                )
-                .child(
-                    island(cx)
-                        .absolute()
-                        .top(top)
-                        .bottom(metrics::workbench_gap())
-                        .left(metrics::workbench_gap() + metrics::rail_control())
-                        .w(px(288.))
-                        // Solid even with glass on: it floats over the centre, not the desktop,
-                        // and a see-through surface showed the editor's text under the tool.
-                        .bg(gpui::Hsla { a: 1., ..cx.theme().colors.surface })
-                        .shadow(cx.theme().shadows.popover.clone())
-                        .occlude()
-                        .child(self.render_sidebar(false, window, cx)),
-                ),
+                .top_0()
+                .bottom_0()
+                .left_0()
+                .w(px(self.state.layout.sidebar_width))
+                .rounded(metrics::island_radius() + px(1.))
+                // Solid even with glass on: it floats over the centre, not the desktop,
+                // and a see-through surface showed the editor's text under the tool.
+                .bg(gpui::Hsla { a: 1., ..cx.theme().colors.surface })
+                .border_1()
+                .border_color(cx.theme().colors.border)
+                .shadow(vec![])
+                .occlude()
+                .child(self.render_sidebar(false, window, cx)),
         )
     }
 
@@ -620,7 +607,7 @@ impl Workbench {
             .flex_1()
             .min_h_0()
             .child(ui::PanelHeader::new("Sessions").trailing(header_actions))
-            .child(ui::faded_scroll(ui::with_scrollbar(list, ui::Scrollbar::new("sessions-scrollbar", &scroll)), &scroll, cx.theme().colors.background).flex_1())
+            .child(ui::faded_scroll(ui::with_scrollbar(list, ui::Scrollbar::new("sessions-scrollbar", &scroll)), &scroll, ui::sidebar_fade_plane(cx)).flex_1())
             .child(self.render_sessions_footer(cx))
     }
 

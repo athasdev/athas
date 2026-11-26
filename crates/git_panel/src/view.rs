@@ -215,7 +215,7 @@ impl GitPanel {
         // The composer, the toolbar and the footer hold still; only the files move. Scrolling the
         // commit box off the top to reach a file, and losing the Commit button with it, made the
         // panel feel like a document rather than a tool.
-        let plane = cx.theme().colors.background;
+        let plane = ui::sidebar_fade_plane(cx);
         div()
             .flex()
             .flex_col()

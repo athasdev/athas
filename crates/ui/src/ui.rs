@@ -62,7 +62,7 @@ pub use field::{Field, FieldOrientation, FieldSeparator, InputGroup, InputGroupV
 pub use icon::{Icon, IconName, IconSize};
 pub use item::{GroupedSection, GroupedSectionVariant, Item, ItemMedia, ItemSize, ItemVariant, item_group};
 pub use kbd::{Kbd, shortcut_text};
-pub use list::{SectionHeader, SectionLabel, AccordionRow, SidebarListItem, SidebarListItemTone, sidebar_row};
+pub use list::{SectionHeader, SectionLabel, AccordionRow, SidebarListItem, SidebarListItemTone, sidebar_hover_fill, sidebar_row};
 pub use loading::{Shimmer, Skeleton, Spinner, ThinkingOrb, ThinkingOrbState, shimmer_band};
 pub use menu::{CloseSubmenu, Menu, MenuEntry, MenuItem, MenuItemTone, MenuQuerySource, MenuSize, overlay_max_height, overlay_max_width, OpenMenu};
 pub use message::{Attachment, AttachmentState, Message, ResourceSection, ResourceSummary, message_action};
@@ -97,6 +97,21 @@ pub fn init(cx: &mut gpui::App) {
 struct KeyBinders(Vec<(&'static str, fn(&mut gpui::App))>);
 
 impl gpui::Global for KeyBinders {}
+
+#[derive(Clone, Copy, Default)]
+pub struct SidebarFadePlane(pub gpui::Hsla);
+
+impl gpui::Global for SidebarFadePlane {}
+
+pub fn set_sidebar_fade_plane(cx: &mut gpui::App, color: gpui::Hsla) {
+    cx.default_global::<SidebarFadePlane>().0 = color;
+}
+
+pub fn sidebar_fade_plane(cx: &gpui::App) -> gpui::Hsla {
+    cx.try_global::<SidebarFadePlane>()
+        .map(|plane| plane.0)
+        .unwrap_or_else(|| theme::ActiveTheme::theme(cx).colors.background)
+}
 
 /// Binds a crate's keys the first time it asks, and again whenever the keymap reloads.
 pub fn bind_keys_once(cx: &mut gpui::App, owner: &'static str, bind: fn(&mut gpui::App)) {

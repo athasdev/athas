@@ -2853,6 +2853,8 @@ impl Render for Workbench {
         self.publish_editor_index(window, cx);
         let theme = cx.theme().clone();
         let narrow = Self::is_narrow(window);
+        let fade_plane = if narrow && self.sidebar_overlay_open { theme.colors.surface } else { theme.colors.background };
+        ui::set_sidebar_fade_plane(cx, fade_plane);
         // A full-screen editor group takes the whole workbench, sidebars included.
         let pane_fullscreen = self
             .fullscreen_group
@@ -2883,7 +2885,8 @@ impl Render for Workbench {
         let shell = ui::shell(cx, gpui::px(settings::get(cx).shell_border_width as f32))
             .when(sidebar_column, |this| this.child(self.render_sidebar_column(window, cx)))
             .when(!narrow && !pane_fullscreen, |this| this.children(self.render_inbox_column(cx)))
-            .child(self.render_centre(window, cx));
+            .child(self.render_centre(window, cx))
+            .children(self.render_sidebar_overlay(narrow, window, cx));
         let body = div()
             .relative()
             .flex()
@@ -2907,7 +2910,6 @@ impl Render for Workbench {
             .min_h_0()
             .child(title_row)
             .child(body)
-            .children(self.render_sidebar_overlay(narrow, window, cx))
             .children(self.render_inbox_overlay(narrow, cx));
 
         let root = div()

@@ -591,7 +591,7 @@ impl GitHubPanel {
         row.action = Some(self.new_window_action("github-pr", number, title.clone(), cx));
         let menu_pr = pr.clone();
         let dragged = ui::DraggedResource::new("github-pr", number.to_string(), title.clone(), format!("#{number} {title}"), IconName::GitPullRequest);
-        row.render(colors)
+        row.render(colors, cx)
             .hoverable_tooltip(preview.tooltip())
             .on_drag(dragged, |dragged, _, _, cx| dragged.preview(cx))
             .on_click(cx.listener(move |this, event: &ClickEvent, _, cx| {
@@ -675,7 +675,7 @@ impl GitHubPanel {
         let (number, title, url, copy_title) = (issue.number, issue.title.clone(), issue.url.clone(), issue.title.clone());
         row.action = Some(self.new_window_action("github-issue", number, title.clone(), cx));
         let dragged = ui::DraggedResource::new("github-issue", number.to_string(), title.clone(), format!("#{number} {title}"), IconName::CircleDot);
-        row.render(colors)
+        row.render(colors, cx)
             .tooltip(preview.tooltip())
             .on_drag(dragged, |dragged, _, _, cx| dragged.preview(cx))
             .on_click(cx.listener(move |this, event: &ClickEvent, _, cx| {
@@ -772,7 +772,7 @@ impl GitHubPanel {
         row.action = Some(self.new_window_action("github-run", id, title.clone(), cx));
         let menu_run = run.clone();
         let dragged = ui::DraggedResource::new("github-run", id.to_string(), title.clone(), title.clone(), IconName::PlayCircle);
-        row.render(colors)
+        row.render(colors, cx)
             .tooltip(preview.tooltip())
             .on_drag(dragged, |dragged, _, _, cx| dragged.preview(cx))
             .on_click(cx.listener(move |this, event: &ClickEvent, _, cx| {
@@ -841,7 +841,7 @@ impl GitHubPanel {
         row.meta = Some(div().child(model::sidebar_time(&when, now)).into_any_element());
         row.selected = self.selected == Some((Section::Releases, id));
         let dragged = ui::DraggedResource::new("github-release", id.to_string(), title.clone(), title.clone(), IconName::Tag);
-        row.render(colors)
+        row.render(colors, cx)
             .on_drag(dragged, |dragged, _, _, cx| dragged.preview(cx))
             .on_click(cx.listener(move |this, _, _, cx| this.open(Section::Releases, "github-release", id, title.clone(), cx)))
             .into_any_element()
@@ -873,7 +873,7 @@ impl GitHubPanel {
         row.meta = Some(div().child(model::sidebar_time(&deployment.created_at, now)).into_any_element());
         row.selected = self.selected == Some((Section::Deployments, id));
         let dragged = ui::DraggedResource::new("github-deployment", id.to_string(), title.clone(), title.clone(), IconName::Rocket);
-        row.render(colors)
+        row.render(colors, cx)
             .on_drag(dragged, |dragged, _, _, cx| dragged.preview(cx))
             .on_click(cx.listener(move |this, _, _, cx| this.open(Section::Deployments, "github-deployment", id, title.clone(), cx)))
             .into_any_element()

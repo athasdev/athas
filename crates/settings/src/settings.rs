@@ -268,6 +268,8 @@ pub struct Settings {
     pub ollama_base_url: String,
     #[serde(rename = "sidebarWidth")]
     pub sidebar_width: f64,
+    #[serde(rename = "sidebarHoverStyle")]
+    pub sidebar_hover_style: String,
     #[serde(rename = "showGitHubPullRequests")]
     pub show_github_pull_requests: bool,
     #[serde(rename = "showGitHubIssues")]
@@ -507,6 +509,7 @@ impl Default for Settings {
             active_v0_design_system_id: "".into(),
             ollama_base_url: "http://localhost:11434".into(),
             sidebar_width: 220.0,
+            sidebar_hover_style: "fill".into(),
             show_github_pull_requests: true,
             show_github_issues: true,
             show_github_actions: true,
@@ -971,6 +974,11 @@ pub fn reload_from_disk(cx: &mut App) -> Option<std::result::Result<Vec<SettingI
 /// The settings in effect: the user's, with any editor overrides of this session on top.
 pub fn get(cx: &App) -> &Settings {
     &cx.global::<SettingsStore>().effective
+}
+
+/// Whether sidebar rows fill on hover instead of only brightening their text.
+pub fn sidebar_hover_fill(cx: &App) -> bool {
+    get(cx).sidebar_hover_style == "fill"
 }
 
 /// The user's settings as saved, without this session's editor overrides.

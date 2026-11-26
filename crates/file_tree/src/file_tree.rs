@@ -2321,7 +2321,14 @@ impl FileTree {
                 if editing.is_some() || highlighted {
                     this.text_color(colors.foreground)
                 } else {
-                    ui::sidebar_row(this, false, false, cx)
+                    // GPUI panics on a second .hover()
+                    let foreground = colors.foreground;
+                    if settings::sidebar_hover_fill(cx) {
+                        let hover_fill = ui::sidebar_hover_fill(cx);
+                        this.text_color(colors.muted_foreground).hover(move |style| style.bg(hover_fill).text_color(foreground))
+                    } else {
+                        this.text_color(colors.muted_foreground).hover(move |style| style.text_color(foreground))
+                    }
                 }
             })
             .child(content)
@@ -2413,7 +2420,7 @@ impl Render for FileTree {
                     ui::Scrollbar::uniform("file-tree-scrollbar", &self.scroll_handle),
                 ),
                 &self.scroll_handle,
-                cx.theme().colors.background,
+                ui::sidebar_fade_plane(cx),
             )
             .flex_1()
             .into_any_element()

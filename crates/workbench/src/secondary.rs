@@ -92,7 +92,7 @@ pub(crate) fn list(id: &'static str, rows: Vec<AnyElement>, empty: EmptyState, s
         .pb(px(8.))
         .gap(px(2.))
         .children(rows);
-    ui::faded_scroll(body, scroll, cx.theme().colors.background).flex_1().into_any_element()
+    ui::faded_scroll(body, scroll, ui::sidebar_fade_plane(cx)).flex_1().into_any_element()
 }
 
 /// A heading between groups of rows, as the Inbox's categories read.

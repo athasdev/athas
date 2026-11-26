@@ -173,6 +173,8 @@ impl RenderOnce for SidebarListItem {
         let has_hover_trailing = self.hover_trailing.is_some();
         let outline = self.active && theme::accessibility(cx).differentiate_without_color;
         let raised_pill = self.on_page && !theme::glass(cx);
+        let hover_fill = settings::sidebar_hover_fill(cx);
+        let fill = sidebar_hover_fill(cx);
 
         div()
             .id(self.id)
@@ -201,14 +203,12 @@ impl RenderOnce for SidebarListItem {
                 }
             })
             .when(outline, |this| this.border_1().border_color(colors.border_strong))
-            .when(forced && !self.on_page && toned.is_none(), |this| this.bg(colors.accent))
+            .when(forced && !self.on_page && toned.is_none() && hover_fill, |this| this.bg(fill))
             .when(!self.active && toned.is_none(), |this| {
                 let hover_fg = colors.foreground;
-                let hover_bg = colors.accent;
-                let on_page = self.on_page;
                 this.hover(move |style| {
                     let style = style.text_color(hover_fg);
-                    if on_page { style } else { style.bg(hover_bg) }
+                    if hover_fill { style.bg(fill) } else { style }
                 })
             })
             .children(self.leading.map(|leading| {
@@ -281,16 +281,22 @@ impl RenderOnce for SidebarListItem {
     }
 }
 
-/// The look every sidebar row shares, so a file, an outline symbol or a search hit reads like a
-/// session: muted text that brightens on hover with no fill, and the active row lifted as a
-/// pill. Rows inside a panel call this instead of filling on hover.
+pub fn sidebar_hover_fill(cx: &App) -> gpui::Hsla {
+    cx.theme().colors.accent.opacity(0.6)
+}
+
 pub fn sidebar_row<E: Styled + InteractiveElement>(row: E, active: bool, emphasized: bool, cx: &App) -> E {
     let theme = cx.theme();
     let colors = &theme.colors;
     let raised_pill = !theme::glass(cx);
     let foreground = colors.foreground;
     if !active {
-        return row.text_color(colors.muted_foreground).hover(move |style| style.text_color(foreground));
+        let row = row.text_color(colors.muted_foreground);
+        if settings::sidebar_hover_fill(cx) {
+            let fill = sidebar_hover_fill(cx);
+            return row.hover(move |style| style.bg(fill).text_color(foreground));
+        }
+        return row.hover(move |style| style.text_color(foreground));
     }
     let row = row.text_color(foreground);
     match (emphasized, raised_pill) {

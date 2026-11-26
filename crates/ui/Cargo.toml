@@ -10,6 +10,7 @@ path = "src/ui.rs"
 
 [dependencies]
 gpui.workspace = true
+settings = { path = "../settings" }
 theme = { path = "../theme" }
 anyhow.workspace = true
 include_dir = "0.7"

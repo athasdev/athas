@@ -7,9 +7,10 @@ use gpui::{
     Stateful, Styled, Window, div, prelude::*, relative,
 };
 use theme::{ActiveTheme, ThemeColors};
-use ui::{Avatar, Icon, IconName, IconSize, metrics, typography};
+use ui::{Avatar, Icon, IconName, IconSize, metrics, sidebar_hover_fill, typography};
 
 use crate::model::{Phase, RunState, Tone};
+use settings;
 
 pub fn tone_color(tone: Tone, colors: &ThemeColors) -> Hsla {
     match tone {
@@ -114,8 +115,10 @@ impl Row {
         Self { id: id.into(), leading: leading.into_any_element(), title: title.into(), secondary: None, meta: None, action: None, selected: false }
     }
 
-    pub fn render(self, colors: &ThemeColors) -> Stateful<Div> {
+    pub fn render(self, colors: &ThemeColors, cx: &App) -> Stateful<Div> {
         let hover = colors.foreground;
+        let fill = sidebar_hover_fill(cx);
+        let hover_fill = settings::sidebar_hover_fill(cx);
         let has_action = self.action.is_some();
         div()
             .id(self.id)
@@ -131,7 +134,10 @@ impl Row {
             .line_height(relative(typography::LEADING_ROW))
             .text_color(if self.selected { colors.foreground } else { colors.muted_foreground })
             .when(self.selected, |this| this.bg(colors.selected))
-            .hover(move |style| style.text_color(hover))
+            .hover(move |style| {
+                let style = style.text_color(hover);
+                if hover_fill { style.bg(fill) } else { style }
+            })
             .child(div().flex().flex_none().items_center().justify_center().size(px(18.)).child(self.leading))
             .child(
                 div()
