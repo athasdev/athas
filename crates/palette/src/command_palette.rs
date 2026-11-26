@@ -284,7 +284,6 @@ impl PickerDelegate for CommandPaletteDelegate {
         let entry = self.entry(*row);
         PaletteRow::new(entry.label.clone())
             .icon(entry.icon)
-            .description(format!("{} · {}", entry.category, entry.description))
             // Return is in the footer now; a row shows only its own shortcut.
             .shortcut(entry.shortcut.clone())
             .highlights(matched.positions.clone())

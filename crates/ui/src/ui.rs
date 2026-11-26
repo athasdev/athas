@@ -74,7 +74,7 @@ pub use progress::{Progress, ProgressCircle, ProgressTone, ToggleGroup, ToggleOp
 pub use questionnaire::{Questionnaire, QuestionnaireChoice, QuestionnaireEvent, QuestionnaireQuestion};
 pub use resource_drag::{DraggedResource, DraggedResourcePreview, WORKTREE_KIND};
 pub use scroll_area::{AlwaysShowScrollbars, ScrollArea, Scrollbar, WithScrollbar, with_scrollbar};
-pub use scroll_fade::{faded_scroll, faded_scroll_x, faded_uniform_scroll};
+pub use scroll_fade::{faded_list_scroll, faded_scroll, faded_scroll_x, faded_uniform_scroll};
 pub use select::{Select, SelectEvent, SelectOption, SelectSearch, SelectVariant, SelectWidth};
 pub use step_slider::{StepSlider, StepSliderStep};
 pub use surfaces::{
