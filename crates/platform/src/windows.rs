@@ -425,7 +425,7 @@ mod tests {
 #[cfg(test)]
 mod window_lease_tests {
     use super::with_window;
-    use gpui::{AppContext as _, Context, IntoElement, Render, TestAppContext, Window, div};
+    use gpui::{Context, IntoElement, Render, TestAppContext, Window, div};
 
     struct Root;
 
