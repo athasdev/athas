@@ -138,7 +138,7 @@ enum Entry {
 
 /// A row's height before it is measured, so the scrollbar is about right from the first frame.
 fn row_height_hint() -> gpui::Pixels {
-    px(36.)
+    px(29.)
 }
 
 impl<D: PickerDelegate> EventEmitter<DismissEvent> for Picker<D> {}
@@ -401,7 +401,7 @@ impl<D: PickerDelegate> Render for Picker<D> {
             .items_center()
             .gap(px(6.))
             .h(px(36.))
-            .px(px(10.))
+            .px(px(12.))
             .border_b_1()
             .border_color(colors.divider)
             .text_size(typography::text_sm())
@@ -473,7 +473,7 @@ impl<D: PickerDelegate> Render for Picker<D> {
             .items_center()
             .gap(px(12.))
             .h(px(28.))
-            .px(px(8.))
+            .px(px(12.))
             .border_t_1()
             .border_color(colors.divider)
             .text_size(typography::text_caption())
