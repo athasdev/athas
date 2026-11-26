@@ -7,6 +7,8 @@ const LABELS: &[(&str, &str)] = &[
     ("ai.rejectAgentHunk", "AI: Undo Agent Change"),
     ("browser.newTab", "Browser: New Browser Tab"),
     ("browser.openUrl", "Browser: Open URL..."),
+    ("browser.importBrowserData", "Browser: Import from Browser..."),
+    ("browser.managePasskeys", "Browser: Manage Passkeys"),
     ("editor.addSelectionToChat", "AI: Add Selection to Agent Chat"),
     ("editor.addSelectionToNewChat", "AI: Add Selection to New Agent Chat"),
     ("file.save", "File: Save"),

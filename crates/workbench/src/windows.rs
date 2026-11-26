@@ -34,10 +34,10 @@ actions!(
 /// Groups workbench windows into one set of native tabs; detached windows would leave it unset.
 pub const TABBING_IDENTIFIER: &str = "dev.athas.workspace";
 
-/// The window tab strip's height, with the tabs a little down from the top so a tab's centre
-/// lines up with the traffic lights (`--athas-window-tabs-height`, `--athas-window-tabs-top`).
-pub fn window_tabs_height() -> gpui::Pixels { px(42.) }
-fn window_tabs_top() -> gpui::Pixels { px(5.) }
+/// The window tab strip's height: the title strip's, with the tabs centred in it. The window
+/// buttons are centred on that same height (`metrics::workbench_traffic_lights`), so a tab and
+/// the buttons beside it share a centre line at every zoom.
+pub fn window_tabs_height() -> gpui::Pixels { metrics::pane_header() }
 
 pub type WindowSetup = Box<dyn FnOnce(&mut Workbench, &mut Window, &mut Context<Workbench>)>;
 
@@ -366,7 +366,6 @@ impl Workbench {
             .items_center()
             .gap(metrics::chrome_gap())
             .h(window_tabs_height())
-            .pt(window_tabs_top())
             .pl(inset)
             .pr(metrics::workbench_gap())
             .w_full()

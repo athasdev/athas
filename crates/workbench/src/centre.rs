@@ -452,6 +452,14 @@ impl Workbench {
                         .active(side_shown)
                         .on_click(|_, _, cx| agent_ui::toggle_session_side_panel(cx)),
                 )
+                .child({
+                    let has_server = self.session_panes.get(&id.0).is_some_and(|panes| panes.server.is_some());
+                    let session = id.0.clone();
+                    Button::icon(gpui::ElementId::Name(format!("session-browser-{}", id.0).into()), IconName::Globe)
+                        .size(ButtonSize::Small)
+                        .tooltip(if has_server { "Open dev server" } else { "Open browser" })
+                        .on_click(cx.listener(move |this, _, window, cx| this.open_session_browser_for(&session, None, true, window, cx)))
+                })
                 .child(
                     Button::icon(gpui::ElementId::Name(key.into()), IconName::Dots)
                         .size(ButtonSize::Small)
@@ -1192,8 +1200,8 @@ fn ai_enabled(cx: &App) -> bool {
 const SESSION_MORE_MENU: &str = "session-more-actions";
 
 impl Workbench {
-    /// The session's other actions (`SessionMoreActionsMenu`): the project tools, opened in the
-    /// sidebar, then the conversation's own actions.
+    /// The session's other actions (`SessionMoreActionsMenu`): its plan, then the conversation's
+    /// own actions.
     /// Opens the More actions menu of the session in front of the focused group, hanging from
     /// `position` (the header's … button).
     pub fn show_front_session_more_actions(&mut self, position: gpui::Point<gpui::Pixels>, window: &mut Window, cx: &mut Context<Self>) {
@@ -1227,52 +1235,9 @@ impl Workbench {
                     .into(),
             );
         }
-        // The session's terminal and browser open in tabs.
-        {
-            let weak = weak.clone();
-            entries.push(
-                ui::MenuItem::new("Open terminal in a tab")
-                    .icon(IconName::Terminal)
-                    .on_select(move |_, cx| {
-                        weak.update(cx, |this, cx| this.open_session_terminal(cx)).ok();
-                    })
-                    .into(),
-            );
+        if !entries.is_empty() {
+            entries.push(ui::MenuEntry::Separator);
         }
-        {
-            let weak = weak.clone();
-            let server = self.session_panes.get(&id.0).and_then(|panes| panes.server.clone());
-            entries.push(
-                ui::MenuItem::new(if server.is_some() { "Open dev server in a tab" } else { "Open browser in a tab" })
-                    .icon(IconName::Globe)
-                    .on_select(move |window, cx| {
-                        weak.update(cx, |this, cx| this.open_session_browser(None, true, window, cx)).ok();
-                    })
-                    .into(),
-            );
-        }
-        entries.push(ui::MenuEntry::Separator);
-        entries.push(ui::MenuEntry::Label("Project tools".into()));
-        for view in workspace::SidebarView::PROJECT_TOOLS.into_iter().filter(|view| self.tool_available(*view, cx)) {
-            let icon = match view {
-                workspace::SidebarView::Files => IconName::Files,
-                workspace::SidebarView::Git => IconName::GitBranch,
-                workspace::SidebarView::GitHub => IconName::Github,
-                workspace::SidebarView::Agents => IconName::ChatBubbleText,
-                workspace::SidebarView::Settings => IconName::Settings,
-                workspace::SidebarView::Notifications => IconName::Bell,
-            };
-            let weak = weak.clone();
-            entries.push(
-                ui::MenuItem::new(view.title())
-                    .icon(icon)
-                    .on_select(move |window, cx| {
-                        weak.update(cx, |this, cx| this.show_sidebar_view(view, window, cx)).ok();
-                    })
-                    .into(),
-            );
-        }
-        entries.push(ui::MenuEntry::Separator);
         let run = |action: Box<dyn gpui::Action>| {
             let weak = weak.clone();
             let id = id.clone();
@@ -1286,9 +1251,9 @@ impl Workbench {
                 window.dispatch_action(action.boxed_clone(), cx);
             }
         };
-        entries.push(ui::MenuItem::new("Open conversation as Markdown").icon(IconName::File).on_select(run(Box::new(agent_ui::session_commands::OpenChatTranscript))).into());
-        entries.push(ui::MenuItem::new("Share agent to web").icon(IconName::Upload).disabled(!has_messages).on_select(run(Box::new(collaboration::ShareSession))).into());
-        entries.push(ui::MenuItem::new("Open agent in new window").icon(IconName::WindowExpand).on_select(run(Box::new(crate::agent_commands::OpenAgentInNewWindow))).into());
+        entries.push(ui::MenuItem::new("Open as Markdown").icon(IconName::File).on_select(run(Box::new(agent_ui::session_commands::OpenChatTranscript))).into());
+        entries.push(ui::MenuItem::new("Share").icon(IconName::Upload).disabled(!has_messages).on_select(run(Box::new(collaboration::ShareSession))).into());
+        entries.push(ui::MenuItem::new("Open in New Window").icon(IconName::WindowExpand).on_select(run(Box::new(crate::agent_commands::OpenAgentInNewWindow))).into());
         self.open_menu = Some(ui::OpenMenu::sized(SESSION_MORE_MENU, entries, ui::MenuSize::Default, position, gpui::Anchor::TopRight, window, cx, |this, _| this.open_menu = None));
         cx.notify();
     }

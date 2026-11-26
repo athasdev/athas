@@ -44,6 +44,11 @@ pub enum NativeEvent {
     Snapshot(Option<Vec<u8>>),
     /// Nothing covers the page any more; its picture goes once the page has drawn again.
     Revealed,
+    /// The page asks to make a passkey (`create`) or sign in with one. `origin` is what the page
+    /// claims; the view checks it against the webview's own address.
+    PasskeyRequest { request_id: u64, create: bool, origin: String, options: serde_json::Value },
+    /// The page gave up on a passkey request.
+    PasskeyCancel(u64),
 }
 
 #[cfg_attr(target_family = "wasm", allow(dead_code))]

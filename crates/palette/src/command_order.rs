@@ -15,6 +15,8 @@ pub const COMMAND_ORDER: &[&str] = &[
     "workbench.zoomReset",
     "browser.newTab",
     "browser.openUrl",
+    "browser.importBrowserData",
+    "browser.managePasskeys",
     "preview.shareLocalServer",
     "terminal.new",
     "terminal.generateName",

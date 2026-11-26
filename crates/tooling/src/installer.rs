@@ -863,11 +863,46 @@ impl ToolInstaller {
         };
         Self::ensure_executable(&incoming.join(&relative))?;
 
-        if install_dir.exists() {
-            fs::remove_dir_all(install_dir)?;
-        }
-        fs::rename(&incoming, install_dir)?;
+        Self::swap_into_place(&incoming, install_dir, &file_name)?;
         Ok(install_dir.join(relative))
+    }
+
+    /// Puts `incoming` where `install_dir` is, replacing whatever was there.
+    ///
+    /// Not a delete followed by a rename: Windows refuses to delete a file another process holds
+    /// open, and a language server running from the folder being replaced holds its own exe. That
+    /// is the "Access is denied. (os error 5)" a reinstall used to fail with, while a Bun-managed
+    /// tool next to it installed fine. Windows does let the folder be renamed out from under the
+    /// running process, so the old one steps aside and is swept afterwards -- and if the sweep is
+    /// refused as well, the leftover goes on the next install rather than failing this one.
+    fn swap_into_place(incoming: &Path, install_dir: &Path, file_name: &str) -> Result<(), ToolError> {
+        Self::sweep_retired(install_dir, file_name);
+        if install_dir.exists() {
+            let retired = install_dir.with_file_name(format!(".{file_name}.old-{}", std::process::id()));
+            let _ = fs::remove_dir_all(&retired);
+            match fs::rename(install_dir, &retired) {
+                Ok(()) => {
+                    let _ = fs::remove_dir_all(&retired);
+                }
+                // A platform that would not rename it may still delete it.
+                Err(_) => fs::remove_dir_all(install_dir)?,
+            }
+        }
+        fs::rename(incoming, install_dir)?;
+        Ok(())
+    }
+
+    /// Drops the folders an earlier install stepped aside and could not sweep, now that whatever
+    /// held them has quit.
+    fn sweep_retired(install_dir: &Path, file_name: &str) {
+        let Some(parent) = install_dir.parent() else { return };
+        let prefix = format!(".{file_name}.old-");
+        let Ok(entries) = fs::read_dir(parent) else { return };
+        for entry in entries.flatten() {
+            if entry.file_name().to_string_lossy().starts_with(&prefix) {
+                let _ = fs::remove_dir_all(entry.path());
+            }
+        }
     }
 
     /// Install a tool based on its configuration

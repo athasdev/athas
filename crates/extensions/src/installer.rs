@@ -186,14 +186,21 @@ fn staged_manifest(staging: &Path, id: &str) -> Result<ExtensionManifest> {
 }
 
 /// Moves a staged folder into place, keeping the previous version until the move succeeds.
+///
+/// Sweeping the previous version is best-effort on purpose. Windows will not delete a file
+/// another process holds open -- a language server started from the extension holds its own
+/// binary -- and by the time the old folder is swept the new one is already in place. Failing
+/// there reported "Access is denied. (os error 5)" for an install that had in fact worked
+/// (#813). What cannot go now is retired under a name of its own and swept by a later install.
 fn commit(dir: &Path, id: &str, staging: &Path) -> Result<()> {
     let target = dir.join(id);
     let backup = dir.join(format!(".previous-{id}"));
+    sweep_retired(dir, id);
     // A backup without its extension is what an interrupted install left: it is put back first.
     if !target.exists() && backup.exists() {
         fs::rename(&backup, &target)?;
     } else if backup.exists() {
-        fs::remove_dir_all(&backup)?;
+        retire(dir, id, &backup)?;
     }
     if target.exists() {
         fs::rename(&target, &backup)?;
@@ -205,9 +212,33 @@ fn commit(dir: &Path, id: &str, staging: &Path) -> Result<()> {
         return Err(error.into());
     }
     if backup.exists() {
-        fs::remove_dir_all(&backup)?;
+        let _ = retire(dir, id, &backup);
     }
     Ok(())
+}
+
+/// Removes `path`, or moves it out of the way when the platform will not: a folder nothing can
+/// delete yet must not stop the next rename.
+fn retire(dir: &Path, id: &str, path: &Path) -> Result<()> {
+    if fs::remove_dir_all(path).is_ok() {
+        return Ok(());
+    }
+    let retired = dir.join(format!(".retired-{id}-{}", std::process::id()));
+    let _ = fs::remove_dir_all(&retired);
+    fs::rename(path, &retired)?;
+    let _ = fs::remove_dir_all(&retired);
+    Ok(())
+}
+
+/// Drops what an earlier install retired, now that whatever held it has quit.
+fn sweep_retired(dir: &Path, id: &str) {
+    let prefix = format!(".retired-{id}-");
+    let Ok(entries) = fs::read_dir(dir) else { return };
+    for entry in entries.flatten() {
+        if entry.file_name().to_string_lossy().starts_with(&prefix) {
+            let _ = fs::remove_dir_all(entry.path());
+        }
+    }
 }
 
 /// Downloads, verifies and unpacks a package into `<dir>/<id>/`, returning its manifest.

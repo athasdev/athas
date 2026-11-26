@@ -337,3 +337,40 @@ node --from-package-script || exit 15
             .unwrap();
     assert_eq!(installed, cli);
 }
+
+#[test]
+fn reinstalling_replaces_what_is_already_there() {
+    let install = tempfile::tempdir().unwrap();
+    let install_dir = install.path().join("marksman");
+    for body in ["first", "second"] {
+        let staging = tempfile::tempdir().unwrap();
+        fs::write(staging.path().join(ToolInstaller::bin_file_name("marksman")), body).unwrap();
+        let installed = ToolInstaller::install_extracted_binary(staging.path(), &install_dir, "marksman", "marksman").unwrap();
+        assert_eq!(fs::read_to_string(&installed).unwrap(), body);
+    }
+    // The folder the first install stepped aside is gone, not left beside the tool.
+    let leftovers: Vec<_> = fs::read_dir(install.path())
+        .unwrap()
+        .flatten()
+        .map(|entry| entry.file_name().to_string_lossy().into_owned())
+        .filter(|name| name.starts_with(".marksman."))
+        .collect();
+    assert!(leftovers.is_empty(), "left behind: {leftovers:?}");
+}
+
+/// A folder an earlier install could not sweep -- Windows refuses while the running server holds
+/// its exe -- is swept by the next one rather than failing it (#813).
+#[test]
+fn an_install_sweeps_what_an_earlier_one_left_behind() {
+    let install = tempfile::tempdir().unwrap();
+    let install_dir = install.path().join("marksman");
+    let stale = install.path().join(".marksman.old-4242");
+    fs::create_dir_all(&stale).unwrap();
+    fs::write(stale.join("marksman"), "locked").unwrap();
+
+    let staging = tempfile::tempdir().unwrap();
+    fs::write(staging.path().join(ToolInstaller::bin_file_name("marksman")), "fresh").unwrap();
+    ToolInstaller::install_extracted_binary(staging.path(), &install_dir, "marksman", "marksman").unwrap();
+
+    assert!(!stale.exists(), "the leftover folder is swept");
+}

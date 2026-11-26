@@ -109,3 +109,103 @@ pub fn capture_snapshot(webview: &WebView, done: impl FnOnce(Option<Vec<u8>>) + 
         view.takeSnapshotWithConfiguration_completionHandler(Some(&configuration), &handler);
     }
 }
+
+/// Writes `cookies` into the website data store of the browser profile `identifier`, without a
+/// page open on it, then reads the store back and calls `done` with how many of them it holds.
+pub fn set_cookies(identifier: [u8; 16], cookies: &[crate::profile::import::Cookie], done: impl FnOnce(usize) + 'static) {
+    use std::rc::Rc;
+
+    use block2::RcBlock;
+    use objc2::{rc::Retained, runtime::AnyObject};
+    use objc2_foundation::{
+        NSArray, NSDate, NSHTTPCookie, NSHTTPCookieDiscard, NSHTTPCookieDomain, NSHTTPCookieExpires, NSHTTPCookieName, NSHTTPCookiePath,
+        NSHTTPCookiePropertyKey, NSHTTPCookieSecure, NSHTTPCookieValue, NSMutableDictionary, NSString, NSUUID, ns_string,
+    };
+    use objc2_web_kit::WKWebsiteDataStore;
+
+    use crate::profile::import::SameSite;
+
+    let Some(main_thread) = objc2::MainThreadMarker::new() else {
+        done(0);
+        return;
+    };
+    // SAFETY: on the main thread, with property dictionaries of NSString and NSDate values as
+    // NSHTTPCookie documents them; the completion blocks run on the main thread.
+    unsafe {
+        let store = if major_version() >= 14 {
+            WKWebsiteDataStore::dataStoreForIdentifier(&NSUUID::from_bytes(identifier), main_thread)
+        } else {
+            WKWebsiteDataStore::defaultDataStore(main_thread)
+        };
+        let made: Vec<Retained<NSHTTPCookie>> = cookies
+            .iter()
+            .filter_map(|cookie| {
+                let name = NSString::from_str(&cookie.name);
+                let value = NSString::from_str(&cookie.value);
+                let domain = NSString::from_str(&cookie.domain);
+                let path = NSString::from_str(&cookie.path);
+                let properties: Retained<NSMutableDictionary<NSHTTPCookiePropertyKey, AnyObject>> = NSMutableDictionary::from_slices(
+                    &[NSHTTPCookieName, NSHTTPCookieValue, NSHTTPCookieDomain, NSHTTPCookiePath],
+                    &[&*name as &AnyObject, &*value, &*domain, &*path],
+                );
+                match cookie.expires {
+                    Some(expires) => properties.insert(NSHTTPCookieExpires, &*NSDate::dateWithTimeIntervalSince1970(expires as f64)),
+                    None => properties.insert(NSHTTPCookieDiscard, ns_string!("TRUE")),
+                }
+                if cookie.secure {
+                    properties.insert(NSHTTPCookieSecure, ns_string!("TRUE"));
+                }
+                if cookie.http_only {
+                    properties.insert(ns_string!("HttpOnly"), ns_string!("TRUE"));
+                }
+                match cookie.same_site {
+                    Some(SameSite::Lax) => properties.insert(ns_string!("SameSite"), ns_string!("lax")),
+                    Some(SameSite::Strict) => properties.insert(ns_string!("SameSite"), ns_string!("strict")),
+                    _ => {}
+                }
+                NSHTTPCookie::cookieWithProperties(&properties)
+            })
+            .collect();
+        let total = made.len();
+        if total < cookies.len() {
+            log::warn!("[browser-import] the system refused {} of {} cookies", cookies.len() - total, cookies.len());
+        }
+        if total == 0 {
+            done(0);
+            return;
+        }
+        let wanted: std::collections::HashSet<(String, String, String)> =
+            made.iter().map(|cookie| (cookie.name().to_string(), cookie.domain().to_string(), cookie.path().to_string())).collect();
+        let cookie_store = store.httpCookieStore();
+        let progress = Rc::new(RefCell::new((0usize, Some(done))));
+        for cookie in made {
+            let progress = progress.clone();
+            let check_store = cookie_store.clone();
+            let wanted = wanted.clone();
+            let stored = RcBlock::new(move || {
+                let finished = {
+                    let mut progress = progress.borrow_mut();
+                    progress.0 += 1;
+                    if progress.0 == total { progress.1.take() } else { None }
+                };
+                let Some(done) = finished else { return };
+                // Count what the store holds now, so the result says what took.
+                let done = RefCell::new(Some(done));
+                let wanted = wanted.clone();
+                let read = RcBlock::new(move |all: std::ptr::NonNull<NSArray<NSHTTPCookie>>| {
+                    let held = all
+                        .as_ref()
+                        .iter()
+                        .filter(|cookie| wanted.contains(&(cookie.name().to_string(), cookie.domain().to_string(), cookie.path().to_string())))
+                        .count();
+                    log::info!("[browser-import] wrote {total} cookies; the store holds {held} of them");
+                    if let Some(done) = done.borrow_mut().take() {
+                        done(held);
+                    }
+                });
+                check_store.getAllCookies(&read);
+            });
+            cookie_store.setCookie_completionHandler(&cookie, Some(&stored));
+        }
+    }
+}

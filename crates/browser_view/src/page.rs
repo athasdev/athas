@@ -17,12 +17,13 @@ use ui::{
 };
 
 use crate::{
-    Back, FocusAddressBar, Forward, OpenDevTools, Reload, ResetZoom, ZoomIn, ZoomOut,
+    Back, FocusAddressBar, Forward, ImportBrowserData, ManagePasskeys, OpenDevTools, Reload, ResetZoom, ZoomIn, ZoomOut,
     address::{format_browser_address, is_blank_page, is_secure_address, resolve_browser_address},
     host::{Content, Host, HostRef, NativeEvent, NavigationAction},
     key_bindings::{browser_key_bindings, is_page_command},
     page_state::{PageState, step_zoom},
     pages,
+    profile::PageProfile,
     slot::webview_slot,
 };
 
@@ -59,7 +60,37 @@ pub struct BrowserPage {
     focus_handle: FocusHandle,
     menu: Entity<DropdownMenu>,
     extras: Option<PageExtras>,
+    /// The passkey sheet or the profile dialog over the page.
+    pub(crate) profile: PageProfile,
     _subscriptions: Vec<Subscription>,
+}
+
+/// What a page opens over itself once it shows, for a command run with no browser tab in front.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum OpenOnShow {
+    Import,
+    Passkeys,
+}
+
+thread_local! {
+    static OPEN_ON_SHOW: std::cell::RefCell<Option<(OpenOnShow, String)>> = const { std::cell::RefCell::new(None) };
+}
+
+/// Opens a blank browser tab with the import dialog, or the passkeys, over it.
+fn open_tab_with(open: OpenOnShow, cx: &mut App) {
+    let id = pages::new_page_id();
+    OPEN_ON_SHOW.with(|pending| *pending.borrow_mut() = Some((open, id.clone())));
+    pages::with_store(|store| store.update(&id, |page| page.url = crate::address::BLANK_PAGE_URL.to_string()));
+    workbench_api::open_resource(cx, crate::BROWSER_KIND, &id, &crate::address::browser_tab_name(crate::address::BLANK_PAGE_URL, None));
+}
+
+/// The profile commands where no browser tab is in front to take them.
+pub(crate) fn init_profile_commands(cx: &mut App) {
+    if !PageProfile::AVAILABLE {
+        return;
+    }
+    cx.on_action(|_: &ImportBrowserData, cx| open_tab_with(OpenOnShow::Import, cx));
+    cx.on_action(|_: &ManagePasskeys, cx| open_tab_with(OpenOnShow::Passkeys, cx));
 }
 
 impl EventEmitter<BrowserPageEvent> for BrowserPage {}
@@ -142,8 +173,53 @@ impl BrowserPage {
             focus_handle,
             menu,
             extras: None,
+            profile: PageProfile::default(),
             _subscriptions: vec![address_events, focus_blank],
         }
+        .with_pending_dialog(window, cx)
+    }
+
+    fn with_pending_dialog(self, window: &mut Window, cx: &mut Context<Self>) -> Self {
+        let open = OPEN_ON_SHOW.with(|pending| {
+            let mut pending = pending.borrow_mut();
+            if pending.as_ref().is_some_and(|(_, id)| *id == self.id) { pending.take().map(|(open, _)| open) } else { None }
+        });
+        #[cfg(all(debug_assertions, feature = "webview", any(target_os = "macos", target_os = "windows")))]
+        if let Ok(kind) = std::env::var("ATHAS_SNAPSHOT_PASSKEY") {
+            let page = cx.weak_entity();
+            window.defer(cx, move |window, cx| {
+                page.update(cx, |page, cx| {
+                    let host = page.host.clone();
+                    page.profile.preview_sheet(&host, &kind, window, cx);
+                })
+                .ok();
+            });
+        }
+        if let Some(open) = open {
+            // The tab's view is not in the window yet; the dialog opens once it is.
+            let page = cx.weak_entity();
+            window.defer(cx, {
+                move |window, cx| {
+                    page.update(cx, |page, cx| match open {
+                        OpenOnShow::Import => page.open_import(window, cx),
+                        OpenOnShow::Passkeys => page.open_passkeys(window, cx),
+                    })
+                    .ok();
+                }
+            });
+        }
+        self
+    }
+
+    pub fn open_import(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        self.release_native_focus();
+        let host = self.host.clone();
+        self.profile.open_import(&host, window, cx);
+    }
+
+    pub fn open_passkeys(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        self.release_native_focus();
+        self.profile.open_passkeys(window, cx);
     }
 
     /// Adds the owner's controls to the page, redrawn whenever `source` changes.
@@ -177,7 +253,13 @@ impl BrowserPage {
                             page.update(cx, |page, cx| run(page, window, cx)).ok();
                         })
                     };
-                    vec![
+                    let profile_item = |label: &'static str, icon: IconName, run: fn(&mut BrowserPage, &mut Window, &mut Context<BrowserPage>)| {
+                        let page = page.clone();
+                        MenuItem::new(label).icon(icon).on_select(move |window, cx| {
+                            page.update(cx, |page, cx| run(page, window, cx)).ok();
+                        })
+                    };
+                    let mut entries: Vec<MenuEntry> = vec![
                         item("Open in System Browser", IconName::OpenExternal, |page, _, cx| cx.open_url(&page.state.url)).into(),
                         item("Copy Address", IconName::Copy, |page, _, cx| {
                             cx.write_to_clipboard(gpui::ClipboardItem::new_string(page.state.url.clone()));
@@ -187,7 +269,18 @@ impl BrowserPage {
                         MenuEntry::Separator,
                         item("Developer Tools", IconName::Bug, |page, _, cx| page.open_devtools(cx)).into(),
                         item("Clear Browsing Data", IconName::Trash, |page, _, cx| page.clear_browsing_data(cx)).destructive().into(),
-                    ]
+                    ];
+                    if PageProfile::AVAILABLE {
+                        entries.splice(
+                            3..3,
+                            [
+                                profile_item("Import from Browser…", IconName::Download, BrowserPage::open_import).into(),
+                                profile_item("Passkeys", IconName::Key, BrowserPage::open_passkeys).into(),
+                                MenuEntry::Separator,
+                            ],
+                        );
+                    }
+                    entries
                 },
             )
         })
@@ -386,6 +479,12 @@ impl BrowserPage {
             }
             NativeEvent::Page(BrowserEvent::Shortcut { command }) => self.run_shortcut(&command, window, cx),
             NativeEvent::Page(BrowserEvent::OpenInNewTab { url }) => open_browser_tab(Some(&url), cx),
+            NativeEvent::PasskeyRequest { request_id, create, origin, options } => {
+                self.release_native_focus();
+                let host = self.host.clone();
+                self.profile.passkey_request(&host, request_id, create, &origin, &options, window, cx);
+            }
+            NativeEvent::PasskeyCancel(request_id) => self.profile.passkey_cancel(Some(request_id), window, cx),
             NativeEvent::Page(BrowserEvent::DownloadStarted { path, .. }) => {
                 notifications::info(cx, format!("Downloading {}", file_name(&path)));
             }
@@ -409,6 +508,10 @@ impl BrowserPage {
                 }
             }
             NativeEvent::Page(event) => {
+                // A page that moves on takes its passkey request with it.
+                if matches!(event, BrowserEvent::LoadStarted { .. }) {
+                    self.profile.passkey_cancel(None, window, cx);
+                }
                 let changed = self.state.apply(&event);
                 self.changed(changed, cx);
             }
@@ -426,6 +529,7 @@ impl BrowserPage {
     }
 
     fn render_slot(&self, cx: &mut Context<Self>) -> impl IntoElement {
+        let overlay = self.profile.render(cx);
         let colors = cx.theme().colors.clone();
         let host = self.host.borrow();
         let content = if let Some(error) = &self.state.error {
@@ -442,6 +546,13 @@ impl BrowserPage {
                 EmptyState::new("Browse the web")
                     .icon(IconName::Globe)
                     .message("Search or enter an address, such as localhost:5173 or athas.dev")
+                    .when(PageProfile::AVAILABLE, |state| {
+                        state.action(
+                            Button::new("browser-import", "Import from Browser")
+                                .leading_icon(IconName::Download)
+                                .on_click(cx.listener(|this, _: &ClickEvent, window, cx| this.open_import(window, cx))),
+                        )
+                    })
                     .into_any_element(),
             )
         } else if host.unavailable || !crate::NATIVE_PAGES {
@@ -465,6 +576,7 @@ impl BrowserPage {
             .children(host.snapshot.clone().map(|picture| img(picture).absolute().top_0().left_0().size_full().object_fit(ObjectFit::Fill)))
             .children(content)
             .child(webview_slot(self.host.clone(), f64::from(SLOT_RADIUS)))
+            .children(overlay)
     }
 }
 
@@ -567,6 +679,10 @@ impl Render for BrowserPage {
             .on_action(cx.listener(|this, _: &Reload, _, cx| this.perform(NavigationAction::Reload, cx)))
             .on_action(cx.listener(|this, _: &FocusAddressBar, window, cx| this.focus_address_bar(window, cx)))
             .on_action(cx.listener(|this, _: &OpenDevTools, _, cx| this.open_devtools(cx)))
+            .when(PageProfile::AVAILABLE, |this| {
+                this.on_action(cx.listener(|this, _: &ImportBrowserData, window, cx| this.open_import(window, cx)))
+                    .on_action(cx.listener(|this, _: &ManagePasskeys, window, cx| this.open_passkeys(window, cx)))
+            })
             .on_action(cx.listener(|this, _: &ZoomIn, _, cx| this.zoom(1, cx)))
             .on_action(cx.listener(|this, _: &ZoomOut, _, cx| this.zoom(-1, cx)))
             .on_action(cx.listener(|this, _: &ResetZoom, _, cx| this.zoom(0, cx)))

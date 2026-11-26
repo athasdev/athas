@@ -12,7 +12,7 @@ path = "src/browser_view.rs"
 default = ["webview"]
 # Native pages: a wry webview placed over the tab. Desktop only; without it the tab draws its
 # chrome around a placeholder.
-webview = ["dep:wry", "dep:objc2", "dep:objc2-app-kit", "dep:objc2-foundation", "dep:objc2-web-kit", "dep:block2", "dep:windows"]
+webview = ["dep:wry", "dep:objc2", "dep:objc2-app-kit", "dep:objc2-foundation", "dep:objc2-web-kit", "dep:objc2-local-authentication", "dep:block2", "dep:windows", "dep:aes-gcm"]
 # Page developer tools in release builds; debug builds always have them.
 devtools = ["wry?/devtools"]
 
@@ -31,6 +31,7 @@ editor = { path = "../editor" }
 viewer = { path = "../viewer" }
 account = { path = "../account" }
 futures = "0.3"
+log = "0.4"
 regex = "1"
 url = "2.5"
 sha2 = "0.10"
@@ -52,18 +53,34 @@ web-sys = { version = "0.3", features = ["CssStyleDeclaration", "Document", "Ele
 # The same wry the old app ran its browser tabs on. Linux would need GTK running beside GPUI.
 [target.'cfg(any(target_os = "macos", target_os = "windows"))'.dependencies]
 wry = { version = "0.57", default-features = false, features = ["os-webview"], optional = true }
+# Passkeys: Athas answers `navigator.credentials` itself with P-256 keys kept in the keychain.
+p256 = { version = "0.13", default-features = false, features = ["ecdsa", "std"] }
+getrandom = "0.2"
+base64 = "0.22"
+psl = "2"
+secure_storage = { path = "../secure_storage" }
+# Importing sign-ins from other browsers: their cookie databases, decrypted where they are.
+rusqlite = { version = "0.29", features = ["bundled"] }
+aes = "0.8"
+cbc = { version = "0.1", features = ["alloc"] }
+pbkdf2 = { version = "0.12", default-features = false, features = ["hmac"] }
+sha1 = "0.10"
+tempfile = "3"
 
 # Page pictures and rounded corners; the versions wry uses.
 [target.'cfg(target_os = "macos")'.dependencies]
 block2 = { version = "0.6", optional = true }
 objc2 = { version = "0.6", optional = true }
 objc2-app-kit = { version = "0.3", default-features = false, features = ["std", "NSBitmapImageRep", "NSImage", "NSImageRep", "NSResponder", "NSView"], optional = true }
-objc2-foundation = { version = "0.3", default-features = false, features = ["std", "NSData", "NSDictionary", "NSError", "NSProcessInfo"], optional = true }
-objc2-web-kit = { version = "0.3", default-features = false, features = ["std", "block2", "objc2-app-kit", "WKSnapshotConfiguration", "WKWebView"], optional = true }
+objc2-foundation = { version = "0.3", default-features = false, features = ["std", "NSArray", "NSData", "NSDate", "NSDictionary", "NSError", "NSHTTPCookie", "NSProcessInfo", "NSString", "NSUUID"], optional = true }
+objc2-web-kit = { version = "0.3", default-features = false, features = ["std", "block2", "objc2-app-kit", "WKHTTPCookieStore", "WKSnapshotConfiguration", "WKWebView", "WKWebsiteDataStore"], optional = true }
+objc2-local-authentication = { version = "0.3", default-features = false, features = ["std", "block2", "LAContext", "LAError"], optional = true }
+security-framework = "3"
 
 # Window regions that cut pages around workbench UI; the version wry uses.
 [target.'cfg(target_os = "windows")'.dependencies]
-windows = { version = "0.62", features = ["Win32_Foundation", "Win32_Graphics_Gdi", "Win32_UI_HiDpi"], optional = true }
+windows = { version = "0.62", features = ["Foundation", "Security_Credentials_UI", "Win32_Foundation", "Win32_Graphics_Gdi", "Win32_Security_Cryptography", "Win32_System_WinRT", "Win32_UI_HiDpi"], optional = true }
+aes-gcm = { version = "0.10", optional = true }
 
 [dev-dependencies]
 tempfile = "3"

@@ -28,6 +28,12 @@ mod native;
 #[cfg(not(any(target_family = "wasm", all(feature = "webview", any(target_os = "macos", target_os = "windows")))))]
 #[path = "native_stub.rs"]
 mod native;
+#[cfg(all(feature = "webview", any(target_os = "macos", target_os = "windows")))]
+#[path = "profile/mod.rs"]
+pub mod profile;
+#[cfg(not(all(feature = "webview", any(target_os = "macos", target_os = "windows"))))]
+#[path = "profile_stub.rs"]
+pub mod profile;
 
 use std::path::PathBuf;
 
@@ -49,7 +55,7 @@ pub const PREVIEW_KIND: &str = "preview";
 /// The centre tab kinds this crate shows.
 pub const RESOURCE_KINDS: &[&str] = &[BROWSER_KIND, PREVIEW_KIND];
 
-actions!(browser, [NewTab, OpenUrl, FocusAddressBar, Reload, Back, Forward, OpenDevTools, ZoomIn, ZoomOut, ResetZoom]);
+actions!(browser, [NewTab, OpenUrl, FocusAddressBar, Reload, Back, Forward, OpenDevTools, ZoomIn, ZoomOut, ResetZoom, ImportBrowserData, ManagePasskeys]);
 
 /// Registers the browser commands. Call before the keymap binds.
 pub fn init(cx: &mut App) {
@@ -60,7 +66,12 @@ pub fn init(cx: &mut App) {
     keymap::register(cx, "browser.back", Back);
     keymap::register(cx, "browser.forward", Forward);
     keymap::register(cx, "browser.openDevTools", OpenDevTools);
+    if profile::PageProfile::AVAILABLE {
+        keymap::register(cx, "browser.importBrowserData", ImportBrowserData);
+        keymap::register(cx, "browser.managePasskeys", ManagePasskeys);
+    }
     cx.on_action(|_: &NewTab, cx| open_browser_tab(None, cx));
+    page::init_profile_commands(cx);
     // A blank tab focuses its address bar, which takes the address the old prompt asked for.
     cx.on_action(|_: &OpenUrl, cx| open_browser_tab(None, cx));
     ui::bind_keys_once(cx, "browser_view", |cx| {

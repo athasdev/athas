@@ -57,6 +57,15 @@ fn send(events: &UnboundedSender<NativeEvent>, event: BrowserEvent) {
 
 /// What the page does with a navigation, the bridge's reports and the shortcuts it forwards.
 fn handle_bridge_message(events: &UnboundedSender<NativeEvent>, commands: &HashSet<String>, body: &str) {
+    if let Ok(message) = serde_json::from_str::<crate::profile::PasskeyMessage>(body) {
+        let _ = events.unbounded_send(match message {
+            crate::profile::PasskeyMessage::Passkey { op, request_id, origin, options } => {
+                NativeEvent::PasskeyRequest { request_id, create: op == "create", origin, options }
+            }
+            crate::profile::PasskeyMessage::PasskeyCancel { request_id } => NativeEvent::PasskeyCancel(request_id),
+        });
+        return;
+    }
     let Ok(message) = serde_json::from_str::<BridgeMessage>(body) else { return };
     let event = match message {
         BridgeMessage::Focus => BrowserEvent::Focused,
@@ -76,6 +85,66 @@ fn app_data_dir() -> Option<PathBuf> {
     dirs::data_dir().map(|dir| dir.join(paths::APP_ID))
 }
 
+fn browser_profile() -> Result<athas_browser::BrowserProfile, String> {
+    app_data_dir()
+        .ok_or_else(|| "Failed to resolve app data folder".to_string())
+        .and_then(|dir| resolve_profile(&dir, DEFAULT_PROFILE).map_err(|error| format!("Failed to prepare browser profile: {error}")))
+}
+
+#[cfg(not(target_os = "macos"))]
+thread_local! {
+    /// Imported cookies waiting for a page: WebView2 reaches a profile's cookies only through one.
+    static PENDING_COOKIES: std::cell::RefCell<Vec<crate::profile::import::Cookie>> = Default::default();
+}
+
+#[cfg(not(target_os = "macos"))]
+fn to_wry_cookie(cookie: &crate::profile::import::Cookie) -> wry::cookie::Cookie<'static> {
+    use crate::profile::import::SameSite;
+    let mut built = wry::cookie::Cookie::build((cookie.name.clone(), cookie.value.clone()))
+        .domain(cookie.domain.clone())
+        .path(cookie.path.clone())
+        .secure(cookie.secure)
+        .http_only(cookie.http_only);
+    if let Some(expires) = cookie.expires.and_then(|expires| wry::cookie::time::OffsetDateTime::from_unix_timestamp(expires).ok()) {
+        built = built.expires(expires);
+    }
+    if let Some(same_site) = cookie.same_site {
+        built = built.same_site(match same_site {
+            SameSite::None => wry::cookie::SameSite::None,
+            SameSite::Lax => wry::cookie::SameSite::Lax,
+            SameSite::Strict => wry::cookie::SameSite::Strict,
+        });
+    }
+    built.build()
+}
+
+/// Gives the browser profile `cookies` imported from another browser; `done` gets how many it
+/// took. `page` is a page on the profile, for platforms that reach cookies only through one.
+pub fn import_cookies(page: Option<&NativeWebView>, cookies: Vec<crate::profile::import::Cookie>, done: impl FnOnce(usize) + 'static) {
+    #[cfg(target_os = "macos")]
+    {
+        let _ = page;
+        match browser_profile() {
+            Ok(profile) => macos::set_cookies(profile.data_store_identifier, &cookies, done),
+            Err(_) => done(0),
+        }
+    }
+    #[cfg(not(target_os = "macos"))]
+    {
+        let count = cookies.len();
+        match page {
+            Some(page) => {
+                let taken = cookies.iter().filter(|cookie| page.webview.set_cookie(&to_wry_cookie(cookie)).is_ok()).count();
+                done(taken);
+            }
+            None => {
+                PENDING_COOKIES.with(|pending| pending.borrow_mut().extend(cookies));
+                done(count);
+            }
+        }
+    }
+}
+
 impl NativeWebView {
     /// Makes the page over `options.bounds` of `window`. `Ok(None)` when the window has no native
     /// handle, as a headless window has none.
@@ -88,9 +157,7 @@ impl NativeWebView {
             Content::Url(url) => (parse_browser_url(&url)?.to_string(), None),
             Content::Preview { root, url } => (url, Some(root)),
         };
-        let profile = app_data_dir()
-            .ok_or_else(|| "Failed to resolve app data folder".to_string())
-            .and_then(|dir| resolve_profile(&dir, DEFAULT_PROFILE).map_err(|error| format!("Failed to prepare browser profile: {error}")))?;
+        let profile = browser_profile()?;
         let origins = Arc::new(app_origins(None));
         let commands: HashSet<String> = key_bindings.iter().map(|binding| binding.command.clone()).collect();
         let is_preview = preview_root.is_some();
@@ -163,6 +230,8 @@ impl NativeWebView {
                 })
                 .with_ipc_handler(move |request| handle_bridge_message(&bridge_events, &commands, request.body()));
 
+            // Passkeys belong to web pages, not to previews of the project's files.
+            let builder = if is_preview { builder } else { builder.with_initialization_script_for_main_only(crate::profile::PASSKEY_SCRIPT, true) };
             let builder = match preview_root.clone() {
                 Some(root) => builder.with_custom_protocol(preview_protocol::SCHEME.into(), move |_, request| {
                     match preview_protocol::resolve_request(&root, request.uri().path()).and_then(|file| Some((preview_protocol::read_served(&file)?, file))) {
@@ -207,6 +276,10 @@ impl NativeWebView {
         let _ = corner_radius;
         if (zoom - 1.0).abs() > f64::EPSILON {
             let _ = webview.zoom(zoom.clamp(MIN_ZOOM, MAX_ZOOM));
+        }
+        #[cfg(not(target_os = "macos"))]
+        for cookie in PENDING_COOKIES.with(|pending| std::mem::take(&mut *pending.borrow_mut())) {
+            let _ = webview.set_cookie(&to_wry_cookie(&cookie));
         }
         Ok(Some(Self { webview, visible: true, holes: Vec::new() }))
     }
@@ -301,6 +374,17 @@ impl NativeWebView {
             return Err("Clearing browsing data needs macOS 14 or later".to_string());
         }
         self.webview.clear_all_browsing_data().map_err(|error| format!("Failed to clear browsing data: {error}"))
+    }
+
+    /// Answers the page's passkey request `request_id` with a credential or the error to throw.
+    pub fn resolve_passkey(&self, request_id: u64, result: Result<serde_json::Value, crate::profile::passkey::WebAuthnError>) {
+        let (credential, error) = match result {
+            Ok(credential) => (credential, serde_json::Value::Null),
+            Err(error) => (serde_json::Value::Null, error.to_json()),
+        };
+        let _ = self.webview.evaluate_script(&format!(
+            "window.__athasPasskeyResolve && window.__athasPasskeyResolve({request_id}, {credential}, {error})"
+        ));
     }
 
     /// Takes a JPEG of what the page shows right now and sends it as `NativeEvent::Snapshot`.
