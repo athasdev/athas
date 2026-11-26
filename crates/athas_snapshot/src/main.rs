@@ -388,6 +388,13 @@ fn main() -> Result<()> {
             window.update(cx, |workbench, window, cx| workbench.show_tab_menu(index, gpui::point(px(420.), px(84.)), window, cx)).ok();
         });
     }
+    // `ATHAS_SNAPSHOT_SIDEBAR_OVERLAY=1`: the sidebar floating over a narrow window.
+    if std::env::var_os("ATHAS_SNAPSHOT_SIDEBAR_OVERLAY").is_some() {
+        cx.run_until_parked();
+        cx.update(|cx| {
+            window.update(cx, |workbench, _, cx| workbench.show_sidebar_overlay(cx)).ok();
+        });
+    }
     // `ATHAS_SNAPSHOT_SESSION_MENU=x,y`: the session in front's More actions menu, from that point.
     if let Some((x, y)) = std::env::var("ATHAS_SNAPSHOT_SESSION_MENU").ok().and_then(|point| {
         let (x, y) = point.split_once(',')?;

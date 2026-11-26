@@ -2877,7 +2877,9 @@ impl Render for Workbench {
         let shell = ui::shell(cx, gpui::px(settings::get(cx).shell_border_width as f32))
             .when(sidebar_column, |this| this.child(self.render_sidebar_column(window, cx)))
             .when(!narrow && !pane_fullscreen, |this| this.children(self.render_inbox_column(cx)))
-            .child(self.render_centre(window, cx));
+            .relative()
+            .child(self.render_centre(window, cx))
+            .children(self.render_sidebar_overlay(narrow, window, cx));
         let body = div()
             .relative()
             .flex()
@@ -2901,7 +2903,6 @@ impl Render for Workbench {
             .min_h_0()
             .child(title_row)
             .child(body)
-            .children(self.render_sidebar_overlay(narrow, window, cx))
             .children(self.render_inbox_overlay(narrow, cx));
 
         let root = div()

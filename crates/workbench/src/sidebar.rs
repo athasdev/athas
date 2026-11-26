@@ -244,6 +244,12 @@ impl Workbench {
     }
 
     /// In a narrow window the sidebar floats over the centre, below the title row.
+    /// Opens the sidebar floating over a narrow window, for previews.
+    pub fn show_sidebar_overlay(&mut self, cx: &mut Context<Self>) {
+        self.sidebar_overlay_open = true;
+        cx.notify();
+    }
+
     pub(crate) fn render_sidebar_overlay(
         &self,
         narrow: bool,
@@ -253,7 +259,8 @@ impl Workbench {
         if !narrow || !self.sidebar_overlay_open {
             return None;
         }
-        let top = metrics::workbench_gap() + metrics::pane_header();
+        // It lies inside the shell, flush with its edges, so the title row and its sidebar
+        // toggle stay above it and take their own clicks (#817).
         Some(
             div()
                 .absolute()
@@ -271,13 +278,16 @@ impl Workbench {
                 .child(
                     island(cx)
                         .absolute()
-                        .top(top)
-                        .bottom(metrics::workbench_gap())
-                        .left(metrics::workbench_gap() + metrics::rail_control())
-                        .w(px(288.))
+                        .top_0()
+                        .bottom_0()
+                        .left_0()
+                        .w(px(self.state.layout.sidebar_width))
+                        .rounded(metrics::island_radius())
                         // Solid even with glass on: it floats over the centre, not the desktop,
                         // and a see-through surface showed the editor's text under the tool.
                         .bg(gpui::Hsla { a: 1., ..cx.theme().colors.surface })
+                        .border_r_1()
+                        .border_color(cx.theme().colors.border)
                         .shadow(cx.theme().shadows.popover.clone())
                         .occlude()
                         .child(self.render_sidebar(false, window, cx)),
