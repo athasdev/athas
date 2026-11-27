@@ -270,6 +270,7 @@ impl Workbench {
                         .id("sidebar-backdrop")
                         .absolute()
                         .inset_0()
+                        .occlude()
                         .on_click(cx.listener(|this, _, _, cx| {
                             this.sidebar_overlay_open = false;
                             cx.notify();

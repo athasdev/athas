@@ -353,20 +353,11 @@ impl SandboxRuntime {
     }
 }
 
-impl Drop for SandboxRuntime {
-    fn drop(&mut self) {
-        let Some(live) = self.live.lock().unwrap_or_else(|poison| poison.into_inner()).take() else { return };
-        // A sandbox left running is a sandbox still being paid for -- but only the ones this
-        // session made. One the user picked was theirs before the session and stays theirs.
-        if self.existing.is_some() {
-            return;
-        }
-        let Some(client) = self.client.get() else { return };
-        if let Err(error) = client.dispose(&live.handle) {
-            log::warn!("The session's sandbox could not be stopped: {error}");
-        }
-    }
-}
+// A sandbox outlives the session that made it on purpose. Athas restarts -- a rebuild, a quit,
+// a crash -- and a sandbox thrown away with it is one the user watched disappear after asking
+// for it. The leash is the provider's own: an hour, pushed out again before every command, so an
+// abandoned one stops costing money on its own and a working one is never cut off. Stopping it
+// is a choice, on the provider's page in Integrations.
 
 /// A folder name a shell will not read as anything but a folder name.
 fn sanitize(name: &str) -> String {
