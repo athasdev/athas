@@ -155,6 +155,7 @@ impl Primary {
             save_task: None,
             waits: Default::default(),
             known_projects: HashSet::new(),
+            focus: None,
         });
         workbench::set_window_opener(cx, |request, cx| {
             windows::open_new(request, cx);
@@ -202,9 +203,17 @@ struct PlatformState {
     save_task: Option<Task<()>>,
     waits: waits::Waits,
     known_projects: HashSet<String>,
+    /// The window the request being carried out picked out, brought forward when it is done.
+    focus: Option<WindowHandle<Workbench>>,
 }
 
 impl Global for PlatformState {}
+
+impl PlatformState {
+    fn window_handles(&self) -> Vec<WindowHandle<Workbench>> {
+        self.windows.iter().map(|open| open.handle).collect()
+    }
+}
 
 /// Starts following a window that opened: its size and place, the files `--wait` waits on, and
 /// the folders it opens for the recent documents.

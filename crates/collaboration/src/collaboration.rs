@@ -21,10 +21,14 @@
 
 mod call;
 #[cfg(not(target_family = "wasm"))]
+pub mod devices;
+#[cfg(not(target_family = "wasm"))]
 pub mod live_share;
 #[cfg(not(target_family = "wasm"))]
 pub mod presence;
 pub mod realtime;
+#[cfg(not(target_family = "wasm"))]
+pub mod remote_control;
 #[cfg(not(target_family = "wasm"))]
 mod room;
 mod share_dialog;
@@ -37,6 +41,8 @@ mod team_view;
 use account::{AccountStore, ApiError};
 use gpui::{App, AppContext, Task, actions};
 
+#[cfg(not(target_family = "wasm"))]
+pub use devices::{DEVICE_SESSION_KIND, DEVICES_KIND, DeviceSessionView, DevicesEvent, DevicesView};
 pub use share_dialog::ShareDialog;
 pub use sharing_settings::SharingSettings;
 pub use team_session_view::{SendTo, TeamSessionEvent, TeamSessionView};
@@ -49,6 +55,8 @@ actions!(
     [
         /// Open the Team view in the centre.
         OpenTeam,
+        /// Open the Devices view in the centre: the sessions your other machines sync here.
+        OpenDevices,
         /// Share the session in front to the web (the host opens `ShareDialog`).
         ShareSession,
         /// Share the file in front to the web as a read-only snapshot.
@@ -69,6 +77,7 @@ actions!(
 /// the session in front, so the workbench handles the actions.
 pub fn register_commands(cx: &mut App) {
     keymap::register(cx, "team.open", OpenTeam);
+    keymap::register(cx, "devices.open", OpenDevices);
     keymap::register(cx, "share.agent", ShareSession);
     keymap::register(cx, "share.buffer", ShareBuffer);
     keymap::register(cx, "share.selection", ShareSelection);

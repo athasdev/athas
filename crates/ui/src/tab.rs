@@ -155,13 +155,15 @@ impl RenderOnce for Tab {
         let close_id = ElementId::Name(format!("{}-close", self.id).into());
         let hover_fg = colors.foreground;
         let hover_bg = colors.segment_track;
-        let close_hover = colors.accent;
+        // Translucent, so it shows over the active tab's raised fill as well as a hovered tab's.
+        let close_hover = colors.foreground.opacity(0.12);
         let forced = self.forced_hover && !self.active;
         let show_close = self.show_close.unwrap_or(self.active) || self.forced_hover;
         let text = if forced { hover_fg } else { text };
 
-        // `TabItem`: 12px in front, 24px behind for the close button, which sits 4px from the
-        // end as an extra-small ghost icon button (20px, subtle, accent fill on hover). Unsaved
+        // `TabItem`: 12px in front, 28px behind for the close button, which sits 4px from the
+        // end as an extra-small ghost icon button (20px, subtle, a fill on hover) with 4px
+        // between it and the label. Unsaved
         // changes show as an 8px primary dot after the label (`tab-bar-item.tsx`).
         let subtle = colors.subtle_foreground;
         let close_group = group.clone();
@@ -174,7 +176,7 @@ impl RenderOnce for Tab {
             .gap(metrics::chrome_gap())
             .h(metrics::tab())
             .when(self.stretch, |this| this.flex_1().min_w_0().justify_center().px(px(20.)))
-            .when(!self.stretch, |this| this.flex_none().min_w(px(80.)).max_w(metrics::tab_max_width()).pl(px(8.)).pr(px(24.)))
+            .when(!self.stretch, |this| this.flex_none().min_w(px(80.)).max_w(metrics::tab_max_width()).pl(px(8.)).pr(px(28.)))
             .rounded(metrics::radius_md())
             .text_size(typography::text_chrome())
             .text_color(text)

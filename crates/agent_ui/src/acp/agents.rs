@@ -5,9 +5,11 @@
 //! Ported from `crates/ai/src/acp/config.rs` and the agent manifests in
 //! `extensions/official/*/extension.json`.
 
+use std::collections::HashMap;
 #[cfg(not(target_family = "wasm"))]
 use std::path::Path;
 use std::path::PathBuf;
+use std::sync::{OnceLock, PoisonError, RwLock};
 
 /// An agent Athas knows how to launch.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -84,8 +86,61 @@ pub fn known_agent(agent: &str) -> Option<&'static KnownAgent> {
     KNOWN_AGENTS.iter().find(|known| known.id == id)
 }
 
-/// A readable name for an agent id.
+/// How an agent reads: the name the agent picker lists it under and its extension's icon.
+/// `KNOWN_AGENTS` says how to launch an agent, the catalog says how to show it.
+pub struct CatalogMark {
+    pub name: String,
+    /// The icon the extension gave it, under `assets/`.
+    pub icon: Option<String>,
+    /// Whether that icon is a one-colour glyph the UI tints, rather than artwork.
+    pub monochrome: bool,
+}
+
+/// Athas's agent catalog: the agent contributions of the extension manifests the app ships
+/// (`assets/extensions/catalog.json`), by agent id. Read once.
+fn bundled_marks() -> &'static HashMap<String, CatalogMark> {
+    static MARKS: OnceLock<HashMap<String, CatalogMark>> = OnceLock::new();
+    MARKS.get_or_init(|| {
+        let mut marks = HashMap::new();
+        for entry in extensions::Catalog::bundled().entries() {
+            let (extension_icon, monochrome) = match &entry.icon {
+                Some(extensions::ExtensionIcon::Embedded { path, monochrome }) => (Some(path.clone()), *monochrome),
+                _ => (None, false),
+            };
+            for agent in entry.manifest.agents() {
+                let icon = agent.icon.clone().or_else(|| extension_icon.clone());
+                marks.insert(agent.id.clone(), CatalogMark { name: agent.name.clone(), icon, monochrome });
+            }
+        }
+        marks
+    })
+}
+
+/// The names the agent registry loaded, for agents the bundled catalog does not ship -- the ACP
+/// Registry's, and a catalog the CDN has renamed since this build.
+static REGISTRY_NAMES: RwLock<Option<HashMap<String, String>>> = RwLock::new(None);
+
+/// Tells the labels what the agent registry just loaded, so an agent reads the same in the
+/// picker, the composer's chip and the history.
+pub fn set_registry_names(names: HashMap<String, String>) {
+    *REGISTRY_NAMES.write().unwrap_or_else(PoisonError::into_inner) = Some(names);
+}
+
+fn registry_name(id: &str) -> Option<String> {
+    REGISTRY_NAMES.read().unwrap_or_else(PoisonError::into_inner).as_ref()?.get(id).cloned()
+}
+
+/// What the catalog knows about an agent, by any of its ids.
+pub fn catalog_mark(agent: &str) -> Option<&'static CatalogMark> {
+    bundled_marks().get(catalog_id(agent))
+}
+
+/// A readable name for an agent id: the catalog's, else the launch table's, else the id itself.
 pub fn display_name(agent: &str) -> String {
+    let id = catalog_id(agent);
+    if let Some(name) = registry_name(id).or_else(|| catalog_mark(agent).map(|mark| mark.name.clone())) {
+        return name;
+    }
     match known_agent(agent) {
         Some(known) => known.name.to_string(),
         None => {
@@ -257,6 +312,20 @@ mod tests {
         assert_eq!(known_agent("claude-code").unwrap().binary, "claude-agent-acp");
         assert_eq!(display_name("claude-code"), "Claude Agent");
         assert_eq!(display_name("my-agent"), "My Agent");
+    }
+
+    #[test]
+    fn the_catalog_names_every_agent_it_ships() {
+        // The picker lists the catalog's name; so must the composer's chip and the history.
+        assert_eq!(display_name("antigravity-acp"), "Google Antigravity");
+        for known in KNOWN_AGENTS {
+            let mark = bundled_marks().get(known.id).unwrap_or_else(|| panic!("the catalog ships {}", known.id));
+            assert_eq!(mark.name, known.name, "{}", known.id);
+        }
+        for (id, mark) in bundled_marks() {
+            let icon = mark.icon.as_ref().unwrap_or_else(|| panic!("{id} has no icon"));
+            assert!(std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../assets").join(icon).exists(), "{icon}");
+        }
     }
 
     #[test]

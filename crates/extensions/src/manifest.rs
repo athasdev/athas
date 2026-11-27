@@ -30,6 +30,8 @@ pub struct ExtensionManifest {
     #[serde(default)]
     pub integrations: Vec<IntegrationContribution>,
     #[serde(default)]
+    pub sandbox_providers: Vec<SandboxProviderContribution>,
+    #[serde(default)]
     pub skills: Vec<SkillContribution>,
     #[serde(default)]
     pub mcp_servers: Vec<McpServerContribution>,
@@ -64,6 +66,7 @@ pub enum Category {
     Integration,
     Agent,
     Skill,
+    Sandbox,
     #[serde(rename = "Icon Theme")]
     IconTheme,
     Linter,
@@ -88,6 +91,7 @@ impl<'de> Deserialize<'de> for Category {
             "Integration" => Category::Integration,
             "Agent" => Category::Agent,
             "Skill" => Category::Skill,
+            "Sandbox" => Category::Sandbox,
             "Icon Theme" => Category::IconTheme,
             "Linter" => Category::Linter,
             "Formatter" => Category::Formatter,
@@ -111,6 +115,8 @@ pub struct Contributes {
     pub ai_providers: Vec<serde_json::Value>,
     #[serde(default)]
     pub integrations: Vec<IntegrationContribution>,
+    #[serde(default)]
+    pub sandbox_providers: Vec<SandboxProviderContribution>,
     #[serde(default)]
     pub skills: Vec<SkillContribution>,
     #[serde(default)]
@@ -163,6 +169,20 @@ pub struct IntegrationContribution {
     /// `code-host`, `observability`, `project-management` or `other`.
     pub kind: String,
     pub icon: Option<String>,
+}
+
+/// A code sandbox the app can run commands in. The provider itself is built into Athas
+/// (`crates/sandbox`); the manifest says which one this is and where its key comes from, so the
+/// catalog can list a provider Athas already speaks to without shipping any code for it.
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SandboxProviderContribution {
+    /// Matches the provider's id in `crates/sandbox` (`e2b`).
+    pub id: String,
+    pub name: String,
+    pub description: Option<String>,
+    /// Where the user makes the API key this provider wants.
+    pub api_key_url: Option<String>,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -420,6 +440,10 @@ impl ExtensionManifest {
 
     pub fn integrations(&self) -> impl Iterator<Item = &IntegrationContribution> {
         self.integrations.iter().chain(&self.contributes.integrations)
+    }
+
+    pub fn sandbox_providers(&self) -> impl Iterator<Item = &SandboxProviderContribution> {
+        self.sandbox_providers.iter().chain(&self.contributes.sandbox_providers)
     }
 
     pub fn skills(&self) -> impl Iterator<Item = &SkillContribution> {

@@ -30,7 +30,6 @@ mod pr_view;
 pub mod quick_open;
 pub mod relay;
 mod repo;
-mod rich;
 mod run_view;
 #[cfg(target_family = "wasm")]
 #[path = "../../../core/github/src/serde_helpers.rs"]

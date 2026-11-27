@@ -26,6 +26,8 @@ pub enum AccountMenuEvent {
     OpenSettings(Option<&'static str>),
     /// Open the Team view.
     OpenTeam,
+    /// Open the Devices view: the sessions this account syncs from your other machines.
+    OpenDevices,
 }
 
 type Handler = Rc<dyn Fn(&mut AccountMenu, &mut Window, &mut Context<AccountMenu>)>;
@@ -180,6 +182,7 @@ impl AccountMenu {
                     None => Item::open("github-connect", IconName::Github, "Connect GitHub", urls.integrations()),
                 },
             ];
+            items.push(Item::new("devices", IconName::Laptop, "Devices", |_, _, cx| cx.emit(AccountMenuEvent::OpenDevices)));
             if store.subscription().and_then(|subscription| subscription.team()).is_some() {
                 items.push(Item::new("team", IconName::Users, "Team", |_, _, cx| cx.emit(AccountMenuEvent::OpenTeam)));
             }

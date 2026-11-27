@@ -34,7 +34,7 @@ impl IconSize {
 #[derive(IntoElement)]
 pub struct Icon {
     name: IconName,
-    path: Option<&'static str>,
+    path: Option<gpui::SharedString>,
     size: IconSize,
     color: Option<Hsla>,
     hover_color: Option<(gpui::SharedString, Hsla)>,
@@ -46,9 +46,9 @@ impl Icon {
         Self { name, path: None, size: IconSize::default(), color: None, hover_color: None, filled: false }
     }
 
-    /// An icon outside the Nucleo set, such as a brand mark.
-    pub fn from_path(path: &'static str) -> Self {
-        Self { path: Some(path), ..Self::new(IconName::Square) }
+    /// An icon outside the Nucleo set, such as the mark an extension ships.
+    pub fn from_path(path: impl Into<gpui::SharedString>) -> Self {
+        Self { path: Some(path.into()), ..Self::new(IconName::Square) }
     }
 
     pub fn size(mut self, size: IconSize) -> Self {
@@ -78,10 +78,7 @@ impl Icon {
 impl RenderOnce for Icon {
     fn render(self, _window: &mut Window, cx: &mut App) -> impl IntoElement {
         let path = self.path.unwrap_or_else(|| {
-            self.filled
-                .then(|| self.name.filled_path())
-                .flatten()
-                .unwrap_or_else(|| self.name.path())
+            self.filled.then(|| self.name.filled_path()).flatten().unwrap_or_else(|| self.name.path()).into()
         });
         let size = self.size.pixels();
         svg()

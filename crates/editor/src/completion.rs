@@ -9,36 +9,51 @@ pub fn fuzzy_score(query: &str, candidate: &str) -> Option<i32> {
     if query.is_empty() {
         return Some(0);
     }
-    let candidate_chars: Vec<char> = candidate.chars().collect();
+    let lower = |ch: char| ch.to_lowercase().next().unwrap_or(ch);
+    // One pass over the candidate, no buffer of its own: this runs over every item in the menu
+    // on every keystroke.
+    let mut chars = candidate.chars().enumerate();
     let mut score = 0;
     let mut position = 0;
     let mut previous_match: Option<usize> = None;
+    // The character before the one being looked at, for the word-start bonus.
+    let mut before: Option<char> = None;
+    let mut query_len = 0;
     for (index, wanted) in query.chars().enumerate() {
-        let wanted_lower = wanted.to_lowercase().next().unwrap_or(wanted);
-        let found = (position..candidate_chars.len()).find(|at| candidate_chars[*at].to_lowercase().next() == Some(wanted_lower))?;
-        let ch = candidate_chars[found];
+        query_len += 1;
+        let wanted_lower = lower(wanted);
+        let mut found = None;
+        for (at, ch) in chars.by_ref() {
+            if lower(ch) == wanted_lower {
+                found = Some((at, ch));
+                break;
+            }
+            before = Some(ch);
+        }
+        let (at, ch) = found?;
         score += 1;
         if ch == wanted {
             score += 1;
         }
-        if found == index && previous_match.is_none_or(|previous| previous + 1 == found) {
+        if at == index && previous_match.is_none_or(|previous| previous + 1 == at) {
             // Still matching the start of the candidate.
             score += 6;
-        } else if previous_match.is_some_and(|previous| previous + 1 == found) {
+        } else if previous_match.is_some_and(|previous| previous + 1 == at) {
             score += 4;
         } else {
-            let before = found.checked_sub(1).map(|at| candidate_chars[at]);
             let boundary = before.is_none_or(|before| !before.is_alphanumeric() || (before.is_lowercase() && ch.is_uppercase()));
             if boundary {
                 score += 3;
             }
-            score -= (found - position).min(5) as i32;
+            score -= (at - position).min(5) as i32;
         }
-        previous_match = Some(found);
-        position = found + 1;
+        before = Some(ch);
+        previous_match = Some(at);
+        position = at + 1;
     }
     // Shorter candidates win ties.
-    score -= (candidate_chars.len().saturating_sub(query.chars().count()) as i32).min(10) / 3;
+    let candidate_len = position + chars.count();
+    score -= (candidate_len.saturating_sub(query_len) as i32).min(10) / 3;
     Some(score)
 }
 

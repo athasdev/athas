@@ -1,0 +1,15 @@
+[package]
+name = "markdown"
+edition.workspace = true
+version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lib]
+path = "src/markdown.rs"
+
+[dependencies]
+gpui.workspace = true
+theme = { path = "../theme" }
+ui = { path = "../ui" }
+pulldown-cmark = { version = "0.13", default-features = false }

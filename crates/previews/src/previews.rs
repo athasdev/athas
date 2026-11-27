@@ -10,6 +10,7 @@ use std::{collections::BTreeMap, time::Duration};
 
 use account::{AccountEvent, AccountStore, ApiError, Method};
 use ui::scale::px;
+use ui::OpenOutbound;
 use gpui::{
     App, AppContext, ClipboardItem, Context, DismissEvent, Entity, EventEmitter, FocusHandle, Focusable, Global, SharedString, Subscription, Task, Window,
     div, prelude::*,
@@ -425,7 +426,7 @@ impl Render for ShareLocalServerDialog {
                                 Button::new("previews-plans", "See plans")
                                     .variant(ButtonVariant::Accent)
                                     .trailing_icon(IconName::OpenExternal)
-                                    .on_click(|_, _, cx| cx.open_url("https://athas.dev/pricing")),
+                                    .on_click(|_, _, cx| cx.open_outbound("https://athas.dev/pricing")),
                             ),
                         ),
                 )

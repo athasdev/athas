@@ -3,6 +3,7 @@
 
 use account::{AccountStore, widgets};
 use ui::scale::px;
+use ui::OpenOutbound;
 use gpui::{
     AnyElement, App, ClipboardItem, Context, DismissEvent, Entity, EventEmitter, FocusHandle, Focusable, IntoElement, ParentElement, Render,
     SharedString, Styled, Subscription, Window, div, prelude::*,
@@ -240,7 +241,7 @@ impl ShareDialog {
                     .justify_between()
                     .gap(px(12.))
                     .child(div().text_size(typography::text_sm()).text_color(colors.muted_foreground).child("Email and organization restrictions require Athas Pro."))
-                    .child(Button::new("share-pro", "View Pro plan").size(ButtonSize::Small).on_click(move |_, _, cx| cx.open_url(&pricing)))
+                    .child(Button::new("share-pro", "View Pro plan").size(ButtonSize::Small).on_click(move |_, _, cx| cx.open_outbound(&pricing)))
                     .into_any_element(),
             );
         } else if self.visibility == Visibility::Email {
@@ -361,7 +362,7 @@ impl Render for ShareDialog {
                         .on_click(cx.listener(|this, _, _, cx| this.revoke(cx)))
                         .into_any_element(),
                     div().flex_1().into_any_element(),
-                    Button::new("share-open", "Open in browser").on_click(move |_, _, cx| cx.open_url(&url)).into_any_element(),
+                    Button::new("share-open", "Open in browser").on_click(move |_, _, cx| cx.open_outbound(&url)).into_any_element(),
                     Button::new("share-copy", if self.copied { "Copied" } else { "Copy link" })
                         .variant(ButtonVariant::Accent)
                         .on_click(cx.listener(move |this, _, _, cx| {

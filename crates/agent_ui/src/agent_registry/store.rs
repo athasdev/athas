@@ -146,6 +146,8 @@ impl AgentRegistry {
                 })
                 .await;
             this.update(cx, |this, cx| {
+                // The labels read agents by id, without the registry: tell them what it loaded.
+                crate::acp::agents::set_registry_names(agents.iter().map(|agent| (agent.id.clone(), agent.name.clone())).collect());
                 this.agents = agents;
                 this.states = states;
                 this.tools = tools;

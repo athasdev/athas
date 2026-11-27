@@ -151,6 +151,7 @@ pub const COMMAND_ORDER: &[&str] = &[
     "github.connectAccount",
     "docker.open",
     "team.open",
+    "devices.open",
     "team.shareSession",
     "team.stopSharingSession",
     "team.handOffSession",

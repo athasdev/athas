@@ -39,7 +39,7 @@ web_protocol = { path = "../web_protocol" }
 serde.workspace = true
 web-time = "1"
 chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
-pulldown-cmark = { version = "0.13", default-features = false }
+markdown = { path = "../markdown" }
 
 [target.'cfg(not(target_family = "wasm"))'.dependencies]
 secure_storage = { path = "../secure_storage" }
