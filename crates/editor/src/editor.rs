@@ -515,6 +515,10 @@ pub struct Editor {
     pub(crate) layout: Option<HitLayout>,
     pub(crate) cursor_visible: bool,
     pub(crate) focused: bool,
+    /// Occurrences of the word at the caret show only once the user has clicked, moved the caret
+    /// or edited: the caret a file opens at is not one they put there, as VS Code's word
+    /// highlighter waits for an explicit cursor change.
+    pub(crate) occurrences_armed: bool,
     blink_task: Option<Task<()>>,
     pub(crate) drag: Option<Drag>,
     /// The IME composition, in the newest selection.
@@ -633,6 +637,7 @@ impl Editor {
             layout: None,
             cursor_visible: true,
             focused: false,
+            occurrences_armed: false,
             blink_task: None,
             drag: None,
             marked_range: None,
@@ -1141,6 +1146,7 @@ impl Editor {
         self.ghost_after_update(len, edited, cx);
         self.settle_carets_in_folds(head, edited);
         self.autoscroll = Some(Autoscroll::Fit);
+        self.occurrences_armed = true;
         self.pause_blink(cx);
         cx.notify();
     }
