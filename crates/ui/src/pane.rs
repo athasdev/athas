@@ -34,11 +34,11 @@ pub fn shell(cx: &App, border_width: gpui::Pixels) -> Div {
         .min_h_0()
         .min_w_0()
         .overflow_hidden()
-        // inner radius = outer radius - border width
+        // inner radius = outer radius - border width. The border takes its own room in the
+        // layout, so the panes meet its inner edge and their dividers reach it.
         .rounded(metrics::island_radius() + border_width)
         .border(border_width)
         .border_color(theme.colors.border)
-        .p(border_width)
         .bg(theme.colors.background)
 }
 
