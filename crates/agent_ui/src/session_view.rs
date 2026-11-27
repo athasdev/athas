@@ -259,6 +259,9 @@ pub struct SessionView {
     /// What the sandbox is doing right now, for the row that says where commands run.
     #[cfg(not(target_family = "wasm"))]
     sandbox_work: Option<gpui::SharedString>,
+    /// The last failure in full, for the tooltip: the row has room for a few words.
+    #[cfg(not(target_family = "wasm"))]
+    sandbox_error: Option<gpui::SharedString>,
     #[cfg(not(target_family = "wasm"))]
     sandbox_task: Option<Task<()>>,
     /// The account's own sandboxes, as the provider last listed them. Asked for when the menu
@@ -766,6 +769,8 @@ impl SessionView {
             sandbox_runtime: None,
             #[cfg(not(target_family = "wasm"))]
             sandbox_work: None,
+            #[cfg(not(target_family = "wasm"))]
+            sandbox_error: None,
             #[cfg(not(target_family = "wasm"))]
             sandbox_task: None,
             #[cfg(not(target_family = "wasm"))]
@@ -2413,6 +2418,7 @@ impl SessionView {
         });
         self.sandbox_target = target;
         self.sandbox_work = None;
+        self.sandbox_error = None;
         self.apply_sandbox_target(cx);
         // Chosen means chosen: the sandbox is made and the workspace sent now, not at whatever
         // moment the agent happens to want a command.
@@ -2435,13 +2441,20 @@ impl SessionView {
                 cx.background_spawn(async move { runtime.send_workspace() }).await
             };
             this.update(cx, |this, cx| {
+                this.sandbox_error = None;
                 this.sandbox_work = match sent {
                     Ok(0) => None,
                     Ok(count) => {
                         let files = if count == 1 { "file" } else { "files" };
                         Some(format!("sent {count} {files}").into())
                     }
-                    Err(error) => Some(format!("failed: {error}").into()),
+                    Err(error) => {
+                        // A row is a few words wide. The whole of it goes in the log and in the
+                        // row's tooltip, where there is room to read it.
+                        log::error!("The workspace could not be sent to the sandbox: {error}");
+                        this.sandbox_error = Some(error.into());
+                        Some("could not send the workspace".into())
+                    }
                 };
                 cx.notify();
             })
@@ -2453,6 +2466,12 @@ impl SessionView {
     #[cfg(not(target_family = "wasm"))]
     pub(crate) fn sandbox_work(&self) -> Option<gpui::SharedString> {
         self.sandbox_work.clone()
+    }
+
+    /// The last sandbox failure in full, for the row's tooltip.
+    #[cfg(not(target_family = "wasm"))]
+    pub(crate) fn sandbox_error(&self) -> Option<gpui::SharedString> {
+        self.sandbox_error.clone()
     }
 
     /// Points the running agent's host where the session says. Called when the choice changes

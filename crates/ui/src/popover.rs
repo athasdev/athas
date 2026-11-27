@@ -1,5 +1,5 @@
 use crate::scale::px;
-use gpui::{AnyElement, Anchor, App, IntoElement, Pixels, Point, RenderOnce, SharedString, Window, anchored, deferred, div, prelude::*,};
+use gpui::{AnyElement, Anchor, App, CursorStyle, IntoElement, Pixels, Point, RenderOnce, SharedString, Window, anchored, deferred, div, prelude::*,};
 use theme::ActiveTheme;
 
 use crate::{MenuSize, overlay_max_width, metrics, typography};
@@ -102,5 +102,8 @@ pub fn anchored_overlay(position: Point<Pixels>, anchor: Anchor, offset: Pixels,
         Anchor::BottomLeft | Anchor::BottomRight | Anchor::BottomCenter => div().mb(offset),
         _ => div().mt(offset),
     };
-    deferred(anchored().position(position).anchor(anchor).snap_to_window_with_margin(px(8.)).child(spaced.relative().child(content).child(crate::occluder()))).with_priority(1)
+    // The arrow is the overlay's own: a cursor is read off the topmost element that asks for
+    // one, not the topmost element, so without it a card over the transcript or the editor
+    // wears their I-beam.
+    deferred(anchored().position(position).anchor(anchor).snap_to_window_with_margin(px(8.)).child(spaced.relative().cursor(CursorStyle::Arrow).child(content).child(crate::occluder()))).with_priority(1)
 }
