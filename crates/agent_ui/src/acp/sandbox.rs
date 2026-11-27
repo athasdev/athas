@@ -35,8 +35,10 @@ use sandbox::Provider;
 const SANDBOX_SECONDS: u32 = 60 * 60;
 /// A command runs no longer than this, whatever it is doing.
 const COMMAND_TIMEOUT: Duration = Duration::from_secs(15 * 60);
-/// Where the tar of changed files lands before it is unpacked.
-const SYNC_ARCHIVE: &str = "/tmp/athas-sync.tar.gz";
+/// What the tar of changed files is called where it lands. It goes in the sandbox user's own
+/// home, not `/tmp`: a file written there once belongs to whoever wrote it, and the next copy
+/// comes back "permission denied".
+const SYNC_ARCHIVE: &str = ".athas-sync.tar.gz";
 /// A file bigger than this is not worth copying into a sandbox; it is build output or data.
 const MAX_SYNC_BYTES: u64 = 8 * 1024 * 1024;
 
@@ -245,8 +247,9 @@ impl SandboxRuntime {
         }
         let handle = self.handle()?;
         let dir = self.dir().ok_or("The sandbox is not running.")?;
-        self.client()?.write_file(&handle, SYNC_ARCHIVE, &archive).map_err(|error| error.message)?;
-        let unpack = sandbox::Exec::new(format!("tar xzf {SYNC_ARCHIVE} -C {dir} && rm -f {SYNC_ARCHIVE}"))
+        let archive_path = format!("{}/{SYNC_ARCHIVE}", handle.root.trim_end_matches('/'));
+        self.client()?.write_file(&handle, &archive_path, &archive).map_err(|error| error.message)?;
+        let unpack = sandbox::Exec::new(format!("tar xzf {archive_path} -C {dir} && rm -f {archive_path}"))
             .with_timeout(Duration::from_secs(120));
         let result = self.client()?.exec(&handle, &unpack).map_err(|error| error.message)?;
         if !result.succeeded() {

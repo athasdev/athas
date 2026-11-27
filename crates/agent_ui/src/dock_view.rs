@@ -232,6 +232,8 @@ pub struct SessionDockView {
     /// What the sandbox is busy with, while it is.
     #[cfg(not(target_family = "wasm"))]
     sandbox_work: Option<gpui::SharedString>,
+    #[cfg(not(target_family = "wasm"))]
+    sandbox_error: Option<gpui::SharedString>,
     cloud: Option<CloudState>,
     context: Option<ContextState>,
     skipped_mcp: Vec<String>,
@@ -255,6 +257,8 @@ impl SessionDockView {
             sandbox_live: None,
             #[cfg(not(target_family = "wasm"))]
             sandbox_work: None,
+            #[cfg(not(target_family = "wasm"))]
+            sandbox_error: None,
             cloud: None,
             context: None,
             skipped_mcp: Vec::new(),
@@ -281,8 +285,14 @@ impl SessionDockView {
         #[cfg(not(target_family = "wasm"))]
         let work = session.sandbox_work();
         #[cfg(not(target_family = "wasm"))]
+        let sandbox_error = session.sandbox_error();
+        #[cfg(not(target_family = "wasm"))]
         let sandbox_changed =
-            sandbox != self.sandbox || choices != self.sandbox_choices || live != self.sandbox_live || work != self.sandbox_work;
+            sandbox != self.sandbox
+                || choices != self.sandbox_choices
+                || live != self.sandbox_live
+                || work != self.sandbox_work
+                || sandbox_error != self.sandbox_error;
         #[cfg(target_family = "wasm")]
         let sandbox_changed = false;
         let changed = summary != self.summary
@@ -298,6 +308,7 @@ impl SessionDockView {
                 self.sandbox_choices = choices;
                 self.sandbox_live = live;
                 self.sandbox_work = work;
+                self.sandbox_error = sandbox_error;
             }
             self.summary = summary;
             self.cloud = cloud;
@@ -360,6 +371,7 @@ impl SessionDockView {
                 .child(div().flex().flex_none().child(leading))
                 .child(div().min_w_0().truncate().child(label))
                 .child(Icon::new(IconName::ChevronDown).size(IconSize::XSmall).color(colors.subtle_foreground))
+                .when_some(self.sandbox_error.clone(), |this, error| this.tooltip(ui::Tooltip::text(error)))
                 .on_click(move |event: &gpui::ClickEvent, window, cx| {
                     let position = event.position();
                     session.update(cx, |session, cx| session.deploy_environment_menu(position, window, cx)).ok();
