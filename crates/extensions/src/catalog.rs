@@ -175,6 +175,9 @@ impl Catalog {
                     continue;
                 }
             };
+            if RETIRED.iter().any(|prefix| manifest.id.starts_with(prefix)) {
+                continue;
+            }
             let icon = bundled.get(&manifest.id).and_then(|entry| entry.icon.clone()).or_else(|| {
                 let icon = manifest.icon.as_deref().filter(|icon| !icon.trim().is_empty()).unwrap_or("icon.svg");
                 Some(ExtensionIcon::Remote(if icon.contains("://") {
@@ -188,6 +191,13 @@ impl Catalog {
         }
         entries.extend(bundled.entries().iter().filter(|entry| !listed.contains(&entry.manifest.id)).cloned());
         Ok(Self { entries })
+    }
+
+    /// Keeps only the extensions that can be installed on `platform`: one that downloads a
+    /// package needs a package built for it.
+    pub fn for_platform(mut self, platform: &str) -> Self {
+        self.entries.retain(|entry| !entry.manifest.has_package() || entry.manifest.package_for(platform).is_some());
+        self
     }
 
     pub fn from_entries(entries: Vec<CatalogEntry>) -> Self {
@@ -208,8 +218,12 @@ impl Catalog {
 pub fn fetch(base_url: &str, bundled: &Catalog) -> Result<Catalog> {
     let url = format!("{}/manifests.json", base_url.trim_end_matches('/'));
     let body = crate::installer::get_text(&url).with_context(|| format!("loading {url}"))?;
-    Catalog::from_cdn_json(&body, base_url, bundled)
+    Ok(Catalog::from_cdn_json(&body, base_url, bundled)?.for_platform(&crate::installer::platform()))
 }
+
+/// Kinds of extension this build no longer has a use for, which the registry may still list:
+/// the database providers went with the database viewer.
+const RETIRED: &[&str] = &["athas.database."];
 
 #[cfg(test)]
 mod tests {
@@ -292,6 +306,24 @@ mod tests {
             catalog.get("athas.newlang").unwrap().icon,
             Some(ExtensionIcon::Remote("https://cdn.test/ext/newlang/icon.svg".into()))
         );
+    }
+
+    #[test]
+    fn leaves_out_retired_and_uninstallable_extensions() {
+        let bundled = Catalog::bundled();
+        let rust = &bundled.get("athas.rust").unwrap().manifest;
+        let mut sqlite = serde_json::to_value(rust.as_ref()).unwrap();
+        sqlite["id"] = "athas.database.sqlite".into();
+        let mut mac_only = serde_json::to_value(rust.as_ref()).unwrap();
+        mac_only["id"] = "athas.mac-only".into();
+        mac_only["installation"] = serde_json::json!({"platformArch": {"darwin-arm64": {"downloadUrl": "https://cdn.test/a.tar.gz", "size": 1, "checksum": "0".repeat(64)}}});
+        let json = serde_json::json!({ "database/sqlite": sqlite, "mac-only": mac_only });
+        let catalog = Catalog::from_cdn_json(&json.to_string(), "https://cdn.test/ext/", &bundled).unwrap();
+        assert!(catalog.get("athas.database.sqlite").is_none());
+        assert!(catalog.clone().for_platform("darwin-arm64").get("athas.mac-only").is_some());
+        let linux = catalog.for_platform("linux-x64");
+        assert!(linux.get("athas.mac-only").is_none());
+        assert!(linux.get("athas.rust").is_some());
     }
 
     /// A CDN that lags behind this build used to replace the catalog outright, which dropped
