@@ -96,10 +96,31 @@ pub struct SharedItem {
     pub live: bool,
     pub source_id: Option<String>,
     pub device_id: Option<String>,
+    /// What the device that published this calls itself ("Mehmet's MacBook Pro"); older
+    /// snapshots have none.
+    pub device_name: Option<String>,
     pub revision: i64,
     pub updated_at: i64,
     pub emails: Vec<String>,
     pub workspace_id: Option<i64>,
+}
+
+impl SharedItem {
+    /// A session this account syncs from one of its devices, the kind another device may drive.
+    pub fn is_synced_session(&self) -> bool {
+        self.kind == ShareKind::Agent && self.live && self.visibility == Visibility::Private && self.source_id.is_some() && self.device_id.is_some()
+    }
+
+    /// What to call the device this came from, for a list of devices.
+    pub fn device_label(&self) -> String {
+        match self.device_name.as_deref().map(str::trim).filter(|name| !name.is_empty()) {
+            Some(name) => name.to_string(),
+            None => match self.device_id.as_deref() {
+                Some(id) => format!("Device {}", &id[..id.len().min(6)]),
+                None => "Unknown device".into(),
+            },
+        }
+    }
 }
 
 /// `GET /api/shares`: what the account may share and what it has shared.
@@ -125,6 +146,34 @@ pub struct ExcludedSource {
 pub struct CreatedShare {
     pub id: String,
     pub url: String,
+}
+
+/// A message of a snapshot read back from the server (`ShareMessage` is what is sent).
+#[derive(Clone, Debug, Default, PartialEq, Eq, Deserialize)]
+#[serde(default)]
+pub struct SnapshotMessage {
+    pub role: String,
+    pub content: String,
+}
+
+/// `GET /api/shares/{id}`: one of the account's snapshots with its conversation, as another of
+/// its devices reads it.
+#[derive(Clone, Debug, Default, PartialEq, Deserialize)]
+#[serde(default, rename_all = "camelCase")]
+pub struct SharedSnapshot {
+    pub id: String,
+    pub title: String,
+    pub kind: ShareKind,
+    pub visibility: Visibility,
+    pub live: bool,
+    pub source_id: Option<String>,
+    pub device_id: Option<String>,
+    pub device_name: Option<String>,
+    pub revision: i64,
+    pub updated_at: i64,
+    pub source_updated_at: Option<i64>,
+    pub content: String,
+    pub messages: Vec<SnapshotMessage>,
 }
 
 /// Who may open a link.
@@ -225,6 +274,42 @@ pub fn device_id() -> String {
     ID.get_or_init(read_or_create_device_id).clone()
 }
 
+/// What this machine is called where its sessions are listed on your other devices: its host
+/// name without the `.local` suffix, falling back to the platform's name.
+pub fn device_name() -> String {
+    static NAME: std::sync::OnceLock<String> = std::sync::OnceLock::new();
+    NAME.get_or_init(|| tidy_device_name(&read_machine_name())).clone()
+}
+
+fn read_machine_name() -> String {
+    if let Ok(name) = std::env::var("COMPUTERNAME") {
+        return name;
+    }
+    if cfg!(not(target_family = "wasm"))
+        && let Ok(output) = std::process::Command::new("hostname").output()
+        && output.status.success()
+        && let Ok(name) = String::from_utf8(output.stdout)
+        && !name.trim().is_empty()
+    {
+        return name;
+    }
+    std::env::var("HOSTNAME").unwrap_or_default()
+}
+
+/// `Mehmets-MacBook-Pro.local` as `Mehmets MacBook Pro`; an empty name as the platform's.
+fn tidy_device_name(raw: &str) -> String {
+    let name = raw.trim().trim_end_matches(".local").trim_end_matches(".lan").replace(['-', '_'], " ");
+    let name: String = name.trim().chars().take(80).collect();
+    if !name.is_empty() {
+        return name;
+    }
+    match std::env::consts::OS {
+        "macos" => "This Mac".into(),
+        "windows" => "This PC".into(),
+        other => format!("This {other} device"),
+    }
+}
+
 fn read_or_create_device_id() -> String {
     let path = if cfg!(test) { None } else { dirs::data_dir().map(|dir| dir.join(paths::APP_ID).join("sharing-device")) };
     if let Some(id) = path.as_ref().and_then(|path| std::fs::read_to_string(path).ok()).map(|id| id.trim().to_string()).filter(|id| !id.is_empty()) {
@@ -247,6 +332,7 @@ pub fn create_body(draft: &ShareDraft, request_id: &str, live: bool, access: &Ac
         "sourceUpdatedAt": draft.source_updated_at,
         "sourceId": draft.source_id,
         "deviceId": draft.device_id,
+        "deviceName": device_name(),
         "live": live,
         "kind": draft.kind,
         "title": draft.title,
@@ -269,6 +355,11 @@ const FAILURE: &str = "Could not reach Athas sharing. Try again.";
 
 pub fn fetch_options(client: &Client, token: &str) -> Result<ShareOptions, ApiError> {
     decode(client.authed(token, Method::Get, "/api/shares", None, FAILURE)?)
+}
+
+/// Reads one of the account's own snapshots, conversation and all.
+pub fn fetch_share(client: &Client, token: &str, id: &str) -> Result<SharedSnapshot, ApiError> {
+    decode(client.authed(token, Method::Get, &format!("/api/shares/{}", encode(id)), None, FAILURE)?)
 }
 
 pub fn create_share(client: &Client, token: &str, body: &Value) -> Result<CreatedShare, ApiError> {

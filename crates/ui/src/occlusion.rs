@@ -3,7 +3,7 @@
 
 use std::collections::HashMap;
 
-use gpui::{App, Bounds, Global, IntoElement, Pixels, Styled, Window, WindowId, canvas};
+use gpui::{App, Bounds, Global, IntoElement, Pixels, Point, Styled, Window, WindowId, canvas};
 
 #[derive(Default)]
 struct Overlays(HashMap<WindowId, Vec<Bounds<Pixels>>>);
@@ -26,6 +26,13 @@ pub fn report(bounds: Bounds<Pixels>, window: &Window, cx: &mut App) {
 /// Where floating UI paints in `window` this frame, as far as it has been laid out.
 pub fn overlays(window: &Window, cx: &App) -> Vec<Bounds<Pixels>> {
     cx.try_global::<Overlays>().and_then(|overlays| overlays.0.get(&window.window_handle().window_id()).cloned()).unwrap_or_default()
+}
+
+/// Whether `point` falls on floating UI painted in `window`. A capture-phase handler runs
+/// before the elements under the pointer and occlusion does not stop it, so one that treats a
+/// press as a press on what it covers asks this first.
+pub fn over_overlay(point: Point<Pixels>, window: &Window, cx: &App) -> bool {
+    overlays(window, cx).iter().any(|bounds| bounds.contains(&point))
 }
 
 /// Reports its parent's bounds as floating UI. The parent must be positioned.

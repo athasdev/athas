@@ -439,6 +439,57 @@ struct LiveSessions(Vec<gpui::WeakEntity<SessionView>>);
 
 impl gpui::Global for LiveSessions {}
 
+/// How a session took what another of this account's devices asked of it (`collaboration`'s
+/// remote control drives sessions over the session's own realtime room).
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct RemoteOutcome {
+    /// The session is open on this device, so it can be driven at all.
+    pub open: bool,
+    pub running: bool,
+    /// Prompts waiting behind the turn in flight.
+    pub queued: usize,
+    pub error: Option<String>,
+}
+
+impl RemoteOutcome {
+    fn closed() -> Self {
+        Self { error: Some("That session is not open on this device.".into()), ..Default::default() }
+    }
+}
+
+/// The session with this id, if it is open on this device.
+fn live_session(session_id: &str, cx: &App) -> Option<Entity<SessionView>> {
+    cx.try_global::<LiveSessions>()?.0.iter().filter_map(|session| session.upgrade()).find(|session| session.read(cx).info.id == session_id)
+}
+
+/// Sends a prompt that came from another of your devices, as if it were typed here. The session
+/// keeps a note of where it came from, so the transcript says what happened.
+pub fn remote_prompt(session_id: &str, text: String, device: Option<&str>, cx: &mut App) -> RemoteOutcome {
+    let Some(session) = live_session(session_id, cx) else { return RemoteOutcome::closed() };
+    let from = device.map_or_else(|| "another device".to_string(), str::to_string);
+    session.update(cx, |this, cx| {
+        let index = this.transcript.push_notice(NoticeKind::Info, format!("Prompt from {from}"));
+        this.entries_added(index, cx);
+        this.send(text, cx);
+        this.remote_outcome()
+    })
+}
+
+/// Stops the turn in flight on behalf of another of your devices.
+pub fn remote_stop(session_id: &str, cx: &mut App) -> RemoteOutcome {
+    let Some(session) = live_session(session_id, cx) else { return RemoteOutcome::closed() };
+    session.update(cx, |this, cx| {
+        this.stop(cx);
+        this.remote_outcome()
+    })
+}
+
+/// How the session is doing, for the device watching it.
+pub fn remote_status(session_id: &str, cx: &mut App) -> RemoteOutcome {
+    let Some(session) = live_session(session_id, cx) else { return RemoteOutcome::closed() };
+    session.read(cx).remote_outcome()
+}
+
 impl SessionView {
     pub fn new(info: SessionInfo, window: &mut Window, cx: &mut Context<Self>) -> Self {
         let weak = cx.entity().downgrade();
@@ -766,6 +817,11 @@ impl SessionView {
 
     pub fn is_running(&self) -> bool {
         self.turn.is_some() || self.cloud_poll.is_some()
+    }
+
+    /// What to tell the device driving this session from elsewhere.
+    fn remote_outcome(&self) -> RemoteOutcome {
+        RemoteOutcome { open: true, running: self.is_running(), queued: self.queue.len(), error: None }
     }
 
     /// Whether any session is running a turn or starting its agent (`isAgentBusy`), so a

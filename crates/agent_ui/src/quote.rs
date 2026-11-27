@@ -1,6 +1,7 @@
 //! Quoting a passage of the transcript back to the agent.
 //!
-//! Selecting text in a message raises a small card over the selection with Copy and Quote.
+//! Selecting text in a message raises a small Quote button over the selection. Copying is
+//! Cmd-C and the right-click menu, so the card does not repeat it.
 //! Quote opens a reply field in the same card: what is written there goes to the composer with
 //! the passage as one attachment, so the next prompt says which part of the answer it is about
 //! instead of leaving the agent to guess from "that bit above".
@@ -18,7 +19,7 @@ pub(crate) struct QuoteCard {
     /// The passage, read off the drawn runs when the card opened: the selection may be cleared
     /// while the card is still up.
     pub(crate) text: String,
-    /// The reply field, once Quote has been pressed. `None` while the card is only Copy/Quote.
+    /// The reply field, once Quote has been pressed. `None` while the card is only the button.
     pub(crate) reply: Option<Entity<TextInput>>,
 }
 
@@ -49,14 +50,6 @@ impl SessionView {
         if self.quote_card.take().is_some() {
             cx.notify();
         }
-    }
-
-    /// Copy in the card: the passage, as Cmd-C would have taken it.
-    fn copy_quote(&mut self, cx: &mut Context<Self>) {
-        let Some(card) = &self.quote_card else { return };
-        cx.write_to_clipboard(gpui::ClipboardItem::new_string(card.text.clone()));
-        self.text_selection = None;
-        self.close_quote_card(cx);
     }
 
     /// Quote in the card: the reply field opens under the passage, focused.
@@ -100,20 +93,12 @@ impl SessionView {
         let colors = &cx.theme().colors;
         let quoted = crate::quote::quote_block(&card.text, cx);
         let body = match &card.reply {
-            // Only Copy and Quote until Quote is pressed: a reply field nobody asked for would
-            // cover the passage it is about.
+            // The button alone until it is pressed: a reply field nobody asked for would cover
+            // the passage it is about.
             None => gpui::div()
                 .flex()
                 .items_center()
-                .gap(px(2.))
                 .p(px(2.))
-                .child(
-                    Button::new("quote-copy", "Copy")
-                        .variant(ButtonVariant::Ghost)
-                        .size(ButtonSize::Small)
-                        .leading_icon(IconName::Copy)
-                        .on_click(cx.listener(|this, _, _, cx| this.copy_quote(cx))),
-                )
                 .child(
                     Button::new("quote-start", "Quote")
                         .variant(ButtonVariant::Ghost)
@@ -150,7 +135,8 @@ impl SessionView {
                 gpui::Anchor::BottomLeft,
                 px(8.),
                 gpui::div()
-                    .w(px(CARD_WIDTH))
+                    // The button sizes to itself; only the reply field needs room to write in.
+                    .when(card.reply.is_some(), |card| card.w(px(CARD_WIDTH)))
                     .bg(colors.surface)
                     .border_1()
                     .border_color(colors.border)

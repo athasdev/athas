@@ -2413,6 +2413,7 @@ impl Workbench {
             match event {
                 account::AccountMenuEvent::OpenSettings(page) => this.open_settings_page(*page, window, cx),
                 account::AccountMenuEvent::OpenTeam => this.update_state(cx, |state| state.open_resource("team", "", "Team")),
+                account::AccountMenuEvent::OpenDevices => this.open_devices(cx),
             }
             cx.notify();
         });
@@ -3021,6 +3022,7 @@ impl Render for Workbench {
             .on_action(cx.listener(|this, _: &collaboration::OpenTeam, _, cx| {
                 this.update_state(cx, |state| state.open_resource("team", "", "Team"))
             }))
+            .on_action(cx.listener(|this, _: &collaboration::OpenDevices, _, cx| this.open_devices(cx)))
             .on_action(cx.listener(Self::share_session))
             .on_action(cx.listener(|this, _: &collaboration::ShareBuffer, window, cx| this.share_editor(false, window, cx)))
             .on_action(cx.listener(|this, _: &collaboration::ShareSelection, window, cx| this.share_editor(true, window, cx)))

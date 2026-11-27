@@ -10,6 +10,18 @@ use workspace::{SessionId, TabItem, now_ms};
 
 use crate::Workbench;
 
+/// Session changes reach the device watching it from elsewhere after this update settles, never
+/// from inside the session's own event handler.
+#[cfg(not(target_family = "wasm"))]
+fn announce_remotely(id: &SessionId, cx: &mut Context<Workbench>) {
+    let session = id.0.clone();
+    cx.defer(move |cx| crate::collaboration_hooks::announce_session(&session, cx));
+}
+
+/// The web build hosts no sessions, so there is nothing to tell another device about.
+#[cfg(target_family = "wasm")]
+fn announce_remotely(_id: &SessionId, _cx: &mut Context<Workbench>) {}
+
 /// What an editor-area terminal tab starts with.
 pub(crate) enum PendingTerminal {
     Moved(terminal_view::MovedTerminal),
@@ -704,9 +716,11 @@ impl Workbench {
                         SessionViewEvent::StatusChanged(status) => {
                             let status = *status;
                             this.update_state(cx, |state| state.set_session_status(&id, status));
+                            announce_remotely(&id, cx);
                         }
                         SessionViewEvent::Activity => {
                             this.update_state(cx, |state| state.touch_session(&id, now_ms()));
+                            announce_remotely(&id, cx);
                         }
                         SessionViewEvent::OpenFile(path) => {
                             let path = path.to_string_lossy().into_owned();
@@ -782,6 +796,25 @@ impl Workbench {
                         }
                     });
                     CentreView { focus: Some(view.focus_handle(cx)), view: view.into(), _subscription: Some(subscription), editor: None, session: None }
+                }
+                #[cfg(not(target_family = "wasm"))]
+                kind if kind == collaboration::DEVICES_KIND => {
+                    let view = cx.new(collaboration::DevicesView::new);
+                    let subscription = cx.subscribe(&view, |this, _, event: &collaboration::DevicesEvent, cx| match event {
+                        collaboration::DevicesEvent::OpenSession { share_id, title } => {
+                            this.update_state(cx, |state| state.open_resource(collaboration::DEVICE_SESSION_KIND, share_id, title))
+                        }
+                    });
+                    CentreView { focus: Some(view.focus_handle(cx)), view: view.into(), _subscription: Some(subscription), editor: None, session: None }
+                }
+                #[cfg(not(target_family = "wasm"))]
+                kind if kind == collaboration::DEVICE_SESSION_KIND => {
+                    let (share_id, title) = (id.clone(), match item {
+                        TabItem::Resource { title, .. } => title.clone(),
+                        _ => String::new(),
+                    });
+                    let view = cx.new(|cx| collaboration::DeviceSessionView::new(share_id, title, window, cx));
+                    CentreView { focus: Some(view.focus_handle(cx)), view: view.into(), _subscription: None, editor: None, session: None }
                 }
                 "team-session" => {
                     let (share_id, title) = (id.clone(), match item {

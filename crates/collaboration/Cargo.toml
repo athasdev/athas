@@ -18,6 +18,7 @@ theme = { path = "../theme" }
 ui = { path = "../ui" }
 keymap = { path = "../keymap" }
 notifications = { path = "../notifications" }
+settings = { path = "../settings" }
 account = { path = "../account" }
 # The persisted session transcript a share is made from.
 agent_ui = { path = "../agent_ui" }
@@ -41,4 +42,3 @@ telemetry = { path = "../telemetry", features = ["test-support"] }
 # `examples/account_snapshot.rs` renders the views into PNGs without a window.
 gpui_platform = { workspace = true, features = ["test-support"] }
 image = { version = "0.25", default-features = false, features = ["png"] }
-settings = { path = "../settings" }

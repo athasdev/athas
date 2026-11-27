@@ -335,6 +335,16 @@ impl Workbench {
         view
     }
 
+    /// Opens the Devices view: the sessions this account syncs from your other machines, and the
+    /// one you pick, to drive. The web build has no devices of its own to show.
+    #[cfg(not(target_family = "wasm"))]
+    pub fn open_devices(&mut self, cx: &mut Context<Self>) {
+        self.update_state(cx, |state| state.open_resource(collaboration::DEVICES_KIND, "", "Devices"));
+    }
+
+    #[cfg(target_family = "wasm")]
+    pub fn open_devices(&mut self, _cx: &mut Context<Self>) {}
+
     /// Opens Settings on a page: `general`, `appearance`, `keyboard`, …
     pub fn open_settings_page(&mut self, page: Option<&'static str>, window: &mut Window, cx: &mut Context<Self>) {
         self.open_settings_view(page, window, cx);

@@ -162,16 +162,22 @@ impl Render for SessionView {
             .on_drop(cx.listener(|this, entry: &file_tree::DraggedEntry, _, cx| this.attach_dragged_entry(entry, cx)))
             // A press anywhere puts the transcript's selection away, unless it is about to
             // extend it; the run of text pressed then starts a new one as the press bubbles.
-            .capture_any_mouse_down(cx.listener(|this, event: &gpui::MouseDownEvent, _, cx| {
-                if event.button == MouseButton::Left {
+            // The capture phase runs before the quote card's own buttons and occlusion does not
+            // stop it, so a press on the card would otherwise close it before Quote was heard.
+            .capture_any_mouse_down(cx.listener(|this, event: &gpui::MouseDownEvent, window, cx| {
+                if event.button == MouseButton::Left && !ui::occlusion::over_overlay(event.position, window, cx) {
                     this.clear_text_selection(event.modifiers.shift, cx);
                     this.close_quote_card(cx);
                 }
             }))
-            // Letting go of a selection raises the Copy/Quote card where the pointer was.
+            // Letting go of a selection raises the quote card where the pointer was. Letting go
+            // over the card is a press on it, not the end of a drag through the text.
             .on_mouse_up(
                 MouseButton::Left,
-                cx.listener(|this, event: &gpui::MouseUpEvent, _, cx| {
+                cx.listener(|this, event: &gpui::MouseUpEvent, window, cx| {
+                    if ui::occlusion::over_overlay(event.position, window, cx) {
+                        return;
+                    }
                     this.end_text_selection();
                     this.open_quote_card(event.position, cx);
                 }),
