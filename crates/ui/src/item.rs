@@ -18,6 +18,10 @@ pub enum ItemVariant {
     Muted,
     /// A row inside a list card: square, split by the card's hairlines.
     List,
+    /// A tile standing on the surface behind it: filled a step above its page, with the same
+    /// hairline as an outline. For catalogs and grids, where each item is its own object rather
+    /// than a line of a list.
+    Raised,
 }
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -192,6 +196,9 @@ impl RenderOnce for Item {
                     div()
                         .line_height(relative(1.5))
                         .text_color(colors.muted_foreground)
+                        // `line_clamp` only hides the overflow; without this the last line it
+                        // keeps ends mid-word, with nothing to say more was cut.
+                        .text_ellipsis()
                         .line_clamp(self.description_lines)
                         .child(description)
                 }))
@@ -207,13 +214,18 @@ impl RenderOnce for Item {
             .w_full()
             .rounded(metrics::radius_md())
             .border_1()
-            .border_color(if self.variant == ItemVariant::Outline { colors.divider } else { gpui::transparent_black() })
+            .border_color(if matches!(self.variant, ItemVariant::Outline | ItemVariant::Raised) {
+                colors.divider
+            } else {
+                gpui::transparent_black()
+            })
             .px(px(8.))
             .py(px(6.))
             .font_family(typography::ui_font())
             .text_size(typography::text_sm())
             .text_color(colors.foreground)
             .when(self.variant == ItemVariant::Muted, |this| this.bg(colors.surface))
+            .when(self.variant == ItemVariant::Raised, |this| this.bg(colors.raised))
             .when(self.variant == ItemVariant::List, |this| this.min_h(px(40.)).rounded(px(0.)).px(px(12.)).py(px(8.)))
             .map(|this| match self.size {
                 ItemSize::Default => this,

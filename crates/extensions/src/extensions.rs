@@ -300,6 +300,13 @@ impl Extensions {
             .collect()
     }
 
+    /// The sandbox providers of enabled extensions, with the extension each comes from.
+    pub fn sandbox_providers(&self) -> Vec<(String, manifest::SandboxProviderContribution)> {
+        self.active_manifests()
+            .flat_map(|(id, manifest)| manifest.sandbox_providers().map(|provider| (id.to_string(), provider.clone())).collect::<Vec<_>>())
+            .collect()
+    }
+
     pub fn agents(&self) -> Vec<(String, AgentContribution)> {
         self.active_manifests()
             .flat_map(|(id, manifest)| manifest.agents().map(|agent| (id.to_string(), agent.clone())).collect::<Vec<_>>())
@@ -1138,6 +1145,36 @@ mod tests {
             assert!(!get(cx).status("athas.theme.test", settings::get(cx)).installed);
         });
         assert!(!dir.path().join("athas.theme.test").exists());
+    }
+
+    /// A sandbox provider ships no files -- the provider is built into Athas -- so installing it
+    /// downloads nothing and writes its manifest straight into the extensions folder. Nothing
+    /// has to exist on the CDN for it to install.
+    #[gpui::test]
+    async fn installs_a_provider_that_has_no_package(cx: &mut TestAppContext) {
+        let dir = tempfile::tempdir().unwrap();
+        setup(cx, Some(dir.path().to_path_buf()));
+        let id = "athas.sandbox.e2b";
+        cx.update(|cx| {
+            let entry = get(cx).catalog.get(id).expect("the bundled catalog offers it");
+            assert_eq!(entry.kind, ExtensionKind::Sandbox);
+            assert!(!entry.manifest.has_package());
+            assert!(!get(cx).status(id, settings::get(cx)).installed);
+        });
+
+        cx.executor().allow_parking();
+        cx.update(|cx| install(id, cx)).await.unwrap();
+
+        cx.update(|cx| {
+            let status = get(cx).status(id, settings::get(cx));
+            assert!(status.installed && status.enabled && status.operation.is_none());
+            assert_eq!(get(cx).manifest(id).map(|manifest| manifest.sandbox_providers().count()), Some(1));
+        });
+        assert!(dir.path().join(id).join("extension.json").exists(), "the manifest is kept where the app reads it");
+
+        // It survives a restart, as every other install does.
+        setup(cx, Some(dir.path().to_path_buf()));
+        assert!(cx.update(|cx| get(cx).status(id, settings::get(cx)).installed));
     }
 
     #[gpui::test]

@@ -114,6 +114,10 @@ pub struct TextInput {
     last_layout: Option<ShapedLine>,
     last_bounds: Option<Bounds<Pixels>>,
     is_selecting: bool,
+    /// A double or triple click's drag, which selects whole words.
+    drag: Option<crate::UnitDrag>,
+    /// The right-click menu.
+    context_menu: Option<crate::OpenMenu>,
     appearance: InputAppearance,
     leading_icon: Option<IconName>,
     /// A Clear search (X) button at the end while there is text (`SearchField`).
@@ -176,6 +180,8 @@ impl TextInput {
             last_layout: None,
             last_bounds: None,
             is_selecting: false,
+            drag: None,
+            context_menu: None,
             appearance: InputAppearance::default(),
             leading_icon: None,
             clearable: false,
@@ -418,9 +424,15 @@ impl TextInput {
     fn on_mouse_down(&mut self, event: &MouseDownEvent, window: &mut Window, cx: &mut Context<Self>) {
         self.is_selecting = true;
         window.focus(&self.focus_handle, cx);
-        if event.click_count >= 2 {
-            self.move_to(0, window, cx);
-            self.select_to(self.content.len(), window, cx);
+        let offset = self.index_for_mouse_position(event.position);
+        // A masked field has no words to show: a double click takes it all.
+        self.drag = if self.masked && event.click_count >= 2 {
+            Some(crate::UnitDrag { granularity: crate::Granularity::Line, origin: 0..self.content.len() })
+        } else {
+            crate::UnitDrag::start(&self.content, offset, event.click_count)
+        };
+        if self.drag.is_some() {
+            self.drag_to(offset, window, cx);
             return;
         }
         if event.modifiers.shift {
@@ -432,12 +444,68 @@ impl TextInput {
 
     fn on_mouse_up(&mut self, _: &MouseUpEvent, _window: &mut Window, _: &mut Context<Self>) {
         self.is_selecting = false;
+        self.drag = None;
     }
 
     fn on_mouse_move(&mut self, event: &MouseMoveEvent, window: &mut Window, cx: &mut Context<Self>) {
-        if self.is_selecting {
-            self.select_to(self.index_for_mouse_position(event.position), window, cx);
+        if !self.is_selecting {
+            return;
         }
+        // The button came up somewhere that did not tell us.
+        if event.pressed_button != Some(MouseButton::Left) {
+            self.is_selecting = false;
+            self.drag = None;
+            return;
+        }
+        let offset = self.index_for_mouse_position(event.position);
+        if self.drag.is_some() {
+            self.drag_to(offset, window, cx);
+        } else {
+            self.select_to(offset, window, cx);
+        }
+    }
+
+    /// Selects from the unit a double or triple click took to the one at `offset`.
+    fn drag_to(&mut self, offset: usize, window: &Window, cx: &mut Context<Self>) {
+        let Some(drag) = &self.drag else { return };
+        let (range, reversed) = if self.masked { (0..self.content.len(), false) } else { drag.extend(&self.content, offset) };
+        self.selected_range = range;
+        self.selection_reversed = reversed;
+        self.restart_blink(cx);
+        window.notify_text_selection_changed(&self.focus_handle);
+        cx.notify();
+    }
+
+    /// The right-click menu: Cut, Copy, Paste and Select All. A click outside the selection
+    /// moves the caret there first.
+    fn on_right_mouse_down(&mut self, event: &MouseDownEvent, window: &mut Window, cx: &mut Context<Self>) {
+        if self.disabled {
+            return;
+        }
+        window.focus(&self.focus_handle, cx);
+        let offset = self.index_for_mouse_position(event.position);
+        if !(self.selected_range.start <= offset && offset <= self.selected_range.end && !self.selected_range.is_empty()) {
+            self.move_to(offset, window, cx);
+        }
+        let input = cx.entity();
+        let action = |run: fn(&mut TextInput, &mut Window, &mut Context<TextInput>)| {
+            let input = input.clone();
+            Box::new(move |window: &mut Window, cx: &mut App| input.update(cx, |input, cx| run(input, window, cx))) as Box<dyn Fn(&mut Window, &mut App)>
+        };
+        let entries = crate::EditMenu {
+            has_selection: !self.selected_range.is_empty() && !self.masked,
+            editable: true,
+            cut: action(|input, window, cx| input.cut(&Cut, window, cx)),
+            copy: action(|input, window, cx| input.copy(&Copy, window, cx)),
+            paste: action(|input, window, cx| input.paste(&Paste, window, cx)),
+            select_all: action(|input, window, cx| input.select_all(&SelectAll, window, cx)),
+        }
+        .entries();
+        self.context_menu = Some(crate::OpenMenu::new("text-input-context", entries, event.position, gpui::Anchor::TopLeft, window, cx, |input, _| {
+            input.context_menu = None
+        }));
+        cx.stop_propagation();
+        cx.notify();
     }
 
     fn show_character_palette(&mut self, _: &ShowCharacterPalette, window: &mut Window, _: &mut Context<Self>) {
@@ -924,9 +992,12 @@ impl Render for TextInput {
             .on_action(cx.listener(Self::confirm))
             .on_action(cx.listener(Self::cancel))
             .on_mouse_down(MouseButton::Left, cx.listener(Self::on_mouse_down))
+            .on_mouse_down(MouseButton::Right, cx.listener(Self::on_right_mouse_down))
             .on_mouse_up(MouseButton::Left, cx.listener(Self::on_mouse_up))
             .on_mouse_up_out(MouseButton::Left, cx.listener(Self::on_mouse_up))
             .on_mouse_move(cx.listener(Self::on_mouse_move))
+            // Out of the flow, so it takes no room (or gap) in the row.
+            .children(self.context_menu.as_ref().map(|menu| div().absolute().child(menu.render())))
             .text_size(typography::text_sm())
             .line_height(px(18.))
             .text_color(theme.colors.foreground)

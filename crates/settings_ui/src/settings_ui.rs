@@ -23,6 +23,7 @@ mod terminal_profiles;
 mod typed_confirm;
 
 use ui::WithScrollbar;
+use ui::OpenOutbound;
 use std::{cell::Cell, collections::HashMap, ops::Range, rc::Rc};
 
 use ui::scale::px;
@@ -981,6 +982,8 @@ impl SettingsView {
     fn cli_status() -> (bool, String) {
         match cli::install::state_for_current_user() {
             cli::install::CliInstallState::Installed(_) => (true, "Installed at ~/.local/bin/athas".into()),
+            // Installing again sweeps a launcher Athas itself left behind.
+            cli::install::CliInstallState::Shadowed { by, .. } => (false, format!("{} comes first on your PATH", by.display())),
             _ => (false, "Open folders from your shell with athas".into()),
         }
     }
@@ -1408,7 +1411,7 @@ impl SettingsView {
                         let link = |id: &'static str, label: &'static str, url: String| {
                             div().id(id).text_color(colors.primary).hover(|style| style.underline()).child(label).on_click(move |_, _, cx| {
                                 cx.stop_propagation();
-                                cx.open_url(&url);
+                                cx.open_outbound(&url);
                             })
                         };
                         if def.tab == "appearance" && def.label == "Custom Themes" {
@@ -1931,7 +1934,7 @@ impl SettingsView {
             // Create Theme and Report a Bug are dialogs in their own right. In a tab they float
             // over the window, so a split pane does not crop them.
             .children(self.theme_creator.as_ref().map(|(creator, _)| {
-                let layer = div().flex().items_center().justify_center().bg(colors.scrim).child(creator.clone());
+                let layer = div().flex().items_center().justify_center().bg(colors.scrim).occlude().child(creator.clone());
                 match in_window {
                     true => layer.absolute().inset_0().into_any_element(),
                     false => over_window(layer, viewport),

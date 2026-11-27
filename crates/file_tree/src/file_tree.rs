@@ -80,7 +80,6 @@ actions!(
 const BASE_INDENT: f32 = 6.;
 /// An indent guide runs this far right of its level's start, under the parent's icon.
 const GUIDE_OFFSET: f32 = 7.;
-fn viewport_padding() -> Pixels { px(4.) }
 /// Icons are 1em of the row text.
 fn icon_size() -> Pixels { px(12.) }
 /// A lost focus this soon after a name field opens is a closing menu taking it back, not the
@@ -1347,9 +1346,7 @@ impl FileTree {
         // like a new file, which selected and scrolled back to that file.
         self.pending_reveal = None;
         if row.is_dir {
-            if event.click_count() < 2 {
-                self.toggle_dir(&row.path, cx);
-            }
+            self.toggle_dir(&row.path, cx);
         } else {
             self.open_file(row.path.clone(), cx);
         }
@@ -2189,7 +2186,6 @@ impl FileTree {
     // Rendering.
 
     fn render_rows(&mut self, range: Range<usize>, window: &mut Window, cx: &mut Context<Self>) -> Vec<AnyElement> {
-        let last = self.rows.len();
         let focused = self.focus_handle.is_focused(window);
         let highlighted = if focused { self.selected.clone() } else { self.active.clone().or_else(|| self.selected.clone()) };
         range
@@ -2200,7 +2196,7 @@ impl FileTree {
                 let is_highlighted = !row.draft
                     && if self.multi.is_empty() { highlighted.as_ref() == Some(&row.path) } else { self.multi.contains(&row.path) };
                 let has_ring = is_highlighted && focused && self.keyboard_navigation;
-                Some(self.render_row(index, row, previous_depth, next_depth, is_highlighted, has_ring, index + 1 == last, cx))
+                Some(self.render_row(index, row, previous_depth, next_depth, is_highlighted, has_ring, cx))
             })
             .collect()
     }
@@ -2214,7 +2210,6 @@ impl FileTree {
         next_depth: usize,
         highlighted: bool,
         has_ring: bool,
-        bottom: bool,
         cx: &mut Context<Self>,
     ) -> AnyElement {
         let theme = cx.theme().clone();
@@ -2337,7 +2332,6 @@ impl FileTree {
             .border_1()
             .border_color(if has_ring { colors.focus_ring } else { gpui::transparent_black() })
             .when(highlighted, |this| ui::sidebar_row(this, true, false, cx))
-            .when(bottom, |this| this.rounded_b(metrics::island_radius()))
             .when(row.ignored, |this| this.opacity(0.5))
             .when(cut, |this| this.italic().opacity(0.4))
             .children(arrow)
@@ -2362,8 +2356,7 @@ impl FileTree {
                 }
             })
             .child(content)
-            .children(guides.into_iter().flatten())
-            .when(bottom, |this| this.rounded_b(metrics::island_radius()));
+            .children(guides.into_iter().flatten());
         if editing.is_none() && !row.draft {
             let clicked = row.clone();
             let hovered = row.clone();
@@ -2381,9 +2374,15 @@ impl FileTree {
                 let paths = self
                     .action_targets(&row.path)
                     .into_iter()
-                    .map(|path| {
-                        let is_dir = self.rows.iter().find(|row| row.path == path).map_or(path.is_dir(), |row| row.is_dir);
-                        (path, is_dir)
+                    .map(|target| {
+                        // Every visible row runs this each frame; only a multi-selection's other
+                        // entries need the scan over all rows.
+                        let is_dir = if target == row.path {
+                            is_dir
+                        } else {
+                            self.rows.iter().find(|row| row.path == target).map_or(target.is_dir(), |row| row.is_dir)
+                        };
+                        (target, is_dir)
                     })
                     .collect();
                 let dragged = DraggedEntry { path: row.path.clone(), is_dir, name: display_name(&row.path), paths };
@@ -2443,11 +2442,11 @@ impl Render for FileTree {
                     uniform_list("file-tree-rows", self.rows.len(), cx.processor(Self::render_rows))
                         .track_scroll(&self.scroll_handle)
                         .flex_1()
-                        .pt(viewport_padding())
                         // The inset every sidebar list uses, so a row's hover sits where the
-                        // sessions' does.
+                        // sessions' does. No room above or below: a row's own height already
+                        // keeps its text off the header's divider and the panel's bottom edge.
                         .px(ui::metrics::sidebar_inset()),
-                    ui::Scrollbar::uniform("file-tree-scrollbar", &self.scroll_handle),
+                    ui::Scrollbar::uniform("file-tree-scrollbar", &self.scroll_handle).flush(),
                 ),
                 &self.scroll_handle,
                 cx.theme().colors.background,

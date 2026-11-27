@@ -16,6 +16,7 @@ use std::{
 };
 
 use gpui::{App, Global, SharedString};
+use ui::OpenOutbound;
 use notifications::{NotificationCategory, NotificationKind};
 use serde::{Deserialize, Serialize};
 
@@ -502,7 +503,7 @@ pub fn download_available(cx: &mut App) {
     match update_mode() {
         UpdateMode::External => return,
         UpdateMode::Notify => {
-            cx.open_url(DOWNLOAD_PAGE_URL);
+            cx.open_outbound(DOWNLOAD_PAGE_URL);
             return;
         }
         UpdateMode::SelfUpdate => {}
@@ -516,7 +517,7 @@ pub fn download_available(cx: &mut App) {
         return;
     }
     let Some(asset) = manifest.asset().cloned() else {
-        cx.open_url(&manifest.release_page());
+        cx.open_outbound(&manifest.release_page());
         return;
     };
     state.downloading = true;
@@ -594,7 +595,7 @@ pub fn view_release_notes(cx: &mut App) {
         .and_then(|state| state.available.as_ref())
         .map(Manifest::release_page)
         .unwrap_or_else(|| RELEASES_URL.to_string());
-    cx.open_url(&page);
+    cx.open_outbound(&page);
 }
 
 /// Hides the offered version until a day has passed (`remindLater`, the title bar's "Download later").

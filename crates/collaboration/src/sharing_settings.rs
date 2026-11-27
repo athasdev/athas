@@ -4,6 +4,7 @@
 
 use account::{AccountStore, widgets};
 use ui::scale::px;
+use ui::OpenOutbound;
 use gpui::{
     AnyElement, App, ClipboardItem, Context, Entity, IntoElement, ParentElement, Render, SharedString, Styled, Subscription, Window, div,
     prelude::*,
@@ -209,7 +210,7 @@ impl SharingSettings {
             Button::new(("share-open", index), "Open")
                 .variant(ButtonVariant::Outline)
                 .size(ButtonSize::Small)
-                .on_click(move |_, _, cx| cx.open_url(&open))
+                .on_click(move |_, _, cx| cx.open_outbound(&open))
                 .into_any_element(),
         );
         let revoke_id = item.id.clone();
@@ -246,26 +247,34 @@ impl Render for SharingSettings {
         let library = account::urls(cx).sharing_library();
         let sessions_enabled = self.options.as_ref().is_some_and(|options| options.sessions_enabled);
         let this = cx.entity().downgrade();
-        let cloud = widgets::section(
-            Some("Cloud Sessions"),
-            vec![
-                widgets::row(
-                    "Sync Agent Sessions",
-                    None,
-                    Switch::new("sharing-session-sync", sessions_enabled).disabled(busy || self.options.is_none()).on_change(move |enabled, _, cx| {
-                        this.update(cx, |this, cx| this.run(cx, move |client, token| sharing::set_session_sync(client, token, enabled).map(|_| ()))).ok();
-                    }),
-                    cx,
-                ),
-                widgets::row(
-                    "Web Library",
-                    None,
-                    Button::new("sharing-library", "Open on web").variant(ButtonVariant::Outline).on_click(move |_, _, cx| cx.open_url(&library)),
-                    cx,
-                ),
-            ],
+        let mut cloud_rows = vec![widgets::row(
+            "Sync Agent Sessions",
+            None,
+            Switch::new("sharing-session-sync", sessions_enabled).disabled(busy || self.options.is_none()).on_change(move |enabled, _, cx| {
+                this.update(cx, |this, cx| this.run(cx, move |client, token| sharing::set_session_sync(client, token, enabled).map(|_| ()))).ok();
+            }),
             cx,
-        );
+        )];
+        // Only a desktop install hosts the rooms the other device drives sessions through.
+        #[cfg(not(target_family = "wasm"))]
+        cloud_rows.push(widgets::row(
+            "Let My Other Devices Send Prompts",
+            Some("Open one of this device's sessions from another machine you are signed in on, and send it prompts. The agent keeps running here.".into()),
+            Switch::new("sharing-remote-control", crate::remote_control::allowed(cx)).disabled(!sessions_enabled).on_change(|allow, _, cx| {
+                crate::remote_control::set_allowed(allow, cx);
+                if !allow {
+                    crate::remote_control::stop_hosting(cx);
+                }
+            }),
+            cx,
+        ));
+        cloud_rows.push(widgets::row(
+            "Web Library",
+            None,
+            Button::new("sharing-library", "Open on web").variant(ButtonVariant::Outline).on_click(move |_, _, cx| cx.open_outbound(&library)),
+            cx,
+        ));
+        let cloud = widgets::section(Some("Cloud Sessions"), cloud_rows, cx);
         let items: Vec<SharedItem> =
             self.options.as_ref().map(|options| options.items.iter().filter(|item| item.visibility != Visibility::Private).cloned().collect()).unwrap_or_default();
         let rows: Vec<AnyElement> = match &self.options {

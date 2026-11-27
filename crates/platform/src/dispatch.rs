@@ -14,6 +14,9 @@ use workspace::TabItem;
 use crate::{OpenEvent, PlatformState, deep_link::DeepLink, waits};
 
 pub(crate) fn handle(event: OpenEvent, cx: &mut App) {
+    if cx.has_global::<PlatformState>() {
+        cx.global_mut::<PlatformState>().focus = None;
+    }
     match event {
         OpenEvent::Requests(requests) => {
             for request in requests {
@@ -43,14 +46,18 @@ fn workbench(cx: &mut App) -> Option<Entity<Workbench>> {
 }
 
 fn bring_forward(cx: &mut App) {
-    if let Some(handle) = crate::target_window(cx) {
+    let picked = cx.try_global::<PlatformState>().and_then(|state| state.focus);
+    if let Some(handle) = picked.or_else(|| crate::target_window(cx)) {
         handle.update(cx, |_, window, _| window.activate_window()).ok();
+    }
+    if cx.has_global::<PlatformState>() {
+        cx.global_mut::<PlatformState>().focus = None;
     }
     cx.activate(true);
 }
 
 fn open_request(request: CliRequest, cx: &mut App) {
-    open_request_from(request, false, cx)
+    open_request_from(request, false, false, cx)
 }
 
 /// A request for a new window (`athas -n`, `athas window`) opens one and does the rest there.
@@ -59,17 +66,24 @@ fn open_in_new_window(request: CliRequest, from_link: bool, cx: &mut App) {
     let mut request_state = workspace::WorkspaceState::default();
     request_state.recent_projects = state;
     let opened = crate::windows::open_new(workbench::NewWindowRequest { state: request_state, as_tab: false, setup: None }, cx);
-    if opened.is_some() && !matches!(request, CliRequest::Empty) {
-        open_request_from(request, from_link, cx);
+    if let Some(handle) = opened {
+        pick_window(handle, cx);
+        if !matches!(request, CliRequest::Empty) {
+            // The window is empty, so whatever follows belongs in it.
+            open_request_from(request, from_link, true, cx);
+        }
     }
 }
 
-/// `from_link`: a terminal command from a link waits for the user to agree.
-fn open_request_from(request: CliRequest, from_link: bool, cx: &mut App) {
+/// `from_link`: a terminal command from a link waits for the user to agree. `reuse`: the request
+/// named the window itself (`--reuse-window`, or a new window that was just opened for it), so
+/// folders do not consult the Open Folders in New Window setting.
+fn open_request_from(request: CliRequest, from_link: bool, reuse: bool, cx: &mut App) {
     match request {
         CliRequest::NewWindow { request } => open_in_new_window(*request, from_link, cx),
+        CliRequest::ReuseWindow { request } => open_request_from(*request, from_link, true, cx),
         CliRequest::Empty => {}
-        CliRequest::Path { path, is_directory: true, .. } => open_folder(Path::new(&path), cx),
+        CliRequest::Path { path, is_directory: true, .. } => open_folder_request(Path::new(&path), reuse, cx),
         CliRequest::Path { path, line, column, wait_marker, .. } => {
             open_file(Path::new(&path), line, column, cx);
             if let Some(marker) = wait_marker {
@@ -109,12 +123,12 @@ fn open_link(link: DeepLink, cx: &mut App) {
                 return;
             }
             if path.is_dir() {
-                open_folder(&path, cx);
+                open_folder_request(&path, false, cx);
             } else {
                 open_file(&path, line, column, cx);
             }
         }
-        DeepLink::Open(request) => open_request_from(request, true, cx),
+        DeepLink::Open(request) => open_request_from(request, true, false, cx),
         DeepLink::Settings { .. } => open_settings(cx),
         DeepLink::Extensions { .. } => workbench_api::open_resource(cx, "extensions", "", "Extensions"),
         // The extension's page has the Install button, so a link never installs on its own.
@@ -139,10 +153,62 @@ fn open_surface(name: &str, working_directory: &Path, resource_id: Option<u64>, 
         ("action", Some(id)) => ("github-run", format!("Run {id}")),
         _ => return,
     };
-    // GitHub views read the repository of the project in front.
+    // GitHub views read the repository of the project in front, and the view opens there too.
     open_folder(working_directory, cx);
     let id = resource_id.map(|id| id.to_string()).unwrap_or_default();
     workbench_api::open_resource(cx, kind, &id, &title);
+}
+
+/// Where `athas <folder>` puts the folder: the window that already has it, a new window when
+/// Open Folders in New Window is on and the window in front has a project, else that window.
+/// `--reuse-window` skips all of it.
+fn open_folder_request(path: &Path, reuse: bool, cx: &mut App) {
+    if let Some(handle) = window_with_project(path, cx) {
+        let path_buf = path.to_path_buf();
+        // The window may hold several projects; this one comes to the front there.
+        handle.update(cx, |workbench, _, cx| workbench.open_project_path(path_buf, cx)).ok();
+        pick_window(handle, cx);
+        return;
+    }
+    if !reuse && opens_folders_elsewhere(cx) {
+        let request = CliRequest::Path {
+            path: path.to_string_lossy().into_owned(),
+            is_directory: true,
+            line: None,
+            column: None,
+            wait_marker: None,
+        };
+        open_in_new_window(request, false, cx);
+        return;
+    }
+    open_folder(path, cx);
+}
+
+/// The window that already has `path` open as a project, so a second `athas .` brings it forward
+/// rather than opening the folder twice.
+fn window_with_project(path: &Path, cx: &mut App) -> Option<gpui::WindowHandle<Workbench>> {
+    // Projects are kept without their trailing separator, as `WorkspaceState` stores them.
+    let path = path.to_string_lossy();
+    let path = path.trim_end_matches(['/', '\\']).to_string();
+    let handles: Vec<gpui::WindowHandle<Workbench>> =
+        cx.try_global::<PlatformState>().map(|state| state.window_handles()).unwrap_or_default();
+    handles.into_iter().find(|handle| {
+        handle
+            .update(cx, |workbench, _, _| workbench.state().projects.iter().any(|project| project.path == path))
+            .unwrap_or(false)
+    })
+}
+
+/// Whether the window in front hands a folder to a window of its own (`openFoldersInNewWindow`).
+fn opens_folders_elsewhere(cx: &mut App) -> bool {
+    workbench(cx).is_some_and(|entity| entity.read(cx).opens_folders_elsewhere(cx))
+}
+
+/// The window [`bring_forward`] ends on, when a request named one of its own.
+fn pick_window(handle: gpui::WindowHandle<Workbench>, cx: &mut App) {
+    if cx.has_global::<PlatformState>() {
+        cx.global_mut::<PlatformState>().focus = Some(handle);
+    }
 }
 
 fn open_folder(path: &Path, cx: &mut App) {

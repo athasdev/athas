@@ -12,8 +12,8 @@ use gpui::{Div, Hsla, IntoElement, ParentElement, ScrollHandle, Styled, div, lin
 use crate::scale::px;
 
 /// How far the fade reaches in. Deep enough to read as a fade rather than a line, shallow enough
-/// to leave the row under it legible.
-const DEPTH: f32 = 24.;
+/// that it hints at the edge without hiding a row: at a row's depth it read as padding.
+const DEPTH: f32 = 8.;
 
 /// A pixel of slack: a list scrolled to its very end lands a hair short often enough that an
 /// exact comparison leaves the fade on over nothing.

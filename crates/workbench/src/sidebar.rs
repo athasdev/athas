@@ -270,6 +270,7 @@ impl Workbench {
                         .id("sidebar-backdrop")
                         .absolute()
                         .inset_0()
+                        .occlude()
                         .on_click(cx.listener(|this, _, _, cx| {
                             this.sidebar_overlay_open = false;
                             cx.notify();
@@ -322,7 +323,7 @@ impl Workbench {
         let files_header = view == SidebarView::Files && extension_view.is_none();
         let toolbar = actions.map(|(more, actions)| {
             if files_header {
-                return ui::PanelHeader::new("Files").more(more).trailing(actions).into_any_element();
+                return ui::PanelHeader::new("Files").flush().more(more).trailing(actions).into_any_element();
             }
             div()
                 .flex()
@@ -626,8 +627,8 @@ impl Workbench {
             .flex_col()
             .flex_1()
             .min_h_0()
-            .child(ui::PanelHeader::new("Sessions").more(header_more).trailing(header_actions))
-            .child(ui::faded_scroll(ui::with_scrollbar(list, ui::Scrollbar::new("sessions-scrollbar", &scroll)), &scroll, cx.theme().colors.background).flex_1())
+            .child(ui::PanelHeader::new("Sessions").flush().more(header_more).trailing(header_actions))
+            .child(ui::faded_scroll(ui::with_scrollbar(list, ui::Scrollbar::new("sessions-scrollbar", &scroll).flush()), &scroll, cx.theme().colors.background).flex_1())
             .child(self.render_sessions_footer(cx))
     }
 

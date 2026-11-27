@@ -6,6 +6,7 @@ use extensions::{
     ToolStatuses, manifest::ToolRuntime,
 };
 use ui::scale::px;
+use ui::OpenOutbound;
 use gpui::{AnyElement, ClickEvent, Context, Hsla, SharedString, div, img, prelude::*,};
 use theme::{ActiveTheme, ThemeColors};
 use ui::{Button, ButtonSize, ButtonVariant, Icon, IconName, IconSize, Switch, WithScrollbar, metrics, pane_header, typography};
@@ -83,7 +84,22 @@ pub(crate) fn render(
 
     let tool_statuses = extensions::get(cx).tool_statuses(&manifest.id);
     // `ExtensionDetailView`: Details first, then what it contributes.
-    let mut sections = vec![section("Details", render_details(entry, &status, colors, cx), colors), section("Contributes", render_contributions(entry, colors, cx), colors)];
+    let mut sections = vec![section("Contributes", render_contributions(entry, colors, cx), colors)];
+    if let Some(sandboxes) = render_running_sandboxes(view, entry, &status, colors, cx) {
+        let provider = entry.manifest.sandbox_providers().next().map(|provider| provider.id.clone());
+        let refresh = provider.map(|provider| {
+            Button::new("sandboxes-refresh", "Refresh")
+                .leading_icon(IconName::ArrowClockwise)
+                .variant(ButtonVariant::Ghost)
+                .size(ButtonSize::Small)
+                .on_click(cx.listener(move |this, _: &ClickEvent, _, cx| this.refresh_sandboxes(&provider, cx)))
+                .into_any_element()
+        });
+        sections.insert(0, section_with_action("Sandboxes", sandboxes, refresh, colors));
+    }
+    if let Some(keys) = render_sandbox_keys(view, entry, &status, colors, cx) {
+        sections.insert(0, section("API Key", keys, colors));
+    }
     if let Some(statuses) = &tool_statuses {
         sections.push(section_with_action("Language Tools", render_tools(&manifest, statuses, colors), tools_action(&manifest.id, statuses, cx), colors));
     }
@@ -182,14 +198,21 @@ fn render_actions(
         return row.into_any_element();
     }
 
+    // Everything that acts on the extension is one joined control: Update, what it contributes,
+    // its key, Uninstall. Separately they read as four unrelated buttons on a page that has no
+    // other buttons; joined they read as the one place this extension is acted on.
+    let mut actions: Vec<AnyElement> = Vec::new();
+
     if status.update_available {
         let update_id = id.clone();
-        row = row.child(
+        actions.push(
             Button::new("extension-update", "Update")
                 .leading_icon(IconName::ArrowClockwise)
-                .variant(ButtonVariant::Accent)
+                .variant(ButtonVariant::Ghost)
                 .size(ButtonSize::Small)
-                .on_click(cx.listener(move |this, _: &ClickEvent, _, cx| this.install(&update_id, cx))),
+                .tone(ui::ButtonTone::Accent)
+                .on_click(cx.listener(move |this, _: &ClickEvent, _, cx| this.install(&update_id, cx)))
+                .into_any_element(),
         );
     }
 
@@ -199,12 +222,14 @@ fn render_actions(
             let current = &cx.theme().id;
             let in_use = manifest.themes().any(|theme| theme.id == *current);
             let theme_id = theme.id.clone();
-            row = row.child(
+            actions.push(
                 Button::new("extension-use-theme", if in_use { "Theme in Use" } else { "Use Theme" })
                     .leading_icon(IconName::Palette)
+                    .variant(ButtonVariant::Ghost)
                     .size(ButtonSize::Small)
                     .disabled(in_use)
-                    .on_click(cx.listener(move |this, _: &ClickEvent, _, cx| this.use_theme(&theme_id, cx))),
+                    .on_click(cx.listener(move |this, _: &ClickEvent, _, cx| this.use_theme(&theme_id, cx)))
+                    .into_any_element(),
             );
         }
         if let Some(icon_theme) = manifest.icon_themes().next() {
@@ -212,9 +237,10 @@ fn render_actions(
             let in_use = manifest.icon_themes().any(|theme| theme.id == active);
             let icon_theme_id = icon_theme.id.clone();
             let several = manifest.icon_themes().count() > 1;
-            row = row.child(
+            actions.push(
                 Button::new("extension-use-icons", if in_use { "Icons in Use" } else { "Use Icons" })
                     .leading_icon(IconName::Files)
+                    .variant(ButtonVariant::Ghost)
                     .size(ButtonSize::Small)
                     .disabled(in_use && !several)
                     .on_click(cx.listener(move |_, _: &ClickEvent, _, cx| {
@@ -223,19 +249,43 @@ fn render_actions(
                         } else {
                             extensions::set_icon_theme(&icon_theme_id, cx);
                         }
-                    })),
+                    }))
+                    .into_any_element(),
+            );
+        }
+        // A sandbox provider is installed the moment its manifest is: the provider itself is
+        // built into Athas. What is still missing is the key, so that is the action an installed
+        // one offers. Making the key is a trip to the provider's dashboard.
+        if let Some(url) = manifest.sandbox_providers().find_map(|provider| provider.api_key_url.clone()) {
+            actions.push(
+                Button::new("extension-sandbox-key", "Get a Key")
+                    .leading_icon(IconName::Key)
+                    .variant(ButtonVariant::Ghost)
+                    .size(ButtonSize::Small)
+                    .on_click(move |_: &ClickEvent, _, cx| cx.open_outbound(&url))
+                    .into_any_element(),
             );
         }
     }
 
     let uninstall_id = id.clone();
-    row = row.child(
+    actions.push(
         Button::new("extension-uninstall", "Uninstall")
             .leading_icon(IconName::Trash)
             .variant(ButtonVariant::Ghost)
             .size(ButtonSize::Small)
-            .on_click(cx.listener(move |this, _: &ClickEvent, _, cx| this.uninstall(&uninstall_id, cx))),
+            .on_click(cx.listener(move |this, _: &ClickEvent, _, cx| this.uninstall(&uninstall_id, cx)))
+            .into_any_element(),
     );
+
+    let mut group = ui::ButtonGroup::new();
+    for (index, action) in actions.into_iter().enumerate() {
+        if index > 0 {
+            group = group.child(ui::ButtonGroupSeparator::new());
+        }
+        group = group.child(action);
+    }
+    row = row.child(group);
 
     let enabled = status.enabled;
     let toggle_id = id.clone();
@@ -332,6 +382,214 @@ fn section_with_action(title: &'static str, body: AnyElement, action: Option<Any
 }
 
 /// One line of a section: a label column and its value.
+/// The key each of this extension's sandbox providers is reached with: what is saved, and the
+/// one place to type a new one. Only for an installed extension -- a provider that is not on is
+/// not asking for anything.
+fn render_sandbox_keys(
+    view: &ExtensionsView,
+    entry: &CatalogEntry,
+    status: &ExtensionStatus,
+    colors: &ThemeColors,
+    cx: &mut Context<ExtensionsView>,
+) -> Option<AnyElement> {
+    if !status.installed {
+        return None;
+    }
+    let providers: Vec<_> = entry.manifest.sandbox_providers().cloned().collect();
+    if providers.is_empty() {
+        return None;
+    }
+    let rows = providers.into_iter().enumerate().map(|(index, provider)| {
+        let id = provider.id.clone();
+        let editing = view.editing_key() == Some(id.as_str());
+        let saved = view.sandbox_key(&id);
+        let detail: SharedString = match &saved {
+            _ if view.checking_key() => format!("Checking the key with {}…", provider.name).into(),
+            _ if editing => "The key is kept in this computer's keychain, never in settings.".into(),
+            Some(Some(mask)) => format!("Saved in the keychain · {mask}").into(),
+            Some(None) => "Not set. Athas cannot reach this provider without it.".into(),
+            None => "Checking the keychain…".into(),
+        };
+        let control = if editing {
+            div()
+                .flex()
+                .items_center()
+                .gap(px(6.))
+                .child(div().w(px(260.)).child(view.key_field()))
+                .child(
+                    Button::new(("sandbox-key-save", index), "Save")
+                        .variant(ButtonVariant::Accent)
+                        .size(ButtonSize::Small)
+                        .on_click(cx.listener(|this, _: &ClickEvent, _, cx| this.save_key(cx))),
+                )
+                .child(
+                    Button::new(("sandbox-key-cancel", index), "Cancel")
+                        .variant(ButtonVariant::Ghost)
+                        .size(ButtonSize::Small)
+                        .on_click(cx.listener(|this, _: &ClickEvent, _, cx| this.cancel_key_entry(cx))),
+                )
+                .into_any_element()
+        } else {
+            let has_key = matches!(saved, Some(Some(_)));
+            let edit_id = id.clone();
+            let remove_id = id.clone();
+            let mut group = ui::ButtonGroup::new().child(
+                Button::new(("sandbox-key-edit", index), if has_key { "Replace" } else { "Add Key" })
+                    .leading_icon(IconName::Key)
+                    .variant(ButtonVariant::Ghost)
+                    .size(ButtonSize::Small)
+                    .on_click(cx.listener(move |this, _: &ClickEvent, window, cx| this.start_key_entry(&edit_id, window, cx))),
+            );
+            if has_key {
+                group = group.child(ui::ButtonGroupSeparator::new()).child(
+                    Button::new(("sandbox-key-remove", index), "Remove")
+                        .variant(ButtonVariant::Ghost)
+                        .size(ButtonSize::Small)
+                        .on_click(cx.listener(move |this, _: &ClickEvent, _, cx| this.remove_key(&remove_id, cx))),
+                );
+            }
+            group.into_any_element()
+        };
+        let name = div()
+            .flex()
+            .items_center()
+            .gap(px(6.))
+            .child(provider.name.clone())
+            .when(matches!(saved, Some(Some(_))), |this| {
+                this.child(Icon::new(IconName::CheckCircle).size(IconSize::XSmall).color(colors.success))
+            });
+        div()
+            .flex()
+            .flex_wrap()
+            .items_center()
+            .gap(px(12.))
+            .px(px(12.))
+            .py(px(8.))
+            .border_b_1()
+            .border_color(colors.divider)
+            .text_size(typography::text_sm())
+            .child(
+                div()
+                    .flex()
+                    .flex_col()
+                    .flex_1()
+                    .min_w(px(200.))
+                    .gap(px(2.))
+                    .child(div().text_color(colors.foreground).child(name))
+                    .child(div().text_color(colors.muted_foreground).child(detail)),
+            )
+            .child(control)
+            .into_any_element()
+    });
+    let error = view.key_error().map(|message| {
+        div()
+            .px(px(12.))
+            .py(px(8.))
+            .text_size(typography::text_sm())
+            .text_color(colors.destructive)
+            .border_b_1()
+            .border_color(colors.divider)
+            .child(message)
+    });
+    Some(
+        div()
+            .flex()
+            .flex_col()
+            .children(rows)
+            .children(error)
+            .into_any_element(),
+    )
+}
+
+/// What the account has right now, with what each one is made of and when the provider will
+/// stop it. The point of a key is that this can be asked at all, so it is the first thing a
+/// working key shows.
+fn render_running_sandboxes(
+    view: &ExtensionsView,
+    entry: &CatalogEntry,
+    status: &ExtensionStatus,
+    colors: &ThemeColors,
+    cx: &mut Context<ExtensionsView>,
+) -> Option<AnyElement> {
+    if !status.installed {
+        return None;
+    }
+    let provider = entry.manifest.sandbox_providers().next()?;
+    let id = provider.id.clone();
+    let listed = view.sandbox_key(&id).flatten().and(view.provider_sandboxes(&id))?;
+    let line = |content: AnyElement| {
+        div()
+            .flex()
+            .flex_wrap()
+            .items_center()
+            .gap(px(12.))
+            .px(px(12.))
+            .py(px(8.))
+            .border_b_1()
+            .border_color(colors.divider)
+            .text_size(typography::text_sm())
+            .child(content)
+    };
+    if listed.is_empty() {
+        return Some(
+            line(div().text_color(colors.muted_foreground).child("No sandboxes right now.").into_any_element()).into_any_element(),
+        );
+    }
+    let rows = listed.iter().enumerate().map(|(index, sandbox)| {
+        let stop_id = sandbox.id.clone();
+        let provider_id = id.clone();
+        let state: SharedString = if sandbox.is_running() { "Running".into() } else { sandbox.state.clone().into() };
+        let mut detail = vec![sandbox.template.clone()].into_iter().filter(|part| !part.is_empty()).collect::<Vec<_>>();
+        if sandbox.cpus > 0 {
+            detail.push(format!("{} vCPU", sandbox.cpus));
+        }
+        if sandbox.memory_mb > 0 {
+            detail.push(format!("{} MB", sandbox.memory_mb));
+        }
+        if let Some(left) = sandbox.ends_at.as_deref().and_then(time_left) {
+            detail.push(left);
+        }
+        line(
+            div()
+                .flex()
+                .flex_col()
+                .flex_1()
+                .min_w(px(200.))
+                .gap(px(2.))
+                .child(
+                    div()
+                        .flex()
+                        .items_center()
+                        .gap(px(8.))
+                        .child(mono(sandbox.id.clone(), colors))
+                        .child(div().text_color(colors.muted_foreground).child(state)),
+                )
+                .child(div().text_color(colors.subtle_foreground).child(detail.join(" · ")))
+                .into_any_element(),
+        )
+        .child(
+            Button::new(("sandbox-stop", index), "Stop")
+                .variant(ButtonVariant::Ghost)
+                .size(ButtonSize::Small)
+                .on_click(cx.listener(move |this, _: &ClickEvent, _, cx| this.stop_sandbox(&provider_id, &stop_id, cx))),
+        )
+        .into_any_element()
+    });
+    Some(div().flex().flex_col().children(rows).into_any_element())
+}
+
+/// How long the provider will leave a sandbox alone, from the moment it says it will stop it.
+/// `None` when the time has passed or cannot be read: a countdown that has run out says nothing.
+fn time_left(ends_at: &str) -> Option<String> {
+    let ends = chrono::DateTime::parse_from_rfc3339(ends_at).ok()?;
+    let minutes = (ends.timestamp() - chrono::Utc::now().timestamp()) / 60;
+    match minutes {
+        ..=0 => None,
+        1..=59 => Some(format!("stops in {minutes}m")),
+        _ => Some(format!("stops in {}h{:02}m", minutes / 60, minutes % 60)),
+    }
+}
+
 fn item(label: impl Into<SharedString>, value: impl IntoElement, detail: Option<SharedString>, colors: &ThemeColors) -> AnyElement {
     div()
         .flex()
@@ -476,6 +734,9 @@ fn render_contributions(entry: &CatalogEntry, colors: &ThemeColors, cx: &mut Con
         };
         items.push(item("Skill", div().child(skill.name.clone()), (!detail.is_empty()).then(|| detail.into()), colors));
     }
+    for provider in manifest.sandbox_providers() {
+        items.push(item("Sandbox", div().child(provider.name.clone()), provider.description.clone().map(Into::into), colors));
+    }
     for integration in manifest.integrations() {
         items.push(item("App", div().child(integration.name.clone()), integration.description.clone().map(Into::into), colors));
     }
@@ -601,58 +862,5 @@ fn render_permissions(manifest: &ExtensionManifest, colors: &ThemeColors) -> Opt
         items.push(item("Settings", mono(permissions.settings.join("  "), colors), None, colors));
     }
     (!items.is_empty()).then(|| div().flex().flex_col().children(items).into_any_element())
-}
-
-fn render_details(entry: &CatalogEntry, status: &ExtensionStatus, colors: &ThemeColors, cx: &mut Context<ExtensionsView>) -> AnyElement {
-    let manifest = &entry.manifest;
-    // The original's rows (Category, Version, Latest version, Publisher, Source, License,
-    // Distribution), then what only Athas here shows.
-    let installed = status.installed_version.clone().filter(|_| status.installed);
-    let mut items = vec![
-        item("Category", div().child(entry.kind.label()), None, colors),
-        item("Version", div().child(installed.clone().unwrap_or_else(|| manifest.version.clone())), None, colors),
-    ];
-    if status.update_available || installed.as_ref().is_some_and(|installed| *installed != manifest.version) {
-        items.push(item("Latest version", div().child(manifest.version.clone()), None, colors));
-    }
-    items.push(item("Publisher", div().child(manifest.publisher.clone()), None, colors));
-    if let Some(repository) = &manifest.repository {
-        let url = repository.url.clone();
-        let link = colors.primary;
-        items.push(item(
-            "Source",
-            div()
-                .id("extension-repository")
-                .truncate()
-                .text_color(link)
-                .hover(|style| style.underline())
-                .child(repository.url.clone())
-                .on_click(cx.listener(move |_, _, _, cx| cx.open_url(&url))),
-            None,
-            colors,
-        ));
-    }
-    if let Some(license) = &manifest.license {
-        items.push(item("License", div().child(license.clone()), None, colors));
-    }
-    let listed = extensions::get(cx).catalog().get(&manifest.id).is_some();
-    items.push(item("Distribution", div().child(if listed { "Athas catalog" } else { "Local" }), None, colors));
-    items.push(item("Identifier", mono(manifest.id.clone(), colors), None, colors));
-    let package = if manifest.has_package() {
-        match manifest.package_for(&platform()) {
-            Some(package) => format!("{} download, SHA-256 verified", format_size(package.size)),
-            None => format!("No package for {}", platform()),
-        }
-    } else {
-        "Data only, nothing to download".into()
-    };
-    items.push(item("Package", div().child(package), None, colors));
-    if !manifest.activation_events.is_empty() {
-        items.push(item("Activation", mono(manifest.activation_events.join("  "), colors), None, colors));
-    }
-    if let Some(dir) = extensions::get(cx).extension_dir(&manifest.id) {
-        items.push(item("Installed in", mono(dir.to_string_lossy().into_owned(), colors), None, colors));
-    }
-    div().flex().flex_col().children(items).into_any_element()
 }
 

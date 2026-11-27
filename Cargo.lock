@@ -221,8 +221,10 @@ dependencies = [
  "git_diff",
  "github_panel",
  "gpui",
+ "ignore",
  "keymap",
  "libc",
+ "log",
  "lsp_client",
  "notifications",
  "objc2 0.6.5",
@@ -230,6 +232,7 @@ dependencies = [
  "palette",
  "paths",
  "pulldown-cmark",
+ "sandbox",
  "serde",
  "serde_json",
  "settings",
@@ -2554,8 +2557,8 @@ dependencies = [
  "gpui",
  "keymap",
  "lsp_client",
+ "markdown",
  "notifications",
- "pulldown-cmark",
  "regex",
  "reqwest",
  "ropey",
@@ -2834,15 +2837,18 @@ dependencies = [
  "account",
  "ai_providers",
  "anyhow",
+ "chrono",
  "extension_host",
  "extensions",
  "futures",
  "gpui",
  "gpui_platform",
  "image",
+ "log",
  "lsp_client",
  "notifications",
  "palette",
+ "sandbox",
  "serde_json",
  "settings",
  "telemetry",
@@ -3566,11 +3572,11 @@ dependencies = [
  "gpui_platform",
  "image",
  "keymap",
+ "markdown",
  "multibuffer",
  "notifications",
  "palette",
  "paths",
- "pulldown-cmark",
  "secure_storage",
  "serde",
  "serde_json",
@@ -5554,6 +5560,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fc04a4c58212d57930a24bf47d3fa87485264a3a054e9c10e042eb373573ad3c"
 
 [[package]]
+name = "markdown"
+version = "0.1.0"
+dependencies = [
+ "gpui",
+ "pulldown-cmark",
+ "theme",
+ "ui",
+]
+
+[[package]]
 name = "markup5ever"
 version = "0.40.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -7039,6 +7055,7 @@ dependencies = [
  "telemetry",
  "tempfile",
  "theme",
+ "ui",
  "ureq",
  "url",
  "workbench",
@@ -8206,6 +8223,18 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "93fc1dc3aaa9bfed95e02e6eadabb4baf7e3078b0bd1b4d7b6b0b68378900502"
 dependencies = [
  "winapi-util",
+]
+
+[[package]]
+name = "sandbox"
+version = "0.1.0"
+dependencies = [
+ "base64 0.22.1",
+ "paths",
+ "reqwest",
+ "secure_storage",
+ "serde_json",
+ "telemetry",
 ]
 
 [[package]]

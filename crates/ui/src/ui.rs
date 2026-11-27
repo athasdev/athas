@@ -17,6 +17,7 @@ mod field;
 mod icon;
 mod item;
 mod kbd;
+mod link;
 mod list;
 mod loading;
 mod menu;
@@ -40,6 +41,7 @@ mod switch;
 mod tab;
 pub mod text_area;
 pub mod text_input;
+pub mod text_selection;
 mod tooltip;
 pub mod typography;
 
@@ -62,9 +64,10 @@ pub use field::{Field, FieldOrientation, FieldSeparator, InputGroup, InputGroupV
 pub use icon::{Icon, IconName, IconSize};
 pub use item::{GroupedSection, GroupedSectionVariant, Item, ItemMedia, ItemSize, ItemVariant, item_group};
 pub use kbd::{Kbd, shortcut_text};
+pub use link::{OpenOutbound, outbound};
 pub use list::{SectionHeader, SectionLabel, AccordionRow, SidebarListItem, SidebarListItemTone, sidebar_row};
 pub use loading::{Shimmer, Skeleton, Spinner, ThinkingOrb, ThinkingOrbState, shimmer_band};
-pub use menu::{CloseSubmenu, Menu, MenuEntry, MenuItem, MenuItemTone, MenuQuerySource, MenuSize, overlay_max_height, overlay_max_width, OpenMenu};
+pub use menu::{CloseSubmenu, Menu, MenuAction, MenuEntry, MenuItem, MenuItemTone, MenuQuerySource, MenuSize, overlay_max_height, overlay_max_width, OpenMenu};
 pub use message::{Attachment, AttachmentState, Message, ResourceSection, ResourceSummary, message_action};
 pub use number_input::{NumberInput, NumberInputEvent};
 pub use occlusion::occluder;
@@ -78,12 +81,13 @@ pub use scroll_fade::{faded_list_scroll, faded_scroll, faded_scroll_x, faded_uni
 pub use select::{Select, SelectEvent, SelectOption, SelectSearch, SelectVariant, SelectWidth};
 pub use step_slider::{StepSlider, StepSliderStep};
 pub use surfaces::{
-    BrandMark, HoverCard, Table, TableColumn, TableRow, ViewerErrorState, ViewerLayout, ViewerLoadingState, ViewerState, agent_brand_image, checkerboard,
+    BrandMark, HoverCard, Table, TableColumn, TableRow, ViewerErrorState, ViewerLayout, ViewerLoadingState, ViewerState, checkerboard,
 };
 pub use switch::Switch;
 pub use tab::Tab;
 pub use text_area::{TextArea, TextAreaEvent, TextAreaHighlighter, TextAreaVariant};
 pub use text_input::{InputAppearance, TextInput, TextInputEvent};
+pub use text_selection::{EditMenu, Granularity, UnitDrag};
 pub use tooltip::{TOOLTIP_DELAY, Tooltip, TooltipAnchor, TooltipExt, TooltipSide, tooltip_origin};
 
 /// Binds the keys the shared controls use.

@@ -5,7 +5,7 @@ use std::ops::Range;
 
 use ui::scale::px;
 use gpui::{
-    AnyElement, Anchor, Bounds, Context, Div, Font, FontStyle, FontWeight, Hsla, MouseButton, Pixels, SharedString, StyledText, TextRun,
+    AnyElement, Anchor, Bounds, Context, Div, Font, FontWeight, Hsla, MouseButton, Pixels, SharedString, StyledText, TextRun,
     anchored, deferred, div, font, point, prelude::*, size,
 };
 use lsp_client::{Severity, lsp};
@@ -15,7 +15,6 @@ use ui::{Icon, IconName, IconSize, typography};
 use crate::{
     Editor,
     lsp::{DiagnosticSpan, documentation_blocks},
-    markdown::{Block, Inline},
 };
 
 const MENU_ROWS: usize = 10;
@@ -61,89 +60,38 @@ fn completion_icon(kind: Option<lsp::CompletionItemKind>) -> IconName {
     }
 }
 
-/// Fonts and colors the cards draw text with.
+/// The mono font and plain colour the cards draw code-shaped text with: a completion's label, a
+/// signature's parameters. Markdown goes through the shared renderer below.
 struct TextStyle {
-    ui: Font,
     mono: Font,
     foreground: Hsla,
-    muted: Hsla,
-    code_background: Hsla,
-    link: Hsla,
 }
 
 impl TextStyle {
     fn new(cx: &gpui::App) -> Self {
-        let colors = &cx.theme().colors;
-        Self {
-            ui: font(typography::ui_font()),
-            mono: font(SharedString::from(settings::get(cx).font_family.clone())),
-            foreground: colors.foreground,
-            muted: colors.muted_foreground,
-            code_background: colors.field,
-            link: colors.primary,
-        }
+        Self { mono: font(SharedString::from(settings::get(cx).font_family.clone())), foreground: cx.theme().colors.foreground }
     }
 
     fn run(&self, len: usize, font: &Font, color: Hsla) -> TextRun {
         TextRun { len, font: font.clone(), color, background_color: None, underline: None, strikethrough: None }
     }
+}
 
-    /// Runs for inline markdown: emphasis, code spans and links.
-    fn inline(&self, inline: &Inline) -> StyledText {
-        let mut runs = Vec::new();
-        let mut at = 0;
-        for (range, style) in &inline.spans {
-            if range.start > at {
-                runs.push(self.run(range.start - at, &self.ui, self.foreground));
-            }
-            let mut font = if style.code { self.mono.clone() } else { self.ui.clone() };
-            if style.bold {
-                font.weight = FontWeight::SEMIBOLD;
-            }
-            if style.italic {
-                font.style = FontStyle::Italic;
-            }
-            let mut run = self.run(range.len(), &font, if style.link { self.link } else { self.foreground });
-            if style.code {
-                run.background_color = Some(self.code_background);
-            }
-            runs.push(run);
-            at = range.end;
-        }
-        if at < inline.text.len() {
-            runs.push(self.run(inline.text.len() - at, &self.ui, self.foreground));
-        }
-        StyledText::new(inline.text.clone()).with_runs(runs)
-    }
-
-    /// A code block highlighted with the editor's syntax table.
-    fn code(&self, language: Option<&str>, code: &str, theme: &Theme) -> StyledText {
-        StyledText::new(code.to_string()).with_runs(crate::markdown_preview::code_runs(language, code, &self.mono, self.foreground, theme))
-    }
-
-    fn blocks(&self, blocks: &[Block], theme: &Theme) -> Vec<AnyElement> {
-        blocks
-            .iter()
-            .map(|block| match block {
-                Block::Paragraph(text) => div().child(self.inline(text)).into_any_element(),
-                Block::Heading(text) => div().font_weight(FontWeight::SEMIBOLD).child(self.inline(text)).into_any_element(),
-                Block::Item { marker, text } => div()
-                    .flex()
-                    .gap(px(6.))
-                    .child(div().flex_none().text_color(self.muted).child(marker.clone()))
-                    .child(div().flex_1().min_w_0().child(self.inline(text)))
-                    .into_any_element(),
-                Block::Code { language, code } => div()
-                    .px(px(8.))
-                    .py(px(6.))
-                    .rounded(ui::metrics::radius_md())
-                    .bg(self.code_background)
-                    .child(self.code(language.as_deref(), code, theme))
-                    .into_any_element(),
-                Block::Rule => div().h(px(1.)).bg(theme.colors.border).into_any_element(),
-            })
-            .collect()
-    }
+/// The popovers' markdown: the shared renderer at the size a card reads at, with code fences
+/// highlighted by the editor's grammars.
+fn popover_markdown(blocks: &[markdown::Block], cx: &gpui::App) -> Vec<AnyElement> {
+    let style = markdown::MarkdownStyle {
+        mono_font: SharedString::from(settings::get(cx).font_family.clone()),
+        ..markdown::MarkdownStyle::compact()
+    };
+    let theme = cx.theme().clone();
+    let handlers = markdown::Handlers {
+        code_runs: Some(std::rc::Rc::new(move |language, code, mono: &Font, foreground| {
+            crate::markdown_preview::code_runs(language, code, mono, foreground, &theme)
+        })),
+        ..markdown::Handlers::default()
+    };
+    vec![markdown::Renderer::new("editor-popover", style).with(handlers).document(blocks, cx)]
 }
 
 fn card(theme: &Theme) -> Div {
@@ -174,8 +122,7 @@ impl Editor {
 
     pub(crate) fn render_lsp_popovers(&mut self, cx: &mut Context<Self>) -> Vec<AnyElement> {
         let theme = cx.theme().clone();
-        let style = TextStyle::new(cx);
-        let mut popovers = Vec::new();
+                let mut popovers = Vec::new();
         if let Some(rename) = &self.lsp.rename
             && let Some(bounds) = self.offset_bounds(rename.range.start)
         {
@@ -183,21 +130,21 @@ impl Editor {
             popovers.push(deferred(anchored().anchor(Anchor::TopLeft).attach(bounds, Anchor::BottomLeft).offset(point(px(0.), px(2.))).child(field)).with_priority(2).into_any_element());
             return popovers;
         }
-        if let Some(menu) = self.render_completions(&style, &theme, cx) {
+        if let Some(menu) = self.render_completions(&theme, cx) {
             popovers.push(menu);
         } else if let Some(menu) = self.render_code_actions(&theme, cx) {
             popovers.push(menu);
         }
-        if let Some(signature) = self.render_signature(&style, &theme) {
+        if let Some(signature) = self.render_signature(&theme, cx) {
             popovers.push(signature);
         }
-        if let Some(hover) = self.render_hover(&style, &theme, cx) {
+        if let Some(hover) = self.render_hover(&theme, cx) {
             popovers.push(hover);
         }
         popovers
     }
 
-    fn render_hover(&self, style: &TextStyle, theme: &Theme, cx: &mut Context<Self>) -> Option<AnyElement> {
+    fn render_hover(&self, theme: &Theme, cx: &mut Context<Self>) -> Option<AnyElement> {
         let hover = self.lsp.hover.as_ref()?;
         let bounds = self.offset_bounds(hover.range.start)?;
         let mut content = card(theme).id("editor-hover").occlude().max_w(px(560.)).max_h(px(340.)).overflow_y_scroll().on_hover(cx.listener(|editor, hovered: &bool, _, cx| {
@@ -213,12 +160,13 @@ impl Editor {
             if !hover.diagnostics.is_empty() {
                 content = content.child(div().h(px(1.)).bg(theme.colors.border));
             }
-            content = content.child(div().flex().flex_col().gap(px(8.)).px(px(10.)).py(px(8.)).children(style.blocks(&hover.blocks, theme)));
+            content = content.child(div().flex().flex_col().gap(px(8.)).px(px(10.)).py(px(8.)).children(popover_markdown(&hover.blocks, cx)));
         }
         Some(deferred(anchored().anchor(Anchor::BottomLeft).attach(bounds, Anchor::TopLeft).snap_to_window_with_margin(px(8.)).child(content)).with_priority(1).into_any_element())
     }
 
-    fn render_completions(&self, style: &TextStyle, theme: &Theme, cx: &mut Context<Self>) -> Option<AnyElement> {
+    fn render_completions(&self, theme: &Theme, cx: &mut Context<Self>) -> Option<AnyElement> {
+        let style = TextStyle::new(cx);
         let menu = self.lsp.completion.as_ref()?;
         let bounds = self.offset_bounds(menu.start)?;
         let colors = &theme.colors;
@@ -263,7 +211,7 @@ impl Editor {
         let docs = selected.and_then(|item| {
             let mut blocks = Vec::new();
             if let Some(detail) = &item.detail {
-                blocks.push(Block::Code { language: self.lsp.document.as_ref().map(|document| document.language_id.clone()), code: detail.clone() });
+                blocks.push(markdown::Block::new(markdown::BlockKind::Code { language: self.lsp.document.as_ref().map(|document| document.language_id.clone()), code: detail.clone() }, 0..0));
             }
             if let Some(documentation) = &item.documentation {
                 blocks.extend(documentation_blocks(documentation));
@@ -278,7 +226,7 @@ impl Editor {
                     .px(px(10.))
                     .py(px(8.))
                     .gap(px(6.))
-                    .children(style.blocks(&blocks, theme))
+                    .children(popover_markdown(&blocks, cx))
             })
         });
         let menu = div().flex().items_start().gap(px(4.)).child(list).children(docs);
@@ -315,7 +263,8 @@ impl Editor {
         Some(deferred(anchored().anchor(Anchor::TopLeft).attach(bounds, Anchor::BottomLeft).offset(point(px(0.), px(2.))).child(list)).with_priority(2).into_any_element())
     }
 
-    fn render_signature(&self, style: &TextStyle, theme: &Theme) -> Option<AnyElement> {
+    fn render_signature(&self, theme: &Theme, cx: &mut Context<Self>) -> Option<AnyElement> {
+        let style = TextStyle::new(cx);
         let help = self.lsp.signature.as_ref()?;
         let bounds = self.offset_bounds(self.document.newest_selection().head)?;
         let active = help.active_signature.unwrap_or(0) as usize;
@@ -377,7 +326,7 @@ impl Editor {
                     .children(counter.map(|counter| div().flex_none().text_color(theme.colors.subtle_foreground).child(counter)))
                     .child(div().min_w_0().child(StyledText::new(signature.label.clone()).with_runs(runs))),
             )
-            .children(style.blocks(&docs, theme));
+            .children(popover_markdown(&docs, cx));
         Some(deferred(anchored().anchor(Anchor::BottomLeft).attach(bounds, Anchor::TopLeft).offset(point(px(0.), px(-2.))).child(content)).with_priority(1).into_any_element())
     }
 }

@@ -19,6 +19,8 @@ pub enum CliInstallState {
     NotInstalled,
     /// The command points at this `athas-cli`.
     Installed(PathBuf),
+    /// Installed, but another `athas` earlier on PATH runs instead of it.
+    Shadowed { command: PathBuf, by: PathBuf },
     /// A command from the Tauri app, or a link to an `athas-cli` that no longer exists.
     Outdated,
     /// Something else is installed under that name; Athas leaves it alone.
@@ -37,6 +39,8 @@ pub enum ShellPathSetup {
 pub struct Installed {
     pub command: PathBuf,
     pub path_setup: ShellPathSetup,
+    /// Another `athas` that stayed earlier on PATH and still runs instead of this one.
+    pub shadowed: Option<PathBuf>,
 }
 
 impl Installed {
@@ -44,13 +48,17 @@ impl Installed {
     pub fn message(&self) -> String {
         let bin_dir = self.command.parent().unwrap_or(Path::new("")).display();
         let installed = format!("Installed the athas command at {}.", self.command.display());
-        match &self.path_setup {
+        let message = match &self.path_setup {
             ShellPathSetup::AlreadyOnPath => format!("{installed} Open a new terminal and run `athas .` to open a folder."),
             ShellPathSetup::Added(file) => format!(
                 "{installed} Added {bin_dir} to your PATH in {}. Open a new terminal and run `athas .` to open a folder.",
                 file.display()
             ),
             ShellPathSetup::Manual => format!("{installed} Add {bin_dir} to your PATH to use it from any terminal."),
+        };
+        match &self.shadowed {
+            Some(path) => format!("{message} Remove {}: it comes first on your PATH and runs instead.", path.display()),
+            None => message,
         }
     }
 }
@@ -87,8 +95,67 @@ fn is_tauri_launcher(path: &Path) -> bool {
     fs::read_to_string(path).is_ok_and(|script| script.lines().take(2).any(|line| line.trim() == TAURI_LAUNCHER_MARKER))
 }
 
-#[cfg(unix)]
+/// How the command stands, as the running shell would find it.
 pub fn state(home: &Path) -> CliInstallState {
+    state_with(home, &ShellEnv::current())
+}
+
+/// [`state`] against a given environment, so tests do not read the machine's PATH.
+pub fn state_with(home: &Path, env: &ShellEnv) -> CliInstallState {
+    match installed_state(home) {
+        CliInstallState::Installed(target) => match shadowing_command(&command_path(home), env) {
+            Some(by) => CliInstallState::Shadowed { command: target, by },
+            None => CliInstallState::Installed(target),
+        },
+        other => other,
+    }
+}
+
+/// An `athas` that PATH finds before the installed command, so that one runs instead. The Tauri
+/// app wrote such a launcher to `/usr/local/bin`, where it outlived the app and has shadowed
+/// every install since. `None` when the command's own folder is not on PATH at all: that is the
+/// PATH setup's business, not a shadow.
+#[cfg(not(target_family = "wasm"))]
+fn shadowing_command(command: &Path, env: &ShellEnv) -> Option<PathBuf> {
+    let same = |a: &Path, b: &Path| dunce::canonicalize(a).unwrap_or_else(|_| a.to_path_buf()) == dunce::canonicalize(b).unwrap_or_else(|_| b.to_path_buf());
+    let name = command.file_name()?;
+    let bin_dir = command.parent()?;
+    let mut shadow = None;
+    for dir in std::env::split_paths(env.path.as_ref()?) {
+        if same(&dir, bin_dir) {
+            return shadow;
+        }
+        let candidate = dir.join(name);
+        if shadow.is_none() && candidate.is_file() {
+            shadow = Some(candidate);
+        }
+    }
+    None
+}
+
+#[cfg(target_family = "wasm")]
+fn shadowing_command(_: &Path, _: &ShellEnv) -> Option<PathBuf> {
+    None
+}
+
+/// Athas's own leftover launcher only ever stops the real command from running, so install
+/// sweeps it; anything else is left alone and reported.
+#[cfg(not(target_family = "wasm"))]
+fn clear_shadow(command: &Path, env: &ShellEnv) -> Option<PathBuf> {
+    let shadow = shadowing_command(command, env)?;
+    if is_tauri_launcher(&shadow) && fs::remove_file(&shadow).is_ok() {
+        return shadowing_command(command, env);
+    }
+    Some(shadow)
+}
+
+#[cfg(target_family = "wasm")]
+fn clear_shadow(_: &Path, _: &ShellEnv) -> Option<PathBuf> {
+    None
+}
+
+#[cfg(unix)]
+fn installed_state(home: &Path) -> CliInstallState {
     let command = command_path(home);
     let Ok(metadata) = fs::symlink_metadata(&command) else { return CliInstallState::NotInstalled };
     if metadata.file_type().is_symlink() {
@@ -103,12 +170,12 @@ pub fn state(home: &Path) -> CliInstallState {
 
 /// The browser installs no command.
 #[cfg(target_family = "wasm")]
-pub fn state(_: &Path) -> CliInstallState {
+fn installed_state(_: &Path) -> CliInstallState {
     CliInstallState::NotInstalled
 }
 
 #[cfg(windows)]
-pub fn state(home: &Path) -> CliInstallState {
+fn installed_state(home: &Path) -> CliInstallState {
     let command = command_path(home);
     let Ok(script) = fs::read_to_string(&command) else { return CliInstallState::NotInstalled };
     if is_tauri_launcher(&command) || script.contains("athas.ps1") {
@@ -177,7 +244,8 @@ pub fn install(home: &Path, cli: &Path, env: &ShellEnv) -> Result<Installed, Str
     fs::write(&command, windows_shim(cli)).map_err(|error| format!("Could not write {}: {error}", command.display()))?;
 
     let path_setup = ensure_on_shell_path(home, bin_dir, env);
-    Ok(Installed { command, path_setup })
+    let shadowed = clear_shadow(&command, env);
+    Ok(Installed { command, path_setup, shadowed })
 }
 
 /// Removes the command if Athas installed it.
@@ -186,7 +254,7 @@ pub fn uninstall(home: &Path) -> Result<(), String> {
     match state(home) {
         CliInstallState::NotInstalled => Err("The athas command is not installed".into()),
         CliInstallState::Foreign => Err(format!("{} was not installed by Athas; leaving it alone", command.display())),
-        CliInstallState::Installed(_) | CliInstallState::Outdated => {
+        CliInstallState::Installed(_) | CliInstallState::Shadowed { .. } | CliInstallState::Outdated => {
             fs::remove_file(&command).map_err(|error| format!("Could not remove {}: {error}", command.display()))
         }
     }
@@ -305,6 +373,38 @@ mod tests {
         uninstall(home.path()).unwrap();
         assert_eq!(state(home.path()), CliInstallState::NotInstalled);
         assert!(uninstall(home.path()).is_err());
+    }
+
+    /// The Tauri app's `/usr/local/bin/athas` outlived it and ran instead of every install
+    /// since, so `athas .` reached the old app rather than the socket.
+    #[test]
+    fn an_athas_launcher_earlier_on_path_is_swept_and_a_foreign_one_reported() {
+        let home = tempfile::tempdir().unwrap();
+        let cli = fake_cli(home.path());
+        let earlier = home.path().join("usr/local/bin");
+        fs::create_dir_all(&earlier).unwrap();
+        let path = |dirs: &[&Path]| ShellEnv { path: Some(std::env::join_paths(dirs).unwrap()), ..Default::default() };
+        let bin = home.path().join(".local/bin");
+        let env = path(&[&earlier, &bin]);
+
+        fs::write(earlier.join("athas"), "#!/bin/bash\n# Athas CLI launcher\nopen -a Athas\n").unwrap();
+        let installed = install(home.path(), &cli, &env).unwrap();
+        assert_eq!(installed.shadowed, None);
+        assert!(!earlier.join("athas").exists());
+        assert_eq!(state_with(home.path(), &env), CliInstallState::Installed(cli.clone()));
+
+        // A command somebody else wrote stays where it is and is reported instead.
+        fs::write(earlier.join("athas"), "#!/bin/sh\nexec my-editor\n").unwrap();
+        let installed = install(home.path(), &cli, &env).unwrap();
+        assert_eq!(installed.shadowed.as_deref(), Some(earlier.join("athas").as_path()));
+        assert!(installed.message().contains("comes first on your PATH"));
+        assert_eq!(
+            state_with(home.path(), &env),
+            CliInstallState::Shadowed { command: cli.clone(), by: earlier.join("athas") }
+        );
+
+        // Nothing before the command's own folder: nothing shadows it.
+        assert_eq!(state_with(home.path(), &path(&[&bin, &earlier])), CliInstallState::Installed(cli));
     }
 
     #[test]

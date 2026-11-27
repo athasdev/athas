@@ -1098,7 +1098,8 @@ impl Editor {
         }
 
         // The server's highlights of the symbol at the caret, or else words like it.
-        if frame.occurrences && self.focused && !self.lsp.highlights.is_empty() {
+        let occurrences = frame.occurrences && self.focused && self.occurrences_armed;
+        if occurrences && !self.lsp.highlights.is_empty() {
             for (range, kind) in &self.lsp.highlights {
                 if range.end < visible.start || range.start > visible.end {
                     continue;
@@ -1106,7 +1107,7 @@ impl Editor {
                 let border = (*kind == HighlightKind::Write).then_some(colors.border_strong);
                 span_quads(range, colors.selected, border, &mut underlays);
             }
-        } else if frame.occurrences && self.focused && !visible.is_empty() && visible.len() <= MAX_HIGHLIGHT_RANGE {
+        } else if occurrences && !visible.is_empty() && visible.len() <= MAX_HIGHLIGHT_RANGE {
             let newest = self.document.newest_selection().clone();
             let caret_word = newest.is_empty().then(|| buffer.word_range_at(newest.head)).flatten();
             let needle = if newest.is_empty() {
@@ -1640,12 +1641,17 @@ impl Editor {
         let mut scrollbar = Vec::new();
         let mut scrollbar_layout = None;
         if content_height > viewport_height && max_scroll_y > px(0.) {
-            let track = Bounds::new(point(bounds.right() - scrollbar_width(), bounds.top()), size(scrollbar_width(), viewport_height));
-            let thumb_height = (viewport_height * (viewport_height / content_height)).max(px(24.)).min(viewport_height);
-            let thumb_top = track.top() + (viewport_height - thumb_height) * (self.scroll.y / max_scroll_y);
-            let thumb = Bounds::new(point(track.left() + px(2.), thumb_top), size(scrollbar_width() - px(4.), thumb_height));
+            let thumb_width = scrollbar_width() - px(4.);
+            let thumb_radius = thumb_width / 2.;
+            // The thumb stops where its rounded end is concentric with the island's bottom-right
+            // corner, touching it at the edge instead of crossing the curve.
+            let track_height = (viewport_height - (ui::metrics::island_radius() - thumb_radius)).max(px(0.));
+            let track = Bounds::new(point(bounds.right() - scrollbar_width(), bounds.top()), size(scrollbar_width(), track_height));
+            let thumb_height = (track_height * (viewport_height / content_height)).max(px(24.)).min(track_height);
+            let thumb_top = track.top() + (track_height - thumb_height) * (self.scroll.y / max_scroll_y);
+            let thumb = Bounds::new(point(track.right() - thumb_width, thumb_top), size(thumb_width, thumb_height));
             let dragging = matches!(self.drag, Some(Drag::Scrollbar { .. }));
-            let mark_y = |offset: usize| track.top() + viewport_height * (map.to_display(offset).row as f32 / row_count.max(1) as f32);
+            let mark_y = |offset: usize| track.top() + track_height * (map.to_display(offset).row as f32 / row_count.max(1) as f32);
             if self.find_open
                 && let Some(find) = &self.find
             {
@@ -1663,15 +1669,15 @@ impl Editor {
                     HunkKind::Modified => colors.git_modified,
                     HunkKind::Deleted => colors.git_deleted,
                 };
-                let top = track.top() + viewport_height * (map.first_row_of_line(hunk.lines.start) as f32 / row_count.max(1) as f32);
+                let top = track.top() + track_height * (map.first_row_of_line(hunk.lines.start) as f32 / row_count.max(1) as f32);
                 let lines = hunk.lines.len().max(1);
-                let height = (viewport_height * (lines as f32 / row_count.max(1) as f32)).max(px(2.));
+                let height = (track_height * (lines as f32 / row_count.max(1) as f32)).max(px(2.));
                 scrollbar.push(fill(Bounds::new(point(track.left(), top), size(px(3.), height)), color));
             }
             for selection in selections.iter().take(500) {
                 scrollbar.push(fill(Bounds::new(point(track.left(), mark_y(selection.head)), size(scrollbar_width(), px(2.))), colors.foreground.opacity(0.35)));
             }
-            scrollbar.push(fill(thumb, colors.foreground.opacity(if dragging { 0.28 } else { 0.14 })).corner_radii(px(3.)));
+            scrollbar.push(fill(thumb, colors.foreground.opacity(if dragging { 0.28 } else { 0.14 })).corner_radii(thumb_radius));
             scrollbar_layout = Some(ScrollbarLayout { track, thumb });
         }
 

@@ -4,6 +4,7 @@
 
 use account::AccountStore;
 use ui::scale::px;
+use ui::OpenOutbound;
 use gpui::{AnyElement, App, Context, Entity, SharedString, Subscription, Window, div, prelude::*,};
 use serde_json::{Value, json};
 use theme::ActiveTheme;
@@ -165,7 +166,7 @@ impl TeamSettings {
                     window.dispatch_action(action, cx);
                 }
             }))
-            .child(Button::new("team-dashboard", "Dashboard").variant(ButtonVariant::Ghost).on_click(move |_, _, cx| cx.open_url(&collaboration_url)));
+            .child(Button::new("team-dashboard", "Dashboard").variant(ButtonVariant::Ghost).on_click(move |_, _, cx| cx.open_outbound(&collaboration_url)));
         let title = collaboration.workspace.as_ref().map_or("Collaboration".to_string(), |workspace| workspace.name.clone());
         let following = collaboration::following_user(cx);
         let followed = following.and_then(|id| members.iter().find(|member| member.user_id == Some(id))).map(|member| member.name.clone());

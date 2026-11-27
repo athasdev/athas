@@ -65,6 +65,9 @@ bzip2 = "0.6"
 flate2 = "1"
 sha2 = "0.10"
 tar = "0.4"
+sandbox = { path = "../sandbox" }
+ignore = "0.4"
+log = "0.4"
 ureq = { version = "3.5", default-features = false, features = ["rustls"] }
 zip = "9"
 

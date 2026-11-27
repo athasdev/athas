@@ -9,6 +9,7 @@ use std::{collections::HashMap, sync::Arc};
 
 use ai_providers::{Connection, SecretStore, catalog, secrets};
 use ui::scale::px;
+use ui::OpenOutbound;
 use gpui::{
     AnyElement, App, AppContext as _, ClickEvent, Context, DismissEvent, Entity, EventEmitter, FocusHandle, Focusable, IntoElement,
     ParentElement, Render, SharedString, Styled, Subscription, Task, Window, div, prelude::*,
@@ -362,7 +363,7 @@ impl ProviderKeyDialog {
                             .text_color(colors.subtle_foreground)
                             .hover(|style| style.text_color(colors.foreground))
                             .child("Open dashboard")
-                            .on_click(move |_, _, cx| cx.open_url(url))
+                            .on_click(move |_, _, cx| cx.open_outbound(url))
                             .into_any_element(),
                         None => div().into_any_element(),
                     })

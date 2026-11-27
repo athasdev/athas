@@ -547,6 +547,10 @@ pub fn modal_layer(view: impl IntoElement, viewport_height: gpui::Pixels, cx: &A
         .absolute()
         .inset_0()
         .bg(cx.theme().colors.scrim)
+        // The scrim takes the mouse with it: a press on it closes the picker instead of also
+        // landing on what it dims, and the cursor is the window's own again -- a cursor is read
+        // off the topmost element that asks for one, so the editor's I-beam showed through.
+        .occlude()
         .flex()
         .justify_center()
         .pt(viewport_height * 0.1)

@@ -16,27 +16,33 @@ const BUNDLED_CATALOG: &str = include_str!("../../../assets/extensions/catalog.j
 
 /// What an extension adds, as the extension manager groups it.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
+/// The order is the order the catalog reads in: the tabs, the sections of the first page and
+/// the sort of the entries themselves all follow it (`Ord` is the declaration order). What a
+/// person comes to the catalog for is at the top; the long tails -- a language per language, a
+/// theme per taste -- are at the end, where they are searched for rather than browsed.
 pub enum ExtensionKind {
+    Sandbox,
+    Agent,
+    Ai,
+    Mcp,
+    Integration,
+    Skill,
     Language,
     Theme,
     IconTheme,
-    Ai,
-    Integration,
-    Mcp,
-    Skill,
-    Agent,
 }
 
 impl ExtensionKind {
-    pub const ALL: [ExtensionKind; 8] = [
+    pub const ALL: [ExtensionKind; 9] = [
+        ExtensionKind::Sandbox,
+        ExtensionKind::Agent,
+        ExtensionKind::Ai,
+        ExtensionKind::Mcp,
+        ExtensionKind::Integration,
+        ExtensionKind::Skill,
         ExtensionKind::Language,
         ExtensionKind::Theme,
         ExtensionKind::IconTheme,
-        ExtensionKind::Ai,
-        ExtensionKind::Integration,
-        ExtensionKind::Mcp,
-        ExtensionKind::Skill,
-        ExtensionKind::Agent,
     ];
 
     /// The id `extensionsActiveTab` stores.
@@ -50,6 +56,7 @@ impl ExtensionKind {
             ExtensionKind::Mcp => "mcp",
             ExtensionKind::Skill => "skill",
             ExtensionKind::Agent => "agent",
+            ExtensionKind::Sandbox => "sandbox",
         }
     }
 
@@ -63,6 +70,7 @@ impl ExtensionKind {
             ExtensionKind::Mcp => "MCP",
             ExtensionKind::Skill => "Skills",
             ExtensionKind::Agent => "Agents",
+            ExtensionKind::Sandbox => "Sandboxes",
         }
     }
 
@@ -73,7 +81,9 @@ impl ExtensionKind {
     /// The kind of an extension, from the first thing it contributes.
     pub fn of(manifest: &ExtensionManifest) -> Self {
         use crate::manifest::Category;
-        if manifest.agents().next().is_some() {
+        if manifest.sandbox_providers().next().is_some() {
+            ExtensionKind::Sandbox
+        } else if manifest.agents().next().is_some() {
             ExtensionKind::Agent
         } else if manifest.languages().next().is_some() {
             ExtensionKind::Language
@@ -95,6 +105,7 @@ impl ExtensionKind {
                 Some(Category::Ai) => ExtensionKind::Ai,
                 Some(Category::Agent) => ExtensionKind::Agent,
                 Some(Category::Skill) => ExtensionKind::Skill,
+                Some(Category::Sandbox) => ExtensionKind::Sandbox,
                 _ => ExtensionKind::Integration,
             }
         }
@@ -175,6 +186,9 @@ impl Catalog {
                     continue;
                 }
             };
+            if RETIRED.iter().any(|prefix| manifest.id.starts_with(prefix)) {
+                continue;
+            }
             let icon = bundled.get(&manifest.id).and_then(|entry| entry.icon.clone()).or_else(|| {
                 let icon = manifest.icon.as_deref().filter(|icon| !icon.trim().is_empty()).unwrap_or("icon.svg");
                 Some(ExtensionIcon::Remote(if icon.contains("://") {
@@ -188,6 +202,13 @@ impl Catalog {
         }
         entries.extend(bundled.entries().iter().filter(|entry| !listed.contains(&entry.manifest.id)).cloned());
         Ok(Self { entries })
+    }
+
+    /// Keeps only the extensions that can be installed on `platform`: one that downloads a
+    /// package needs a package built for it.
+    pub fn for_platform(mut self, platform: &str) -> Self {
+        self.entries.retain(|entry| !entry.manifest.has_package() || entry.manifest.package_for(platform).is_some());
+        self
     }
 
     pub fn from_entries(entries: Vec<CatalogEntry>) -> Self {
@@ -208,8 +229,12 @@ impl Catalog {
 pub fn fetch(base_url: &str, bundled: &Catalog) -> Result<Catalog> {
     let url = format!("{}/manifests.json", base_url.trim_end_matches('/'));
     let body = crate::installer::get_text(&url).with_context(|| format!("loading {url}"))?;
-    Catalog::from_cdn_json(&body, base_url, bundled)
+    Ok(Catalog::from_cdn_json(&body, base_url, bundled)?.for_platform(&crate::installer::platform()))
 }
+
+/// Kinds of extension this build no longer has a use for, which the registry may still list:
+/// the database providers went with the database viewer.
+const RETIRED: &[&str] = &["athas.database."];
 
 #[cfg(test)]
 mod tests {
@@ -218,7 +243,7 @@ mod tests {
     #[test]
     fn every_official_manifest_parses() {
         let catalog = Catalog::bundled();
-        assert_eq!(catalog.entries().len(), 84);
+        assert_eq!(catalog.entries().len(), 85);
         let count = |kind| catalog.entries().iter().filter(|entry| entry.kind == kind).count();
         assert_eq!(count(ExtensionKind::Language), 47);
         assert_eq!(count(ExtensionKind::Mcp), 21);
@@ -228,6 +253,7 @@ mod tests {
         assert_eq!(count(ExtensionKind::Theme), 1);
         assert_eq!(count(ExtensionKind::Ai), 1);
         assert_eq!(count(ExtensionKind::Integration), 2);
+        assert_eq!(count(ExtensionKind::Sandbox), 1);
         assert!(catalog.entries().iter().all(|entry| entry.icon.is_some()));
         let theme = catalog.get("athas.theme.vercel").unwrap();
         assert_eq!(theme.path, "theme/vercel");
@@ -270,7 +296,7 @@ mod tests {
             ExtensionManifest::from_json(&json).unwrap_or_else(|error| panic!("{}: {error:#}", path.display()));
             count += 1;
         }
-        assert_eq!(count, 90);
+        assert_eq!(count, 91);
     }
 
     #[test]
@@ -292,6 +318,24 @@ mod tests {
             catalog.get("athas.newlang").unwrap().icon,
             Some(ExtensionIcon::Remote("https://cdn.test/ext/newlang/icon.svg".into()))
         );
+    }
+
+    #[test]
+    fn leaves_out_retired_and_uninstallable_extensions() {
+        let bundled = Catalog::bundled();
+        let rust = &bundled.get("athas.rust").unwrap().manifest;
+        let mut sqlite = serde_json::to_value(rust.as_ref()).unwrap();
+        sqlite["id"] = "athas.database.sqlite".into();
+        let mut mac_only = serde_json::to_value(rust.as_ref()).unwrap();
+        mac_only["id"] = "athas.mac-only".into();
+        mac_only["installation"] = serde_json::json!({"platformArch": {"darwin-arm64": {"downloadUrl": "https://cdn.test/a.tar.gz", "size": 1, "checksum": "0".repeat(64)}}});
+        let json = serde_json::json!({ "database/sqlite": sqlite, "mac-only": mac_only });
+        let catalog = Catalog::from_cdn_json(&json.to_string(), "https://cdn.test/ext/", &bundled).unwrap();
+        assert!(catalog.get("athas.database.sqlite").is_none());
+        assert!(catalog.clone().for_platform("darwin-arm64").get("athas.mac-only").is_some());
+        let linux = catalog.for_platform("linux-x64");
+        assert!(linux.get("athas.mac-only").is_none());
+        assert!(linux.get("athas.rust").is_some());
     }
 
     /// A CDN that lags behind this build used to replace the catalog outright, which dropped

@@ -36,7 +36,8 @@ impl gpui::Render for DraggedTabPreview {
 
 #[derive(Clone)]
 enum TabLeading {
-    Brand(ui::BrandMark),
+    /// The agent's id, not its mark: a dragged tab carries this and draws the mark later.
+    Brand(String),
     Favicon(SharedString),
     File(String),
     Icon(IconName),
@@ -45,7 +46,7 @@ enum TabLeading {
 impl TabLeading {
     fn apply(&self, tab: Tab, cx: &App) -> Tab {
         match self {
-            TabLeading::Brand(brand) => tab.leading(brand.clone().size(px(12.))),
+            TabLeading::Brand(agent) => tab.leading(agent_ui::model_vendor::agent_mark(agent, px(12.), cx.theme().colors.foreground)),
             TabLeading::Favicon(url) => {
                 let globe = cx.theme().colors.subtle_foreground;
                 let fallback = move || Icon::new(IconName::Globe).size(IconSize::XSmall).color(globe).into_any_element();
@@ -951,10 +952,11 @@ impl Workbench {
 
     /// `registerTabDecoration("agent", …)`: a chat tab shows its agent's mark, and a dot while
     /// the chat waits on the user.
-    fn tab_decoration(&self, item: &TabItem) -> (Option<ui::BrandMark>, bool) {
+    fn tab_decoration(&self, item: &TabItem) -> (Option<String>, bool) {
         let TabItem::Session { id } = item else { return (None, false) };
         let Some(session) = self.state.session(id) else { return (None, false) };
-        (ui::BrandMark::agent(agent_ui::acp::agents::catalog_id(&session.agent)), session.status == workspace::SessionStatus::NeedsInput)
+        let agent = agent_ui::model_vendor::agent_mark_source(&session.agent).map(|_| session.agent.clone());
+        (agent, session.status == workspace::SessionStatus::NeedsInput)
     }
 
     /// A browser tab's page icon (`BrowserTabIcon`): the globe while it loads or when it fails.
