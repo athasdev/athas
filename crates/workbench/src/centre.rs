@@ -18,16 +18,63 @@ pub(crate) struct DraggedTab {
     group: u64,
     index: usize,
     label: String,
-    icon: IconName,
+    leading: Option<TabLeading>,
 }
 
 /// The tab under the pointer while it is dragged.
 struct DraggedTabPreview(DraggedTab);
 
 impl gpui::Render for DraggedTabPreview {
-    fn render(&mut self, _: &mut Window, _: &mut Context<Self>) -> impl IntoElement {
-        Tab::new("dragged-tab", self.0.label.clone()).icon(self.0.icon).active(true)
+    fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        let tab = Tab::new("dragged-tab", self.0.label.clone()).active(true);
+        match &self.0.leading {
+            Some(leading) => leading.apply(tab, cx),
+            None => tab,
+        }
     }
+}
+
+#[derive(Clone)]
+enum TabLeading {
+    Brand(ui::BrandMark),
+    Favicon(SharedString),
+    File(String),
+    Icon(IconName),
+}
+
+impl TabLeading {
+    fn apply(&self, tab: Tab, cx: &App) -> Tab {
+        match self {
+            TabLeading::Brand(brand) => tab.leading(brand.clone().size(px(12.))),
+            TabLeading::Favicon(url) => {
+                let globe = cx.theme().colors.subtle_foreground;
+                let fallback = move || Icon::new(IconName::Globe).size(IconSize::XSmall).color(globe).into_any_element();
+                tab.leading(gpui::img(url.clone()).flex_none().size(px(12.)).object_fit(gpui::ObjectFit::Contain).with_loading(fallback).with_fallback(fallback))
+            }
+            TabLeading::File(name) => match extensions::file_icon(name, px(12.), cx) {
+                Some(icon) => tab.leading(icon),
+                None => tab.icon(IconName::File),
+            },
+            TabLeading::Icon(icon) => tab.icon(*icon),
+        }
+    }
+}
+
+/// Where a dragged tab will land: a 2px bar in the gap before that tab, 4px in from top and
+/// bottom, so the strip does not shift while a tab is dragged.
+fn tab_drop_marker(group: SharedString, color: gpui::Hsla, left: gpui::Pixels) -> gpui::Div {
+    div()
+        .absolute()
+        .top(px(4.))
+        .bottom(px(4.))
+        .left(left)
+        .w(px(2.))
+        .bg(color)
+        .invisible()
+        // GPUI applies drag-over styles, group ones included, only to an element with a hitbox;
+        // this no-op `drag_over` gives the bar one, which takes no clicks from the tab under it.
+        .drag_over::<DraggedTab>(|style, _, _, _| style)
+        .group_drag_over::<DraggedTab>(group, |style| style.visible())
 }
 
 /// What every group of the split needs to know about the whole.
@@ -37,13 +84,6 @@ struct PaneLayout<'a> {
     leading: u64,
     /// The group in the top-right corner, which carries the centre's own actions.
     trailing: u64,
-}
-
-/// A file tab's icon from the icon theme (`BufferTypeIcon`).
-fn file_icon(item: &TabItem, cx: &App) -> Option<AnyElement> {
-    let TabItem::File { path } = item else { return None };
-    let name = path.rsplit(['/', '\\']).next().unwrap_or(path);
-    extensions::file_icon(name, px(12.), cx)
 }
 
 fn top_left(node: &PaneNode) -> u64 {
@@ -296,6 +336,7 @@ impl Workbench {
             handle.clone()
         };
         let drop_marker = cx.theme().colors.primary;
+        let marker_left = -(metrics::chrome_gap() / 2. + px(1.));
         let file_paths: Vec<Option<&str>> = tabs.tabs.iter().map(|item| if let TabItem::File { path } = item { Some(path.as_str()) } else { None }).collect();
         let display_names = display_names(&file_paths);
         // The welcome opens as a tab of its own in the top-left group (`openOnboardingBuffer`).
@@ -311,19 +352,19 @@ impl Workbench {
             .map(|(index, item)| {
                 let (label, icon) = self.tab_label(item);
                 let label = display_names[index].clone().unwrap_or(label);
-                let dragged = DraggedTab { group: group_id, index, label: label.clone(), icon };
                 let active = tabs.active == Some(index) && !welcome_active;
                 let pinned = tabs.is_pinned(index);
                 let (brand, attention) = self.tab_decoration(item);
-                let favicon = self.tab_favicon(group_id, item, cx);
+                let leading = show_icons.then(|| match (brand, self.tab_favicon(group_id, item, cx), item) {
+                    (Some(brand), _, _) => TabLeading::Brand(brand),
+                    (None, Some(url), _) => TabLeading::Favicon(url),
+                    (None, None, TabItem::File { path }) => TabLeading::File(path.rsplit(['/', '\\']).next().unwrap_or(path).to_string()),
+                    (None, None, _) => TabLeading::Icon(icon),
+                });
+                let dragged = DraggedTab { group: group_id, index, label: label.clone(), leading: leading.clone() };
                 let warning = cx.theme().colors.warning;
                 let tab = Tab::new(gpui::ElementId::Name(format!("tab-{group_id}-{index}").into()), label)
-                    .when(show_icons, |tab| match (brand, favicon, file_icon(item, cx)) {
-                        (Some(brand), _, _) => tab.leading(brand.size(px(12.))),
-                        (None, Some(favicon), _) => tab.leading(favicon),
-                        (None, None, Some(file)) => tab.leading(file),
-                        (None, None, None) => tab.icon(icon),
-                    })
+                    .when_some(leading, |tab, leading| leading.apply(tab, cx))
                     .when(attention, |tab| tab.indicator(div().flex_none().size(px(8.)).rounded_full().bg(warning)))
                     .dirty(self.dirty_tabs.contains(&crate::centre_views::view_key(group_id, item)))
                     .active(active)
@@ -376,8 +417,6 @@ impl Workbench {
                             this.show_menu("tab-context", entries, event.position, gpui::Anchor::TopLeft, window, cx);
                         }
                     }));
-                // The drop marker is a 2px primary bar over the tab's leading edge, 4px in from
-                // top and bottom, so the strip does not shift while a tab is dragged.
                 let drop_group = SharedString::from(format!("tab-drop-{group_id}-{index}"));
                 div()
                     .id(gpui::ElementId::Name(format!("tab-drag-{group_id}-{index}").into()))
@@ -394,17 +433,7 @@ impl Workbench {
                         this.update_state(cx, |state| state.drop_tab_before(from, from_index, group_id, index));
                     }))
                     .child(tab)
-                    .child(
-                        div()
-                            .absolute()
-                            .top(px(4.))
-                            .bottom(px(4.))
-                            .left_0()
-                            .w(px(2.))
-                            .bg(drop_marker)
-                            .invisible()
-                            .group_drag_over::<DraggedTab>(drop_group, |style| style.visible()),
-                    )
+                    .child(tab_drop_marker(drop_group, drop_marker, if index == 0 { px(0.) } else { marker_left }))
                     .into_any_element()
             })
             .collect();
@@ -426,6 +455,25 @@ impl Workbench {
                 .into_any_element(),
             );
         }
+        let tab_count = tabs.tabs.len();
+        let end_group = SharedString::from(format!("tab-drop-{group_id}-end"));
+        tab_elements.push(
+            div()
+                .id(gpui::ElementId::Name(format!("tab-drop-end-{group_id}").into()))
+                .group(end_group.clone())
+                .relative()
+                .flex_1()
+                .min_w(px(24.))
+                .h_full()
+                .on_drop(cx.listener(move |this, dragged: &DraggedTab, _, cx| {
+                    cx.stop_propagation();
+                    this.tab_drop_zone = None;
+                    let (from, from_index) = (dragged.group, dragged.index);
+                    this.update_state(cx, |state| state.drop_tab_before(from, from_index, group_id, tab_count));
+                }))
+                .child(tab_drop_marker(end_group, drop_marker, if tab_count == 0 { px(0.) } else { marker_left }))
+                .into_any_element(),
+        );
 
         let vim_editor = tabs
             .active
@@ -910,17 +958,14 @@ impl Workbench {
     }
 
     /// A browser tab's page icon (`BrowserTabIcon`): the globe while it loads or when it fails.
-    fn tab_favicon(&self, group_id: u64, item: &TabItem, cx: &App) -> Option<AnyElement> {
+    fn tab_favicon(&self, group_id: u64, item: &TabItem, cx: &App) -> Option<SharedString> {
         let TabItem::Resource { kind, .. } = item else { return None };
         if kind != browser_view::BROWSER_KIND {
             return None;
         }
         let view = self.centre_views.get(&crate::centre_views::view_key(group_id, item))?;
         let page = view.view.clone().downcast::<browser_view::BrowserPage>().ok()?;
-        let url = page.read(cx).state().favicon.clone().filter(|url| url.starts_with("https://") || url.starts_with("http://"))?;
-        let globe = cx.theme().colors.subtle_foreground;
-        let fallback = move || Icon::new(IconName::Globe).size(IconSize::XSmall).color(globe).into_any_element();
-        Some(gpui::img(SharedString::from(url)).flex_none().size(px(12.)).object_fit(gpui::ObjectFit::Contain).with_loading(fallback).with_fallback(fallback).into_any_element())
+        page.read(cx).state().favicon.clone().filter(|url| url.starts_with("https://") || url.starts_with("http://")).map(SharedString::from)
     }
 
     pub(crate) fn tab_label(&self, item: &TabItem) -> (String, IconName) {

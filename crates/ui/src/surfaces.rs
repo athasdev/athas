@@ -438,12 +438,13 @@ pub fn agent_brand_image(agent: &str) -> Option<&'static str> {
 
 /// A third party's mark in its own colours (`brand-marks.tsx`): not a UI icon, so it keeps its
 /// artwork instead of taking the text colour.
-#[derive(IntoElement)]
+#[derive(Clone, IntoElement)]
 pub struct BrandMark {
     source: BrandSource,
     size: Pixels,
 }
 
+#[derive(Clone)]
 enum BrandSource {
     Image(&'static str),
     Github,
