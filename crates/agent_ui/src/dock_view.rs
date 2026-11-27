@@ -229,6 +229,9 @@ pub struct SessionDockView {
     /// The sandbox the session is in right now, once its first command has made one.
     #[cfg(not(target_family = "wasm"))]
     sandbox_live: Option<String>,
+    /// What the sandbox is busy with, while it is.
+    #[cfg(not(target_family = "wasm"))]
+    sandbox_work: Option<gpui::SharedString>,
     cloud: Option<CloudState>,
     context: Option<ContextState>,
     skipped_mcp: Vec<String>,
@@ -250,6 +253,8 @@ impl SessionDockView {
             sandbox_choices: Vec::new(),
             #[cfg(not(target_family = "wasm"))]
             sandbox_live: None,
+            #[cfg(not(target_family = "wasm"))]
+            sandbox_work: None,
             cloud: None,
             context: None,
             skipped_mcp: Vec::new(),
@@ -274,7 +279,10 @@ impl SessionDockView {
         #[cfg(not(target_family = "wasm"))]
         let live = session.sandbox_live_id();
         #[cfg(not(target_family = "wasm"))]
-        let sandbox_changed = sandbox != self.sandbox || choices != self.sandbox_choices || live != self.sandbox_live;
+        let work = session.sandbox_work();
+        #[cfg(not(target_family = "wasm"))]
+        let sandbox_changed =
+            sandbox != self.sandbox || choices != self.sandbox_choices || live != self.sandbox_live || work != self.sandbox_work;
         #[cfg(target_family = "wasm")]
         let sandbox_changed = false;
         let changed = summary != self.summary
@@ -289,6 +297,7 @@ impl SessionDockView {
                 self.sandbox = sandbox;
                 self.sandbox_choices = choices;
                 self.sandbox_live = live;
+                self.sandbox_work = work;
             }
             self.summary = summary;
             self.cloud = cloud;
@@ -320,9 +329,16 @@ impl SessionDockView {
             // The provider and which of its sandboxes -- the one running, else the one picked,
             // else a plain word for "chosen, but nothing has run in it yet". A session that has
             // not run a command has no sandbox, and saying so beats implying it has one.
+            // What it is doing while it does it, else which sandbox it is, else that it is only
+            // a destination so far.
             let label = match chosen {
                 Some(choice) => {
-                    let which = self.sandbox_live.clone().or_else(|| target.and_then(|target| target.sandbox.clone()));
+                    let which = self
+                        .sandbox_work
+                        .clone()
+                        .map(|work| work.to_string())
+                        .or_else(|| self.sandbox_live.clone())
+                        .or_else(|| target.and_then(|target| target.sandbox.clone()));
                     format!("{} · {}", choice.name, which.unwrap_or_else(|| "not started".into()))
                 }
                 None => place,

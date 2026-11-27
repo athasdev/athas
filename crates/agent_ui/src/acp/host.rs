@@ -139,6 +139,25 @@ impl LocalHost {
 
 #[cfg(not(target_family = "wasm"))]
 impl LocalHost {
+    /// Sends a file the agent just wrote to every running sandbox this host serves, so the
+    /// sandbox is current between commands and not only before one. Sandboxes that have not
+    /// started are left alone; their first command copies the whole workspace anyway.
+    fn mirror_write(&self, path: &Path) {
+        let runtimes: Vec<_> = self
+            .sandbox
+            .lock()
+            .unwrap_or_else(|p| p.into_inner())
+            .values()
+            .filter(|runtime| runtime.current_id().is_some())
+            .cloned()
+            .collect();
+        for runtime in runtimes {
+            if let Err(error) = runtime.send_file(path) {
+                log::warn!("{} could not be copied into the sandbox: {error}", path.display());
+            }
+        }
+    }
+
     /// A terminal whose command runs in the session's sandbox. It wears the same clothes as a
     /// local one -- the same id, the same snapshot, the same wait -- because everything above
     /// this line, the agent included, is not told which it got.
@@ -227,7 +246,10 @@ impl ClientHost for LocalHost {
         if let Some(parent) = path.parent() {
             let _ = std::fs::create_dir_all(parent);
         }
-        std::fs::write(path, content).map_err(|error| RpcError::internal(format!("Failed to write file: {error}")))
+        std::fs::write(path, content).map_err(|error| RpcError::internal(format!("Failed to write file: {error}")))?;
+        #[cfg(not(target_family = "wasm"))]
+        self.mirror_write(path);
+        Ok(())
     }
 
     fn create_terminal(&self, request: &acp::CreateTerminalRequest, on_change: ChangeListener) -> Result<String, RpcError> {

@@ -252,6 +252,15 @@ pub struct SessionView {
     /// host's, so it can be chosen before the agent has started.
     #[cfg(not(target_family = "wasm"))]
     sandbox_target: Option<SandboxTarget>,
+    /// The sandbox itself, made as soon as one is chosen. The session's, not the host's: it is
+    /// started and filled before any agent exists, and handed to the host when one does.
+    #[cfg(not(target_family = "wasm"))]
+    sandbox_runtime: Option<Arc<acp::sandbox::SandboxRuntime>>,
+    /// What the sandbox is doing right now, for the row that says where commands run.
+    #[cfg(not(target_family = "wasm"))]
+    sandbox_work: Option<gpui::SharedString>,
+    #[cfg(not(target_family = "wasm"))]
+    sandbox_task: Option<Task<()>>,
     /// The account's own sandboxes, as the provider last listed them. Asked for when the menu
     /// opens, so the list is never fetched by a draw.
     #[cfg(not(target_family = "wasm"))]
@@ -753,6 +762,12 @@ impl SessionView {
             open_menu: None,
             #[cfg(not(target_family = "wasm"))]
             sandbox_target: Self::default_sandbox_target(cx),
+            #[cfg(not(target_family = "wasm"))]
+            sandbox_runtime: None,
+            #[cfg(not(target_family = "wasm"))]
+            sandbox_work: None,
+            #[cfg(not(target_family = "wasm"))]
+            sandbox_task: None,
             #[cfg(not(target_family = "wasm"))]
             sandbox_list: Vec::new(),
             #[cfg(not(target_family = "wasm"))]
@@ -2359,8 +2374,7 @@ impl SessionView {
     /// one is made or opened by the first command, not by choosing it.
     #[cfg(not(target_family = "wasm"))]
     pub(crate) fn sandbox_live_id(&self) -> Option<String> {
-        let AgentState::Ready(agent) = &self.agent else { return None };
-        agent.host.as_ref()?.sandbox_id(&agent.session_id)
+        self.sandbox_runtime.as_ref()?.current_id()
     }
 
     /// The sandbox providers that could run this session's commands: installed, enabled, and
@@ -2386,9 +2400,59 @@ impl SessionView {
     /// the next command; one already running finishes where it started.
     #[cfg(not(target_family = "wasm"))]
     pub(crate) fn set_sandbox_target(&mut self, target: Option<SandboxTarget>, cx: &mut Context<Self>) {
+        if self.sandbox_target == target {
+            return;
+        }
+        let cwd = session_cwd(&self.info);
+        // Dropping the old runtime stops the sandbox it made; one the user picked is left alone.
+        self.sandbox_runtime = target.as_ref().map(|target| {
+            Arc::new(match &target.sandbox {
+                Some(sandbox) => acp::sandbox::SandboxRuntime::attached(&target.provider, cwd, sandbox),
+                None => acp::sandbox::SandboxRuntime::new(&target.provider, cwd),
+            })
+        });
         self.sandbox_target = target;
+        self.sandbox_work = None;
         self.apply_sandbox_target(cx);
+        // Chosen means chosen: the sandbox is made and the workspace sent now, not at whatever
+        // moment the agent happens to want a command.
+        if self.sandbox_runtime.is_some() {
+            self.send_workspace(cx);
+        }
         cx.notify();
+    }
+
+    /// Makes or opens the sandbox and copies the workspace into it, off the main thread. What it
+    /// is doing shows on the Environment row while it runs.
+    #[cfg(not(target_family = "wasm"))]
+    pub(crate) fn send_workspace(&mut self, cx: &mut Context<Self>) {
+        let Some(runtime) = self.sandbox_runtime.clone() else { return };
+        self.sandbox_work = Some("starting…".into());
+        cx.notify();
+        self.sandbox_task = Some(cx.spawn(async move |this, cx| {
+            let sent = {
+                let runtime = runtime.clone();
+                cx.background_spawn(async move { runtime.send_workspace() }).await
+            };
+            this.update(cx, |this, cx| {
+                this.sandbox_work = match sent {
+                    Ok(0) => None,
+                    Ok(count) => {
+                        let files = if count == 1 { "file" } else { "files" };
+                        Some(format!("sent {count} {files}").into())
+                    }
+                    Err(error) => Some(format!("failed: {error}").into()),
+                };
+                cx.notify();
+            })
+            .ok();
+        }));
+    }
+
+    /// What the sandbox is busy with, if anything, for the Environment row.
+    #[cfg(not(target_family = "wasm"))]
+    pub(crate) fn sandbox_work(&self) -> Option<gpui::SharedString> {
+        self.sandbox_work.clone()
     }
 
     /// Points the running agent's host where the session says. Called when the choice changes
@@ -2397,14 +2461,7 @@ impl SessionView {
     fn apply_sandbox_target(&mut self, _cx: &mut Context<Self>) {
         let AgentState::Ready(agent) = &self.agent else { return };
         let Some(host) = agent.host.clone() else { return };
-        let cwd = session_cwd(&self.info);
-        let runtime = self.sandbox_target.as_ref().map(|target| {
-            Arc::new(match &target.sandbox {
-                Some(sandbox) => acp::sandbox::SandboxRuntime::attached(&target.provider, cwd, sandbox),
-                None => acp::sandbox::SandboxRuntime::new(&target.provider, cwd),
-            })
-        });
-        host.set_sandbox(&agent.session_id, runtime);
+        host.set_sandbox(&agent.session_id, self.sandbox_runtime.clone());
     }
 
     /// A new session starts where the settings say, so the choice is made once and not per chat.
@@ -3322,9 +3379,7 @@ impl SessionView {
         // everything under the heading is somewhere else. The line under it is there because
         // the first question anyone asks of this menu is what exactly moves.
         entries.push(ui::MenuEntry::Label("Sandboxes".into()));
-        entries.push(ui::MenuEntry::Text(
-            "Commands the agent asks Athas to run. Files stay on this machine; the sandbox is made by the first command.".into(),
-        ));
+        entries.push(ui::MenuEntry::Text("Commands run there. Your files are copied over.".into()));
         for choice in Self::sandbox_choices(cx) {
             let mut inside: Vec<ui::MenuEntry> = Vec::new();
             for listed in self.sandbox_list.iter().filter(|listed| !listed.id.is_empty()) {
@@ -3358,6 +3413,18 @@ impl SessionView {
                     })
                     .into(),
             );
+            if current.as_ref().is_some_and(|target| target.provider == choice.id) {
+                let again = this.clone();
+                inside.push(ui::MenuEntry::Separator);
+                inside.push(
+                    ui::MenuItem::new("Send workspace again")
+                        .icon(ui::IconName::ArrowUp)
+                        .on_select(move |_, cx| {
+                            again.update(cx, |this, cx| this.send_workspace(cx));
+                        })
+                        .into(),
+                );
+            }
             // The provider opens; it is not picked. What runs a command is one of its sandboxes.
             let mut item = ui::MenuItem::new(choice.name).submenu(inside);
             item = match choice.icon {
@@ -3377,9 +3444,17 @@ impl SessionView {
                 })
                 .into(),
         );
-        self.open_menu = Some(OpenMenu::new("session-environment", entries, position, gpui::Anchor::TopLeft, window, cx, |this, _| {
-            this.open_menu = None
-        }));
+        self.open_menu = Some(OpenMenu::sized(
+            "session-environment",
+            entries,
+            // Auto-sized, the explanation under the heading set the width for every row.
+            ui::MenuSize::Default,
+            position,
+            gpui::Anchor::TopLeft,
+            window,
+            cx,
+            |this, _| this.open_menu = None,
+        ));
         // What the account has may have changed since the last time it was asked; the menu is
         // rebuilt in place if it has.
         self.refresh_sandbox_list(position, window, cx);

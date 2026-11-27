@@ -142,6 +142,33 @@ impl SandboxRuntime {
         self.live.lock().unwrap_or_else(|poison| poison.into_inner()).as_ref().map(|live| live.handle.id.clone())
     }
 
+    /// Makes or opens the sandbox now, instead of waiting for a command to need one. Returns the
+    /// workspace's path inside it.
+    pub fn ensure(&self) -> Result<String, String> {
+        self.start()
+    }
+
+    /// Copies the workspace over now. Everything that changed since the last copy, which the
+    /// first time is everything.
+    pub fn send_workspace(&self) -> Result<usize, String> {
+        self.start()?;
+        self.push()
+    }
+
+    /// Copies one file over, now. Only into a sandbox that is already running: a file being
+    /// written is no reason to make one, and the next command copies it anyway.
+    pub fn send_file(&self, path: &Path) -> Result<(), String> {
+        let (Some(dir), Ok(relative)) = (self.dir(), path.strip_prefix(&self.root)) else { return Ok(()) };
+        let bytes = std::fs::read(path).map_err(|error| error.to_string())?;
+        let handle = self.handle()?;
+        let remote = format!("{dir}/{}", relative.to_string_lossy());
+        self.client()?.write_file(&handle, &remote, &bytes).map_err(|error| error.message)?;
+        if let Ok(modified) = std::fs::metadata(path).and_then(|data| data.modified()) {
+            self.pushed.lock().unwrap_or_else(|poison| poison.into_inner()).insert(path.to_path_buf(), modified);
+        }
+        Ok(())
+    }
+
     /// Runs one command and brings back what it changed. Blocking from end to end: the caller
     /// runs it on a thread of its own, as the local terminal does.
     pub fn run(&self, command: &str, timeout: Option<Duration>) -> Result<SandboxRun, String> {

@@ -35,7 +35,9 @@ pub fn over_overlay(point: Point<Pixels>, window: &Window, cx: &App) -> bool {
     overlays(window, cx).iter().any(|bounds| bounds.contains(&point))
 }
 
-/// Reports its parent's bounds as floating UI. The parent must be positioned.
+/// Reports its parent's bounds as floating UI. The parent must be positioned. The insets are
+/// what makes the report the parent's own box: an absolute child with none is laid out where it
+/// would have stood in flow, which for a last child is the band under the content, not over it.
 pub fn occluder() -> impl IntoElement {
     canvas(|bounds, window, cx| report(bounds, window, cx), |_, _, _, _| {}).absolute().inset_0()
 }
