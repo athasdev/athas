@@ -119,6 +119,7 @@ impl Editor {
         }
         self.settle_carets_in_folds(head, edited);
         self.autoscroll = Some(Autoscroll::Fit);
+        self.occurrences_armed = true;
         self.pause_blink(cx);
         cx.notify();
     }

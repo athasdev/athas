@@ -567,6 +567,9 @@ impl Render for DetachedWindow {
             // Over the view, so the view runs under it to the window's top.
             .when(overlay, |this| this.child(self.render_title_bar(window.is_maximized(), cx)))
             .children(crate::toast_stack(window, false, cx))
+            // Floating UI reports where it paints only in a window that starts frames; a
+            // detached chat's quote card asks for that to tell a press on itself apart.
+            .child(browser_view::frame_tracker())
     }
 }
 

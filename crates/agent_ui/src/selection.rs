@@ -13,6 +13,8 @@ use std::{
 
 use gpui::{Context, Div, HighlightStyle, Hsla, KeyBinding, MouseButton, MouseDownEvent, MouseMoveEvent, Pixels, Point, SharedString, TextLayout, actions, prelude::*};
 
+use ui::{Granularity, text_selection::unit_range};
+
 use crate::session_view::SessionView;
 
 actions!(agent, [CopyTranscriptSelection]);
@@ -73,11 +75,40 @@ pub struct TextSelection {
     pub head: TextPoint,
     /// Whether the mouse is still down.
     pub selecting: bool,
+    /// For a double or triple click, what it selects by and the unit it first took: the drag
+    /// after it keeps that unit and grows by whole words or runs.
+    pub unit: Option<(Granularity, TextPoint, TextPoint)>,
 }
 
 impl TextSelection {
     pub fn at(point: TextPoint) -> Self {
-        Self { anchor: point.clone(), head: point, selecting: true }
+        Self { anchor: point.clone(), head: point, selecting: true, unit: None }
+    }
+
+    /// The `range` of the run at `span`, taken whole by a double or triple click.
+    pub fn units(span: &SpanPath, range: Range<usize>, granularity: Granularity) -> Self {
+        let start = TextPoint { span: span.clone(), offset: range.start };
+        let end = TextPoint { span: span.clone(), offset: range.end };
+        Self { anchor: start.clone(), head: end.clone(), selecting: true, unit: Some((granularity, start, end)) }
+    }
+
+    /// Moves the head to `point`; after a double or triple click, to the edge of the unit there,
+    /// keeping the first unit selected.
+    pub fn drag_to(&mut self, point: TextPoint, drawn: &DrawnRuns) {
+        let Some((granularity, start, end)) = self.unit.clone() else {
+            self.head = point;
+            return;
+        };
+        let range = unit_at(drawn, &point.span, point.offset, granularity).unwrap_or(point.offset..point.offset);
+        let here_start = TextPoint { span: point.span.clone(), offset: range.start };
+        let here_end = TextPoint { span: point.span, offset: range.end };
+        if here_start < start {
+            self.anchor = end;
+            self.head = here_start;
+        } else {
+            self.anchor = start;
+            self.head = here_end.max(end);
+        }
     }
 
     fn ordered(&self) -> (&TextPoint, &TextPoint) {
@@ -169,6 +200,13 @@ pub(crate) fn draggable(container: Div, path: SpanPath, layout: TextLayout, cx: 
             let offset = offset_at(&dragged, event.position);
             this.select_text(drag_path.clone(), offset, SelectPhase::Drag, cx);
         }))
+        .on_mouse_down(
+            MouseButton::Right,
+            cx.listener(move |this, event: &MouseDownEvent, window, cx| {
+                this.deploy_transcript_menu(event.position, window, cx);
+                cx.stop_propagation();
+            }),
+        )
 }
 
 /// The byte of the drawn text under `position`, or the nearest one when the mouse is past its
@@ -192,32 +230,14 @@ pub fn selected_text(drawn: &DrawnRuns, selection: &TextSelection) -> String {
     lines.join("\n")
 }
 
-/// The whole run at `path`, for a triple click.
-pub(crate) fn run_len(drawn: &DrawnRuns, path: &SpanPath) -> usize {
-    drawn.get(&path.entry_index()).and_then(|runs| runs.get(path)).map_or(0, |text| text.len())
-}
-
-/// The word around `offset` in the run at `path`, for a double click.
-pub(crate) fn word_at(drawn: &DrawnRuns, path: &SpanPath, offset: usize) -> Option<Range<usize>> {
-    let runs = drawn.get(&path.entry_index())?;
-    let text = runs.get(path)?;
-    Some(word_range(text, offset))
-}
-
-/// The run of word characters around `offset`; the run of other characters when it sits
-/// between words, so a click always takes something.
-fn word_range(text: &str, offset: usize) -> Range<usize> {
-    let offset = floor_char(text, offset);
-    let word = |ch: char| ch.is_alphanumeric() || ch == '_';
-    let at = text[offset..].chars().next().or_else(|| text[..offset].chars().next_back());
-    let Some(at) = at else { return 0..0 };
-    let same = |ch: char| if word(at) { word(ch) } else { !word(ch) && !ch.is_whitespace() };
-    if !same(at) {
-        return offset..offset;
-    }
-    let start = text[..offset].char_indices().rev().take_while(|(_, ch)| same(*ch)).last().map_or(offset, |(index, _)| index);
-    let end = text[offset..].char_indices().find(|(_, ch)| !same(*ch)).map_or(text.len(), |(index, _)| offset + index);
-    start..end
+/// The unit of `granularity` around `offset` in the run at `path`: a word, or the whole run for
+/// a triple click.
+pub(crate) fn unit_at(drawn: &DrawnRuns, path: &SpanPath, offset: usize, granularity: Granularity) -> Option<Range<usize>> {
+    let text = drawn.get(&path.entry_index())?.get(path)?;
+    Some(match granularity {
+        Granularity::Line => 0..text.len(),
+        granularity => unit_range(text, offset, granularity),
+    })
 }
 
 /// `highlights` with `selected` coloured over them: the runs it covers keep their styling and
@@ -276,14 +296,14 @@ mod tests {
 
     #[test]
     fn selections_cover_the_runs_between_their_ends() {
-        let selection = TextSelection { anchor: point(&[1, 0], 6), head: point(&[3, 0, 2], 4), selecting: false };
+        let selection = TextSelection { anchor: point(&[1, 0], 6), head: point(&[3, 0, 2], 4), selecting: false, unit: None };
         assert_eq!(selection.range_in(&SpanPath(vec![1, 0]), 11), Some(6..11));
         assert_eq!(selection.range_in(&SpanPath(vec![2, 0]), 5), Some(0..5));
         assert_eq!(selection.range_in(&SpanPath(vec![3, 0, 2]), 9), Some(0..4));
         assert_eq!(selection.range_in(&SpanPath(vec![3, 0, 3]), 9), None);
         assert_eq!(selection.range_in(&SpanPath(vec![0, 0]), 9), None);
         // Backwards selections read the same.
-        let backwards = TextSelection { anchor: selection.head.clone(), head: selection.anchor.clone(), selecting: false };
+        let backwards = TextSelection { anchor: selection.head.clone(), head: selection.anchor.clone(), selecting: false, unit: None };
         assert_eq!(backwards.range_in(&SpanPath(vec![2, 0]), 5), Some(0..5));
         assert!(TextSelection::at(point(&[1, 0], 6)).range_in(&SpanPath(vec![1, 0]), 11).is_none());
     }
@@ -291,7 +311,7 @@ mod tests {
     #[test]
     fn copying_reads_the_runs_the_selection_covers() {
         let drawn = runs_drawn(&[(&[1, 0], "hello world"), (&[2, 0], "first"), (&[2, 1], "second"), (&[3, 0], "last line")]);
-        let selection = TextSelection { anchor: point(&[1, 0], 6), head: point(&[3, 0], 4), selecting: false };
+        let selection = TextSelection { anchor: point(&[1, 0], 6), head: point(&[3, 0], 4), selecting: false, unit: None };
         assert_eq!(selected_text(&drawn, &selection), "world\nfirst\nsecond\nlast");
         // An entry the list has not drawn is skipped, not guessed at.
         let partial = runs_drawn(&[(&[1, 0], "hello world"), (&[3, 0], "last line")]);
@@ -318,15 +338,22 @@ mod tests {
     }
 
     #[test]
-    fn clicks_take_the_word_under_them() {
-        assert_eq!(word_range("hello world", 7), 6..11);
-        assert_eq!(word_range("hello world", 5), 5..5);
-        assert_eq!(word_range("let a = 1;", 8), 8..9);
-        assert_eq!(word_range("naïve_name here", 2), 0..11);
-        assert_eq!(word_range("", 0), 0..0);
-        let drawn = runs_drawn(&[(&[1, 0], "hello world")]);
-        assert_eq!(word_at(&drawn, &SpanPath(vec![1, 0]), 0), Some(0..5));
-        assert_eq!(run_len(&drawn, &SpanPath(vec![1, 0])), 11);
-        assert_eq!(run_len(&drawn, &SpanPath(vec![9, 0])), 0);
+    fn clicks_take_the_word_or_the_run_under_them() {
+        let drawn = runs_drawn(&[(&[1, 0], "hello world"), (&[1, 1], "next run")]);
+        assert_eq!(unit_at(&drawn, &SpanPath(vec![1, 0]), 7, Granularity::Word), Some(6..11));
+        assert_eq!(unit_at(&drawn, &SpanPath(vec![1, 0]), 2, Granularity::Line), Some(0..11));
+        assert_eq!(unit_at(&drawn, &SpanPath(vec![9, 0]), 0, Granularity::Word), None);
+    }
+
+    #[test]
+    fn dragging_after_a_double_click_takes_whole_words_across_runs() {
+        let drawn = runs_drawn(&[(&[1, 0], "hello world"), (&[1, 1], "next run")]);
+        let mut selection = TextSelection::units(&SpanPath(vec![1, 0]), 6..11, Granularity::Word);
+        // Into the next run: up to the end of the word there.
+        selection.drag_to(point(&[1, 1], 1), &drawn);
+        assert_eq!((selection.anchor.clone(), selection.head.clone()), (point(&[1, 0], 6), point(&[1, 1], 4)));
+        // Back to the left: from the start of "hello" to the end of "world".
+        selection.drag_to(point(&[1, 0], 2), &drawn);
+        assert_eq!((selection.anchor.clone(), selection.head.clone()), (point(&[1, 0], 11), point(&[1, 0], 0)));
     }
 }

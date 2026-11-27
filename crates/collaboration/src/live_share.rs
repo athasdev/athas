@@ -1,6 +1,8 @@
 //! Keeps live shares current (`sharing-runtime.tsx`): every 3 s while signed in, the open files
 //! and agent sessions that have a live share from this device are sent again when they changed,
-//! and with session sync on every session is published as a private cloud session.
+//! and with session sync on every session is published as a private cloud session. Each pass
+//! hands what the account is sharing to [`crate::remote_control`], which opens the rooms this
+//! device's sessions are driven through.
 
 use std::{
     collections::HashMap,
@@ -13,7 +15,10 @@ use account::{AccountStore, ApiError, Client, Method};
 use gpui::{App, Global, Task};
 use serde_json::{Value, json};
 
-use crate::sharing::{self, ShareDraft, ShareKind, ShareOptions, Visibility};
+use crate::{
+    remote_control,
+    sharing::{self, ShareDraft, ShareKind, ShareOptions, Visibility},
+};
 
 const SYNC_INTERVAL: Duration = Duration::from_secs(3);
 const MAX_CONTENT: usize = 500_000;
@@ -79,8 +84,9 @@ impl LiveSync {
         draft
     }
 
-    /// One pass; blocking, so run it off the main thread.
-    pub fn sync(&mut self, client: &Client, token: &str, device_id: &str, sources: &Sources) -> Result<(), ApiError> {
+    /// One pass; blocking, so run it off the main thread. Answers with what the account is
+    /// sharing, which [`crate::remote_control`] listens on.
+    pub fn sync(&mut self, client: &Client, token: &str, device_id: &str, sources: &Sources) -> Result<ShareOptions, ApiError> {
         let options = sharing::fetch_options(client, token)?;
         let live_here = |source: &str| {
             options.items.iter().any(|item| item.live && item.source_id.as_deref() == Some(source) && item.device_id.as_deref() == Some(device_id))
@@ -103,7 +109,7 @@ impl LiveSync {
                 first_error.get_or_insert(error);
             }
         }
-        first_error.map_or(Ok(()), Err)
+        first_error.map_or(Ok(options), Err)
     }
 
     fn sync_draft(&mut self, client: &Client, token: &str, device_id: &str, options: &ShareOptions, draft: &ShareDraft) -> Result<(), ApiError> {
@@ -143,13 +149,13 @@ impl LiveSync {
             {
                 continue;
             }
-            let changes = json!({
+            let changes = sharing::without_nulls(json!({
                 "sourceUpdatedAt": draft.source_updated_at,
                 "title": draft.title,
                 "content": draft.content,
                 "messages": draft.messages,
                 "language": draft.language,
-            });
+            }));
             let signature = changes.to_string();
             if self.sent.get(&item.id) == Some(&format!("{}:{signature}", item.revision)) {
                 continue;
@@ -179,14 +185,22 @@ pub fn start(provider: SourcesProvider, cx: &mut App) {
                 let provider = cx.try_global::<LiveShare>()?.provider.clone();
                 Some((client, token, provider(cx)))
             });
-            let Some((client, token, sources)) = pass else { continue };
-            live = cx
+            let Some((client, token, sources)) = pass else {
+                // Signed out: the rooms this device was listening on belong to that account.
+                cx.update(remote_control::stop_hosting);
+                continue;
+            };
+            let (next, options) = cx
                 .background_executor()
                 .spawn(async move {
-                    let _ = live.sync(&client, &token, &sharing::device_id(), &sources);
-                    live
+                    let options = live.sync(&client, &token, &sharing::device_id(), &sources).ok();
+                    (live, options.map(|options| (options, sources.sessions)))
                 })
                 .await;
+            live = next;
+            if let Some((options, sessions)) = options {
+                cx.update(|cx| remote_control::sync(&options, &sessions, cx));
+            }
         }
     });
     cx.set_global(LiveShare { provider, _task: task });

@@ -3,6 +3,7 @@
 //! in the browser before sending. Athas has no feedback endpoint; this is the same flow.
 
 use ui::scale::px;
+use ui::OpenOutbound;
 use gpui::{
     App, Context, DismissEvent, Entity, EventEmitter, FocusHandle, Focusable, IntoElement, ParentElement, Render, Styled, Subscription,
     Window, div, prelude::*,
@@ -137,7 +138,7 @@ impl FeedbackDialog {
             return;
         }
         let environment = self.include_environment.then(|| FeedbackEnvironment::current(&self.app_version, cx));
-        cx.open_url(&issue_url(&draft, environment.as_ref()));
+        cx.open_outbound(&issue_url(&draft, environment.as_ref()));
         telemetry::record_friction(cx, FrictionSignal::new(FrictionArea::Feedback, FrictionKind::Submitted));
         cx.emit(DismissEvent);
     }

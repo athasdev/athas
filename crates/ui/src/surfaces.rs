@@ -422,20 +422,6 @@ pub fn checkerboard(colors: &theme::ThemeColors) -> impl IntoElement {
 
 fn checker_square() -> Pixels { px(8.) }
 
-pub fn agent_brand_image(agent: &str) -> Option<&'static str> {
-    Some(match agent {
-        "athas" => "icons/athas_mark.png",
-        "claude-acp" => "file-icons/claude-color.svg",
-        "gemini-cli" => "extensions/icons/athas.agent.gemini-cli.svg",
-        "antigravity-acp" => "extensions/icons/athas.agent.antigravity.svg",
-        "github-copilot-cli" => "extensions/icons/athas.agent.github-copilot.svg",
-        "kimi-cli" => "extensions/icons/athas.agent.kimi-cli.svg",
-        "opencode" => "extensions/icons/athas.agent.opencode.svg",
-        "qwen-code" => "extensions/icons/athas.agent.qwen-code.svg",
-        _ => return None,
-    })
-}
-
 /// A third party's mark in its own colours (`brand-marks.tsx`): not a UI icon, so it keeps its
 /// artwork instead of taking the text colour.
 #[derive(IntoElement)]
@@ -445,22 +431,23 @@ pub struct BrandMark {
 }
 
 enum BrandSource {
-    Image(&'static str),
+    Image(SharedString),
     Github,
 }
 
 impl BrandMark {
     pub fn athas() -> Self {
-        Self { source: BrandSource::Image("icons/athas_mark.png"), size: px(16.) }
+        Self::image("icons/athas_mark.png")
+    }
+
+    /// A mark from an asset path, such as the icon an agent's extension ships.
+    pub fn image(path: impl Into<SharedString>) -> Self {
+        Self { source: BrandSource::Image(path.into()), size: px(16.) }
     }
 
     /// The GitHub octocat, drawn in the text colour like the web mark's `currentColor`.
     pub fn github() -> Self {
         Self { source: BrandSource::Github, size: px(16.) }
-    }
-
-    pub fn agent(agent: &str) -> Option<Self> {
-        agent_brand_image(agent).map(|path| Self { source: BrandSource::Image(path), size: px(16.) })
     }
 
     pub fn size(mut self, size: Pixels) -> Self {
@@ -484,8 +471,6 @@ mod tests {
 
     #[test]
     fn brand_images_resolve_like_athas() {
-        assert_eq!(agent_brand_image("antigravity-acp"), Some("extensions/icons/athas.agent.antigravity.svg"));
-        assert_eq!(agent_brand_image("unknown"), None);
         for path in ["icons/athas_mark.png", "extensions/icons/athas.agent.claude-acp.svg", "extensions/icons/athas.agent.opencode.svg"] {
             assert!(std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../assets").join(path).exists(), "{path}");
         }

@@ -3,6 +3,7 @@
 
 use gpui::{App, Menu, MenuItem, OsAction, SystemMenuType};
 use ui::text_input;
+use ui::OpenOutbound;
 
 use crate::*;
 
@@ -134,10 +135,10 @@ pub fn app_menus(cx: &App) -> Vec<Menu> {
 
 /// Sets the menu bar and the help actions, which open pages in the browser.
 pub fn init(cx: &mut App) {
-    cx.on_action(|_: &OpenDocs, cx| cx.open_url(DOCS_URL));
-    cx.on_action(|_: &OpenChangelog, cx| cx.open_url(CHANGELOG_URL));
-    cx.on_action(|_: &ReportBug, cx| cx.open_url(BUG_URL));
-    cx.on_action(|_: &RequestFeature, cx| cx.open_url(FEATURE_URL));
+    cx.on_action(|_: &OpenDocs, cx| cx.open_outbound(DOCS_URL));
+    cx.on_action(|_: &OpenChangelog, cx| cx.open_outbound(CHANGELOG_URL));
+    cx.on_action(|_: &ReportBug, cx| cx.open_outbound(BUG_URL));
+    cx.on_action(|_: &RequestFeature, cx| cx.open_outbound(FEATURE_URL));
     cx.set_menus(app_menus(cx));
     cx.set_dock_menu(vec![MenuItem::action("New Window", NewWindow)]);
 }

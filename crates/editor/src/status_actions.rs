@@ -5,7 +5,7 @@
 use gpui::{App, Context, Entity, IntoElement, Render, Subscription, WeakEntity, Window, div, prelude::*};
 use lsp_client::LspStore;
 use settings::Settings;
-use ui::{Button, ButtonTone, ButtonVariant, DropdownMenu, IconName, MenuEntry, MenuItem, MenuSize, Select, SelectEvent, SelectOption, SelectSearch};
+use ui::{Button, ButtonSize, ButtonTone, ButtonVariant, DropdownMenu, IconName, MenuEntry, MenuItem, MenuSize, Select, SelectEvent, SelectOption, SelectSearch};
 
 use crate::{Editor, LspStatus, syntax};
 
@@ -56,7 +56,7 @@ fn preference_entries(cx: &App) -> Vec<MenuEntry> {
 fn server_entries(editor: &WeakEntity<Editor>, cx: &App) -> Vec<MenuEntry> {
     let store = LspStore::try_global(cx);
     let mut servers = store.as_ref().map(|store| store.read(cx).servers()).unwrap_or_default();
-    servers.sort_by(|a, b| a.name().cmp(b.name()));
+    servers.sort_by(|a, b| a.name().cmp(b.name()).then_with(|| a.root().cmp(b.root())));
     let unavailable = store.as_ref().map(|store| store.read(cx).unavailable()).unwrap_or_default();
     let editor = editor.upgrade();
     let project = editor
@@ -64,48 +64,85 @@ fn server_entries(editor: &WeakEntity<Editor>, cx: &App) -> Vec<MenuEntry> {
         .and_then(|editor| editor.read(cx).lsp.project_root.clone())
         .and_then(|root| root.file_name().map(|name| name.to_string_lossy().into_owned()))
         .unwrap_or_else(|| "Language Servers".to_string());
-    let mut entries: Vec<MenuEntry> = vec![MenuItem::new(project).disabled(true).into()];
-    // One level: each server's name over its own Restart and Stop, no fly-out to aim for.
+    let mut entries: Vec<MenuEntry> = vec![MenuEntry::Label(project.into())];
+    // One row per server, with its own buttons: the same server runs once per project root, so
+    // two `marksman`s mean two folders, and each row says which.
+    let roots: std::collections::BTreeSet<&std::path::Path> = servers.iter().map(|server| server.root()).collect();
+    for server in &servers {
+        let id = server.id();
+        let mut item = MenuItem::new(server.name().to_string())
+            .icon(IconName::Bolt)
+            // The name is not a command; only its buttons are.
+            .keep_open()
+            .action(ui::MenuAction::new(IconName::ArrowClockwise, "Restart", move |_, cx| {
+                LspStore::global(cx).update(cx, |store, cx| store.restart_server(id, cx))
+            }))
+            .action(
+                ui::MenuAction::new(IconName::Square, "Stop", move |_, cx| LspStore::global(cx).update(cx, |store, cx| store.stop_server(id, cx)))
+                    .tone(ui::MenuItemTone::Destructive),
+            );
+        if roots.len() > 1 {
+            item = item.description(root_name(server.root()));
+        }
+        entries.push(item.into());
+    }
+    let status = editor.as_ref().map(|editor| editor.read(cx).lsp_status()).unwrap_or(LspStatus::Off);
+    if let LspStatus::Starting(name) = &status {
+        entries.push(MenuItem::new(format!("{name}")).icon(IconName::Bolt).description("Starting…").disabled(true).into());
+    }
+    for (name, error) in &unavailable {
+        entries.push(
+            MenuItem::new(name.clone())
+                .icon(IconName::BoltSlash)
+                .tone(ui::MenuItemTone::Destructive)
+                .description(unavailable_reason(error))
+                .tooltip(error.to_string())
+                .keep_open()
+                .action(ui::MenuAction::new(IconName::Play, "Start", |_, cx| {
+                    LspStore::global(cx).update(cx, |store, cx| store.retry_unavailable(cx))
+                }))
+                .into(),
+        );
+    }
+    if servers.is_empty() && unavailable.is_empty() && !matches!(status, LspStatus::Starting(_)) {
+        entries.push(MenuItem::new("No language server for this file").icon(IconName::BoltSlash).disabled(true).into());
+    }
     if servers.len() > 1 {
+        entries.push(MenuEntry::Separator);
         entries.push(
             MenuItem::new("Restart all")
                 .icon(IconName::ArrowClockwise)
                 .on_select(|_, cx| LspStore::global(cx).update(cx, |store, cx| store.restart_all(cx)))
                 .into(),
         );
-        entries.push(MenuItem::new("Stop all").icon(IconName::Square).on_select(|_, cx| LspStore::global(cx).update(cx, |store, cx| store.stop_all(cx))).into());
-    }
-    for server in &servers {
-        let id = server.id();
-        entries.push(MenuEntry::Separator);
-        entries.push(MenuEntry::Label(server.name().to_string().into()));
         entries.push(
-            MenuItem::new("Restart")
-                .icon(IconName::ArrowClockwise)
-                .on_select(move |_, cx| LspStore::global(cx).update(cx, |store, cx| store.restart_server(id, cx)))
+            MenuItem::new("Stop all")
+                .icon(IconName::Square)
+                .tone(ui::MenuItemTone::Destructive)
+                .on_select(|_, cx| LspStore::global(cx).update(cx, |store, cx| store.stop_all(cx)))
                 .into(),
         );
-        entries.push(MenuItem::new("Stop").icon(IconName::Square).on_select(move |_, cx| LspStore::global(cx).update(cx, |store, cx| store.stop_server(id, cx))).into());
-    }
-    let status = editor.as_ref().map(|editor| editor.read(cx).lsp_status()).unwrap_or(LspStatus::Off);
-    match &status {
-        LspStatus::Starting(name) => entries.push(MenuItem::new(format!("Connecting to {name}...")).disabled(true).into()),
-        LspStatus::NotInstalled(name) | LspStatus::Failed(name) => {
-            entries.push(MenuItem::new("Language server issue").icon(IconName::BoltSlash).tone(ui::MenuItemTone::Destructive).disabled(true).into());
-            entries.push(
-                MenuItem::new(format!("Start {name}"))
-                    .on_select(|_, cx| LspStore::global(cx).update(cx, |store, cx| store.retry_unavailable(cx)))
-                    .into(),
-            );
-        }
-        _ if servers.is_empty() && !unavailable.is_empty() => {
-            entries.push(MenuItem::new("Language server issue").icon(IconName::BoltSlash).tone(ui::MenuItemTone::Destructive).disabled(true).into());
-            entries.push(MenuItem::new("Try again").on_select(|_, cx| LspStore::global(cx).update(cx, |store, cx| store.retry_unavailable(cx))).into());
-        }
-        _ if servers.is_empty() => entries.push(MenuItem::new("No active language servers").icon(IconName::BoltSlash).disabled(true).into()),
-        _ => {}
     }
     entries
+}
+
+/// The folder a server was started in, as the row names it: the folder's name, or the last two
+/// when the name alone says little (`src`, `docs`).
+fn root_name(root: &std::path::Path) -> String {
+    let name = root.file_name().map(|name| name.to_string_lossy().into_owned()).unwrap_or_else(|| root.to_string_lossy().into_owned());
+    match root.parent().and_then(|parent| parent.file_name()) {
+        Some(parent) if matches!(name.as_str(), "src" | "docs" | "lib" | "app" | "tests") => format!("{}/{name}", parent.to_string_lossy()),
+        _ => name,
+    }
+}
+
+/// Why a server is not running, in a few words; its tooltip has the whole message.
+fn unavailable_reason(error: &lsp_client::OpenError) -> String {
+    match error {
+        lsp_client::OpenError::NotInstalled { .. } => "Not installed".into(),
+        lsp_client::OpenError::Failed { message, .. } => format!("Could not start: {}", message.lines().next().unwrap_or(message)),
+        lsp_client::OpenError::Unsupported => "No server for this file".into(),
+    }
 }
 
 impl EditorStatusActions {
@@ -179,8 +216,8 @@ impl EditorStatusActions {
 impl Render for EditorStatusActions {
     fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let editor = self.editor.upgrade();
-        let markdown = editor.as_ref().is_some_and(|editor| editor.read(cx).language_name() == "Markdown");
-        let previewing = editor.as_ref().is_some_and(|editor| editor.read(cx).preview.is_some());
+        let markdown = editor.as_ref().is_some_and(|editor| editor.read(cx).is_markdown());
+        let previewing = editor.as_ref().is_some_and(|editor| editor.read(cx).previewing());
         let weak = self.editor.clone();
         div()
             .flex()
@@ -188,14 +225,18 @@ impl Render for EditorStatusActions {
             .items_center()
             .gap_0p5()
             .when(markdown, |this| {
+                // A markdown file opens as the document it reads as; this swaps it for the
+                // markdown it was written as, and back.
                 let weak = weak.clone();
                 this.child(
-                    Button::icon("editor-markdown-preview", if previewing { IconName::Pen } else { IconName::Eye })
+                    Button::new("editor-markdown-source", if previewing { "Source" } else { "Preview" })
+                        .leading_icon(if previewing { IconName::Code } else { IconName::Eye })
+                        .size(ButtonSize::XSmall)
                         .variant(ButtonVariant::Ghost)
-                        .tooltip(if previewing { "Show Markdown Source" } else { "Preview Markdown" })
-                        .on_click(move |_, window, cx| {
+                        .tooltip(if previewing { "View the Markdown source" } else { "View the rendered document" })
+                        .on_click(move |_, _, cx| {
                             if let Some(editor) = weak.upgrade() {
-                                editor.update(cx, |editor, cx| editor.toggle_markdown_preview(&crate::ToggleMarkdownPreview, window, cx));
+                                editor.update(cx, |editor, cx| editor.toggle_markdown_source(cx));
                             }
                         }),
                 )
@@ -235,6 +276,18 @@ mod tests {
         assert_eq!(server_status(2, &LspStatus::Failed("x".into()), false).1, ButtonTone::Danger);
         assert_eq!(server_status(0, &LspStatus::Off, true).1, ButtonTone::Danger);
         assert_eq!(server_status(0, &LspStatus::Off, false), (IconName::BoltSlash, ButtonTone::Default, "No active language servers"));
+    }
+
+    #[test]
+    fn rows_name_the_folder_a_server_runs_in() {
+        use std::path::Path;
+        assert_eq!(root_name(Path::new("/Users/me/Git/athas")), "athas");
+        assert_eq!(root_name(Path::new("/Users/me/Git/athas/src")), "athas/src");
+        assert_eq!(unavailable_reason(&lsp_client::OpenError::NotInstalled { server: "taplo".into() }), "Not installed");
+        assert_eq!(
+            unavailable_reason(&lsp_client::OpenError::Failed { server: "taplo".into(), message: "no such file\nmore".into() }),
+            "Could not start: no such file"
+        );
     }
 
     #[test]

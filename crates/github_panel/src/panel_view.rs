@@ -1,6 +1,7 @@
 //! Drawing the sidebar, after `github-prs-view.tsx` and the stream list it is built from.
 
 use ui::TooltipExt as _;
+use ui::OpenOutbound;
 use crate::gh::{Deployment, IssueListItem, PullRequest, Release, WorkflowRunListItem};
 use chrono::Utc;
 use ui::scale::px;
@@ -169,7 +170,7 @@ impl GitHubPanel {
                         Button::new("github-install-gh", "Get GitHub CLI")
                             .variant(ButtonVariant::Ghost)
                             .size(ButtonSize::Small)
-                            .on_click(|_, _, cx| cx.open_url("https://cli.github.com")),
+                            .on_click(|_, _, cx| cx.open_outbound("https://cli.github.com")),
                     );
                 }
                 state

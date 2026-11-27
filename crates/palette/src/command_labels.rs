@@ -57,6 +57,7 @@ const LABELS: &[(&str, &str)] = &[
     ("workbench.zoomReset", "View: Reset Zoom"),
     ("docker.open", "Docker: Open Docker…"),
     ("team.open", "Team: Open Team"),
+    ("devices.open", "Devices: Open My Devices"),
     ("team.shareSession", "Team: Share Session with Team"),
     ("team.stopSharingSession", "Team: Stop Sharing Session"),
     ("team.handOffSession", "Team: Hand Off Session…"),

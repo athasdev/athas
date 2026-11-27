@@ -26,7 +26,6 @@ mod java_class;
 #[cfg(not(target_family = "wasm"))]
 mod lint;
 mod lsp;
-mod markdown;
 mod markdown_preview;
 mod movement;
 mod notebook;
@@ -516,6 +515,10 @@ pub struct Editor {
     pub(crate) layout: Option<HitLayout>,
     pub(crate) cursor_visible: bool,
     pub(crate) focused: bool,
+    /// Occurrences of the word at the caret show only once the user has clicked, moved the caret
+    /// or edited: the caret a file opens at is not one they put there, as VS Code's word
+    /// highlighter waits for an explicit cursor change.
+    pub(crate) occurrences_armed: bool,
     blink_task: Option<Task<()>>,
     pub(crate) drag: Option<Drag>,
     /// The IME composition, in the newest selection.
@@ -567,8 +570,13 @@ impl EventEmitter<EditorEvent> for Editor {}
 impl EventEmitter<LspEvent> for Editor {}
 
 impl Focusable for Editor {
-    fn focus_handle(&self, _: &App) -> FocusHandle {
-        self.focus_handle.clone()
+    fn focus_handle(&self, cx: &App) -> FocusHandle {
+        // Showing the rendered document, the pane is the preview: focusing the tab has to reach
+        // it, or Find and the blocks it edits never see a key.
+        match self.preview.as_ref().filter(|pane| pane.mode == crate::markdown_preview::PreviewMode::Full) {
+            Some(pane) => pane.preview.focus_handle(cx),
+            None => self.focus_handle.clone(),
+        }
     }
 }
 
@@ -629,6 +637,7 @@ impl Editor {
             layout: None,
             cursor_visible: true,
             focused: false,
+            occurrences_armed: false,
             blink_task: None,
             drag: None,
             marked_range: None,
@@ -839,6 +848,11 @@ impl Editor {
     /// references, definitions) does; for text without emoji or other astral characters that is
     /// the character count a person types.
     pub fn go_to_line(&mut self, line: usize, column: Option<usize>, cx: &mut Context<Self>) {
+        // A line of a markdown file is a line of its source: a search hit, a definition, Go to
+        // Line. The rendered document has no lines to land on, so it steps aside.
+        if self.previewing() {
+            self.preview = None;
+        }
         let buffer = &self.document.buffer;
         let line = line.saturating_sub(1).min(buffer.line_count().saturating_sub(1));
         let text = buffer.line(line);
@@ -959,8 +973,10 @@ impl Editor {
                 if let Some(line) = demo_line() {
                     self.go_to_line(line, None, cx);
                 }
-                if demo("preview") && self.document.syntax.language.name == "Markdown" {
-                    self.open_preview_pane(cx);
+                // A markdown file opens as the document it reads as; the toolbar's Source button
+                // shows the markdown it was written as (`demo("preview")` opened it this way before).
+                if self.document.syntax.language.name == "Markdown" {
+                    self.open_preview_pane(crate::markdown_preview::PreviewMode::Full, cx);
                 }
             }
             Ok(Loaded::Binary) => self.status = Status::Binary,
@@ -1130,6 +1146,7 @@ impl Editor {
         self.ghost_after_update(len, edited, cx);
         self.settle_carets_in_folds(head, edited);
         self.autoscroll = Some(Autoscroll::Fit);
+        self.occurrences_armed = true;
         self.pause_blink(cx);
         cx.notify();
     }
@@ -2108,6 +2125,10 @@ impl Render for Editor {
         let blame_card = self.layout.as_ref().and_then(|layout| layout.blame).and_then(|(bounds, _)| self.render_blame_card(bounds, cx));
         let vim_bar = self.render_vim_bar(cx);
         let preview = self.render_preview_pane(cx);
+        // The rendered document stands in for the text itself, so the pane's actions (save, find,
+        // the preview toggle) still reach it.
+        let full_preview = self.render_full_preview();
+        let showing_document = full_preview.is_some();
         div()
             .id("editor-pane")
             .key_context("EditorPane")
@@ -2131,7 +2152,8 @@ impl Render for Editor {
             .on_action(cx.listener(Self::toggle_markdown_preview))
             .on_action(cx.listener(Self::inline_edit))
             .children(notice)
-            .child(
+            .children(full_preview.map(|preview| div().flex().flex_1().min_h_0().w_full().child(preview)))
+            .when(!showing_document, |this| this.child(
                 div().flex().flex_1().min_h_0().w_full().child(
                 div()
                     .id("editor")
@@ -2256,7 +2278,7 @@ impl Render for Editor {
                     .child(EditorElement::new(cx.entity())),
                 )
                 .children(preview),
-            )
+            ))
             .children(vim_bar)
             .children(find_bar)
             .children(go_to_line)

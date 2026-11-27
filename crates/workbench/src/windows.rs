@@ -216,7 +216,7 @@ impl Workbench {
 
     /// With Open Folders in New Window on and a project already open here, a folder picked in
     /// the dialog or the recents opens in a new window (`handleOpenFolder`, `openRecentFolder`).
-    pub(crate) fn opens_folders_elsewhere(&self, cx: &App) -> bool {
+    pub fn opens_folders_elsewhere(&self, cx: &App) -> bool {
         self.platform != Platform::Web && settings::get(cx).open_folders_in_new_window && !self.state.projects.is_empty()
     }
 

@@ -486,7 +486,11 @@ impl Gallery {
                             .gap(px(10.))
                             .child(BrandMark::athas().size(px(20.)))
                             .child(BrandMark::github().size(px(20.)))
-                            .children(["claude-acp", "gemini-cli", "github-copilot-cli", "opencode"].into_iter().filter_map(|agent| BrandMark::agent(agent)).map(|mark| mark.size(px(20.)))),
+                            .children(
+                                ["athas.agent.claude-acp", "athas.agent.gemini-cli", "athas.agent.github-copilot", "athas.agent.opencode"]
+                                    .into_iter()
+                                    .map(|agent| BrandMark::image(format!("extensions/icons/{agent}.svg")).size(px(20.))),
+                            ),
                     ),
             )
             .child(

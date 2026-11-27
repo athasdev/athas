@@ -220,6 +220,18 @@ impl ContextState {
 pub struct SessionDockView {
     session: WeakEntity<SessionView>,
     summary: SessionSummary,
+    /// Where this session's commands run, and what else they could run on. Read from the session
+    /// when the boxes refresh, never during a draw.
+    #[cfg(not(target_family = "wasm"))]
+    sandbox: Option<crate::session_view::SandboxTarget>,
+    #[cfg(not(target_family = "wasm"))]
+    sandbox_choices: Vec<crate::session_view::SandboxChoice>,
+    /// The sandbox the session is in right now, once its first command has made one.
+    #[cfg(not(target_family = "wasm"))]
+    sandbox_live: Option<String>,
+    /// What the sandbox is busy with, while it is.
+    #[cfg(not(target_family = "wasm"))]
+    sandbox_work: Option<gpui::SharedString>,
     cloud: Option<CloudState>,
     context: Option<ContextState>,
     skipped_mcp: Vec<String>,
@@ -235,6 +247,14 @@ impl SessionDockView {
         let mut this = Self {
             session: session.downgrade(),
             summary: SessionSummary::default(),
+            #[cfg(not(target_family = "wasm"))]
+            sandbox: None,
+            #[cfg(not(target_family = "wasm"))]
+            sandbox_choices: Vec::new(),
+            #[cfg(not(target_family = "wasm"))]
+            sandbox_live: None,
+            #[cfg(not(target_family = "wasm"))]
+            sandbox_work: None,
             cloud: None,
             context: None,
             skipped_mcp: Vec::new(),
@@ -242,18 +262,43 @@ impl SessionDockView {
             refresh: None,
             _observe: observe,
         };
-        this.read_session(current);
+        this.read_session(current, cx);
         this
     }
 
     /// Takes what the boxes show from the session; whether anything changed.
-    fn read_session(&mut self, session: &SessionView) -> bool {
+    fn read_session(&mut self, session: &SessionView, cx: &App) -> bool {
         let summary = session.summary();
         let cloud = CloudState::of(session);
         let context = ContextState::of(session, &summary);
         let pull_request = session.pull_request().cloned();
-        let changed = summary != self.summary || cloud != self.cloud || context != self.context || session.skipped_mcp != self.skipped_mcp || pull_request != self.pull_request;
+        #[cfg(not(target_family = "wasm"))]
+        let sandbox = session.sandbox_target();
+        #[cfg(not(target_family = "wasm"))]
+        let choices = SessionView::sandbox_choices(cx);
+        #[cfg(not(target_family = "wasm"))]
+        let live = session.sandbox_live_id();
+        #[cfg(not(target_family = "wasm"))]
+        let work = session.sandbox_work();
+        #[cfg(not(target_family = "wasm"))]
+        let sandbox_changed =
+            sandbox != self.sandbox || choices != self.sandbox_choices || live != self.sandbox_live || work != self.sandbox_work;
+        #[cfg(target_family = "wasm")]
+        let sandbox_changed = false;
+        let changed = summary != self.summary
+            || cloud != self.cloud
+            || context != self.context
+            || session.skipped_mcp != self.skipped_mcp
+            || pull_request != self.pull_request
+            || sandbox_changed;
         if changed {
+            #[cfg(not(target_family = "wasm"))]
+            {
+                self.sandbox = sandbox;
+                self.sandbox_choices = choices;
+                self.sandbox_live = live;
+                self.sandbox_work = work;
+            }
             self.summary = summary;
             self.cloud = cloud;
             self.context = context;
@@ -261,6 +306,67 @@ impl SessionDockView {
             self.pull_request = pull_request;
         }
         changed
+    }
+
+    /// The first row of the Environment box: where this session's commands run. With a sandbox
+    /// integration installed it is the choice itself, not a label -- "This Mac" is a place, and
+    /// the place is what a reader wants to change when they read it.
+    fn location_row(&self, icon: IconName, place: String, cx: &mut Context<Self>) -> AnyElement {
+        #[cfg(not(target_family = "wasm"))]
+        if !self.sandbox_choices.is_empty() {
+            let colors = cx.theme().colors.clone();
+            let target = self.sandbox.as_ref();
+            let chosen = target.and_then(|target| self.sandbox_choices.iter().find(|choice| choice.id == target.provider));
+            // The provider's own mark where the laptop would be, so the row looks like the place
+            // it names.
+            let leading: AnyElement = match chosen.and_then(|choice| choice.icon.clone()) {
+                Some(path) => gpui::img(path).size(px(14.)).into_any_element(),
+                None => Icon::new(if chosen.is_some() { IconName::Cube } else { icon })
+                    .size(IconSize::XSmall)
+                    .color(colors.subtle_foreground)
+                    .into_any_element(),
+            };
+            // The provider and which of its sandboxes -- the one running, else the one picked,
+            // else a plain word for "chosen, but nothing has run in it yet". A session that has
+            // not run a command has no sandbox, and saying so beats implying it has one.
+            // What it is doing while it does it, else which sandbox it is, else that it is only
+            // a destination so far.
+            let label = match chosen {
+                Some(choice) => {
+                    let which = self
+                        .sandbox_work
+                        .clone()
+                        .map(|work| work.to_string())
+                        .or_else(|| self.sandbox_live.clone())
+                        .or_else(|| target.and_then(|target| target.sandbox.clone()));
+                    format!("{} · {}", choice.name, which.unwrap_or_else(|| "not started".into()))
+                }
+                None => place,
+            };
+            let session = self.session.clone();
+            // Built by hand rather than through `row`: the chevron belongs against the label it
+            // opens, not pushed to the far edge of the box by a row that fills the space.
+            return div()
+                .id("env-location")
+                .flex()
+                .items_center()
+                .gap(px(8.))
+                .min_w_0()
+                .min_h(px(24.))
+                .rounded(ui::metrics::radius_md())
+                .text_size(typography::text_sm())
+                .text_color(colors.muted_foreground)
+                .hover(|style| style.text_color(colors.foreground))
+                .child(div().flex().flex_none().child(leading))
+                .child(div().min_w_0().truncate().child(label))
+                .child(Icon::new(IconName::ChevronDown).size(IconSize::XSmall).color(colors.subtle_foreground))
+                .on_click(move |event: &gpui::ClickEvent, window, cx| {
+                    let position = event.position();
+                    session.update(cx, |session, cx| session.deploy_environment_menu(position, window, cx)).ok();
+                })
+                .into_any_element();
+        }
+        row(Some(icon), place, None, None, cx).into_any_element()
     }
 
     /// Streaming changes the session many times a second; the boxes follow a few times a second.
@@ -273,7 +379,7 @@ impl SessionDockView {
             this.update(cx, |this, cx| {
                 this.refresh = None;
                 let Some(session) = this.session.upgrade() else { return };
-                if this.read_session(session.read(cx)) {
+                if this.read_session(session.read(cx), cx) {
                     cx.notify();
                 }
             })
@@ -448,7 +554,7 @@ fn location_of(workspace: &std::path::Path) -> (IconName, String) {
     } else if let Some(rest) = workspace.strip_prefix("wsl://") {
         (IconName::TerminalWindow, format!("WSL · {}", rest.split('/').next().unwrap_or_default()))
     } else {
-        (IconName::Laptop, if cfg!(target_os = "macos") { "This Mac" } else if cfg!(target_os = "windows") { "This PC" } else { "This computer" }.to_string())
+        (IconName::Laptop, crate::session_view::local_machine_name())
     }
 }
 
@@ -471,7 +577,7 @@ impl Render for SessionDockView {
             }
         } else if let Some(info) = &summary.environment {
             let (icon, place) = location_of(&info.workspace);
-            environment.push(row(Some(icon), place, None, None, cx).into_any_element());
+            environment.push(self.location_row(icon, place, cx));
             environment.push(inline_row(Some(IconName::Folder), info.name.clone(), Some(info.workspace.display().to_string()), None, cx).into_any_element());
             if let Some(branch) = &info.branch {
                 environment.push(row(Some(IconName::GitBranch), branch.clone(), None, None, cx).into_any_element());

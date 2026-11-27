@@ -12,6 +12,7 @@ use account::{
     widgets,
 };
 use ui::scale::px;
+use ui::OpenOutbound;
 use gpui::{
     AnyElement, App, Context, Entity, EventEmitter, FocusHandle, Focusable, Hsla, IntoElement, ParentElement, Render, SharedString, Styled,
     Subscription, Task, Window, div, prelude::*,
@@ -340,7 +341,7 @@ impl TeamView {
                 EmptyState::new("Available on the Team plan")
                     .message("Share agent sessions with teammates, ask for reviews and hand work off.")
                     .icon(IconName::Users)
-                    .action(Button::new("team-plans", "View Plans").variant(ButtonVariant::Accent).on_click(move |_, _, cx| cx.open_url(&pricing))),
+                    .action(Button::new("team-plans", "View Plans").variant(ButtonVariant::Accent).on_click(move |_, _, cx| cx.open_outbound(&pricing))),
             );
         };
         let sections: Vec<AnyElement> = [
@@ -434,7 +435,7 @@ impl Render for TeamView {
                                     Button::icon("team-dashboard", IconName::OpenExternal)
                                         .size(ButtonSize::Small)
                                         .tooltip("Manage Team on the Web")
-                                        .on_click(move |_, _, cx| cx.open_url(&dashboard)),
+                                        .on_click(move |_, _, cx| cx.open_outbound(&dashboard)),
                                 )
                                 .child(
                                     Button::icon("team-refresh", IconName::ArrowClockwise)
