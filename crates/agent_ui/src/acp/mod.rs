@@ -11,6 +11,8 @@ pub mod traffic_secrets;
 pub mod host;
 #[cfg(not(target_family = "wasm"))]
 pub mod process;
+#[cfg(not(target_family = "wasm"))]
+pub mod sandbox;
 pub mod remote;
 
 #[cfg(test)]

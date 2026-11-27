@@ -4,6 +4,7 @@
 //! under it.
 
 use ui::scale::px;
+use ui::OpenOutbound;
 use gpui::{AnyElement, App, Context, Entity, IntoElement, ParentElement, Render, SharedString, Styled, Subscription, Window, div, prelude::*,};
 use theme::ActiveTheme;
 use ui::{Button, ButtonVariant, Switch, typography};
@@ -64,7 +65,7 @@ impl AccountSettings {
                     div()
                         .flex()
                         .gap(px(6.))
-                        .child(Button::new("account-dashboard", "Dashboard").variant(ButtonVariant::Outline).on_click(move |_, _, cx| cx.open_url(&dashboard)))
+                        .child(Button::new("account-dashboard", "Dashboard").variant(ButtonVariant::Outline).on_click(move |_, _, cx| cx.open_outbound(&dashboard)))
                         .child(Button::new("account-sign-out", "Sign Out").variant(ButtonVariant::Outline).on_click(move |_, _, cx| update(cx, |store, cx| store.sign_out(cx)))),
                     cx,
                 ));

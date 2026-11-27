@@ -9,6 +9,8 @@ publish.workspace = true
 path = "src/extensions_ui.rs"
 
 [dependencies]
+sandbox = { path = "../sandbox" }
+log = "0.4"
 gpui.workspace = true
 extensions = { path = "../extensions" }
 account = { path = "../account" }

@@ -10,6 +10,7 @@
 use gpui::{AnyElement, Context, IntoElement, ParentElement, Styled, Window, div, prelude::*};
 use theme::ActiveTheme;
 use ui::scale::px;
+use ui::OpenOutbound;
 use ui::{Button, ButtonSize, ButtonVariant, EmptyState, Icon, IconName, IconSize, SidebarListItem, pane_actions, typography};
 
 use crate::Workbench;
@@ -178,7 +179,7 @@ impl Workbench {
                 }
                 rows.push(match url.is_empty() {
                     true => item.into_any_element(),
-                    false => item.on_click(move |_, _, cx| cx.open_url(&url)).into_any_element(),
+                    false => item.on_click(move |_, _, cx| cx.open_outbound(&url)).into_any_element(),
                 });
             }
         }
@@ -187,7 +188,7 @@ impl Workbench {
             for agent in &spend {
                 rows.push(
                     SidebarListItem::new(gpui::SharedString::from(format!("spend-{}", agent.id)), agent.name.clone())
-                        .leading(Icon::new(agent_ui::model_vendor::provider_icon(&agent.id)).size(IconSize::XSmall).color(colors.subtle_foreground))
+                        .leading(agent_ui::model_vendor::agent_mark(&agent.id, px(12.), colors.subtle_foreground))
                         .description(agent.detail())
                         .trailing(agent.value())
                         .into_any_element(),
@@ -200,7 +201,7 @@ impl Workbench {
                 .variant(ButtonVariant::Ghost)
                 .size(ButtonSize::Small)
                 .tooltip("Plan & Billing")
-                .on_click(move |_, _, cx| cx.open_url(&billing))
+                .on_click(move |_, _, cx| cx.open_outbound(&billing))
                 .into_any_element(),
             Button::icon("usage-ai-settings", IconName::Sparkle)
                 .variant(ButtonVariant::Ghost)
@@ -267,7 +268,7 @@ impl Workbench {
                 let trailing = if login.is_empty() { "Connected".to_string() } else { login };
                 github.push(
                     row("account-github".into(), "GitHub".into(), IconName::BrandGithub, Some(trailing))
-                        .on_click(move |_, _, cx| cx.open_url(&profile))
+                        .on_click(move |_, _, cx| cx.open_outbound(&profile))
                         .into_any_element(),
                 );
             }
@@ -275,7 +276,7 @@ impl Workbench {
                 let integrations = urls.integrations();
                 github.push(
                     row("account-github-connect".into(), "Connect GitHub".into(), IconName::BrandGithub, None)
-                        .on_click(move |_, _, cx| cx.open_url(&integrations))
+                        .on_click(move |_, _, cx| cx.open_outbound(&integrations))
                         .into_any_element(),
                 );
             }
@@ -293,7 +294,9 @@ impl Workbench {
         }
         for agent in &agents {
             agent_rows.push(
-                row(format!("account-agent-{}", agent.id), agent.name.clone(), agent_ui::model_vendor::provider_icon(&agent.id), Some(agent.source.clone()))
+                SidebarListItem::new(gpui::SharedString::from(format!("account-agent-{}", agent.id)), agent.name.clone())
+                    .leading(agent_ui::model_vendor::agent_mark(&agent.id, px(12.), colors.subtle_foreground))
+                    .trailing(agent.source.clone())
                     .on_click(cx.listener(|this, _, window, cx| this.open_settings_page(Some("ai"), window, cx)))
                     .into_any_element(),
             );

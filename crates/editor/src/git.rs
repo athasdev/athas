@@ -2,10 +2,10 @@
 //! for the caret line (`features/editor` git gutter and inline blame in Athas).
 
 #[cfg(not(target_family = "wasm"))]
-use std::{collections::HashMap, path::PathBuf};
+use std::collections::HashMap;
 use std::{
     ops::Range,
-    path::Path,
+    path::{Path, PathBuf},
     sync::Arc,
     time::Duration,
 };
@@ -61,6 +61,8 @@ pub struct BlameEntry {
     pub email: String,
     /// Seconds since the Unix epoch.
     pub time: i64,
+    /// The author's time zone, in minutes from UTC: the date is shown as they wrote it.
+    pub offset_minutes: i32,
     pub summary: String,
     /// `None` for a line not committed yet.
     pub commit: Option<String>,
@@ -69,22 +71,89 @@ pub struct BlameEntry {
 /// The file in its repository: the work tree and its `HEAD` text (`None` when untracked).
 struct HeadText {
     text: Option<String>,
+    /// The repository's work tree, so the blame card can name the repository a commit is in.
+    workdir: PathBuf,
+    /// The file inside the work tree, for its blame tab.
+    relative: PathBuf,
+    /// The remote's web page (`https://github.com/owner/repo`), when it has one.
+    remote: Option<String>,
+}
+
+/// The commit and blame views' resource kinds (`git_diff::COMMIT_KIND`, `git_diff::BLAME_KIND`);
+/// their ids are `repo|hash` and `repo|path`. The editor cannot depend on `git_diff` (it depends
+/// on the editor), so it asks the workbench by name, as the GitHub panel does.
+const COMMIT_KIND: &str = "git-commit";
+const BLAME_KIND: &str = "git-blame";
+
+/// The web page of a remote URL: `git@host:owner/repo.git`, `ssh://git@host/owner/repo` and
+/// `https://host/owner/repo.git` all become `https://host/owner/repo`. (The web build reads no
+/// remotes: only `read_head` and its test call this.)
+#[cfg_attr(target_family = "wasm", allow(dead_code))]
+fn remote_web_url(url: &str) -> Option<String> {
+    let url = url.trim().trim_end_matches('/');
+    let url = url.strip_suffix(".git").unwrap_or(url);
+    // Drop the scheme and the user, leaving `host/owner/repo` or scp-style `host:owner/repo`.
+    let rest = url.split_once("://").map_or(url, |(_, rest)| rest);
+    let rest = rest.rsplit_once('@').map_or(rest, |(_, rest)| rest);
+    let (host, path) = rest.split_once(['/', ':'])?;
+    // `ssh://git@host:2222/owner/repo` keeps its port in the path.
+    let path = match path.split_once('/') {
+        Some((port, rest)) if !port.is_empty() && port.bytes().all(|byte| byte.is_ascii_digit()) => rest,
+        _ => path,
+    };
+    let path = path.trim_matches('/');
+    if !host.contains('.') || path.is_empty() {
+        return None;
+    }
+    Some(format!("https://{host}/{path}"))
+}
+
+/// The page a commit has on its forge; Bitbucket is the one that says "commits".
+fn commit_web_url(remote: &str, hash: &str) -> String {
+    let segment = if remote.contains("bitbucket.") { "commits" } else { "commit" };
+    format!("{remote}/{segment}/{hash}")
+}
+
+/// `2026-11-21 14:32` in the time zone the commit was written in, as the commit view writes it.
+pub fn absolute_time(time: i64, offset_minutes: i32) -> String {
+    let local = time + offset_minutes as i64 * 60;
+    let (days, seconds) = (local.div_euclid(86_400), local.rem_euclid(86_400));
+    let z = days + 719_468;
+    let era = z.div_euclid(146_097);
+    let doe = z - era * 146_097;
+    let yoe = (doe - doe / 1460 + doe / 36_524 - doe / 146_096) / 365;
+    let doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
+    let mp = (5 * doy + 2) / 153;
+    let day = (doy - (153 * mp + 2) / 5 + 1) as u32;
+    let month = if mp < 10 { mp + 3 } else { mp - 9 } as u32;
+    let year = yoe + era * 400 + i64::from(month <= 2);
+    format!("{year:04}-{month:02}-{day:02} {:02}:{:02}", seconds / 3600, seconds % 3600 / 60)
 }
 
 #[cfg(not(target_family = "wasm"))]
-fn open_repository(path: &Path) -> Option<(git2::Repository, PathBuf)> {
+/// The repository a file is in: the repository, its work tree and the file's path inside it.
+fn open_repository(path: &Path) -> Option<(git2::Repository, PathBuf, PathBuf)> {
     let repository = git2::Repository::discover(path.parent()?).ok()?;
     let workdir = repository.workdir()?.canonicalize().ok()?;
     let absolute = path.canonicalize().ok()?;
     let relative = absolute.strip_prefix(&workdir).ok()?.to_path_buf();
-    Some((repository, relative))
+    Some((repository, workdir, relative))
 }
 
 /// The file's text at `HEAD`, or empty when it is staged but not committed yet. `None` when the
 /// file is not in a repository or not tracked.
 #[cfg(not(target_family = "wasm"))]
 fn read_head(path: &Path) -> Option<HeadText> {
-    let (repository, relative) = open_repository(path)?;
+    let (repository, workdir, relative) = open_repository(path)?;
+    let remote = repository
+        .find_remote("origin")
+        .ok()
+        .or_else(|| {
+            let names = repository.remotes().ok()?;
+            let name = names.iter().flatten().next()?;
+            repository.find_remote(name).ok()
+        })
+        .and_then(|remote| remote.url().and_then(remote_web_url));
     let from_head = repository
         .head()
         .ok()
@@ -93,10 +162,10 @@ fn read_head(path: &Path) -> Option<HeadText> {
         .and_then(|entry| repository.find_blob(entry.id()).ok())
         .map(|blob| String::from_utf8_lossy(blob.content()).replace("\r\n", "\n"));
     if from_head.is_some() {
-        return Some(HeadText { text: from_head });
+        return Some(HeadText { text: from_head, workdir, relative, remote });
     }
     let staged = repository.index().ok().is_some_and(|index| index.get_path(&relative, 0).is_some());
-    staged.then_some(HeadText { text: Some(String::new()) })
+    staged.then_some(HeadText { text: Some(String::new()), workdir, relative, remote })
 }
 
 /// The hunks that turn `old` into `new`, by line.
@@ -141,11 +210,11 @@ fn blame_lines(_: &Path, _: &str) -> Option<Vec<Option<Arc<BlameEntry>>>> {
 /// Blame for each line of `text` (the buffer, saved or not).
 #[cfg(not(target_family = "wasm"))]
 fn blame_lines(path: &Path, text: &str) -> Option<Vec<Option<Arc<BlameEntry>>>> {
-    let (repository, relative) = open_repository(path)?;
+    let (repository, _, relative) = open_repository(path)?;
     let blame = repository.blame_file(&relative, None).ok()?;
     let blame = blame.blame_buffer(text.as_bytes()).ok()?;
     let mut commits: HashMap<git2::Oid, Arc<BlameEntry>> = HashMap::new();
-    let uncommitted = Arc::new(BlameEntry { author: "You".into(), email: String::new(), time: now_seconds(), summary: "Uncommitted changes".into(), commit: None });
+    let uncommitted = Arc::new(BlameEntry { author: "You".into(), email: String::new(), time: now_seconds(), offset_minutes: 0, summary: "Uncommitted changes".into(), commit: None });
     let line_count = text.lines().count().max(1) + usize::from(text.ends_with('\n'));
     let mut lines = Vec::with_capacity(line_count);
     for line in 1..=line_count {
@@ -163,6 +232,7 @@ fn blame_lines(path: &Path, text: &str) -> Option<Vec<Option<Arc<BlameEntry>>>> 
                         author: signature.name().unwrap_or("Unknown").to_string(),
                         email: signature.email().unwrap_or_default().to_string(),
                         time: signature.when().seconds(),
+                        offset_minutes: signature.when().offset_minutes(),
                         summary: commit.as_ref().and_then(|commit| commit.summary().map(str::to_string)).unwrap_or_default(),
                         commit: Some(id.to_string()),
                     })
@@ -198,6 +268,12 @@ pub(crate) struct GitState {
     pub hunks: Vec<GitHunk>,
     /// The `HEAD` text the hunks compare against; `None` outside a repository.
     head: Option<Arc<String>>,
+    /// The work tree of the repository the file is in, and the file inside it: the tabs the
+    /// blame card opens.
+    repo: Option<PathBuf>,
+    repo_path: Option<PathBuf>,
+    /// The remote's web page, when the card can link a commit to one.
+    remote: Option<String>,
     pub blame: Vec<Option<Arc<BlameEntry>>>,
     last_refresh: Option<Instant>,
     head_task: Option<Task<()>>,
@@ -228,6 +304,9 @@ impl Editor {
         self.git.head_task = Some(cx.spawn(async move |this, cx| {
             let head = cx.background_spawn(async move { read_head(&path) }).await;
             this.update(cx, |editor, cx| {
+                editor.git.repo = head.as_ref().map(|head| head.workdir.clone());
+                editor.git.repo_path = head.as_ref().map(|head| head.relative.clone());
+                editor.git.remote = head.as_ref().and_then(|head| head.remote.clone());
                 editor.git.head = head.and_then(|head| head.text).map(Arc::new);
                 editor.schedule_git_diff(false, cx);
                 editor.schedule_blame(cx);
@@ -292,7 +371,7 @@ impl Editor {
     /// again after a pause.
     pub(crate) fn git_edited(&mut self, edits: &[AppliedEdit], cx: &mut Context<Self>) {
         if !self.git.blame.is_empty() {
-            let uncommitted = Arc::new(BlameEntry { author: "You".into(), email: String::new(), time: now_seconds(), summary: "Uncommitted changes".into(), commit: None });
+            let uncommitted = Arc::new(BlameEntry { author: "You".into(), email: String::new(), time: now_seconds(), offset_minutes: 0, summary: "Uncommitted changes".into(), commit: None });
             for edit in edits {
                 let first = edit.lsp.range.start.line as usize;
                 let last = edit.lsp.range.end.line as usize;
@@ -349,9 +428,9 @@ impl Editor {
 
     /// The commit card over the inline blame at `anchor`.
     pub(crate) fn render_blame_card(&self, anchor: gpui::Bounds<gpui::Pixels>, cx: &mut Context<Self>) -> Option<gpui::AnyElement> {
-        use gpui::{Anchor, InteractiveElement as _, IntoElement as _, StatefulInteractiveElement as _, ParentElement as _, Styled as _, anchored, deferred, div, point, px};
+        use gpui::{Anchor, InteractiveElement as _, IntoElement as _, StatefulInteractiveElement as _, ParentElement as _, Styled as _, anchored, deferred, div, point, prelude::FluentBuilder as _, px};
         use theme::ActiveTheme as _;
-        use ui::{Avatar, Button, ButtonSize, ButtonVariant, IconName, typography};
+        use ui::{Avatar, Button, ButtonSize, ButtonVariant, IconName, TooltipExt as _, typography};
 
         let line = self.git.card?;
         let entry = self.git.blame.get(line)?.as_ref()?;
@@ -362,6 +441,10 @@ impl Editor {
         let summary = entry.summary.lines().next().filter(|summary| !summary.trim().is_empty()).unwrap_or("No commit message").to_string();
         let short = hash.chars().take(7).collect::<String>();
         let copied = self.git.copied;
+        let when: gpui::SharedString = absolute_time(entry.time, entry.offset_minutes).into();
+        let blame_path = self.git.repo_path.clone();
+        let remote = self.git.remote.clone();
+        let host = remote.as_ref().and_then(|remote| remote.strip_prefix("https://")).and_then(|rest| rest.split('/').next()).unwrap_or("the remote").to_string();
         let card = div()
             .id("blame-card")
             .occlude()
@@ -388,28 +471,110 @@ impl Editor {
                     .text_color(colors.subtle_foreground)
                     .child(Avatar::new(&author).size(px(20.)).image(author_avatar(&entry.email, cx)))
                     .child(div().min_w_0().truncate().font_weight(typography::MEDIUM).text_color(colors.foreground).child(author))
-                    .child(div().flex_none().child(relative_time(entry.time, now_seconds()))),
+                    .child(
+                        div()
+                            .id("blame-when")
+                            .flex_none()
+                            .child(relative_time(entry.time, now_seconds()))
+                            .anchored_tooltip(move || ui::Tooltip::new(when.clone())),
+                    ),
             )
-            .child(div().line_clamp(3).child(summary))
+            .child(div().line_clamp(3).child(summary.clone()))
             .child(
-                div().child(
-                    Button::new("blame-copy-hash", short)
-                        .size(ButtonSize::XSmall)
-                        .variant(ButtonVariant::Ghost)
-                        .leading_icon(if copied { IconName::Check } else { IconName::Copy })
-                        .tooltip(if copied { "Copied" } else { "Copy commit hash" })
-                        .on_click(cx.listener(move |editor, _, _, cx| {
-                            cx.write_to_clipboard(gpui::ClipboardItem::new_string(hash.clone()));
-                            editor.git.copied = true;
-                            cx.notify();
-                        })),
-                ),
+                // A row, not the card's own column: a column stretches its children, which left
+                // the hash button the width of the card with its label in the middle.
+                div()
+                    .flex()
+                    .items_center()
+                    .gap(px(2.))
+                    .child(
+                        Button::new("blame-copy-hash", short.clone())
+                            .size(ButtonSize::XSmall)
+                            .variant(ButtonVariant::Ghost)
+                            .leading_icon(if copied { IconName::Check } else { IconName::Copy })
+                            .tooltip(if copied { "Copied" } else { "Copy commit hash" })
+                            .on_click(cx.listener({
+                                let hash = hash.clone();
+                                move |editor, _, _, cx| {
+                                    cx.write_to_clipboard(gpui::ClipboardItem::new_string(hash.clone()));
+                                    editor.git.copied = true;
+                                    cx.notify();
+                                }
+                            })),
+                    )
+                    .child(div().flex_1())
+                    .when_some(blame_path, |this, path| {
+                        this.child(
+                            Button::icon("blame-open-blame", IconName::History)
+                                .size(ButtonSize::XSmall)
+                                .variant(ButtonVariant::Ghost)
+                                .tooltip("Blame this file")
+                                .on_click(cx.listener(move |editor, _, _, cx| {
+                                    editor.open_blame_file(&path, cx);
+                                })),
+                        )
+                    })
+                    .when_some(remote, |this, remote| {
+                        let url = commit_web_url(&remote, &hash);
+                        this.child(
+                            Button::icon("blame-open-remote", IconName::OpenExternal)
+                                .size(ButtonSize::XSmall)
+                                .variant(ButtonVariant::Ghost)
+                                .tooltip(format!("Open on {host}"))
+                                .on_click(cx.listener(move |editor, _, _, cx| {
+                                    cx.open_url(&url);
+                                    editor.close_blame_card(cx);
+                                })),
+                        )
+                    })
+                    .child(
+                        Button::new("blame-open-commit", "Open commit")
+                            .size(ButtonSize::XSmall)
+                            .variant(ButtonVariant::Ghost)
+                            .leading_icon(IconName::GitCommit)
+                            .tooltip("Open the commit in a tab")
+                            .on_click(cx.listener(move |editor, _, _, cx| {
+                                editor.open_blame_commit(&hash, &short, &summary, cx);
+                            })),
+                    ),
             );
         Some(
             deferred(anchored().anchor(Anchor::BottomLeft).position(point(anchor.left(), anchor.top() - px(4.))).snap_to_window_with_margin(px(8.)).child(card))
                 .with_priority(2)
                 .into_any_element(),
         )
+    }
+
+    /// Opens the commit the card shows as a tab, and closes the card.
+    fn open_blame_commit(&mut self, hash: &str, short: &str, summary: &str, cx: &mut Context<Self>) {
+        let id = self.git_resource_id(hash);
+        workbench_api::open_resource(cx, COMMIT_KIND, &id, &format!("{short} {summary}"));
+        self.close_blame_card(cx);
+    }
+
+    /// Opens the file's blame tab, the whole history the card shows one line of.
+    fn open_blame_file(&mut self, path: &Path, cx: &mut Context<Self>) {
+        let path = path.to_string_lossy().replace('\\', "/");
+        let name = path.rsplit('/').next().unwrap_or(&path).to_string();
+        let id = self.git_resource_id(&path);
+        workbench_api::open_resource(cx, BLAME_KIND, &id, &format!("{name} (Blame)"));
+        self.close_blame_card(cx);
+    }
+
+    /// `repo|rest`, the id the git views take (`git_diff::target::with_repo`).
+    fn git_resource_id(&self, rest: &str) -> String {
+        match &self.git.repo {
+            Some(repo) => format!("{}|{rest}", repo.to_string_lossy()),
+            None => rest.to_string(),
+        }
+    }
+
+    fn close_blame_card(&mut self, cx: &mut Context<Self>) {
+        self.git.card = None;
+        self.git.card_hovered = false;
+        self.git.blame_hovered = None;
+        self.git.card_task = None;
+        cx.notify();
     }
 
     /// The blame of the caret line, as the inline annotation shows it.
@@ -443,6 +608,25 @@ mod tests {
         assert_eq!(diff_hunks(old, "one\nTWO\nthree\nfour\n"), vec![GitHunk { kind: HunkKind::Modified, lines: 1..2 }]);
         assert_eq!(diff_hunks(old, "one\nfour\n"), vec![GitHunk { kind: HunkKind::Deleted, lines: 1..1 }]);
         assert_eq!(diff_hunks(old, "two\nthree\nfour\n"), vec![GitHunk { kind: HunkKind::Deleted, lines: 0..0 }]);
+    }
+
+    #[test]
+    fn remote_pages_from_every_url_shape() {
+        let page = Some("https://github.com/athasdev/athas".to_string());
+        assert_eq!(remote_web_url("git@github.com:athasdev/athas.git"), page);
+        assert_eq!(remote_web_url("ssh://git@github.com/athasdev/athas"), page);
+        assert_eq!(remote_web_url("https://github.com/athasdev/athas.git/"), page);
+        assert_eq!(remote_web_url("ssh://git@github.com:2222/athasdev/athas"), page);
+        assert_eq!(remote_web_url("/srv/repos/athas.git"), None);
+        assert_eq!(commit_web_url("https://github.com/a/b", "0123456"), "https://github.com/a/b/commit/0123456");
+        assert_eq!(commit_web_url("https://bitbucket.org/a/b", "0123456"), "https://bitbucket.org/a/b/commits/0123456");
+    }
+
+    #[test]
+    fn dates_are_written_in_the_author_s_zone() {
+        assert_eq!(absolute_time(0, 0), "1970-01-01 00:00");
+        // 2026-11-29 14:32 UTC, written in UTC+2.
+        assert_eq!(absolute_time(1_795_962_720, 120), "2026-11-29 16:32");
     }
 
     #[test]

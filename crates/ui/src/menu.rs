@@ -64,6 +64,29 @@ pub fn overlay_max_height() -> Pixels { px(320.) }
 /// prompts, which draw at 3 and below. A submenu paints one step above its parent.
 pub const MENU_PRIORITY: usize = 4;
 
+/// How many action buttons a row's element ids leave room for.
+const ROW_ACTIONS: usize = 8;
+
+/// A button at the end of a row, such as a language server's restart and stop. It runs its own
+/// handler and closes the menu; it never picks the row it sits in.
+pub struct MenuAction {
+    pub(crate) icon: IconName,
+    pub(crate) tooltip: SharedString,
+    pub(crate) tone: MenuItemTone,
+    pub(crate) handler: Handler,
+}
+
+impl MenuAction {
+    pub fn new(icon: IconName, tooltip: impl Into<SharedString>, handler: impl Fn(&mut Window, &mut App) + 'static) -> Self {
+        Self { icon, tooltip: tooltip.into(), tone: MenuItemTone::Default, handler: Rc::new(handler) }
+    }
+
+    pub fn tone(mut self, tone: MenuItemTone) -> Self {
+        self.tone = tone;
+        self
+    }
+}
+
 /// What a row ends with besides its shortcut.
 pub(crate) enum Trailing {
     Disclosure,
@@ -75,10 +98,13 @@ pub struct MenuItem {
     pub(crate) icon: Option<IconName>,
     /// A picture in place of `icon`, such as the icon theme's icon for a file.
     pub(crate) icon_image: Option<gpui::ImageSource>,
+    pub(crate) icon_path: Option<SharedString>,
     pub(crate) checked: Option<bool>,
     pub(crate) selected: bool,
     pub(crate) shortcut: Option<SharedString>,
     pub(crate) trailing: Option<Trailing>,
+    /// Buttons at the end of the row, each with its own handler (`MenuAction`).
+    pub(crate) actions: Vec<MenuAction>,
     pub(crate) tone: MenuItemTone,
     pub(crate) disabled: bool,
     pub(crate) handler: Option<Handler>,
@@ -108,10 +134,12 @@ impl MenuItem {
             label: label.into(),
             icon: None,
             icon_image: None,
+            icon_path: None,
             checked: None,
             selected: false,
             shortcut: None,
             trailing: None,
+            actions: Vec::new(),
             tone: MenuItemTone::Default,
             disabled: false,
             handler: None,
@@ -169,6 +197,13 @@ impl MenuItem {
         self
     }
 
+    /// A one-colour SVG outside the Nucleo set, such as the mark an agent's extension ships.
+    /// It takes the icon's place and follows the row's text colour.
+    pub fn icon_path(mut self, path: impl Into<SharedString>) -> Self {
+        self.icon_path = Some(path.into());
+        self
+    }
+
     pub fn icon(mut self, icon: IconName) -> Self {
         self.icon = Some(icon);
         self
@@ -200,6 +235,12 @@ impl MenuItem {
     /// Muted text at the end, such as a count.
     pub fn trailing_text(mut self, text: impl Into<SharedString>) -> Self {
         self.trailing = Some(Trailing::Text(text.into()));
+        self
+    }
+
+    /// Adds a button at the end of the row; picking it runs the action, not the row.
+    pub fn action(mut self, action: MenuAction) -> Self {
+        self.actions.push(action);
         self
     }
 
@@ -632,7 +673,7 @@ impl Menu {
                 continue;
             }
             let items: Vec<&MenuItem> = (start..index).filter_map(|row| self.item(row)).collect();
-            if !items.is_empty() && items.iter().all(|item| item.icon.is_some() || item.icon_image.is_some()) {
+            if !items.is_empty() && items.iter().all(|item| item.icon.is_some() || item.icon_image.is_some() || item.icon_path.is_some()) {
                 visible[start..index].iter_mut().for_each(|flag| *flag = true);
             }
             start = index + 1;
@@ -702,7 +743,8 @@ impl Render for Menu {
                         None
                     };
                     let is_submenu = item.is_submenu() || open_submenu.is_some();
-                    let has_trailing = item.shortcut.is_some() || item.trailing.is_some() || is_submenu || item.checked.is_some() || item.external;
+                    let has_trailing =
+                        item.shortcut.is_some() || item.trailing.is_some() || is_submenu || item.checked.is_some() || item.external || !item.actions.is_empty();
                     let submenu = open_submenu.map(|open| open.menu.clone());
                     // A submenu opens to the right, or to the left when the right has no room for
                     // it; snapping it into the window instead slid it over this menu's rows.
@@ -726,9 +768,10 @@ impl Render for Menu {
                         .text_color(text)
                         .when_some(item.tooltip.clone(), |this, tooltip| this.anchored_tooltip(move || crate::Tooltip::new(tooltip.clone())))
                         .when_some(fill, |this, fill| this.bg(fill))
-                        .when(icons[index], |this| match item.icon_image.clone() {
-                            Some(source) => this.child(gpui::img(source).flex_none().size(px(14.))),
-                            None => this.children(item.icon.map(|icon| Icon::new(icon).size(IconSize::Small).color(icon_color))),
+                        .when(icons[index], |this| match (item.icon_image.clone(), item.icon_path.clone()) {
+                            (Some(source), _) => this.child(gpui::img(source).flex_none().size(px(14.))),
+                            (None, Some(path)) => this.child(Icon::from_path(path).size(IconSize::Small).color(icon_color)),
+                            (None, None) => this.children(item.icon.map(|icon| Icon::new(icon).size(IconSize::Small).color(icon_color))),
                         })
                         .map(|this| match item.description.clone() {
                             Some(description) => this.items_start().child(
@@ -768,7 +811,29 @@ impl Render for Menu {
                                     div().flex().items_center().justify_center().size(px(14.)).when(checked, |this| {
                                         this.child(Icon::new(IconName::Check).size(IconSize::Small).color(text))
                                     })
-                                })),
+                                }))
+                                .when(!item.actions.is_empty(), |this| {
+                                    // The buttons occlude the row: a click on one runs the action
+                                    // and never picks the row they sit in.
+                                    this.child(div().occlude().flex().items_center().gap(px(2.)).children(item.actions.iter().enumerate().map(
+                                        |(slot, action)| {
+                                            let (handler, entity) = (action.handler.clone(), entity.clone());
+                                            crate::Button::icon(("menu-action", (index * ROW_ACTIONS + slot) as u64), action.icon)
+                                                .size(crate::ButtonSize::XSmall)
+                                                .variant(crate::ButtonVariant::Ghost)
+                                                .when(action.tone == MenuItemTone::Destructive, |button| button.tone(crate::ButtonTone::Danger))
+                                                .tooltip(action.tooltip.clone())
+                                                .on_click(move |_, window, cx| {
+                                                    if let Some(menu) = entity.upgrade() {
+                                                        menu.update(cx, |_, cx| cx.emit(DismissEvent));
+                                                    }
+                                                    // Deferred for the reason `activate` defers.
+                                                    let handler = handler.clone();
+                                                    window.defer(cx, move |window, cx| handler(window, cx));
+                                                })
+                                        },
+                                    )))
+                                }),
                         ))
                         .when(!disabled, |this| {
                             this.on_hover(cx.listener(move |this, hovered: &bool, window, cx| {

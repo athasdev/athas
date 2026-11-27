@@ -75,6 +75,10 @@ pub struct Composer {
     goal_x: Option<Pixels>,
     layout: Option<TextLayout>,
     is_selecting: bool,
+    /// A double or triple click's drag, which selects whole words or lines.
+    drag: Option<ui::UnitDrag>,
+    /// The right-click menu.
+    context_menu: Option<ui::OpenMenu>,
     /// Lines scrolled off the top when the text is taller than the box.
     scroll_lines: usize,
     /// Set when the wheel scrolled the text: the cursor and length it was at. While both stay
@@ -153,6 +157,8 @@ impl Composer {
             goal_x: None,
             layout: None,
             is_selecting: false,
+            drag: None,
+            context_menu: None,
             scroll_lines: 0,
             manual_scroll: None,
             scroll_remainder: px(0.),
@@ -462,9 +468,7 @@ impl Composer {
                 true
             }
             "a" if cmd || (ctrl && cfg!(not(target_os = "macos"))) => {
-                self.selected_range = 0..self.content.len();
-                self.selection_reversed = false;
-                cx.notify();
+                self.select_all_text(cx);
                 true
             }
             // Only claimed with something selected here. The composer holds the focus for the
@@ -472,34 +476,11 @@ impl Composer {
             // own `CopyTranscriptSelection` never ran: text selected in the transcript could not
             // be copied at all. Unhandled, it falls through to the session's binding.
             "c" | "x" if (cmd || (ctrl && cfg!(not(target_os = "macos")))) && !self.selected_range.is_empty() => {
-                cx.write_to_clipboard(ClipboardItem::new_string(self.content[self.selected_range.clone()].to_string()));
-                if keystroke.key == "x" {
-                    self.replace_selection("", cx);
-                }
+                self.copy_selection(keystroke.key == "x", cx);
                 true
             }
             "v" if cmd || (ctrl && cfg!(not(target_os = "macos"))) => {
-                let item = cx.read_from_clipboard();
-                let entries = item.as_ref().map(|item| item.entries()).unwrap_or_default();
-                let image = entries.iter().find_map(|entry| match entry {
-                    gpui::ClipboardEntry::Image(image) => Some(image.clone()),
-                    _ => None,
-                });
-                let paths: Vec<std::path::PathBuf> = entries
-                    .iter()
-                    .filter_map(|entry| match entry {
-                        gpui::ClipboardEntry::ExternalPaths(paths) => Some(paths.paths().to_vec()),
-                        _ => None,
-                    })
-                    .flatten()
-                    .collect();
-                if let Some(image) = image {
-                    cx.emit(ComposerEvent::PastedImage(image));
-                } else if !paths.is_empty() {
-                    cx.emit(ComposerEvent::PastedPaths(paths));
-                } else if let Some(text) = item.and_then(|item| item.text()) {
-                    self.replace_selection(&text.replace("\r\n", "\n"), cx);
-                }
+                self.paste(cx);
                 true
             }
             "space" if ctrl && cmd => {
@@ -517,12 +498,11 @@ impl Composer {
         window.focus(&self.focus_handle, cx);
         let Some(origin) = self.layout.as_ref().map(|layout| layout.bounds.origin) else { return };
         let offset = self.offset_for_position(event.position - origin);
-        if event.click_count >= 2 {
-            let start = self.previous_word_start(self.next_boundary(offset).min(self.content.len()));
-            let end = self.next_word_end(offset);
-            self.selected_range = start..end;
-            self.selection_reversed = false;
-            cx.notify();
+        self.drag = ui::UnitDrag::start(&self.content, offset, event.click_count);
+        if self.drag.is_some() {
+            self.is_selecting = true;
+            self.goal_x = None;
+            self.drag_to(offset, cx);
             return;
         }
         let offset = self.chip_at(offset).map_or(offset, |chip| chip.range.end);
@@ -533,6 +513,86 @@ impl Composer {
 
     fn on_mouse_up(&mut self, _: &MouseUpEvent, _: &mut Window, _: &mut Context<Self>) {
         self.is_selecting = false;
+        self.drag = None;
+    }
+
+    /// Selects from the unit a double or triple click took to the one at `offset`.
+    fn drag_to(&mut self, offset: usize, cx: &mut Context<Self>) {
+        let Some(drag) = &self.drag else { return };
+        let (range, reversed) = drag.extend(&self.content, offset);
+        self.selected_range = range;
+        self.selection_reversed = reversed;
+        cx.notify();
+    }
+
+    fn copy_selection(&mut self, cut: bool, cx: &mut Context<Self>) {
+        if self.selected_range.is_empty() {
+            return;
+        }
+        cx.write_to_clipboard(ClipboardItem::new_string(self.content[self.selected_range.clone()].to_string()));
+        if cut {
+            self.replace_selection("", cx);
+        }
+    }
+
+    /// Pastes text, or hands an image or files on the clipboard to the session to attach.
+    fn paste(&mut self, cx: &mut Context<Self>) {
+        let item = cx.read_from_clipboard();
+        let entries = item.as_ref().map(|item| item.entries()).unwrap_or_default();
+        let image = entries.iter().find_map(|entry| match entry {
+            gpui::ClipboardEntry::Image(image) => Some(image.clone()),
+            _ => None,
+        });
+        let paths: Vec<std::path::PathBuf> = entries
+            .iter()
+            .filter_map(|entry| match entry {
+                gpui::ClipboardEntry::ExternalPaths(paths) => Some(paths.paths().to_vec()),
+                _ => None,
+            })
+            .flatten()
+            .collect();
+        if let Some(image) = image {
+            cx.emit(ComposerEvent::PastedImage(image));
+        } else if !paths.is_empty() {
+            cx.emit(ComposerEvent::PastedPaths(paths));
+        } else if let Some(text) = item.and_then(|item| item.text()) {
+            self.replace_selection(&text.replace("\r\n", "\n"), cx);
+        }
+    }
+
+    fn select_all_text(&mut self, cx: &mut Context<Self>) {
+        self.selected_range = 0..self.content.len();
+        self.selection_reversed = false;
+        cx.notify();
+    }
+
+    /// The right-click menu: Cut, Copy, Paste and Select All. A click outside the selection
+    /// moves the caret there first.
+    fn on_right_mouse_down(&mut self, event: &MouseDownEvent, window: &mut Window, cx: &mut Context<Self>) {
+        window.focus(&self.focus_handle, cx);
+        if let Some(origin) = self.layout.as_ref().map(|layout| layout.bounds.origin) {
+            let offset = self.offset_for_position(event.position - origin);
+            if self.selected_range.is_empty() || offset < self.selected_range.start || offset > self.selected_range.end {
+                self.move_to(offset, cx);
+            }
+        }
+        let this = cx.entity();
+        let action = |run: fn(&mut Composer, &mut Window, &mut Context<Composer>)| {
+            let this = this.clone();
+            Box::new(move |window: &mut Window, cx: &mut App| this.update(cx, |this, cx| run(this, window, cx))) as Box<dyn Fn(&mut Window, &mut App)>
+        };
+        let entries = ui::EditMenu {
+            has_selection: !self.selected_range.is_empty(),
+            editable: true,
+            cut: action(|this, _, cx| this.copy_selection(true, cx)),
+            copy: action(|this, _, cx| this.copy_selection(false, cx)),
+            paste: action(|this, _, cx| this.paste(cx)),
+            select_all: action(|this, _, cx| this.select_all_text(cx)),
+        }
+        .entries();
+        self.context_menu = Some(ui::OpenMenu::new("composer-context", entries, event.position, gpui::Anchor::TopLeft, window, cx, |this, _| this.context_menu = None));
+        cx.stop_propagation();
+        cx.notify();
     }
 
     /// The wheel or trackpad scrolls text taller than the box, a line at a time.
@@ -563,9 +623,19 @@ impl Composer {
         if !self.is_selecting {
             return;
         }
+        // The button came up somewhere that did not tell us.
+        if event.pressed_button != Some(MouseButton::Left) {
+            self.is_selecting = false;
+            self.drag = None;
+            return;
+        }
         let Some(origin) = self.layout.as_ref().map(|layout| layout.bounds.origin) else { return };
         let offset = self.offset_for_position(event.position - origin);
-        self.select_to(offset, cx);
+        if self.drag.is_some() {
+            self.drag_to(offset, cx);
+        } else {
+            self.select_to(offset, cx);
+        }
     }
 
     fn offset_from_utf16(&self, offset: usize) -> usize {
@@ -997,6 +1067,8 @@ impl Render for Composer {
             .cursor(CursorStyle::IBeam)
             .on_key_down(cx.listener(Self::on_key_down))
             .on_mouse_down(MouseButton::Left, cx.listener(Self::on_mouse_down))
+            .on_mouse_down(MouseButton::Right, cx.listener(Self::on_right_mouse_down))
+            .children(self.context_menu.as_ref().map(|menu| div().absolute().child(menu.render())))
             .on_mouse_up(MouseButton::Left, cx.listener(Self::on_mouse_up))
             .on_mouse_up_out(MouseButton::Left, cx.listener(Self::on_mouse_up))
             .on_mouse_move(cx.listener(Self::on_mouse_move))

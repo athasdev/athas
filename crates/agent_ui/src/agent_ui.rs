@@ -118,7 +118,7 @@ pub use ai_settings::AiSettingsView;
 pub use dock_view::{SessionDockView, reveal_box as reveal_session_box, side_panel_shown as session_side_panel_shown, toggle_side_panel as toggle_session_side_panel};
 pub use review::ReviewView;
 pub use history_view::{HistoryEvent, HistoryView};
-pub use session_view::SessionView;
+pub use session_view::{RemoteOutcome, SessionView, remote_prompt, remote_status, remote_stop};
 use workspace::SessionStatus;
 
 /// What the workbench knows about the session a view shows.

@@ -30,6 +30,7 @@ agent_ui = { path = "../agent_ui" }
 workbench_api = { path = "../workbench_api" }
 workspace = { path = "../workspace" }
 theme = { path = "../theme" }
+ui = { path = "../ui" }
 onboarding = { path = "../onboarding" }
 base64 = "0.22"
 minisign-verify = "0.2"

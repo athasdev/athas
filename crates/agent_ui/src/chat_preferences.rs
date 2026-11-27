@@ -322,13 +322,19 @@ impl SessionView {
         if self.transcript.config_options.iter().any(|option| option.category.as_deref() == Some("model")) {
             self.refresh_codex_models(false, cx);
         }
+        // A session that has not started yet knows no models: the agent reports them when it
+        // opens its session. Starting it here is what puts Model in this menu before the first
+        // prompt; the open menu takes the list when it arrives.
+        if self.transcript.config_options.is_empty() {
+            self.warm_up(cx);
+        }
         let entries = self.agent_menu_entries(cx);
         self.effort_popover = None;
         self.show_menu_at("preferences", entries, position, window, cx);
     }
 
     /// An open Agent settings menu shows the Codex skills that just loaded.
-    fn refresh_open_preferences_menu(&mut self, cx: &mut Context<Self>) {
+    pub(crate) fn refresh_open_preferences_menu(&mut self, cx: &mut Context<Self>) {
         if self.open_menu.as_ref().is_none_or(|menu| menu.key != "preferences") {
             return;
         }
@@ -346,7 +352,7 @@ impl SessionView {
         } else {
             vec![
                 MenuEntry::Label("Agent".into()),
-                MenuEntry::Item(MenuItem::new(self.agent_name()).icon(crate::model_vendor::provider_icon(&self.info.agent)).checked(true).disabled(true)),
+                MenuEntry::Item(crate::model_vendor::agent_menu_item(MenuItem::new(self.agent_name()), &self.info.agent).checked(true).disabled(true)),
             ]
         };
         entries.push(MenuEntry::Separator);
@@ -364,6 +370,7 @@ impl SessionView {
         }
         let models: Vec<(String, String)> =
             self.transcript.config_options.iter().filter(|option| classify(option) == OptionCategory::Model && !option.choices.is_empty()).map(|option| (option.id.clone(), option.current_name().to_string())).collect();
+        let mut has_model = false;
         for (id, current) in models {
             let Some((rows, searchable)) = self.config_option_entries(&id, cx) else { continue };
             let mut item = MenuItem::new("Model").icon(IconName::Sparkle).trailing_text(current);
@@ -371,6 +378,12 @@ impl SessionView {
                 item = item.searchable_submenu("Search models…", "No matching models");
             }
             entries.push(MenuEntry::Item(item.submenu(rows)));
+            has_model = true;
+        }
+        // The agent `open_preferences_menu` just started has not reported its models yet; the row
+        // holds their place so the menu does not read as an agent without a choice of model.
+        if !has_model && !crate::builtin::is_builtin(&self.info.agent) && !matches!(self.agent, AgentState::NotInstalled { .. }) {
+            entries.push(MenuEntry::Item(MenuItem::new("Model").icon(IconName::Sparkle).trailing_text("Loading…").disabled(true)));
         }
 
         let (modes, target) = composer_modes::mode_options(&self.transcript);

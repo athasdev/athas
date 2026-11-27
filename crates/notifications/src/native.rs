@@ -56,16 +56,16 @@ fn center() -> *mut AnyObject {
 }
 
 /// Asks for permission (once; later calls answer at once), then adds the banner.
-pub fn send(title: &str, body: &str, sound: bool) {
+pub fn send(title: &str, subtitle: Option<&str>, body: &str, sound: bool) {
     let center = center();
     if center.is_null() {
         return;
     }
-    let (title, body) = (title.to_string(), body.to_string());
+    let (title, subtitle, body) = (title.to_string(), subtitle.unwrap_or_default().to_string(), body.to_string());
     let center_address = center as usize;
     let then = RcBlock::new(move |granted: Bool, _: *mut AnyObject| {
         if granted.as_bool() {
-            unsafe { add_request(center_address as *mut AnyObject, &title, &body, sound) };
+            unsafe { add_request(center_address as *mut AnyObject, &title, &subtitle, &body, sound) };
         }
     });
     unsafe {
@@ -73,13 +73,16 @@ pub fn send(title: &str, body: &str, sound: bool) {
     }
 }
 
-unsafe fn add_request(center: *mut AnyObject, title: &str, body: &str, sound: bool) {
+unsafe fn add_request(center: *mut AnyObject, title: &str, subtitle: &str, body: &str, sound: bool) {
     let (Some(content_class), Some(request_class)) = (class(c"UNMutableNotificationContent"), class(c"UNNotificationRequest")) else {
         return;
     };
     unsafe {
         let content: *mut AnyObject = msg_send![content_class, new];
         let _: () = msg_send![content, setTitle: ns_string(title)];
+        if !subtitle.is_empty() {
+            let _: () = msg_send![content, setSubtitle: ns_string(subtitle)];
+        }
         let _: () = msg_send![content, setBody: ns_string(body)];
         if sound && let Some(sound_class) = class(c"UNNotificationSound") {
             let sound: *mut AnyObject = msg_send![sound_class, defaultSound];

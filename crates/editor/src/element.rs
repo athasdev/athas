@@ -1098,7 +1098,8 @@ impl Editor {
         }
 
         // The server's highlights of the symbol at the caret, or else words like it.
-        if frame.occurrences && self.focused && !self.lsp.highlights.is_empty() {
+        let occurrences = frame.occurrences && self.focused && self.occurrences_armed;
+        if occurrences && !self.lsp.highlights.is_empty() {
             for (range, kind) in &self.lsp.highlights {
                 if range.end < visible.start || range.start > visible.end {
                     continue;
@@ -1106,7 +1107,7 @@ impl Editor {
                 let border = (*kind == HighlightKind::Write).then_some(colors.border_strong);
                 span_quads(range, colors.selected, border, &mut underlays);
             }
-        } else if frame.occurrences && self.focused && !visible.is_empty() && visible.len() <= MAX_HIGHLIGHT_RANGE {
+        } else if occurrences && !visible.is_empty() && visible.len() <= MAX_HIGHLIGHT_RANGE {
             let newest = self.document.newest_selection().clone();
             let caret_word = newest.is_empty().then(|| buffer.word_range_at(newest.head)).flatten();
             let needle = if newest.is_empty() {

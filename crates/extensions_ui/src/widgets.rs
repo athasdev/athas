@@ -16,6 +16,7 @@ pub(crate) fn kind_icon(kind: ExtensionKind) -> IconName {
         ExtensionKind::Mcp => IconName::PlugsConnected,
         ExtensionKind::Skill => IconName::Lightbulb,
         ExtensionKind::Agent => IconName::TerminalWindow,
+        ExtensionKind::Sandbox => IconName::Cube,
     }
 }
 

@@ -23,7 +23,8 @@ dap = { path = "../dap" }
 keymap = { path = "../keymap" }
 notifications = { path = "../notifications" }
 extensions = { path = "../extensions" }
-pulldown-cmark = { version = "0.13", default-features = false }
+# The app's one markdown parser, renderer and editable field.
+markdown = { path = "../markdown" }
 futures = "0.3"
 ropey = { version = "1.6", default-features = false, features = ["simd"] }
 regex = "1"

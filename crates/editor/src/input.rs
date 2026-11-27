@@ -11,6 +11,7 @@ use crate::{Autoscroll, Drag, Editor, buffer::char_class, element::ScrollbarLayo
 impl Editor {
     pub(crate) fn mouse_down(&mut self, event: &MouseDownEvent, in_gutter: bool, window: &mut Window, cx: &mut Context<Self>) {
         window.focus(&self.focus_handle, cx);
+        self.occurrences_armed = true;
         self.dismiss_lsp_popovers(cx);
         let offset = self.offset_for_position(event.position);
         if !in_gutter && event.click_count == 1 && self.definition_modifier(event.modifiers, cx) && self.definition_click(offset, window, cx) {
