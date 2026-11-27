@@ -1347,9 +1347,7 @@ impl FileTree {
         // like a new file, which selected and scrolled back to that file.
         self.pending_reveal = None;
         if row.is_dir {
-            if event.click_count() < 2 {
-                self.toggle_dir(&row.path, cx);
-            }
+            self.toggle_dir(&row.path, cx);
         } else {
             self.open_file(row.path.clone(), cx);
         }
@@ -2381,9 +2379,15 @@ impl FileTree {
                 let paths = self
                     .action_targets(&row.path)
                     .into_iter()
-                    .map(|path| {
-                        let is_dir = self.rows.iter().find(|row| row.path == path).map_or(path.is_dir(), |row| row.is_dir);
-                        (path, is_dir)
+                    .map(|target| {
+                        // Every visible row runs this each frame; only a multi-selection's other
+                        // entries need the scan over all rows.
+                        let is_dir = if target == row.path {
+                            is_dir
+                        } else {
+                            self.rows.iter().find(|row| row.path == target).map_or(target.is_dir(), |row| row.is_dir)
+                        };
+                        (target, is_dir)
                     })
                     .collect();
                 let dragged = DraggedEntry { path: row.path.clone(), is_dir, name: display_name(&row.path), paths };
