@@ -12,6 +12,9 @@ use web_time::Instant;
 
 fn track_width() -> Pixels { px(12.) }
 fn track_inset() -> Pixels { px(4.) }
+/// The resting thumb's rounded end sits concentric with an island's bottom corner, so the thumb,
+/// flush with the right edge, never crosses that curve.
+fn track_bottom_inset() -> Pixels { crate::metrics::island_radius() - px(2.) }
 fn min_thumb() -> Pixels { px(24.) }
 /// How long the thumb stays after the content stops moving.
 const SCROLLING_LINGER: Duration = Duration::from_millis(900);
@@ -94,6 +97,7 @@ pub struct Scrollbar {
     inside: bool,
     /// Drawn whenever the content overflows, not only while the pointer is over it.
     always: bool,
+    flush: bool,
     /// Where the thumb draws among the deferred elements. The bar is deferred so later rows
     /// cannot cover it, which also puts it under anything deferred above it — a scrolling list
     /// inside a modal (priority 2) needs its own priority to show at all.
@@ -104,7 +108,7 @@ pub struct Scrollbar {
 impl Scrollbar {
     /// For a div with `overflow_y_scroll().track_scroll(handle)`.
     pub fn new(id: impl Into<ElementId>, handle: &ScrollHandle) -> Self {
-        Self { id: id.into(), source: ScrollSource::Handle(handle.clone()), inside: false, always: false, priority: 0, bar: None }
+        Self { id: id.into(), source: ScrollSource::Handle(handle.clone()), inside: false, always: false, flush: false, priority: 0, bar: None }
     }
 
     /// For a `uniform_list(..).track_scroll(handle)`.
@@ -114,13 +118,20 @@ impl Scrollbar {
 
     /// For a variable-height `list(state, ..)`.
     pub fn list(id: impl Into<ElementId>, state: &ListState) -> Self {
-        Self { id: id.into(), source: ScrollSource::List(state.clone()), inside: false, always: false, priority: 0, bar: None }
+        Self { id: id.into(), source: ScrollSource::List(state.clone()), inside: false, always: false, flush: false, priority: 0, bar: None }
     }
 
     /// Always drawn while the content overflows: for a surface the keyboard drives, where the
     /// pointer may never go near the list (a command surface).
     pub fn always(mut self) -> Self {
         self.always = true;
+        self
+    }
+
+    /// Runs the track to both ends of the area, for a list whose ends meet a divider or a
+    /// square corner rather than a rounded one (a sidebar list).
+    pub fn flush(mut self) -> Self {
+        self.flush = true;
         self
     }
 
@@ -193,9 +204,10 @@ impl Scrollbar {
             return None;
         }
         let offset = self.source.offset().clamp(px(0.), max);
+        let (top_inset, bottom_inset) = if self.flush { (px(0.), px(0.)) } else { (track_inset(), track_bottom_inset()) };
         let track = Bounds::new(
-            point(bounds.origin.x, bounds.origin.y + track_inset()),
-            size(bounds.size.width, (bounds.size.height - track_inset() * 2.).max(px(0.))),
+            point(bounds.origin.x, bounds.origin.y + top_inset),
+            size(bounds.size.width, (bounds.size.height - top_inset - bottom_inset).max(px(0.))),
         );
         let content = viewport.size.height + max;
         let thumb_height = (track.size.height * (viewport.size.height / content)).max(min_thumb()).min(track.size.height);
@@ -231,7 +243,7 @@ impl Element for Scrollbar {
         // The bar is laid out here, as `deferred` lays out its child, and drawn later.
         let cell = Rc::new(Cell::new(Bounds::default()));
         let mut bar =
-            ScrollbarBar { source: self.source.clone(), bounds: cell.clone(), hitbox: None, always: self.always, inside: self.inside }.into_any_element();
+            ScrollbarBar { source: self.source.clone(), bounds: cell.clone(), hitbox: None, always: self.always, inside: self.inside, flush: self.flush }.into_any_element();
         let layout_id = bar.request_layout(window, cx);
         self.bar = Some((bar, cell));
         (layout_id, ())
@@ -285,11 +297,12 @@ struct ScrollbarBar {
     /// A child of the scrolling div: a full-height box there would count as content, and with
     /// the div's padding make it scroll by that much with nothing to scroll to.
     inside: bool,
+    flush: bool,
 }
 
 impl ScrollbarBar {
     fn geometry(&self, bounds: Bounds<Pixels>) -> Option<Geometry> {
-        Scrollbar { id: "".into(), source: self.source.clone(), inside: false, always: false, priority: 0, bar: None }.geometry(bounds)
+        Scrollbar { id: "".into(), source: self.source.clone(), inside: false, always: false, flush: self.flush, priority: 0, bar: None }.geometry(bounds)
     }
 }
 
@@ -387,7 +400,7 @@ impl Element for ScrollbarBar {
             let (rest, active) = thumb_colors(dark);
             let width = if widened { px(8.) } else { px(4.) };
             let thumb = Bounds::new(
-                point(geometry.thumb.center().x - width / 2., geometry.thumb.origin.y),
+                point(geometry.thumb.right() - width, geometry.thumb.origin.y),
                 size(width, geometry.thumb.size.height),
             );
             window.paint_quad(fill(thumb, if widened { active } else { rest }).corner_radii(width / 2.));
