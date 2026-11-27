@@ -215,7 +215,7 @@ impl GitHubPanel {
             .flex_1()
             .min_h_0()
             .overflow_hidden()
-            .child(ui::with_scrollbar(column, ui::Scrollbar::new("github-list-scrollbar", &self.list_scroll)))
+            .child(ui::with_scrollbar(column, ui::Scrollbar::new("github-list-scrollbar", &self.list_scroll).flush()))
     }
 
     /// The rows under the list: releases and deployments, each opening its command surface

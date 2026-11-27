@@ -1,6 +1,7 @@
 use crate::scale::px;
 use gpui::{
     AnyElement, App, Div, IntoElement, ParentElement, RenderOnce, SharedString, Styled, Window, div,
+    prelude::FluentBuilder,
 };
 use theme::ActiveTheme;
 
@@ -135,11 +136,18 @@ pub struct PanelHeader {
     detail: Option<SharedString>,
     more: Option<AnyElement>,
     trailing: Option<AnyElement>,
+    flush: bool,
 }
 
 impl PanelHeader {
     pub fn new(label: impl Into<SharedString>) -> Self {
-        Self { label: label.into(), detail: None, more: None, trailing: None }
+        Self { label: label.into(), detail: None, more: None, trailing: None, flush: false }
+    }
+
+    /// No room under the rule, for a list whose rows (and scrollbar) start right at it.
+    pub fn flush(mut self) -> Self {
+        self.flush = true;
+        self
     }
 
     /// A quiet reading after the name: "3 new", "2 selected", "12 archived".
@@ -171,7 +179,7 @@ impl RenderOnce for PanelHeader {
         div()
             .flex_none()
             .pb(px(4.))
-            .mb(px(4.))
+            .when(!self.flush, |this| this.mb(px(4.)))
             .border_b_1()
             .border_color(colors.border)
             .child(
