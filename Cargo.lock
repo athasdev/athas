@@ -2837,6 +2837,7 @@ dependencies = [
  "account",
  "ai_providers",
  "anyhow",
+ "chrono",
  "extension_host",
  "extensions",
  "futures",

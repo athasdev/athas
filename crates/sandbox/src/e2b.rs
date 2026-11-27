@@ -154,11 +154,22 @@ impl Provider for E2b {
         Ok(entries
             .iter()
             .filter_map(|entry| {
+                let number = |key: &str| entry.get(key).and_then(Value::as_u64).unwrap_or_default() as u32;
                 Some(Listed {
                     id: entry.get("sandboxID")?.as_str()?.to_string(),
-                    template: entry.get("templateID").and_then(Value::as_str).unwrap_or_default().to_string(),
+                    // The alias is what the template was asked for by name; the id behind it
+                    // means nothing to a reader.
+                    template: entry
+                        .get("alias")
+                        .or_else(|| entry.get("templateID"))
+                        .and_then(Value::as_str)
+                        .unwrap_or_default()
+                        .to_string(),
                     state: entry.get("state").and_then(Value::as_str).unwrap_or("running").to_string(),
                     started_at: entry.get("startedAt").and_then(Value::as_str).map(str::to_string),
+                    ends_at: entry.get("endAt").and_then(Value::as_str).map(str::to_string),
+                    cpus: number("cpuCount"),
+                    memory_mb: number("memoryMB"),
                 })
             })
             .collect())
@@ -249,6 +260,7 @@ impl Provider for E2b {
         };
         let bytes = response.bytes().map_err(|error| Error::unavailable(format!("Running a command: the output stopped ({error}).")))?;
         let mut output = Output::default();
+        let mut ended = false;
         for frame in connect::decode(&bytes)? {
             if frame.is_end() {
                 if let Some(error) = connect::stream_error(&frame) {
@@ -266,11 +278,14 @@ impl Provider for E2b {
                 }
             }
             if let Some(end) = event.get("end") {
-                output.exit_code = number_field(end, "exitCode", "exit_code").map(|code| code as i32);
+                // Protobuf JSON leaves a zero out, so a command that succeeded carries no
+                // `exitCode` at all. An `end` event is the exit; what it does not say is 0.
+                ended = true;
+                output.exit_code = Some(number_field(end, "exitCode", "exit_code").unwrap_or(0) as i32);
             }
         }
-        // envd ended the stream without an `end` event: the command did not get to exit.
-        output.timed_out = output.exit_code.is_none();
+        // No `end` event at all: the command never got to exit.
+        output.timed_out = !ended;
         Ok(output)
     }
 

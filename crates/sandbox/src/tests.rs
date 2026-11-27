@@ -124,6 +124,25 @@ fn the_command_is_sent_as_one_connect_envelope_a_shell_runs() {
     assert_eq!(sent["process"]["cwd"], json!("/home/user/project"));
 }
 
+/// Protobuf JSON omits zero values, so envd's `end` event for a command that worked carries no
+/// `exitCode` at all. Read as "no exit code" that made every successful command look like one
+/// that never finished.
+#[test]
+fn an_end_event_with_no_exit_code_is_a_command_that_succeeded() {
+    let server = exec_server(format!(
+        "{}{}",
+        data_frame("stdout", "done\n"),
+        frame(0, json!({ "event": { "end": { "exited": true, "status": "exit status 0" } } })),
+    ));
+    let (client, sandbox) = sandbox_of(&server);
+
+    let output = client.exec(&sandbox, &Exec::new("tar xzf archive.tgz")).expect("the command runs");
+
+    assert_eq!(output.exit_code, Some(0));
+    assert!(output.succeeded(), "a command that exited cleanly is not a failure");
+    assert!(!output.timed_out, "it ended, so it did not run out of time");
+}
+
 #[test]
 fn a_failing_command_keeps_its_exit_code_instead_of_becoming_an_error() {
     let body = format!("{}{}", data_frame("stderr", "not found\n"), frame(0, json!({ "event": { "end": { "exitCode": 127 } } })));
@@ -185,7 +204,7 @@ fn the_list_is_what_the_account_has_right_now() {
         Response::json(
             200,
             json!([
-                { "sandboxID": "sb-1", "templateID": "base", "state": "running", "startedAt": "2026-11-27T10:00:00Z" },
+                { "sandboxID": "sb-1", "alias": "base", "templateID": "rki5", "state": "running", "startedAt": "2026-11-27T10:00:00Z", "endAt": "2026-11-27T11:00:00Z", "cpuCount": 2, "memoryMB": 512 },
                 { "sandboxID": "sb-2", "templateID": "athas-agent", "state": "paused", "startedAt": "2026-11-27T09:00:00Z" },
                 { "templateID": "base", "state": "running" }
             ]),
@@ -197,6 +216,9 @@ fn the_list_is_what_the_account_has_right_now() {
 
     assert_eq!(listed.len(), 2, "an entry with no id is not a sandbox anything can be done to");
     assert_eq!(listed[0].id, "sb-1");
+    assert_eq!(listed[0].template, "base", "the alias is the name a reader asked for");
+    assert_eq!((listed[0].cpus, listed[0].memory_mb), (2, 512));
+    assert_eq!(listed[0].ends_at.as_deref(), Some("2026-11-27T11:00:00Z"));
     assert!(listed[0].is_running());
     assert_eq!(listed[1].template, "athas-agent");
     assert!(!listed[1].is_running());

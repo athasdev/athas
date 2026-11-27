@@ -167,6 +167,10 @@ pub struct Listed {
     pub state: String,
     /// When it started, in the provider's own format.
     pub started_at: Option<String>,
+    /// When the provider will stop it on its own, in the provider's own format.
+    pub ends_at: Option<String>,
+    pub cpus: u32,
+    pub memory_mb: u32,
 }
 
 impl Listed {

@@ -85,6 +85,18 @@ pub(crate) fn render(
     let tool_statuses = extensions::get(cx).tool_statuses(&manifest.id);
     // `ExtensionDetailView`: Details first, then what it contributes.
     let mut sections = vec![section("Contributes", render_contributions(entry, colors, cx), colors)];
+    if let Some(sandboxes) = render_running_sandboxes(view, entry, &status, colors, cx) {
+        let provider = entry.manifest.sandbox_providers().next().map(|provider| provider.id.clone());
+        let refresh = provider.map(|provider| {
+            Button::new("sandboxes-refresh", "Refresh")
+                .leading_icon(IconName::ArrowClockwise)
+                .variant(ButtonVariant::Ghost)
+                .size(ButtonSize::Small)
+                .on_click(cx.listener(move |this, _: &ClickEvent, _, cx| this.refresh_sandboxes(&provider, cx)))
+                .into_any_element()
+        });
+        sections.insert(0, section_with_action("Sandboxes", sandboxes, refresh, colors));
+    }
     if let Some(keys) = render_sandbox_keys(view, entry, &status, colors, cx) {
         sections.insert(0, section("API Key", keys, colors));
     }
@@ -485,22 +497,26 @@ fn render_sandbox_keys(
             .flex_col()
             .children(rows)
             .children(error)
-            .children(render_running_sandboxes(view, entry, colors, cx))
             .into_any_element(),
     )
 }
 
-/// What the account has running right now, straight from the provider. The point of a key is
-/// that this list can be asked for at all, so it is the first thing a working key shows.
+/// What the account has right now, with what each one is made of and when the provider will
+/// stop it. The point of a key is that this can be asked at all, so it is the first thing a
+/// working key shows.
 fn render_running_sandboxes(
     view: &ExtensionsView,
     entry: &CatalogEntry,
+    status: &ExtensionStatus,
     colors: &ThemeColors,
     cx: &mut Context<ExtensionsView>,
 ) -> Option<AnyElement> {
+    if !status.installed {
+        return None;
+    }
     let provider = entry.manifest.sandbox_providers().next()?;
     let id = provider.id.clone();
-    let listed = view.provider_sandboxes(&id)?;
+    let listed = view.sandbox_key(&id).flatten().and(view.provider_sandboxes(&id))?;
     let line = |content: AnyElement| {
         div()
             .flex()
@@ -523,17 +539,32 @@ fn render_running_sandboxes(
         let stop_id = sandbox.id.clone();
         let provider_id = id.clone();
         let state: SharedString = if sandbox.is_running() { "Running".into() } else { sandbox.state.clone().into() };
+        let mut detail = vec![sandbox.template.clone()].into_iter().filter(|part| !part.is_empty()).collect::<Vec<_>>();
+        if sandbox.cpus > 0 {
+            detail.push(format!("{} vCPU", sandbox.cpus));
+        }
+        if sandbox.memory_mb > 0 {
+            detail.push(format!("{} MB", sandbox.memory_mb));
+        }
+        if let Some(left) = sandbox.ends_at.as_deref().and_then(time_left) {
+            detail.push(left);
+        }
         line(
             div()
                 .flex()
+                .flex_col()
                 .flex_1()
-                .flex_wrap()
-                .items_center()
-                .gap(px(8.))
                 .min_w(px(200.))
-                .child(mono(sandbox.id.clone(), colors))
-                .child(div().text_color(colors.subtle_foreground).child(sandbox.template.clone()))
-                .child(div().text_color(colors.muted_foreground).child(state))
+                .gap(px(2.))
+                .child(
+                    div()
+                        .flex()
+                        .items_center()
+                        .gap(px(8.))
+                        .child(mono(sandbox.id.clone(), colors))
+                        .child(div().text_color(colors.muted_foreground).child(state)),
+                )
+                .child(div().text_color(colors.subtle_foreground).child(detail.join(" · ")))
                 .into_any_element(),
         )
         .child(
@@ -545,6 +576,18 @@ fn render_running_sandboxes(
         .into_any_element()
     });
     Some(div().flex().flex_col().children(rows).into_any_element())
+}
+
+/// How long the provider will leave a sandbox alone, from the moment it says it will stop it.
+/// `None` when the time has passed or cannot be read: a countdown that has run out says nothing.
+fn time_left(ends_at: &str) -> Option<String> {
+    let ends = chrono::DateTime::parse_from_rfc3339(ends_at).ok()?;
+    let minutes = (ends.timestamp() - chrono::Utc::now().timestamp()) / 60;
+    match minutes {
+        ..=0 => None,
+        1..=59 => Some(format!("stops in {minutes}m")),
+        _ => Some(format!("stops in {}h{:02}m", minutes / 60, minutes % 60)),
+    }
 }
 
 fn item(label: impl Into<SharedString>, value: impl IntoElement, detail: Option<SharedString>, colors: &ThemeColors) -> AnyElement {
