@@ -981,6 +981,8 @@ impl SettingsView {
     fn cli_status() -> (bool, String) {
         match cli::install::state_for_current_user() {
             cli::install::CliInstallState::Installed(_) => (true, "Installed at ~/.local/bin/athas".into()),
+            // Installing again sweeps a launcher Athas itself left behind.
+            cli::install::CliInstallState::Shadowed { by, .. } => (false, format!("{} comes first on your PATH", by.display())),
             _ => (false, "Open folders from your shell with athas".into()),
         }
     }
