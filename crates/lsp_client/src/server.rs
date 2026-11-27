@@ -211,6 +211,13 @@ impl LanguageServer {
     /// Sends a request; the future resolves with the server's answer. Dropping it early cancels
     /// the request (`$/cancelRequest`).
     pub fn request<R: Request>(&self, params: R::Params) -> impl Future<Output = Result<R::Result>> + use<R> {
+        let answer = self.request_value::<R>(params);
+        async move { Ok(serde_json::from_value(answer.await?)?) }
+    }
+
+    /// [`Self::request`] without the last step: the answer stays JSON, so a caller on the
+    /// foreground can hand a large one (a completion list) to a background thread to read.
+    pub fn request_value<R: Request>(&self, params: R::Params) -> impl Future<Output = Result<Value>> + use<R> {
         let shared = self.shared.clone();
         let id = shared.next_id.fetch_add(1, Ordering::SeqCst);
         let (tx, rx) = oneshot::channel();
@@ -224,8 +231,7 @@ impl LanguageServer {
             sent?;
             let answer = rx.await;
             guard.armed = false;
-            let value = answer.map_err(|_| anyhow!("{} stopped", shared.name))??;
-            Ok(serde_json::from_value(value)?)
+            Ok(answer.map_err(|_| anyhow!("{} stopped", shared.name))??)
         }
     }
 
