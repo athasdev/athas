@@ -28,6 +28,8 @@ const API_TIMEOUT: Duration = Duration::from_secs(30);
 /// Read beyond a command's own timeout, so a command that just ran out is reported as timed out
 /// by the sandbox rather than as a dead connection by us.
 const EXEC_GRACE: Duration = Duration::from_secs(10);
+/// Moving a file is not an API call: a workspace is tens of megabytes and crosses the internet.
+const TRANSFER_TIMEOUT: Duration = Duration::from_secs(5 * 60);
 
 pub struct E2b {
     api_key: String,
@@ -277,14 +279,14 @@ impl Provider for E2b {
             .client
             .post(self.envd(sandbox, &files_query(path)))
             .header("Content-Type", "application/octet-stream")
-            .timeout(API_TIMEOUT)
+            .timeout(TRANSFER_TIMEOUT)
             .body(bytes.to_vec());
         self.send(self.envd_headers(request, sandbox), &format!("Writing {path}"))?;
         Ok(())
     }
 
     fn read_file(&self, sandbox: &Sandbox, path: &str) -> Result<Vec<u8>> {
-        let request = self.client.get(self.envd(sandbox, &files_query(path))).timeout(API_TIMEOUT);
+        let request = self.client.get(self.envd(sandbox, &files_query(path))).timeout(TRANSFER_TIMEOUT);
         let response = self.send(self.envd_headers(request, sandbox), &format!("Reading {path}"))?;
         response
             .bytes()

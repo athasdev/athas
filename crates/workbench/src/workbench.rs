@@ -2032,7 +2032,7 @@ impl Workbench {
             div()
                 .absolute()
                 .inset_0()
-                .child(div().id("inbox-backdrop").absolute().inset_0().on_click(cx.listener(|this, _, window, cx| this.close_secondary(window, cx))))
+                .child(div().id("inbox-backdrop").absolute().inset_0().occlude().on_click(cx.listener(|this, _, window, cx| this.close_secondary(window, cx))))
                 .child(
                     div()
                         .absolute()
@@ -3135,6 +3135,12 @@ impl Render for Workbench {
                         .absolute()
                         .inset_0()
                         .bg(theme.colors.scrim)
+                        // The scrim covers the window, so it takes the mouse with it: without
+                        // this the press that closes the modal also lands on whatever is under
+                        // it, rows below light up on hover, and the editor's I-beam shows
+                        // through the dimmed area, since a cursor is read off the topmost
+                        // element that asks for one, not the topmost element.
+                        .occlude()
                         .flex()
                         .justify_center()
                         .map(|this| if centred { this.items_center() } else { this.items_start().pt(viewport.height * 0.1) })
@@ -3333,6 +3339,9 @@ pub(crate) fn toast_stack(window: &Window, workbench: bool, cx: &mut App) -> Opt
             .absolute()
             .bottom(px(24.))
             .right(px(24.))
+            // Toasts float over the editor and the chat: without a cursor of their own they
+            // wear the I-beam of the text they cover.
+            .cursor(gpui::CursorStyle::Arrow)
             .on_hover(|hovered, window, cx| {
                 cx.set_global(notifications::ToastStackHover(*hovered));
                 window.refresh();

@@ -1934,7 +1934,7 @@ impl SettingsView {
             // Create Theme and Report a Bug are dialogs in their own right. In a tab they float
             // over the window, so a split pane does not crop them.
             .children(self.theme_creator.as_ref().map(|(creator, _)| {
-                let layer = div().flex().items_center().justify_center().bg(colors.scrim).child(creator.clone());
+                let layer = div().flex().items_center().justify_center().bg(colors.scrim).occlude().child(creator.clone());
                 match in_window {
                     true => layer.absolute().inset_0().into_any_element(),
                     false => over_window(layer, viewport),
