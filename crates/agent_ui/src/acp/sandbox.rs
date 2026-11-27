@@ -82,6 +82,9 @@ pub struct SandboxRuntime {
     /// session makes its own with its first command.
     existing: Option<String>,
     live: Mutex<Option<Live>>,
+    /// Commands that have actually run in there. The question "did it really run in the sandbox"
+    /// deserves a number, not a guess.
+    ran: std::sync::atomic::AtomicUsize,
     /// When each file was last copied over, so only what changed goes again.
     pushed: Mutex<HashMap<PathBuf, SystemTime>>,
 }
@@ -102,6 +105,7 @@ impl SandboxRuntime {
             root,
             existing: None,
             live: Mutex::default(),
+            ran: std::sync::atomic::AtomicUsize::new(0),
             pushed: Mutex::default(),
         }
     }
@@ -136,6 +140,11 @@ impl SandboxRuntime {
 
     pub fn provider(&self) -> &str {
         &self.provider
+    }
+
+    /// How many commands have run in there.
+    pub fn commands_run(&self) -> usize {
+        self.ran.load(std::sync::atomic::Ordering::Relaxed)
     }
 
     /// The sandbox this session is in right now, if its first command has run. Before that there
@@ -186,6 +195,7 @@ impl SandboxRuntime {
         if output.timed_out {
             text.push_str("\nThe command ran out of time and the sandbox stopped it.\n");
         }
+        self.ran.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
         let pulled = self.pull().unwrap_or_default();
         let _ = pushed;
         Ok(SandboxRun { output: text, exit_code: output.exit_code, pulled })

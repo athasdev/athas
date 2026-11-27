@@ -3070,7 +3070,12 @@ impl SessionView {
         // Reads as the model and its effort ("Opus 5.5 Medium"); the agent's mark leads it, and
         // before the agent offers a model it shows the agent's name.
         let option_of = |category| self.transcript.config_options.iter().find(|option| crate::chat_preferences::classify(option) == category && !option.choices.is_empty());
-        let model = option_of(crate::chat_preferences::OptionCategory::Model).map(|option| option.current_name().to_string()).filter(|name| !name.is_empty());
+        let model_option = option_of(crate::chat_preferences::OptionCategory::Model);
+        let model = model_option.map(|option| option.current_name().to_string()).filter(|name| !name.is_empty());
+        // The chip reads as the model, so it is the model's maker that belongs beside it. The
+        // agent's own mark is the CLI's -- Claude Code's terminal box, not Claude's -- and next
+        // to "Opus 5.5" that reads as the wrong company.
+        let model_value = model_option.map(|option| option.current.clone()).filter(|_| model.is_some());
         let effort = option_of(crate::chat_preferences::OptionCategory::ThoughtLevel).map(|option| {
             option.choices.iter().find(|choice| choice.value == option.current).map_or_else(|| option.current_name().to_string(), |choice| crate::chat_preferences::effort_label(&choice.value, &choice.name))
         });
@@ -3078,7 +3083,13 @@ impl SessionView {
         let label = model.unwrap_or_else(|| agent.clone());
         let mut button = picker_button("agent-picker", label.clone(), None, true)
             .secondary_label(effort.unwrap_or_default())
-            .leading(crate::model_vendor::agent_mark(&self.info.agent, px(14.), colors(cx).muted_foreground))
+            .leading(match &model_value {
+                Some(value) => ui::Icon::new(crate::model_vendor::model_icon(&self.info.agent, value))
+                    .size(ui::IconSize::Custom(px(14.)))
+                    .color(colors(cx).muted_foreground)
+                    .into_any_element(),
+                None => crate::model_vendor::agent_mark(&self.info.agent, px(14.), colors(cx).muted_foreground),
+            })
             .on_click(cx.listener(|this, event: &ClickEvent, window, cx| this.open_preferences_menu(event.position(), window, cx)));
         // The agent's name as the tooltip, but only when the chip shows a model instead: a
         // tooltip that repeats the label says nothing.
@@ -3086,6 +3097,41 @@ impl SessionView {
             button = button.tooltip(agent);
         }
         pickers.push(button.into_any_element());
+        // Where this session's commands run, next to what runs them. A chip that only appears
+        // when a sandbox is chosen: nobody needs to be told their commands run on their own
+        // computer, and everybody needs to be told when they do not.
+        #[cfg(not(target_family = "wasm"))]
+        if let Some(target) = self.sandbox_target() {
+            let name = Self::sandbox_choices(cx)
+                .into_iter()
+                .find(|choice| choice.id == target.provider)
+                .map_or_else(|| target.provider.clone(), |choice| choice.name);
+            let live = self.sandbox_live_id();
+            let ran = self.sandbox_commands_run();
+            let label = match (&live, &self.sandbox_work()) {
+                (_, Some(work)) => format!("{name} · {work}"),
+                (Some(id), None) => format!("{name} · {id}"),
+                (None, None) => format!("{name} · not started"),
+            };
+            // The honest answer to "did it really run in there", which is a number, and the
+            // reason it can be zero: an agent with a shell of its own never asks Athas.
+            let tooltip = match (ran, live) {
+                (0, _) => format!(
+                    "No commands have run in {name} yet. Only commands the agent asks Athas to run go there; one that runs its own shell does not."
+                ),
+                (1, Some(id)) => format!("1 command has run in {id}."),
+                (count, Some(id)) => format!("{count} commands have run in {id}."),
+                (count, None) => format!("{count} commands have run in {name}."),
+            };
+            pickers.push(
+                picker_button("sandbox-picker", label, Some(IconName::Cube), true)
+                    .tooltip(tooltip)
+                    .on_click(cx.listener(|this, event: &ClickEvent, window, cx| {
+                        this.deploy_environment_menu(event.position(), window, cx)
+                    }))
+                    .into_any_element(),
+            );
+        }
         // Once the session has a conversation, where it runs is settled: a local one hides the
         // chip, a cloud one keeps it, disabled, and its repository and branch move to the dock.
         let settled = self.transcript.entries.iter().any(|entry| matches!(entry, Entry::User(_) | Entry::Agent(_)));

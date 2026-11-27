@@ -2468,6 +2468,12 @@ impl SessionView {
         self.sandbox_work.clone()
     }
 
+    /// How many commands have actually run in this session's sandbox.
+    #[cfg(not(target_family = "wasm"))]
+    pub(crate) fn sandbox_commands_run(&self) -> usize {
+        self.sandbox_runtime.as_ref().map_or(0, |runtime| runtime.commands_run())
+    }
+
     /// The last sandbox failure in full, for the row's tooltip.
     #[cfg(not(target_family = "wasm"))]
     pub(crate) fn sandbox_error(&self) -> Option<gpui::SharedString> {
