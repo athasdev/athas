@@ -3131,6 +3131,7 @@ impl Render for Workbench {
                         .id("modal-layer")
                         .absolute()
                         .inset_0()
+                        .occlude()
                         .bg(theme.colors.scrim)
                         .flex()
                         .justify_center()
@@ -3330,6 +3331,7 @@ pub(crate) fn toast_stack(window: &Window, workbench: bool, cx: &mut App) -> Opt
             .absolute()
             .bottom(px(24.))
             .right(px(24.))
+            .occlude()
             .on_hover(|hovered, window, cx| {
                 cx.set_global(notifications::ToastStackHover(*hovered));
                 window.refresh();
