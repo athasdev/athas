@@ -57,6 +57,9 @@ pub(crate) enum AgentState {
 pub(crate) struct SharedAgent {
     key: (String, PathBuf),
     connection: Arc<AgentConnection>,
+    /// Shared by every session of this agent in this folder, which is why where commands run is
+    /// kept per session inside it rather than per host.
+    host: Arc<acp::host::LocalHost>,
     process: acp::process::AgentProcess,
     /// Stopped by the idle sweep; its sessions reconnect with their next prompt.
     idle_stopped: std::cell::Cell<bool>,
@@ -123,6 +126,10 @@ const SESSION_CLOSE_TIMEOUT: Duration = Duration::from_secs(2);
 pub(crate) struct RunningAgent {
     pub connection: Arc<AgentConnection>,
     pub session_id: String,
+    /// The machine side of this session, kept so where its commands run can be changed while it
+    /// is open. `None` for a session whose commands are not this client's to run.
+    #[cfg(not(target_family = "wasm"))]
+    pub host: Option<Arc<acp::host::LocalHost>>,
     #[cfg(not(target_family = "wasm"))]
     _process: Option<acp::process::AgentProcess>,
     /// The agent process this session shares with the others of its agent and folder.
@@ -137,6 +144,25 @@ pub(crate) struct RunningAgent {
     _builtin: Option<Task<()>>,
     _io: Task<()>,
     _events: Task<()>,
+}
+
+/// Where a session's commands run, when they do not run here: whose sandbox, and which one of
+/// theirs. No sandbox named means a fresh one, made with the session's first command.
+#[cfg(not(target_family = "wasm"))]
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(crate) struct SandboxTarget {
+    pub provider: String,
+    pub sandbox: Option<String>,
+}
+
+/// A sandbox a session's commands could run in, as the Environment menu shows it.
+#[cfg(not(target_family = "wasm"))]
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(crate) struct SandboxChoice {
+    pub id: String,
+    pub name: String,
+    /// The provider's mark from its extension, when it ships one.
+    pub icon: Option<gpui::SharedString>,
 }
 
 /// A question the agent waits on.
@@ -222,6 +248,16 @@ pub struct SessionView {
     /// The tool calls each cloud run's log shows so far, by the agent message the run fills.
     pub(crate) cloud_tool_calls: HashMap<usize, Vec<crate::cloud::transcript::CloudToolCall>>,
     pub(crate) open_menu: Option<OpenMenu>,
+    /// Where this session's commands run, or `None` for this machine. The session's, not the
+    /// host's, so it can be chosen before the agent has started.
+    #[cfg(not(target_family = "wasm"))]
+    sandbox_target: Option<SandboxTarget>,
+    /// The account's own sandboxes, as the provider last listed them. Asked for when the menu
+    /// opens, so the list is never fetched by a draw.
+    #[cfg(not(target_family = "wasm"))]
+    sandbox_list: Vec<sandbox::Listed>,
+    #[cfg(not(target_family = "wasm"))]
+    sandbox_list_task: Option<Task<()>>,
     pub(crate) effort_popover: Option<(gpui::Point<gpui::Pixels>, String)>,
     /// The `@` or `/` completion menu over the composer.
     pub(crate) completion: Option<Completion>,
@@ -484,6 +520,28 @@ pub fn remote_stop(session_id: &str, cx: &mut App) -> RemoteOutcome {
     })
 }
 
+/// Sends `text` to the session once its view is up: a click on a follow-up button of a system
+/// banner opens the session first, and a session the user has not looked at this launch takes a
+/// moment to come back. Gives up after a few seconds rather than firing into a closed window.
+pub fn deliver_prompt(session_id: String, text: String, cx: &mut App) {
+    cx.spawn(async move |cx| {
+        for _ in 0..25 {
+            let sent = cx.update(|cx| match live_session(&session_id, cx) {
+                Some(session) => {
+                    session.update(cx, |this, cx| this.send(text.clone(), cx));
+                    true
+                }
+                None => false,
+            });
+            if sent {
+                return;
+            }
+            cx.background_executor().timer(Duration::from_millis(200)).await;
+        }
+    })
+    .detach();
+}
+
 /// How the session is doing, for the device watching it.
 pub fn remote_status(session_id: &str, cx: &mut App) -> RemoteOutcome {
     let Some(session) = live_session(session_id, cx) else { return RemoteOutcome::closed() };
@@ -693,6 +751,12 @@ impl SessionView {
             thumbnails: RefCell::default(),
             cloud_tool_calls: HashMap::new(),
             open_menu: None,
+            #[cfg(not(target_family = "wasm"))]
+            sandbox_target: Self::default_sandbox_target(cx),
+            #[cfg(not(target_family = "wasm"))]
+            sandbox_list: Vec::new(),
+            #[cfg(not(target_family = "wasm"))]
+            sandbox_list_task: None,
             effort_popover: None,
             completion: None,
             open_attachment_group: if open_attachments { crate::attachment_groups::groups(&attachments).first().map(|group| group.kind) } else { None },
@@ -1681,7 +1745,7 @@ impl SessionView {
         let ended_normally = matches!(&result, Some(Ok(response)) if response.stop_reason == schema::StopReason::EndTurn);
         match &result {
             Some(Ok(response)) if response.stop_reason != schema::StopReason::Cancelled => self.call_attention(crate::attention::AttentionKind::Complete, cx),
-            Some(Err(_)) => self.call_attention(crate::attention::AttentionKind::Error, cx),
+            Some(Err(error)) => self.call_attention_about(crate::attention::AttentionKind::Error, Some(error.to_string()), cx),
             _ => {}
         }
         self.turn = None;
@@ -1863,6 +1927,20 @@ impl SessionView {
         } else {
             Self::start_agent(this, &agent_id, cwd, resume, have_history, settings, cx).await
         };
+        // The user picked another agent while this one was starting (the warm-up of an empty
+        // session races the agent menu): that session is let go rather than prompted.
+        if this.read_with(cx, |this, _| this.info.agent != agent_id).unwrap_or(false) {
+            this.update(cx, |this, cx| {
+                this.replaying = false;
+                this.agent = AgentState::Stopped;
+                this.transcript.agent_session_id = None;
+                this.transcript.modes = None;
+                this.transcript.config_options.clear();
+                cx.notify();
+            })
+            .ok();
+            return None;
+        }
         match started {
             Ok(agent) => {
                 this.update(cx, |this, cx| {
@@ -1953,7 +2031,9 @@ impl SessionView {
         let (client_end, agent_end) = acp::rpc::Transport::pair();
         let server = cx.background_spawn(builtin::serve(agent_end, config));
         #[cfg(not(target_family = "wasm"))]
-        let host: Option<Arc<dyn acp::host::ClientHost>> = Some(Arc::new(acp::host::LocalHost::new(cwd.clone(), vec![cwd.clone()])));
+        let local = Some(local_host(cwd.clone(), vec![cwd.clone()]));
+        #[cfg(not(target_family = "wasm"))]
+        let host: Option<Arc<dyn acp::host::ClientHost>> = local.clone().map(|host| host as Arc<dyn acp::host::ClientHost>);
         #[cfg(target_family = "wasm")]
         let host = None;
         let (connection, events, io) = AgentConnection::new(client_end, host);
@@ -1963,6 +2043,8 @@ impl SessionView {
         let agent = Rc::new(RunningAgent {
             connection,
             session_id: opened.session_id.clone(),
+            #[cfg(not(target_family = "wasm"))]
+            host: local,
             #[cfg(not(target_family = "wasm"))]
             _process: None,
             #[cfg(not(target_family = "wasm"))]
@@ -2025,8 +2107,8 @@ impl SessionView {
         };
         let (client_end, agent_end) = acp::rpc::Transport::pair();
         let server = cx.background_spawn(codex::serve(agent_end, codex_transport, config));
-        let host: Arc<dyn acp::host::ClientHost> = Arc::new(acp::host::LocalHost::new(cwd.clone(), vec![cwd.clone()]));
-        let (connection, events, io) = AgentConnection::new(client_end, Some(host));
+        let local = local_host(cwd.clone(), vec![cwd.clone()]);
+        let (connection, events, io) = AgentConnection::new(client_end, Some(local.clone() as Arc<dyn acp::host::ClientHost>));
         connection.set_preferred_auth(this.read_with(cx, |this, _| this.preferred_auth.clone()).ok().flatten());
         let io = cx.background_spawn(io);
         let events = Self::pump_events(this.clone(), events, cx);
@@ -2044,6 +2126,7 @@ impl SessionView {
         let agent = Rc::new(RunningAgent {
             connection,
             session_id: opened.session_id.clone(),
+            host: Some(local),
             _process: Some(process),
             shared: None,
             _route: None,
@@ -2121,12 +2204,13 @@ impl SessionView {
                 let folders = this.read_with(cx, |this, _| this.workspace_folders.clone()).unwrap_or_default();
                 let extra = acp::client::additional_directories(&cwd, &folders);
                 let roots = std::iter::once(cwd.clone()).chain(extra.iter().cloned()).collect();
-                let host: Arc<dyn acp::host::ClientHost> = Arc::new(acp::host::LocalHost::new(cwd.clone(), roots));
-                let (connection, _, io) = AgentConnection::new(transport, Some(host));
+                let host = local_host(cwd.clone(), roots);
+                let (connection, _, io) = AgentConnection::new(transport, Some(host.clone() as Arc<dyn acp::host::ClientHost>));
                 connection.share();
                 connection.read_open_buffers();
                 connection.set_additional_directories(extra);
-                let shared = Rc::new(SharedAgent { key: key.clone(), connection, process, idle_stopped: Default::default(), _io: cx.background_spawn(io) });
+                let shared =
+                    Rc::new(SharedAgent { key: key.clone(), connection, host, process, idle_stopped: Default::default(), _io: cx.background_spawn(io) });
                 cx.update(|cx| {
                     cx.default_global::<SharedAgents>().0.insert(key.clone(), Rc::downgrade(&shared));
                     start_idle_sweep(cx);
@@ -2143,6 +2227,7 @@ impl SessionView {
                 let agent = Rc::new(RunningAgent {
                     connection,
                     session_id: opened.session_id.clone(),
+                    host: Some(shared.host.clone()),
                     _process: None,
                     shared: Some(shared),
                     _route: Some(route),
@@ -2205,6 +2290,8 @@ impl SessionView {
                     connection,
                     session_id: opened.session_id.clone(),
                     _remote: Some(handle),
+                    #[cfg(not(target_family = "wasm"))]
+                    host: None,
                     _route: None,
                     _builtin: None,
                     _io: io,
@@ -2260,6 +2347,109 @@ impl SessionView {
         })
     }
 
+    /// Where this session's commands run: a provider id, or `None` for this machine. The
+    /// session's own answer, not the host's: it is chosen before the agent starts as often as
+    /// after, and an agent that has not started yet still has a place its commands will go.
+    #[cfg(not(target_family = "wasm"))]
+    pub(crate) fn sandbox_target(&self) -> Option<SandboxTarget> {
+        self.sandbox_target.clone()
+    }
+
+    /// The sandbox this session is in right now. `None` while it is still only a destination:
+    /// one is made or opened by the first command, not by choosing it.
+    #[cfg(not(target_family = "wasm"))]
+    pub(crate) fn sandbox_live_id(&self) -> Option<String> {
+        let AgentState::Ready(agent) = &self.agent else { return None };
+        agent.host.as_ref()?.sandbox_id(&agent.session_id)
+    }
+
+    /// The sandbox providers that could run this session's commands: installed, enabled, and
+    /// with a client in this build.
+    #[cfg(not(target_family = "wasm"))]
+    pub(crate) fn sandbox_choices(cx: &App) -> Vec<SandboxChoice> {
+        let extensions = extensions::get(cx);
+        extensions
+            .sandbox_providers()
+            .into_iter()
+            .map(|(extension, provider)| SandboxChoice {
+                icon: extensions.entry(&extension).and_then(|entry| match entry.icon {
+                    Some(extensions::ExtensionIcon::Embedded { path, .. }) => Some(gpui::SharedString::from(path)),
+                    _ => None,
+                }),
+                id: provider.id,
+                name: provider.name,
+            })
+            .collect()
+    }
+
+    /// Sends this session's commands to a provider, or back to this machine. Takes effect with
+    /// the next command; one already running finishes where it started.
+    #[cfg(not(target_family = "wasm"))]
+    pub(crate) fn set_sandbox_target(&mut self, target: Option<SandboxTarget>, cx: &mut Context<Self>) {
+        self.sandbox_target = target;
+        self.apply_sandbox_target(cx);
+        cx.notify();
+    }
+
+    /// Points the running agent's host where the session says. Called when the choice changes
+    /// and again when an agent starts, since a session chooses before it has one.
+    #[cfg(not(target_family = "wasm"))]
+    fn apply_sandbox_target(&mut self, _cx: &mut Context<Self>) {
+        let AgentState::Ready(agent) = &self.agent else { return };
+        let Some(host) = agent.host.clone() else { return };
+        let cwd = session_cwd(&self.info);
+        let runtime = self.sandbox_target.as_ref().map(|target| {
+            Arc::new(match &target.sandbox {
+                Some(sandbox) => acp::sandbox::SandboxRuntime::attached(&target.provider, cwd, sandbox),
+                None => acp::sandbox::SandboxRuntime::new(&target.provider, cwd),
+            })
+        });
+        host.set_sandbox(&agent.session_id, runtime);
+    }
+
+    /// A new session starts where the settings say, so the choice is made once and not per chat.
+    #[cfg(not(target_family = "wasm"))]
+    pub(crate) fn default_sandbox_target(cx: &App) -> Option<SandboxTarget> {
+        if !settings::get(cx).ai_sandbox_commands {
+            return None;
+        }
+        let provider = Self::sandbox_choices(cx).into_iter().next()?.id;
+        Some(SandboxTarget { provider, sandbox: None })
+    }
+
+    /// Asks each provider what the account has. The menu shows what was there last time and this
+    /// list when it lands, so opening it never waits on the network.
+    #[cfg(not(target_family = "wasm"))]
+    fn refresh_sandbox_list(&mut self, position: gpui::Point<Pixels>, window: &mut Window, cx: &mut Context<Self>) {
+        let providers: Vec<String> = Self::sandbox_choices(cx).into_iter().map(|choice| choice.id).collect();
+        if providers.is_empty() {
+            return;
+        }
+        self.sandbox_list_task = Some(cx.spawn_in(window, async move |this, cx| {
+            let listed = cx
+                .background_spawn(async move {
+                    providers
+                        .into_iter()
+                        .flat_map(|provider| acp::sandbox::list(&provider).unwrap_or_default())
+                        .collect::<Vec<_>>()
+                })
+                .await;
+            this.update_in(cx, |this, window, cx| {
+                if this.sandbox_list == listed {
+                    return;
+                }
+                this.sandbox_list = listed;
+                // The menu was built from the old list; if it is still the one open, it is
+                // rebuilt in place rather than left stale under the pointer.
+                if this.open_menu.as_ref().is_some_and(|menu| menu.key == "session-environment") {
+                    this.deploy_environment_menu(position, window, cx);
+                }
+                cx.notify();
+            })
+            .ok();
+        }));
+    }
+
     fn session_opened(&mut self, opened: acp::OpenedSession, have_history: bool, cx: &mut Context<Self>) {
         self.auth_choices = None;
         self.auth_signing_in = None;
@@ -2272,6 +2462,8 @@ impl SessionView {
         }
         self.skipped_mcp = opened.skipped_mcp;
         self.transcript.agent_session_id = Some(opened.session_id);
+        #[cfg(not(target_family = "wasm"))]
+        self.apply_sandbox_target(cx);
         let saved_mode = self.transcript.modes.as_ref().map(|modes| modes.current.clone());
         let saved_options: Vec<(String, String)> = self.transcript.config_options.iter().map(|option| (option.id.clone(), option.current.clone())).collect();
         if let Some(modes) = opened.modes {
@@ -2320,6 +2512,9 @@ impl SessionView {
             self.markdown.borrow_mut().retain(|entry, _| *entry < at);
             self.drawn_runs.borrow_mut().retain(|entry, _| *entry < at);
         }
+        // An Agent settings menu open over the composer takes the models and modes that just
+        // arrived, in place of its Loading row.
+        self.refresh_open_preferences_menu(cx);
         self.schedule_save(cx);
     }
 
@@ -2327,7 +2522,6 @@ impl SessionView {
         let kind = if matches!(failure, StartFailure::SignIn(..)) { crate::attention::AttentionKind::Auth } else { crate::attention::AttentionKind::Error };
         self.auth_signing_in = None;
         self.auth_terminal = None;
-        self.call_attention(kind, cx);
         let text = match &failure {
             StartFailure::NotInstalled { name, hint } => format!("{name} is not installed. {hint}"),
             StartFailure::SignIn(methods, program, _) => {
@@ -2336,6 +2530,7 @@ impl SessionView {
             }
             StartFailure::Failed(error) => format!("Could not start {}: {error}", self.agent_name()),
         };
+        self.call_attention_about(kind, Some(text.clone()), cx);
         self.agent = match failure {
             StartFailure::NotInstalled { name, hint } => AgentState::NotInstalled { name, hint },
             StartFailure::SignIn(methods, program, error) => {
@@ -2353,6 +2548,7 @@ impl SessionView {
         };
         let index = self.transcript.push_notice(NoticeKind::Error, text);
         self.entries_added(index, cx);
+        self.refresh_open_preferences_menu(cx);
         self.set_status(SessionStatus::Failed, cx);
     }
 
@@ -2537,18 +2733,47 @@ impl SessionView {
         }));
     }
 
-    /// Asks for the user's attention through the OS when they are not looking at the session.
+    /// Asks for the user's attention through the OS when they are not looking at the session,
+    /// saying what happened in the agent's own words ([`Self::attention`]).
     fn call_attention(&self, kind: crate::attention::AttentionKind, cx: &mut Context<Self>) {
+        self.call_attention_about(kind, None, cx);
+    }
+
+    /// [`Self::call_attention`] with the words of the event itself: the error, the tool waiting
+    /// for approval, the question. A finished turn speaks for itself, so it needs none.
+    fn call_attention_about(&self, kind: crate::attention::AttentionKind, detail: Option<String>, cx: &mut Context<Self>) {
         // A fixture session (screenshots) is not a real one.
         if self.store_dir.is_none() {
             return;
         }
         let visible = self.seen_at.is_some_and(|at| at.elapsed() < Duration::from_secs(2));
-        crate::attention::notify(kind, &self.info.id, visible, cx);
+        crate::attention::notify(kind, &self.attention(detail), visible, cx);
+    }
+
+    /// What a banner about this session says: which agent, which session, in which project, and
+    /// the last thing the agent said, with the follow-up actions that answer ended with.
+    fn attention(&self, detail: Option<String>) -> crate::attention::Attention {
+        let last_answer = self.transcript.entries.iter().rev().find_map(|entry| match entry {
+            Entry::Agent(message) => Some(crate::follow_ups::extract(&message.text)),
+            // Only the latest turn speaks: an answer further up is old news.
+            Entry::User(_) => Some((String::new(), Vec::new())),
+            _ => None,
+        });
+        let (answer, follow_ups) = last_answer.unwrap_or_default();
+        crate::attention::Attention::new(self.info.id.clone(), self.agent_name())
+            .title(self.title_text())
+            .project(self.info.cwd.as_ref().and_then(|cwd| cwd.file_name()).map(|name| name.to_string_lossy().into_owned()))
+            .detail(detail.or(Some(answer)))
+            .actions(follow_ups.into_iter().map(|action| crate::attention::Action { label: action.label, prompt: action.prompt }).collect())
+    }
+
+    /// The session's title as the sidebar shows it, never the context Athas puts before a prompt.
+    fn title_text(&self) -> String {
+        let title = self.info.title.trim();
+        if title.is_empty() || crate::follow_ups::is_context_preamble(title) { String::new() } else { title.to_string() }
     }
 
     fn on_permission(&mut self, request: acp::client::PermissionRequest, cx: &mut Context<Self>) {
-        self.call_attention(crate::attention::AttentionKind::Permission, cx);
         let tool_call_id = request.tool_call.tool_call_id.0.to_string();
         let applied = {
             let before = self.transcript.entries.len();
@@ -2566,6 +2791,7 @@ impl SessionView {
             self.entry_changed(index);
         }
         let title = self.transcript.tool_call(&tool_call_id).map(|(_, call)| call.title.clone()).unwrap_or_default();
+        self.call_attention_about(crate::attention::AttentionKind::Permission, Some(title.clone()), cx);
         self.permissions.push_back(PendingPermission { tool_call_id, title, options: request.options, respond: Some(request.respond) });
         self.set_status(SessionStatus::NeedsInput, cx);
         cx.notify();
@@ -2576,7 +2802,7 @@ impl SessionView {
             let _ = request.respond.send(crate::elicitation::response("cancel", None));
             return;
         };
-        self.call_attention(crate::attention::AttentionKind::Question, cx);
+        self.call_attention_about(crate::attention::AttentionKind::Question, Some(elicitation.message.clone()), cx);
         let answers = match &elicitation.mode {
             crate::elicitation::Mode::Form { questions, .. } => {
                 questions.iter().map(|question| (question.name.clone(), crate::elicitation::default_answer(question))).collect()
@@ -2830,13 +3056,16 @@ impl SessionView {
         cx.notify();
     }
 
-    /// Switches the agent a session that has not started yet will run.
+    /// Switches the agent a session that has not started yet will run. An agent warmed up for
+    /// its model list is let go with its session: nothing has been said on it.
     pub(crate) fn set_agent(&mut self, agent: String, cx: &mut Context<Self>) {
-        if !self.transcript.entries.is_empty() || matches!(self.agent, AgentState::Ready(_) | AgentState::Starting) {
+        if !self.transcript.entries.is_empty() || self.is_running() || self.info.agent == agent {
             return;
         }
         self.info.agent = agent;
+        // A start still in flight finds `info.agent` has moved on and drops the session it opened.
         self.agent = AgentState::Stopped;
+        self.transcript.agent_session_id = None;
         self.transcript.modes = None;
         self.transcript.config_options.clear();
         self.update_placeholder(cx);
@@ -3067,6 +3296,93 @@ impl SessionView {
                 _ => return,
             },
         }
+        cx.notify();
+    }
+
+    /// The menu behind the Environment box's first row: where this session's commands run. Only
+    /// the commands move -- the files stay on this machine, which is what the row under it says.
+    ///
+    /// A provider is a heading, not a choice: what runs a command is one of its sandboxes, so
+    /// the account's own are listed under it and "New sandbox" is the one that makes another.
+    #[cfg(not(target_family = "wasm"))]
+    pub(crate) fn deploy_environment_menu(&mut self, position: gpui::Point<Pixels>, window: &mut Window, cx: &mut Context<Self>) {
+        let current = self.sandbox_target();
+        let this = cx.entity();
+        let here = this.clone();
+        let mut entries: Vec<ui::MenuEntry> = vec![
+            ui::MenuItem::new(local_machine_name())
+                .icon(ui::IconName::Laptop)
+                .checked(current.is_none())
+                .on_select(move |_, cx| {
+                    here.update(cx, |this, cx| this.set_sandbox_target(None, cx));
+                })
+                .into(),
+        ];
+        // The sandboxes sit under a heading of their own: the first row is this machine, and
+        // everything under the heading is somewhere else. The line under it is there because
+        // the first question anyone asks of this menu is what exactly moves.
+        entries.push(ui::MenuEntry::Label("Sandboxes".into()));
+        entries.push(ui::MenuEntry::Text(
+            "Commands the agent asks Athas to run. Files stay on this machine; the sandbox is made by the first command.".into(),
+        ));
+        for choice in Self::sandbox_choices(cx) {
+            let mut inside: Vec<ui::MenuEntry> = Vec::new();
+            for listed in self.sandbox_list.iter().filter(|listed| !listed.id.is_empty()) {
+                let chosen = this.clone();
+                let target = SandboxTarget { provider: choice.id.clone(), sandbox: Some(listed.id.clone()) };
+                let picked = Some(&target) == current.as_ref();
+                let label = match listed.is_running() {
+                    true => listed.id.clone(),
+                    false => format!("{} · {}", listed.id, listed.state),
+                };
+                inside.push(
+                    ui::MenuItem::new(label)
+                        .checked(picked)
+                        .on_select(move |_, cx| {
+                            let target = target.clone();
+                            chosen.update(cx, |this, cx| this.set_sandbox_target(Some(target), cx));
+                        })
+                        .into(),
+                );
+            }
+            let fresh = this.clone();
+            let new_target = SandboxTarget { provider: choice.id.clone(), sandbox: None };
+            let picked_new = Some(&new_target) == current.as_ref();
+            inside.push(
+                ui::MenuItem::new("New sandbox")
+                    .icon(ui::IconName::Plus)
+                    .checked(picked_new)
+                    .on_select(move |_, cx| {
+                        let target = new_target.clone();
+                        fresh.update(cx, |this, cx| this.set_sandbox_target(Some(target), cx));
+                    })
+                    .into(),
+            );
+            // The provider opens; it is not picked. What runs a command is one of its sandboxes.
+            let mut item = ui::MenuItem::new(choice.name).submenu(inside);
+            item = match choice.icon {
+                Some(path) => item.icon_image(gpui::ImageSource::from(path)),
+                None => item.icon(ui::IconName::Cube),
+            };
+            entries.push(item.into());
+        }
+        // Where another provider comes from, for an account that has one Athas has not been
+        // told about yet.
+        entries.push(
+            ui::MenuItem::new("Add a provider…")
+                .icon(ui::IconName::PuzzlePiece)
+                .on_select(|_, cx| {
+                    settings::update(cx, |settings| settings.extensions_active_tab = "sandbox".into());
+                    workbench_api::open_resource(cx, "extensions", "", "Integrations");
+                })
+                .into(),
+        );
+        self.open_menu = Some(OpenMenu::new("session-environment", entries, position, gpui::Anchor::TopLeft, window, cx, |this, _| {
+            this.open_menu = None
+        }));
+        // What the account has may have changed since the last time it was asked; the menu is
+        // rebuilt in place if it has.
+        self.refresh_sandbox_list(position, window, cx);
         cx.notify();
     }
 
@@ -3485,6 +3801,24 @@ fn has_visible_response(entries: &[Entry]) -> bool {
 }
 
 /// Where the agent works: the project, or for a chat of no project a folder of Athas's own.
+/// The machine side of a session. Where its commands run is decided per session once it has an
+/// id, not here: one host can serve several sessions of a shared agent.
+#[cfg(not(target_family = "wasm"))]
+fn local_host(cwd: PathBuf, roots: Vec<PathBuf>) -> Arc<acp::host::LocalHost> {
+    Arc::new(acp::host::LocalHost::new(cwd, roots))
+}
+
+/// What this computer is called in the places a session says where it is running.
+pub(crate) fn local_machine_name() -> String {
+    if cfg!(target_os = "macos") {
+        "This Mac".into()
+    } else if cfg!(target_os = "windows") {
+        "This PC".into()
+    } else {
+        "This computer".into()
+    }
+}
+
 fn session_cwd(info: &SessionInfo) -> PathBuf {
     if let Some(cwd) = &info.cwd {
         return cwd.clone();

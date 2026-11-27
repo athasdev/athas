@@ -5,6 +5,7 @@ use gpui::{AnyElement, App, ClipboardItem, Context, SharedString, Window, prelud
 use notifications::NotificationKind;
 use palette::{PaletteRow, Picker, PickerDelegate};
 use ui::IconName;
+use ui::OpenOutbound;
 
 use crate::notify;
 
@@ -57,7 +58,7 @@ pub fn report_via(channel: &Channel, cx: &mut App) {
         cx.write_to_clipboard(ClipboardItem::new_string(report.clone()));
         notify(cx, NotificationKind::Success, "Report template copied", None);
     }
-    cx.open_url(&channel_url(channel, &report));
+    cx.open_outbound(&channel_url(channel, &report));
 }
 
 pub struct ReportBugDelegate {

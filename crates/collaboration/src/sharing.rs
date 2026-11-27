@@ -325,10 +325,20 @@ fn read_or_create_device_id() -> String {
     id
 }
 
+/// Drops the keys whose value is null. The server's schema fills in a missing optional field
+/// but rejects an explicit `null` for one ("expected number, received null"), so a draft
+/// without a line number or a modified time has to leave the key out.
+pub fn without_nulls(mut body: Value) -> Value {
+    if let Value::Object(map) = &mut body {
+        map.retain(|_, field| !field.is_null());
+    }
+    body
+}
+
 /// The body of `POST /api/shares`.
 pub fn create_body(draft: &ShareDraft, request_id: &str, live: bool, access: &Access) -> Value {
     let restricted = |visibility| access.visibility == visibility;
-    json!({
+    without_nulls(json!({
         "sourceUpdatedAt": draft.source_updated_at,
         "sourceId": draft.source_id,
         "deviceId": draft.device_id,
@@ -344,7 +354,7 @@ pub fn create_body(draft: &ShareDraft, request_id: &str, live: bool, access: &Ac
         "visibility": access.visibility,
         "emails": if restricted(Visibility::Email) { access.emails.clone() } else { Vec::new() },
         "workspaceId": if restricted(Visibility::Organization) { access.workspace_id } else { None },
-    })
+    }))
 }
 
 fn decode<T: serde::de::DeserializeOwned>(value: Value) -> Result<T, ApiError> {
@@ -459,6 +469,19 @@ mod tests {
         assert_eq!(body["messages"][0]["role"], "user");
         let public = create_body(&draft, "r1", false, &Access::default());
         assert_eq!((public["visibility"].as_str(), public["emails"].as_array().map(Vec::len)), (Some("public"), Some(0)));
+    }
+
+    /// The server's schema fills in a missing optional field but rejects an explicit null, so a
+    /// session (no line number, no modified time) must not send one.
+    #[test]
+    fn create_bodies_leave_out_what_a_draft_does_not_have() {
+        let body = create_body(&agent_draft("s1", "T", &transcript(), None), "r1", false, &Access::default());
+        let keys: Vec<&str> = body.as_object().unwrap().keys().map(String::as_str).collect();
+        assert!(!keys.contains(&"startLine") && !keys.contains(&"sourceUpdatedAt") && !keys.contains(&"workspaceId"), "{keys:?}");
+        assert!(body.as_object().unwrap().values().all(|field| !field.is_null()), "{body}");
+
+        let snippet = create_body(&editor_draft("/p/main.rs", "main.rs", "rust", "fn main() {}".into(), Some((4, "fn main() {}".into()))), "r2", false, &Access::default());
+        assert_eq!(snippet["startLine"], json!(5));
     }
 
     #[test]

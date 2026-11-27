@@ -44,6 +44,9 @@ use workbench::Workbench;
 use workspace::{MemoryStore, SessionId, StateStore, WorkspaceState};
 
 fn main() -> Result<()> {
+    // Nothing headless touches the keychain: it would prompt, and a prompt nobody can answer
+    // hangs the run. Set before any thread starts, which is what makes this sound.
+    unsafe { std::env::set_var("ATHAS_NO_KEYCHAIN", "1") };
     let args: Vec<String> = std::env::args().skip(1).collect();
     let out = args.first().cloned().unwrap_or_else(|| "snapshot.png".into());
     let appearance = match args.get(1).map(String::as_str) {

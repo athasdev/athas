@@ -63,6 +63,7 @@ use std::{cell::Cell, collections::HashMap, path::PathBuf, rc::Rc};
 use file_tree::{FileTree, FileTreeEvent};
 use git_panel::{GitPanel, GitPanelEvent};
 use ui::scale::px;
+use ui::OpenOutbound;
 use gpui::{
     Anchor, AnyView, App, Bounds, ClipboardItem, Context, DismissEvent, Entity, EventEmitter,
     FocusHandle, Focusable, MouseButton, MouseMoveEvent, PathPromptOptions, Pixels,
@@ -1328,7 +1329,7 @@ impl Workbench {
     pub fn show_help_menu(&mut self, position: Point<Pixels>, window: &mut Window, cx: &mut Context<Self>) {
         let urls = account::urls(cx);
         let open = |label: &'static str, icon: ui::IconName, url: String| -> MenuEntry {
-            MenuItem::new(label).icon(icon).external().on_select(move |_, cx| cx.open_url(&url)).into()
+            MenuItem::new(label).icon(icon).external().on_select(move |_, cx| cx.open_outbound(&url)).into()
         };
         let entries = vec![
             MenuItem::new("What's New")

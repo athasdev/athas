@@ -4,6 +4,7 @@
 
 use account::{AccountStore, widgets};
 use ui::scale::px;
+use ui::OpenOutbound;
 use gpui::{
     AnyElement, App, ClipboardItem, Context, Entity, IntoElement, ParentElement, Render, SharedString, Styled, Subscription, Window, div,
     prelude::*,
@@ -209,7 +210,7 @@ impl SharingSettings {
             Button::new(("share-open", index), "Open")
                 .variant(ButtonVariant::Outline)
                 .size(ButtonSize::Small)
-                .on_click(move |_, _, cx| cx.open_url(&open))
+                .on_click(move |_, _, cx| cx.open_outbound(&open))
                 .into_any_element(),
         );
         let revoke_id = item.id.clone();
@@ -270,7 +271,7 @@ impl Render for SharingSettings {
         cloud_rows.push(widgets::row(
             "Web Library",
             None,
-            Button::new("sharing-library", "Open on web").variant(ButtonVariant::Outline).on_click(move |_, _, cx| cx.open_url(&library)),
+            Button::new("sharing-library", "Open on web").variant(ButtonVariant::Outline).on_click(move |_, _, cx| cx.open_outbound(&library)),
             cx,
         ));
         let cloud = widgets::section(Some("Cloud Sessions"), cloud_rows, cx);

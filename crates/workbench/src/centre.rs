@@ -314,12 +314,12 @@ impl Workbench {
                 let dragged = DraggedTab { group: group_id, index, label: label.clone(), icon };
                 let active = tabs.active == Some(index) && !welcome_active;
                 let pinned = tabs.is_pinned(index);
-                let (brand, attention) = self.tab_decoration(item);
+                let (brand, attention) = self.tab_decoration(item, cx);
                 let favicon = self.tab_favicon(group_id, item, cx);
                 let warning = cx.theme().colors.warning;
                 let tab = Tab::new(gpui::ElementId::Name(format!("tab-{group_id}-{index}").into()), label)
                     .when(show_icons, |tab| match (brand, favicon, file_icon(item, cx)) {
-                        (Some(brand), _, _) => tab.leading(brand.size(px(12.))),
+                        (Some(brand), _, _) => tab.leading(brand),
                         (None, Some(favicon), _) => tab.leading(favicon),
                         (None, None, Some(file)) => tab.leading(file),
                         (None, None, None) => tab.icon(icon),
@@ -903,10 +903,12 @@ impl Workbench {
 
     /// `registerTabDecoration("agent", …)`: a chat tab shows its agent's mark, and a dot while
     /// the chat waits on the user.
-    fn tab_decoration(&self, item: &TabItem) -> (Option<ui::BrandMark>, bool) {
+    fn tab_decoration(&self, item: &TabItem, cx: &App) -> (Option<AnyElement>, bool) {
         let TabItem::Session { id } = item else { return (None, false) };
         let Some(session) = self.state.session(id) else { return (None, false) };
-        (ui::BrandMark::agent(agent_ui::acp::agents::catalog_id(&session.agent)), session.status == workspace::SessionStatus::NeedsInput)
+        let mark = agent_ui::model_vendor::agent_mark_source(&session.agent)
+            .map(|_| agent_ui::model_vendor::agent_mark(&session.agent, px(12.), cx.theme().colors.foreground));
+        (mark, session.status == workspace::SessionStatus::NeedsInput)
     }
 
     /// A browser tab's page icon (`BrowserTabIcon`): the globe while it loads or when it fails.

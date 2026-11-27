@@ -2904,6 +2904,36 @@
    "monochromeIcon": false
   },
   {
+   "path": "sandboxes/e2b",
+   "manifest": {
+    "$schema": "https://athas.dev/schemas/extension.json",
+    "id": "athas.sandbox.e2b",
+    "name": "e2b",
+    "displayName": "E2B",
+    "description": "Run commands in a throwaway Linux sandbox on your own E2B account instead of on this machine. Not affiliated with E2B.",
+    "version": "1.0.0",
+    "publisher": "Athas",
+    "categories": [
+     "Sandbox"
+    ],
+    "sandboxProviders": [
+     {
+      "id": "e2b",
+      "name": "E2B",
+      "description": "Firecracker microVMs with their own filesystem and network, started in about a second.",
+      "apiKeyUrl": "https://e2b.dev/dashboard?tab=keys"
+     }
+    ],
+    "license": "MIT",
+    "repository": {
+     "type": "git",
+     "url": "https://github.com/athasdev/athas"
+    }
+   },
+   "icon": "extensions/icons/athas.sandbox.e2b.svg",
+   "monochromeIcon": false
+  },
+  {
    "path": "scala",
    "manifest": {
     "$schema": "https://athas.dev/schemas/extension.json",

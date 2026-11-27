@@ -16,27 +16,33 @@ const BUNDLED_CATALOG: &str = include_str!("../../../assets/extensions/catalog.j
 
 /// What an extension adds, as the extension manager groups it.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
+/// The order is the order the catalog reads in: the tabs, the sections of the first page and
+/// the sort of the entries themselves all follow it (`Ord` is the declaration order). What a
+/// person comes to the catalog for is at the top; the long tails -- a language per language, a
+/// theme per taste -- are at the end, where they are searched for rather than browsed.
 pub enum ExtensionKind {
+    Sandbox,
+    Agent,
+    Ai,
+    Mcp,
+    Integration,
+    Skill,
     Language,
     Theme,
     IconTheme,
-    Ai,
-    Integration,
-    Mcp,
-    Skill,
-    Agent,
 }
 
 impl ExtensionKind {
-    pub const ALL: [ExtensionKind; 8] = [
+    pub const ALL: [ExtensionKind; 9] = [
+        ExtensionKind::Sandbox,
+        ExtensionKind::Agent,
+        ExtensionKind::Ai,
+        ExtensionKind::Mcp,
+        ExtensionKind::Integration,
+        ExtensionKind::Skill,
         ExtensionKind::Language,
         ExtensionKind::Theme,
         ExtensionKind::IconTheme,
-        ExtensionKind::Ai,
-        ExtensionKind::Integration,
-        ExtensionKind::Mcp,
-        ExtensionKind::Skill,
-        ExtensionKind::Agent,
     ];
 
     /// The id `extensionsActiveTab` stores.
@@ -50,6 +56,7 @@ impl ExtensionKind {
             ExtensionKind::Mcp => "mcp",
             ExtensionKind::Skill => "skill",
             ExtensionKind::Agent => "agent",
+            ExtensionKind::Sandbox => "sandbox",
         }
     }
 
@@ -63,6 +70,7 @@ impl ExtensionKind {
             ExtensionKind::Mcp => "MCP",
             ExtensionKind::Skill => "Skills",
             ExtensionKind::Agent => "Agents",
+            ExtensionKind::Sandbox => "Sandboxes",
         }
     }
 
@@ -73,7 +81,9 @@ impl ExtensionKind {
     /// The kind of an extension, from the first thing it contributes.
     pub fn of(manifest: &ExtensionManifest) -> Self {
         use crate::manifest::Category;
-        if manifest.agents().next().is_some() {
+        if manifest.sandbox_providers().next().is_some() {
+            ExtensionKind::Sandbox
+        } else if manifest.agents().next().is_some() {
             ExtensionKind::Agent
         } else if manifest.languages().next().is_some() {
             ExtensionKind::Language
@@ -95,6 +105,7 @@ impl ExtensionKind {
                 Some(Category::Ai) => ExtensionKind::Ai,
                 Some(Category::Agent) => ExtensionKind::Agent,
                 Some(Category::Skill) => ExtensionKind::Skill,
+                Some(Category::Sandbox) => ExtensionKind::Sandbox,
                 _ => ExtensionKind::Integration,
             }
         }
@@ -232,7 +243,7 @@ mod tests {
     #[test]
     fn every_official_manifest_parses() {
         let catalog = Catalog::bundled();
-        assert_eq!(catalog.entries().len(), 84);
+        assert_eq!(catalog.entries().len(), 85);
         let count = |kind| catalog.entries().iter().filter(|entry| entry.kind == kind).count();
         assert_eq!(count(ExtensionKind::Language), 47);
         assert_eq!(count(ExtensionKind::Mcp), 21);
@@ -242,6 +253,7 @@ mod tests {
         assert_eq!(count(ExtensionKind::Theme), 1);
         assert_eq!(count(ExtensionKind::Ai), 1);
         assert_eq!(count(ExtensionKind::Integration), 2);
+        assert_eq!(count(ExtensionKind::Sandbox), 1);
         assert!(catalog.entries().iter().all(|entry| entry.icon.is_some()));
         let theme = catalog.get("athas.theme.vercel").unwrap();
         assert_eq!(theme.path, "theme/vercel");
@@ -284,7 +296,7 @@ mod tests {
             ExtensionManifest::from_json(&json).unwrap_or_else(|error| panic!("{}: {error:#}", path.display()));
             count += 1;
         }
-        assert_eq!(count, 90);
+        assert_eq!(count, 91);
     }
 
     #[test]

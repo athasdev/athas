@@ -6,6 +6,7 @@
 use std::{path::PathBuf, rc::Rc};
 
 use ui::scale::px;
+use ui::OpenOutbound;
 use gpui::{
     AnyElement, App, ClickEvent, Context, ExternalPaths, FontStyle, FontWeight, HighlightStyle, Hsla, InteractiveText, IntoElement,
     MouseButton, SharedString, StrikethroughStyle, StyledText, UnderlineStyle, Window, div, list, prelude::*,
@@ -414,7 +415,7 @@ impl SessionView {
                         }),
                         Recovery::OpenBilling(url) => {
                             let urls = account::urls(cx);
-                            cx.open_url(&crate::turn_error::resolve_billing_url(url.as_deref(), &urls.api_base, &urls.website, &urls.billing()));
+                            cx.open_outbound(&crate::turn_error::resolve_billing_url(url.as_deref(), &urls.api_base, &urls.website, &urls.billing()));
                         }
                         Recovery::SignIn => {
                             if let Some(store) = account::AccountStore::global(cx) {
@@ -1914,7 +1915,6 @@ impl SessionView {
         let queued = self.elicitations.len().checked_sub(1)?;
         let agent = self.agent_name();
         let colors = colors(cx);
-        let view = cx.entity().downgrade();
         let pending = self.elicitations.front_mut()?;
         if let Mode::Form { questions, .. } = &pending.elicitation.mode
             && let Some(question) = questions.get(pending.step)
@@ -1944,10 +1944,15 @@ impl SessionView {
                     input.set_text(text, cx);
                     input
                 });
-                let view = view.clone();
-                cx.subscribe(&input, move |_, _, event: &ui::TextInputEvent, cx| {
+                // The handler already holds the session; going through the entity again would
+                // be updating it while it is being updated, which panics.
+                cx.subscribe(&input, move |this, _, event: &ui::TextInputEvent, cx| {
                     if matches!(event, ui::TextInputEvent::Confirmed) {
-                        let _ = view.update(cx, |this, cx| if last { this.answer_elicitation("accept", cx) } else { this.elicitation_step(true, false, cx) });
+                        if last {
+                            this.answer_elicitation("accept", cx);
+                        } else {
+                            this.elicitation_step(true, false, cx);
+                        }
                     }
                 })
                 .detach();
@@ -3069,15 +3074,18 @@ impl SessionView {
         let effort = option_of(crate::chat_preferences::OptionCategory::ThoughtLevel).map(|option| {
             option.choices.iter().find(|choice| choice.value == option.current).map_or_else(|| option.current_name().to_string(), |choice| crate::chat_preferences::effort_label(&choice.value, &choice.name))
         });
-        let label = model.unwrap_or_else(|| self.agent_name());
-        pickers.push(
-            picker_button("agent-picker", label, None, true)
-                .secondary_label(effort.unwrap_or_default())
-                .tooltip(self.agent_name())
-                .leading(crate::model_vendor::agent_mark(&self.info.agent, px(14.), colors(cx).muted_foreground))
-                .on_click(cx.listener(|this, event: &ClickEvent, window, cx| this.open_preferences_menu(event.position(), window, cx)))
-                .into_any_element(),
-        );
+        let agent = self.agent_name();
+        let label = model.unwrap_or_else(|| agent.clone());
+        let mut button = picker_button("agent-picker", label.clone(), None, true)
+            .secondary_label(effort.unwrap_or_default())
+            .leading(crate::model_vendor::agent_mark(&self.info.agent, px(14.), colors(cx).muted_foreground))
+            .on_click(cx.listener(|this, event: &ClickEvent, window, cx| this.open_preferences_menu(event.position(), window, cx)));
+        // The agent's name as the tooltip, but only when the chip shows a model instead: a
+        // tooltip that repeats the label says nothing.
+        if label != agent {
+            button = button.tooltip(agent);
+        }
+        pickers.push(button.into_any_element());
         // Once the session has a conversation, where it runs is settled: a local one hides the
         // chip, a cloud one keeps it, disabled, and its repository and branch move to the dock.
         let settled = self.transcript.entries.iter().any(|entry| matches!(entry, Entry::User(_) | Entry::Agent(_)));
@@ -4065,21 +4073,22 @@ impl SessionView {
             agents::catalog_id(&self.info.agent).to_string()
         };
         let registry = crate::agent_registry::AgentRegistry::global(cx);
-        let mut choices: Vec<(String, String)> = agents::KNOWN_AGENTS.iter().map(|agent| (agent.id.to_string(), agent.name.to_string())).collect();
+        let mut choices: Vec<String> = agents::KNOWN_AGENTS.iter().map(|agent| agent.id.to_string()).collect();
         // Agents this app installed from the catalog or the ACP Registry.
         for agent in registry.read(cx).agents() {
-            if !choices.iter().any(|(id, _)| *id == agent.id) && registry.read(cx).state(&agent.id).is_installed() {
-                choices.push((agent.id.clone(), agent.name.clone()));
+            if !choices.iter().any(|id| *id == agent.id) && registry.read(cx).state(&agent.id).is_installed() {
+                choices.push(agent.id.clone());
             }
         }
         let builtin_entry = {
             let view = cx.entity();
-            MenuEntry::Item(MenuItem::new(builtin::NAME).icon(IconName::Sparkle).checked(current == builtin::AGENT_ID).on_select(move |_, cx| {
+            let item = crate::model_vendor::agent_menu_item(MenuItem::new(builtin::NAME), builtin::AGENT_ID).checked(current == builtin::AGENT_ID);
+            MenuEntry::Item(item.on_select(move |_, cx| {
                 view.update(cx, |this, cx| this.set_agent(builtin::AGENT_ID.to_string(), cx));
             }))
         };
         let mut entries: Vec<MenuEntry> = std::iter::once(builtin_entry)
-            .chain(choices.into_iter().map(|(id, name)| {
+            .chain(choices.into_iter().map(|id| {
                 let view = cx.entity();
                 let (state, operation, installable) = {
                     let registry = registry.read(cx);
@@ -4088,7 +4097,8 @@ impl SessionView {
                     });
                     (registry.state(&id), registry.operation(&id), installable)
                 };
-                let mut item = MenuItem::new(name).icon(crate::model_vendor::provider_icon(&id)).checked(current == id);
+                // The name and the mark the catalog gives the agent, the same the chip shows.
+                let mut item = crate::model_vendor::agent_menu_item(MenuItem::new(agents::display_name(&id)), &id).checked(current == id);
                 if operation == Some(crate::agent_registry::Operation::Installing) {
                     item = item.shortcut("Installing…");
                 } else if !state.is_installed() {

@@ -86,11 +86,45 @@ pub struct LocalHost {
     roots: Vec<PathBuf>,
     cwd: PathBuf,
     terminals: Mutex<HashMap<String, Arc<TerminalState>>>,
+    /// Where each session's commands run; a session with no entry runs them on this machine.
+    /// Keyed by session because one host can serve several sessions -- an external agent is
+    /// shared by every session of that agent in this folder -- and each chooses for itself.
+    #[cfg(not(target_family = "wasm"))]
+    sandbox: Mutex<HashMap<String, Arc<super::sandbox::SandboxRuntime>>>,
 }
 
 impl LocalHost {
     pub fn new(cwd: PathBuf, roots: Vec<PathBuf>) -> Self {
-        Self { roots, cwd, terminals: Mutex::default() }
+        Self {
+            roots,
+            cwd,
+            terminals: Mutex::default(),
+            #[cfg(not(target_family = "wasm"))]
+            sandbox: Mutex::default(),
+        }
+    }
+
+    /// Points a session's commands somewhere else from now on. A command already in flight
+    /// finishes where it started; dropping the old runtime stops the sandbox it had made.
+    #[cfg(not(target_family = "wasm"))]
+    pub fn set_sandbox(&self, session: &str, runtime: Option<Arc<super::sandbox::SandboxRuntime>>) {
+        let mut sandboxes = self.sandbox.lock().unwrap_or_else(|p| p.into_inner());
+        match runtime {
+            Some(runtime) => sandboxes.insert(session.to_string(), runtime),
+            None => sandboxes.remove(session),
+        };
+    }
+
+    /// The sandbox a session is running in right now, if one has been made or opened yet.
+    #[cfg(not(target_family = "wasm"))]
+    pub fn sandbox_id(&self, session: &str) -> Option<String> {
+        self.sandbox.lock().unwrap_or_else(|p| p.into_inner()).get(session).and_then(|runtime| runtime.current_id())
+    }
+
+    /// The provider a session's commands run on, or `None` for this machine.
+    #[cfg(not(target_family = "wasm"))]
+    pub fn sandbox_provider(&self, session: &str) -> Option<String> {
+        self.sandbox.lock().unwrap_or_else(|p| p.into_inner()).get(session).map(|runtime| runtime.provider().to_string())
     }
 
     fn terminal(&self, id: &str) -> Result<Arc<TerminalState>, RpcError> {
@@ -100,6 +134,61 @@ impl LocalHost {
             .get(id)
             .cloned()
             .ok_or_else(|| RpcError::internal(format!("No terminal {id}")))
+    }
+}
+
+#[cfg(not(target_family = "wasm"))]
+impl LocalHost {
+    /// A terminal whose command runs in the session's sandbox. It wears the same clothes as a
+    /// local one -- the same id, the same snapshot, the same wait -- because everything above
+    /// this line, the agent included, is not told which it got.
+    fn create_sandbox_terminal(
+        &self,
+        runtime: Arc<super::sandbox::SandboxRuntime>,
+        request: &acp::CreateTerminalRequest,
+        on_change: ChangeListener,
+    ) -> Result<String, RpcError> {
+        static NEXT_TERMINAL: AtomicU64 = AtomicU64::new(1);
+        let id = format!("sandbox-{}", NEXT_TERMINAL.fetch_add(1, Ordering::Relaxed));
+        let command = std::iter::once(request.command.as_str())
+            .chain(request.args.iter().map(String::as_str))
+            .collect::<Vec<_>>()
+            .join(" ");
+        let state = Arc::new(TerminalState {
+            // No process on this machine; `kill` knows what 0 means.
+            pid: 0,
+            session: request.session_id.to_string(),
+            limit: request.output_byte_limit.map(|limit| limit as usize),
+            inner: Mutex::new(TerminalInner {
+                snapshot: TerminalSnapshot { command: command.clone(), ..Default::default() },
+                waiters: Vec::new(),
+            }),
+        });
+        self.terminals.lock().unwrap_or_else(|p| p.into_inner()).insert(id.clone(), state.clone());
+        let thread_id = id.clone();
+        std::thread::spawn(move || {
+            on_change(thread_id.clone());
+            match runtime.run(&command, None) {
+                Ok(run) => {
+                    // Said after the run, when which sandbox it was is known.
+                    state.append(&runtime.banner());
+                    state.append(&run.output);
+                    if run.pulled > 0 {
+                        let files = if run.pulled == 1 { "file" } else { "files" };
+                        state.append(&format!("\n{} changed {files} copied back.\n", run.pulled));
+                    }
+                    // A command the sandbox never got to is a failure, not a silent success.
+                    state.finish(TerminalExit { code: run.exit_code.map(|code| code as u32).or(Some(1)), signal: None });
+                }
+                Err(error) => {
+                    state.append(&format!("The sandbox could not run this command. {error}\n"));
+                    let _ = &runtime;
+                    state.finish(TerminalExit { code: Some(1), signal: None });
+                }
+            }
+            on_change(thread_id);
+        });
+        Ok(id)
     }
 }
 
@@ -144,6 +233,10 @@ impl ClientHost for LocalHost {
     fn create_terminal(&self, request: &acp::CreateTerminalRequest, on_change: ChangeListener) -> Result<String, RpcError> {
         if request.command.trim().is_empty() {
             return Err(RpcError::new(RpcError::INVALID_PARAMS, "terminal/create command must not be empty"));
+        }
+        #[cfg(not(target_family = "wasm"))]
+        if let Some(runtime) = self.sandbox.lock().unwrap_or_else(|p| p.into_inner()).get(&request.session_id.to_string()).cloned() {
+            return self.create_sandbox_terminal(runtime, request, on_change);
         }
         let cwd = request.cwd.clone().unwrap_or_else(|| self.cwd.clone());
         // Like a shell would run it: agents send `command` with `args`, or one shell line.
@@ -319,6 +412,11 @@ impl TerminalState {
 
     fn kill(&self) {
         if self.inner.lock().unwrap_or_else(|p| p.into_inner()).snapshot.exit.is_some() {
+            return;
+        }
+        // A terminal running in a sandbox has no process here, and `pid` is 0. Signalling group
+        // 0 is signalling the group this process is in -- Athas itself.
+        if self.pid == 0 {
             return;
         }
         #[cfg(unix)]

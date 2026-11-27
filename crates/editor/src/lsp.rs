@@ -18,6 +18,7 @@ use lsp_client::{
     lsp,
     offset_to_position, offsets_to_range, position_to_offset, range_to_offsets, text_edits_to_offsets,
 };
+use markdown::{Block, BlockKind};
 use ui::{InputAppearance, TextInput, TextInputEvent};
 
 use crate::{
@@ -26,7 +27,6 @@ use crate::{
     completion::{self, Candidate},
     document::Target,
     history::EditKind,
-    markdown::{self, Block},
 };
 
 /// What an editor asks of the workbench: places to open and lists to show.
@@ -1801,18 +1801,23 @@ pub(crate) fn changed_span(old: &str, new: &str) -> Option<(std::ops::Range<usiz
     Some((prefix..old.len() - suffix, new[prefix..new.len() - suffix].to_string()))
 }
 
+/// Text a server sent as plain text, as one block.
+fn plain_block(text: String) -> Block {
+    Block::new(BlockKind::Paragraph(markdown::Inline::plain(text)), 0..0)
+}
+
 /// A hover's contents as markdown blocks.
 fn hover_blocks(contents: lsp::HoverContents) -> Vec<Block> {
     let marked = |marked: lsp::MarkedString| match marked {
         lsp::MarkedString::String(text) => markdown::parse(&text),
-        lsp::MarkedString::LanguageString(code) => vec![Block::Code { language: Some(code.language), code: code.value }],
+        lsp::MarkedString::LanguageString(code) => vec![Block::new(BlockKind::Code { language: Some(code.language), code: code.value }, 0..0)],
     };
     match contents {
         lsp::HoverContents::Scalar(scalar) => marked(scalar),
         lsp::HoverContents::Array(items) => items.into_iter().flat_map(marked).collect(),
         lsp::HoverContents::Markup(markup) => match markup.kind {
             lsp::MarkupKind::Markdown => markdown::parse(&markup.value),
-            lsp::MarkupKind::PlainText => vec![Block::Paragraph(markdown::Inline::plain(markup.value))],
+            lsp::MarkupKind::PlainText => vec![plain_block(markup.value)],
         },
     }
 }
@@ -1820,10 +1825,10 @@ fn hover_blocks(contents: lsp::HoverContents) -> Vec<Block> {
 /// Documentation (completion items, signatures) as markdown blocks.
 pub(crate) fn documentation_blocks(documentation: &lsp::Documentation) -> Vec<Block> {
     match documentation {
-        lsp::Documentation::String(text) => vec![Block::Paragraph(markdown::Inline::plain(text.clone()))],
+        lsp::Documentation::String(text) => vec![plain_block(text.clone())],
         lsp::Documentation::MarkupContent(markup) => match markup.kind {
             lsp::MarkupKind::Markdown => markdown::parse(&markup.value),
-            lsp::MarkupKind::PlainText => vec![Block::Paragraph(markdown::Inline::plain(markup.value.clone()))],
+            lsp::MarkupKind::PlainText => vec![plain_block(markup.value.clone())],
         },
     }
 }

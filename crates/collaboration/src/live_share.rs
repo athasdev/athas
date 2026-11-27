@@ -149,13 +149,13 @@ impl LiveSync {
             {
                 continue;
             }
-            let changes = json!({
+            let changes = sharing::without_nulls(json!({
                 "sourceUpdatedAt": draft.source_updated_at,
                 "title": draft.title,
                 "content": draft.content,
                 "messages": draft.messages,
                 "language": draft.language,
-            });
+            }));
             let signature = changes.to_string();
             if self.sent.get(&item.id) == Some(&format!("{}:{signature}", item.revision)) {
                 continue;

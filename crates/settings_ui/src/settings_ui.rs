@@ -23,6 +23,7 @@ mod terminal_profiles;
 mod typed_confirm;
 
 use ui::WithScrollbar;
+use ui::OpenOutbound;
 use std::{cell::Cell, collections::HashMap, ops::Range, rc::Rc};
 
 use ui::scale::px;
@@ -1410,7 +1411,7 @@ impl SettingsView {
                         let link = |id: &'static str, label: &'static str, url: String| {
                             div().id(id).text_color(colors.primary).hover(|style| style.underline()).child(label).on_click(move |_, _, cx| {
                                 cx.stop_propagation();
-                                cx.open_url(&url);
+                                cx.open_outbound(&url);
                             })
                         };
                         if def.tab == "appearance" && def.label == "Custom Themes" {
