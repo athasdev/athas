@@ -7,7 +7,7 @@ use std::{path::PathBuf, sync::Arc, time::Duration};
 
 use account::{AccountMenu, AccountSettings, FeedbackDialog, MemoryTokenStore, ServiceUrls};
 use anyhow::{Context as _, Result};
-use collaboration::{ShareDialog, SharingSettings, TeamSessionView, TeamView, sharing};
+use collaboration::{DeviceSessionView, DevicesView, ShareDialog, SharingSettings, TeamSessionView, TeamView, sharing};
 use gpui::{
     AnyView, AppContext, Context, HeadlessAppContext, IntoElement, ParentElement, Render, Styled, Window, div, px, size,
 };
@@ -36,6 +36,10 @@ impl Render for Frame {
 
 fn now_minus(minutes: i64) -> String {
     (chrono::Utc::now() - chrono::Duration::minutes(minutes)).to_rfc3339()
+}
+
+fn now_ms_minus(minutes: i64) -> i64 {
+    (chrono::Utc::now() - chrono::Duration::minutes(minutes)).timestamp_millis()
 }
 
 fn mock_service(team: bool) -> MockServer {
@@ -73,8 +77,21 @@ fn mock_service(team: bool) -> MockServer {
             "items": [
                 { "id": "a1", "title": "Fix the login redirect", "kind": "agent", "visibility": "organization", "live": true, "sourceId": "s1", "revision": 2, "updatedAt": 1, "emails": [], "workspaceId": 9 },
                 { "id": "a2", "title": "Explain the renderer", "kind": "agent", "visibility": "public", "live": false, "sourceId": "s2", "revision": 1, "updatedAt": 1, "emails": [] },
+                { "id": "sn1", "title": "Port the terminal panel", "kind": "agent", "visibility": "private", "live": true, "sourceId": "chat-7", "deviceId": "dev-work-pc", "deviceName": "Work PC", "revision": 4, "updatedAt": now_ms_minus(8), "emails": [] },
+                { "id": "sn2", "title": "Trim the release script", "kind": "agent", "visibility": "private", "live": true, "sourceId": "chat-8", "deviceId": "dev-work-pc", "deviceName": "Work PC", "revision": 2, "updatedAt": now_ms_minus(90), "emails": [] },
+                { "id": "sn3", "title": "Write the changelog", "kind": "agent", "visibility": "private", "live": true, "sourceId": "chat-9", "deviceId": "dev-studio", "deviceName": "Studio Mac", "revision": 9, "updatedAt": now_ms_minus(1500), "emails": [] },
             ],
             "organizations": [{ "id": 9, "name": "Athas Labs" }],
+        })),
+        "/api/shares/sn1" => Response::json(200, json!({
+            "id": "sn1", "title": "Port the terminal panel", "kind": "agent", "visibility": "private", "live": true,
+            "sourceId": "chat-7", "deviceId": "dev-work-pc", "deviceName": "Work PC", "revision": 4, "updatedAt": now_ms_minus(8),
+            "language": "markdown",
+            "content": "",
+            "messages": [
+                { "role": "user", "content": "Port the terminal panel to GPUI and keep the shell integration working." },
+                { "role": "assistant", "content": "Done: the panel renders through `terminal_view`, the OSC 133 markers still drive the command list, and `cargo test -p terminal_view` passes." },
+            ],
         })),
         "/api/collaboration/sessions/sh1" => Response::json(200, json!({
             "session": { "shareId": "sh1", "title": "Fix the login redirect", "ownerUserId": 4, "ownerName": "Ana Ruiz", "live": true, "reviewState": "requested", "commentCount": 2 },
@@ -109,6 +126,8 @@ fn main() -> Result<()> {
         ("team-no-plan", true, false),
         ("team-signed-out", false, false),
         ("team-session", true, true),
+        ("devices", true, false),
+        ("device-session", true, false),
     ] {
         let server = mock_service(team);
         let text_system = gpui_platform::current_platform(true).text_system();
@@ -149,6 +168,8 @@ fn main() -> Result<()> {
                     cx.new(|cx| ShareDialog::new(draft, window, cx)).into()
                 }
                 "team-session" => cx.new(|cx| TeamSessionView::new("sh1".into(), "Fix the login redirect".into(), None, window, cx)).into(),
+                "devices" => cx.new(DevicesView::new).into(),
+                "device-session" => cx.new(|cx| DeviceSessionView::new("sn1".into(), "Port the terminal panel".into(), window, cx)).into(),
                 _ => cx.new(TeamView::new).into(),
             };
             cx.new(|_| Frame { view, page })

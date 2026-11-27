@@ -18,6 +18,7 @@ use lsp_client::{
     lsp,
     offset_to_position, offsets_to_range, position_to_offset, range_to_offsets, text_edits_to_offsets,
 };
+use markdown::{Block, BlockKind};
 use ui::{InputAppearance, TextInput, TextInputEvent};
 
 use crate::{
@@ -26,7 +27,6 @@ use crate::{
     completion::{self, Candidate},
     document::Target,
     history::EditKind,
-    markdown::{self, Block},
 };
 
 /// What an editor asks of the workbench: places to open and lists to show.
@@ -62,6 +62,12 @@ const LIGHTBULB_DELAY: Duration = Duration::from_millis(250);
 const INLAY_DELAY: Duration = Duration::from_millis(400);
 const FORMAT_TIMEOUT: Duration = Duration::from_secs(3);
 const RESOLVE_TIMEOUT: Duration = Duration::from_millis(700);
+/// How long typing settles before the open menu asks the server again. Servers that mark their
+/// list incomplete (rust-analyzer marks nearly every one) want a request per keystroke; the menu
+/// has already narrowed itself locally by then, so a burst of typing is worth one request.
+const COMPLETION_DEBOUNCE: Duration = Duration::from_millis(50);
+/// How long the selection rests before the item's documentation is fetched.
+const RESOLVE_DEBOUNCE: Duration = Duration::from_millis(60);
 /// Inlay hints are fetched for whole files up to this size.
 const MAX_INLAY_FILE: usize = 512 * 1024;
 
@@ -352,7 +358,7 @@ impl Editor {
                         editor.lsp.hover_pending = Some(caret);
                         editor.show_hover(caret, true, cx);
                     }
-                    "completion" => editor.request_completions(None, cx),
+                    "completion" => editor.request_completions(None, false, cx),
                     "signature" => editor.request_signature_help(None, cx),
                     _ => {}
                 }
@@ -668,21 +674,24 @@ impl Editor {
         if self.lsp.completion.is_some() {
             if is_word_char(last) {
                 let incomplete = self.lsp.completion.as_ref().is_some_and(|menu| menu.is_incomplete);
+                // Narrow what is already here first, so the menu keeps up with the keystroke
+                // instead of waiting on the server; an incomplete list is widened after.
+                self.refilter_completions(cx);
                 if incomplete {
-                    self.request_completions(None, cx);
-                } else {
-                    self.refilter_completions(cx);
+                    self.request_completions(None, true, cx);
                 }
             } else if is_trigger {
-                self.request_completions(Some(last.to_string()), cx);
+                self.request_completions(Some(last.to_string()), false, cx);
             } else {
                 self.lsp.completion = None;
                 self.lsp.completion_task = None;
             }
         } else if is_trigger {
-            self.request_completions(Some(last.to_string()), cx);
+            self.request_completions(Some(last.to_string()), false, cx);
         } else if auto_completion && is_word_char(last) && text.chars().count() == 1 {
-            self.request_completions(None, cx);
+            // Typing on past the first letter would otherwise cancel and restart the request
+            // each time, so the menu only arrived once the typing stopped anyway.
+            self.request_completions(None, true, cx);
         }
 
         if parameter_hints && let Some(provider) = capabilities.as_ref().and_then(|capabilities| capabilities.signature_help_provider.as_ref()) {
@@ -703,28 +712,42 @@ impl Editor {
     }
 
     pub(crate) fn show_completions(&mut self, _: &crate::ShowCompletions, _: &mut Window, cx: &mut Context<Self>) {
-        self.request_completions(None, cx);
+        self.request_completions(None, false, cx);
     }
 
-    fn request_completions(&mut self, trigger: Option<String>, cx: &mut Context<Self>) {
+    /// `debounce`: typing settles first, and the caret the request names is read then, so a
+    /// burst of keystrokes costs one request instead of one each.
+    fn request_completions(&mut self, trigger: Option<String>, debounce: bool, cx: &mut Context<Self>) {
         let Some(server) = self.server().cloned() else { return };
         if server.capabilities().is_some_and(|capabilities| capabilities.completion_provider.is_none()) {
             return;
         }
-        let caret = self.caret();
-        let Some(params) = self.position_params(caret) else { return };
-        let context = lsp::CompletionContext {
-            trigger_kind: if trigger.is_some() { lsp::CompletionTriggerKind::TRIGGER_CHARACTER } else { lsp::CompletionTriggerKind::INVOKED },
-            trigger_character: trigger,
-        };
-        let request = server.request::<lsp::request::Completion>(lsp::CompletionParams {
-            text_document_position: params,
-            work_done_progress_params: Default::default(),
-            partial_result_params: Default::default(),
-            context: Some(context),
-        });
         self.lsp.completion_task = Some(cx.spawn(async move |this, cx| {
-            let Ok(response) = request.await else { return };
+            if debounce {
+                cx.background_executor().timer(COMPLETION_DEBOUNCE).await;
+            }
+            let request = this.update(cx, |editor, _| {
+                let params = editor.position_params(editor.caret())?;
+                let context = lsp::CompletionContext {
+                    trigger_kind: if trigger.is_some() { lsp::CompletionTriggerKind::TRIGGER_CHARACTER } else { lsp::CompletionTriggerKind::INVOKED },
+                    trigger_character: trigger,
+                };
+                Some(server.request_value::<lsp::request::Completion>(lsp::CompletionParams {
+                    text_document_position: params,
+                    work_done_progress_params: Default::default(),
+                    partial_result_params: Default::default(),
+                    context: Some(context),
+                }))
+            });
+            let Ok(Some(request)) = request else { return };
+            let Ok(answer) = request.await else { return };
+            // A server answers with thousands of items; reading them is not the foreground's work.
+            let Ok(response) = cx
+                .background_spawn(async move { serde_json::from_value::<Option<lsp::CompletionResponse>>(answer) })
+                .await
+            else {
+                return;
+            };
             this.update(cx, |editor, cx| {
                 let (items, is_incomplete) = match response {
                     Some(lsp::CompletionResponse::Array(items)) => (items, false),
@@ -781,12 +804,15 @@ impl Editor {
             return;
         }
         let Some(server) = self.server().cloned() else { return };
-        let request = server.request::<lsp::request::ResolveCompletionItem>(item);
+        let label = item.label.clone();
         self.lsp.resolve_task = Some(cx.spawn(async move |this, cx| {
-            let Ok(resolved) = request.await else { return };
+            // Arrowing through the menu, or typing with it open, would ask once per keystroke.
+            cx.background_executor().timer(RESOLVE_DEBOUNCE).await;
+            let Ok(resolved) = server.request::<lsp::request::ResolveCompletionItem>(item).await else { return };
             this.update(cx, |editor, cx| {
+                // A list that arrived meanwhile holds other items at that index.
                 if let Some(menu) = &mut editor.lsp.completion
-                    && let Some(item) = menu.items.get_mut(index)
+                    && let Some(item) = menu.items.get_mut(index).filter(|item| item.label == label)
                 {
                     *item = resolved;
                     cx.notify();
@@ -1775,18 +1801,23 @@ pub(crate) fn changed_span(old: &str, new: &str) -> Option<(std::ops::Range<usiz
     Some((prefix..old.len() - suffix, new[prefix..new.len() - suffix].to_string()))
 }
 
+/// Text a server sent as plain text, as one block.
+fn plain_block(text: String) -> Block {
+    Block::new(BlockKind::Paragraph(markdown::Inline::plain(text)), 0..0)
+}
+
 /// A hover's contents as markdown blocks.
 fn hover_blocks(contents: lsp::HoverContents) -> Vec<Block> {
     let marked = |marked: lsp::MarkedString| match marked {
         lsp::MarkedString::String(text) => markdown::parse(&text),
-        lsp::MarkedString::LanguageString(code) => vec![Block::Code { language: Some(code.language), code: code.value }],
+        lsp::MarkedString::LanguageString(code) => vec![Block::new(BlockKind::Code { language: Some(code.language), code: code.value }, 0..0)],
     };
     match contents {
         lsp::HoverContents::Scalar(scalar) => marked(scalar),
         lsp::HoverContents::Array(items) => items.into_iter().flat_map(marked).collect(),
         lsp::HoverContents::Markup(markup) => match markup.kind {
             lsp::MarkupKind::Markdown => markdown::parse(&markup.value),
-            lsp::MarkupKind::PlainText => vec![Block::Paragraph(markdown::Inline::plain(markup.value))],
+            lsp::MarkupKind::PlainText => vec![plain_block(markup.value)],
         },
     }
 }
@@ -1794,10 +1825,10 @@ fn hover_blocks(contents: lsp::HoverContents) -> Vec<Block> {
 /// Documentation (completion items, signatures) as markdown blocks.
 pub(crate) fn documentation_blocks(documentation: &lsp::Documentation) -> Vec<Block> {
     match documentation {
-        lsp::Documentation::String(text) => vec![Block::Paragraph(markdown::Inline::plain(text.clone()))],
+        lsp::Documentation::String(text) => vec![plain_block(text.clone())],
         lsp::Documentation::MarkupContent(markup) => match markup.kind {
             lsp::MarkupKind::Markdown => markdown::parse(&markup.value),
-            lsp::MarkupKind::PlainText => vec![Block::Paragraph(markdown::Inline::plain(markup.value.clone()))],
+            lsp::MarkupKind::PlainText => vec![plain_block(markup.value.clone())],
         },
     }
 }

@@ -23,7 +23,7 @@ Usage:
 
 Options:
   -n, --new-window     Open each target in a new window
-  -r, --reuse-window   Open in an existing editor (create one if needed)
+  -r, --reuse-window   Open in the window Athas has in front, never a new one
   -w, --wait           Return only after the files are closed (EDITOR="athas --wait")
   --cwd <directory>   Working directory for terminals and repository commands
   --                  End Athas options; following arguments belong to the command
@@ -32,6 +32,10 @@ Options:
 
 Paths take an optional :line or :line:column suffix, such as src/main.rs:120:4.
 Pass shell expressions as one quoted command string.
+
+Without -n or -r, a folder follows the Open Folders in New Window setting: on (the
+default) it opens a window of its own whenever the window in front already has a
+project; off, it joins that window.
 
 Examples:
   athas .
@@ -45,6 +49,10 @@ Examples:
 #[serde(tag = "kind", rename_all = "snake_case")]
 pub enum CliRequest {
     NewWindow {
+        request: Box<CliRequest>,
+    },
+    /// `--reuse-window`: open here, whatever `openFoldersInNewWindow` says.
+    ReuseWindow {
         request: Box<CliRequest>,
     },
     /// A view that is not a file: `settings`, `extensions`, `pr`, `issue` or `action`.
@@ -264,10 +272,13 @@ pub fn parse_cli(args: &[String], cwd: &Path) -> Option<ParsedCli> {
         }
         return Some(ParsedCli { requests, wait });
     }
-    let requests = if new_window.unwrap_or(standalone || command == "window") {
-        requests.into_iter().map(|request| CliRequest::NewWindow { request: Box::new(request) }).collect()
-    } else {
-        requests
+    let requests = match new_window.unwrap_or(standalone || command == "window") {
+        true => requests.into_iter().map(|request| CliRequest::NewWindow { request: Box::new(request) }).collect(),
+        // Only an explicit --reuse-window overrules the Open Folders in New Window setting.
+        false if new_window == Some(false) => {
+            requests.into_iter().map(|request| CliRequest::ReuseWindow { request: Box::new(request) }).collect()
+        }
+        false => requests,
     };
     Some(ParsedCli { requests, wait })
 }
@@ -376,7 +387,9 @@ mod tests {
                 })
             }]
         );
-        assert!(matches!(requests(&["terminal", "-r"], manifest_dir())[0], CliRequest::Terminal { .. }));
+        let reused = &requests(&["terminal", "-r"], manifest_dir())[0];
+        let CliRequest::ReuseWindow { request } = reused else { panic!("expected a reused window") };
+        assert!(matches!(request.as_ref(), CliRequest::Terminal { .. }));
     }
 
     #[cfg(unix)]
@@ -399,6 +412,15 @@ mod tests {
         let CliRequest::Terminal { command, working_directory } = request.as_ref() else { panic!("expected a terminal") };
         assert_eq!(command.as_deref(), Some("printf '%s' 'two words' '$(echo unsafe)' --new-window --disable-gpu"));
         assert_eq!(working_directory.as_deref(), Some("/"));
+    }
+
+    /// A plain `athas .` says nothing about windows, so the app applies the setting; `-r` and
+    /// `-n` answer for it.
+    #[test]
+    fn folders_leave_the_window_to_the_setting_unless_a_flag_decides() {
+        assert!(matches!(requests(&["."], manifest_dir())[0], CliRequest::Path { is_directory: true, .. }));
+        assert!(matches!(requests(&["-r", "."], manifest_dir())[0], CliRequest::ReuseWindow { .. }));
+        assert!(matches!(requests(&["-n", "."], manifest_dir())[0], CliRequest::NewWindow { .. }));
     }
 
     #[test]

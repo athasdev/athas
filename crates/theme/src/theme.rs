@@ -197,7 +197,9 @@ impl Theme {
                 mix(background, 0.94, foreground),
                 Rgba { r: 0.0, g: 0.0, b: 0.0, a: 0.4 },
                 mix(border, 0.8, TRANSPARENT),
-                mix(foreground, 0.06, TRANSPARENT),
+                // Under `raised`, not level with it: a segmented control is chrome, and at the
+                // same weight as a content card it reads as the heaviest thing on the page.
+                mix(foreground, 0.04, TRANSPARENT),
                 mix(background, 0.8, foreground),
                 mix(foreground, 0.07, TRANSPARENT),
             )

@@ -356,30 +356,33 @@ pub fn send_os_notification(cx: &App, title: &str, body: &str) -> bool {
     os_notify(title, body)
 }
 
-/// [`send_os_notification`] with the system notification sound when `sound` is set (macOS; other
-/// systems play their own).
-pub fn send_os_notification_with_sound(cx: &App, title: &str, body: &str, sound: bool) -> bool {
+/// [`send_os_notification`] with a second line under the title (macOS only) and the system
+/// notification sound when `sound` is set (macOS; other systems play their own).
+pub fn send_os_notification_with(cx: &App, title: &str, subtitle: Option<&str>, body: &str, sound: bool) -> bool {
     if !can_send_os_notification(cx) {
         return false;
     }
-    os_notify_with_sound(title, body, sound)
+    os_notify_with_sound(title, subtitle, body, sound)
 }
 
 #[cfg(target_os = "macos")]
 fn os_notify(title: &str, body: &str) -> bool {
-    os_notify_with_sound(title, body, false)
+    os_notify_with_sound(title, None, body, false)
 }
 
 #[cfg(target_os = "macos")]
-fn os_notify_with_sound(title: &str, body: &str, sound: bool) -> bool {
+fn os_notify_with_sound(title: &str, subtitle: Option<&str>, body: &str, sound: bool) -> bool {
     // In the app bundle the banner is Athas's own, so clicking it brings Athas forward as the
     // original's (Tauri's notification plugin) does; a bare binary falls back to `osascript`.
     if native::bundled() {
-        native::send(title, body, sound);
+        native::send(title, subtitle, body, sound);
         return true;
     }
     let quote = |text: &str| text.replace('\\', "\\\\").replace('"', "\\\"");
     let mut script = format!("display notification \"{}\" with title \"{}\"", quote(body), quote(title));
+    if let Some(subtitle) = subtitle.filter(|subtitle| !subtitle.is_empty()) {
+        script.push_str(&format!(" subtitle \"{}\"", quote(subtitle)));
+    }
     if sound {
         script.push_str(" sound name \"Glass\"");
     }
@@ -387,7 +390,7 @@ fn os_notify_with_sound(title: &str, body: &str, sound: bool) -> bool {
 }
 
 #[cfg(not(target_os = "macos"))]
-fn os_notify_with_sound(title: &str, body: &str, _sound: bool) -> bool {
+fn os_notify_with_sound(title: &str, _subtitle: Option<&str>, body: &str, _sound: bool) -> bool {
     os_notify(title, body)
 }
 

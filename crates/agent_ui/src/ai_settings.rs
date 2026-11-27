@@ -22,6 +22,7 @@ use std::{
 use ai_mcp::{McpNameValue, McpServerSecrets, McpServerSetting, McpTransportKind};
 use ai_providers::{Keychain, RemoteModel, SecretStore, catalog, secrets};
 use ui::scale::px;
+use ui::OpenOutbound;
 use gpui::{
     AnyElement, App, AppContext as _, ClickEvent, Context, Entity, FocusHandle, Focusable, IntoElement, ParentElement, Render, SharedString,
     Styled, Subscription, Task, Window, div, prelude::*,
@@ -1040,11 +1041,11 @@ impl AiSettingsView {
                     };
                     div().w(px(96.)).child(ui::Progress::new(usage.used_percent as f32).tone(tone))
                 }))
-                .child(Button::new("athas-manage", "Manage").variant(ButtonVariant::Outline).size(ButtonSize::Small).on_click(move |_, _, cx| cx.open_url(&billing)))
+                .child(Button::new("athas-manage", "Manage").variant(ButtonVariant::Outline).size(ButtonSize::Small).on_click(move |_, _, cx| cx.open_outbound(&billing)))
                 .into_any_element()
         } else {
             let pricing = urls.pricing();
-            Button::new("athas-upgrade", "Upgrade").variant(ButtonVariant::Accent).size(ButtonSize::Small).on_click(move |_, _, cx| cx.open_url(&pricing)).into_any_element()
+            Button::new("athas-upgrade", "Upgrade").variant(ButtonVariant::Accent).size(ButtonSize::Small).on_click(move |_, _, cx| cx.open_outbound(&pricing)).into_any_element()
         };
         let plan_description = if intelligence { usage.as_ref().map(crate::hosted_usage::describe_included_credit) } else { Some("Pro includes Athas credit every month".to_string()) };
         let plan_control = div().flex().items_center().gap(px(8.)).child(plan_badge).child(plan_control);
@@ -1055,7 +1056,7 @@ impl AiSettingsView {
             .items_center()
             .gap(px(8.))
             .children(balance.map(|balance| div().text_size(typography::text_sm()).text_color(cx.theme().colors.foreground).child(balance)))
-            .child(Button::new("athas-add-credit", "Add Credit").variant(ButtonVariant::Outline).size(ButtonSize::Small).on_click(move |_, _, cx| cx.open_url(&billing)));
+            .child(Button::new("athas-add-credit", "Add Credit").variant(ButtonVariant::Outline).size(ButtonSize::Small).on_click(move |_, _, cx| cx.open_outbound(&billing)));
         let rate = crate::hosted_usage::usage_rate(credits.as_ref().and_then(|credits| credits.usage_markup));
         rows.push(row("Balance", Some(format!("Used after included credit, at {rate}").into()), balance_control, false, cx));
         if let Some(policy) = policy {
@@ -1097,7 +1098,7 @@ impl AiSettingsView {
                         .items_center()
                         .gap(px(6.))
                         .when_some(provider.key_url, |this, url| {
-                            this.child(Button::icon(("key-url", index), IconName::OpenExternal).size(ButtonSize::Small).tooltip("Create a key").on_click(move |_, _, cx| cx.open_url(url)))
+                            this.child(Button::icon(("key-url", index), IconName::OpenExternal).size(ButtonSize::Small).tooltip("Create a key").on_click(move |_, _, cx| cx.open_outbound(url)))
                         })
                         .when(saved, |this| {
                             this.child(Button::new(("key-remove", index), "Remove").variant(ButtonVariant::Ghost).size(ButtonSize::Small).on_click(cx.listener(move |this, _: &ClickEvent, _, cx| this.remove_key(id, cx))))

@@ -177,7 +177,9 @@ impl PreviewView {
                 let editor = cx.new(|cx| editor::Editor::open(path.clone(), window, cx));
                 #[cfg(target_family = "wasm")]
                 let editor = cx.new(|cx| editor::Editor::open_with(path.clone(), web_files(), window, cx));
-                Body::Markdown(cx.new(|cx| editor::MarkdownPreview::new(editor, cx)))
+                // This tab reads a file beside its editor, from its own buffer: what is written here
+                // would never be saved, so the document is shown, not edited.
+                Body::Markdown(cx.new(|cx| editor::MarkdownPreview::new(editor, cx).read_only()))
             }
             PreviewKind::Csv => Body::Csv(cx.new(|cx| viewer::FileViewer::open(path.clone(), window, cx))),
         };

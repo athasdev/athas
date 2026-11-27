@@ -402,6 +402,8 @@ pub struct Settings {
     pub github_sidebar_section_order: Vec<String>,
     #[serde(rename = "enableInlineGitBlame")]
     pub enable_inline_git_blame: bool,
+    #[serde(rename = "aiSandboxCommands")]
+    pub ai_sandbox_commands: bool,
     #[serde(rename = "telemetry")]
     pub telemetry: bool,
     /// Keys from other versions, kept so saving does not drop them.
@@ -492,7 +494,7 @@ impl Default for Settings {
             aidefault_session_mode: "".into(),
             ai_agent_notifications: true,
             ai_agent_finish_notifications: true,
-            ai_agent_notification_sound: false,
+            ai_agent_notification_sound: true,
             notifications_only_in_background: false,
             notification_quiet_hours: false,
             notification_quiet_hours_start: "22:00".into(),
@@ -570,6 +572,7 @@ impl Default for Settings {
             hidden_git_sidebar_items: Vec::new(),
             github_sidebar_section_order: vec!["pull-requests".into(), "issues".into(), "actions".into(), "releases".into(), "deployments".into()],
             enable_inline_git_blame: true,
+            ai_sandbox_commands: false,
             telemetry: false,
             extra: BTreeMap::new(),
         }

@@ -44,13 +44,42 @@ pub fn provider_mark(id: &str, size: gpui::Pixels, color: gpui::Hsla) -> gpui::A
     }
 }
 
+/// The picture an agent brings: artwork in its own colours, or a one-colour glyph the UI tints
+/// like any other icon.
+pub enum AgentMark {
+    Art(gpui::SharedString),
+    Glyph(gpui::SharedString),
+}
+
+/// The mark an agent's extension gave it in Athas's catalog, or Athas's own for the built-in
+/// agent. One lookup, so the agent picker's rows and the composer's chip show the same thing.
+pub fn agent_mark_source(id: &str) -> Option<AgentMark> {
+    if crate::builtin::is_builtin(id) {
+        return Some(AgentMark::Art("icons/athas_mark.png".into()));
+    }
+    let mark = crate::acp::agents::catalog_mark(id)?;
+    let icon: gpui::SharedString = mark.icon.clone()?.into();
+    Some(if mark.monochrome { AgentMark::Glyph(icon) } else { AgentMark::Art(icon) })
+}
+
 /// An agent's mark as Athas draws it (`ProviderIcon`): its artwork when it has one, else its
 /// flat mark in `color`.
 pub fn agent_mark(id: &str, size: gpui::Pixels, color: gpui::Hsla) -> gpui::AnyElement {
     use gpui::IntoElement as _;
-    match ui::BrandMark::agent(crate::acp::agents::catalog_id(id)) {
-        Some(mark) => mark.size(size).into_any_element(),
+    match agent_mark_source(id) {
+        Some(AgentMark::Art(path)) => ui::BrandMark::image(path).size(size).into_any_element(),
+        Some(AgentMark::Glyph(path)) => ui::Icon::from_path(path).size(ui::IconSize::Custom(size)).color(color).into_any_element(),
         None => ui::Icon::new(provider_icon(id)).size(ui::IconSize::Custom(size)).color(color).into_any_element(),
+    }
+}
+
+/// Gives a menu row an agent's mark: the same one the composer's chip shows, else the flat mark
+/// its id maps to.
+pub fn agent_menu_item(item: MenuItem, id: &str) -> MenuItem {
+    match agent_mark_source(id) {
+        Some(AgentMark::Art(path)) => item.icon_image(path),
+        Some(AgentMark::Glyph(path)) => item.icon_path(path),
+        None => item.icon(provider_icon(id)),
     }
 }
 
@@ -155,6 +184,17 @@ mod tests {
         assert_eq!(model_icon("openai", "gpt-5"), IconName::BrandOpenai);
         assert_eq!(provider_icon("claude-acp"), IconName::BrandClaude);
         assert_eq!(provider_icon("athas"), IconName::Sparkle);
+    }
+
+    #[test]
+    fn an_agent_wears_its_catalog_mark() {
+        // A monochrome glyph takes the row's colour; artwork keeps its own.
+        assert!(matches!(agent_mark_source("antigravity-acp"), Some(AgentMark::Glyph(path)) if path == "extensions/icons/athas.agent.antigravity.svg"));
+        assert!(matches!(agent_mark_source("qwen-code"), Some(AgentMark::Art(_))));
+        assert!(matches!(agent_mark_source("athas"), Some(AgentMark::Art(_))));
+        // Codex is not a catalog extension: it falls back to its vendor's flat mark.
+        assert!(agent_mark_source("codex").is_none());
+        assert_eq!(provider_icon("codex"), IconName::BrandOpenai);
     }
 
     #[test]

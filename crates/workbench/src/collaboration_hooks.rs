@@ -1,11 +1,13 @@
-//! Team presence's view of the workbench: the file or agent session in front and its cursor, and
-//! opening a followed teammate's file.
+//! Team presence's view of the workbench: the file or agent session in front and its cursor,
+//! opening a followed teammate's file, and carrying out what another of this account's devices
+//! asks a session here to do.
 
 use std::{path::PathBuf, rc::Rc};
 
 use collaboration::{
     live_share::{self, SessionSource, Sources},
     presence::{self, ActiveContext, CollaborationRuntime},
+    remote_control::{self, Command, SessionState},
 };
 use gpui::{App, WeakEntity};
 use workspace::TabItem;
@@ -14,6 +16,17 @@ use crate::Workbench;
 
 pub(crate) fn init(workbench: WeakEntity<Workbench>, cx: &mut App) {
     CollaborationRuntime::init(cx);
+    remote_control::set_handler(
+        Rc::new(|session_id: &str, command: Command, cx: &mut App| {
+            let outcome = match command {
+                Command::Prompt(text) => agent_ui::remote_prompt(session_id, text, Some("another of your devices"), cx),
+                Command::Stop => agent_ui::remote_stop(session_id, cx),
+                Command::Hello => agent_ui::remote_status(session_id, cx),
+            };
+            SessionState { open: outcome.open, running: outcome.running, queued: outcome.queued, error: outcome.error }
+        }),
+        cx,
+    );
     let reader = workbench.clone();
     presence::set_context_provider(
         cx,
@@ -26,6 +39,17 @@ pub(crate) fn init(workbench: WeakEntity<Workbench>, cx: &mut App) {
         Rc::new(move |path: PathBuf, cx: &mut App| {
             workbench.update(cx, |workbench, cx| workbench.open_file_at(path, None, None, cx)).ok();
         }),
+    );
+}
+
+/// Tells the device watching this session how it is doing now, so a prompt sent from there is
+/// answered before the next poll. Does nothing for a session no other device is watching.
+pub(crate) fn announce_session(session_id: &str, cx: &mut App) {
+    let outcome = agent_ui::remote_status(session_id, cx);
+    remote_control::announce(
+        session_id,
+        SessionState { open: outcome.open, running: outcome.running, queued: outcome.queued, error: outcome.error },
+        cx,
     );
 }
 
