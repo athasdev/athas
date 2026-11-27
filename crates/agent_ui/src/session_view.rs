@@ -7,7 +7,6 @@
 use std::{
     cell::RefCell,
     collections::{HashMap, HashSet, VecDeque},
-    ops::Range,
     path::PathBuf,
     rc::Rc,
     sync::Arc,
@@ -2989,33 +2988,59 @@ impl SessionView {
     /// Starts, extends (with Shift) or drags the transcript's selection to `offset`, a byte of
     /// the run drawn at `path`. A second click takes the word there and a third the whole run.
     pub(crate) fn select_text(&mut self, path: SpanPath, offset: usize, phase: SelectPhase, cx: &mut Context<Self>) {
-        let whole = |path: &SpanPath, range: Range<usize>| TextSelection {
-            anchor: TextPoint { span: path.clone(), offset: range.start },
-            head: TextPoint { span: path.clone(), offset: range.end },
-            selecting: false,
-        };
+        let point = TextPoint { span: path.clone(), offset };
         match phase {
-            SelectPhase::Start { clicks, .. } if clicks >= 3 => {
-                let len = crate::selection::run_len(&self.drawn_runs.borrow(), &path);
-                self.text_selection = Some(whole(&path, 0..len));
-            }
-            SelectPhase::Start { clicks, .. } if clicks == 2 => {
-                let word = crate::selection::word_at(&self.drawn_runs.borrow(), &path, offset);
-                let Some(word) = word.filter(|word| !word.is_empty()) else { return };
-                self.text_selection = Some(whole(&path, word));
-            }
-            SelectPhase::Start { extend: true, .. } if self.text_selection.is_some() => {
-                if let Some(selection) = &mut self.text_selection {
-                    selection.head = TextPoint { span: path, offset };
-                    selection.selecting = true;
+            SelectPhase::Start { clicks, extend } => {
+                let granularity = ui::Granularity::for_clicks(clicks);
+                let unit = (granularity != ui::Granularity::Character)
+                    .then(|| crate::selection::unit_at(&self.drawn_runs.borrow(), &path, offset, granularity))
+                    .flatten()
+                    .filter(|range| !range.is_empty());
+                match (unit, &mut self.text_selection) {
+                    (Some(range), _) => self.text_selection = Some(TextSelection::units(&path, range, granularity)),
+                    (None, Some(selection)) if extend => {
+                        selection.head = point;
+                        selection.selecting = true;
+                        selection.unit = None;
+                    }
+                    (None, _) => self.text_selection = Some(TextSelection::at(point)),
                 }
             }
-            SelectPhase::Start { .. } => self.text_selection = Some(TextSelection::at(TextPoint { span: path, offset })),
             SelectPhase::Drag => match &mut self.text_selection {
-                Some(selection) if selection.selecting => selection.head = TextPoint { span: path, offset },
+                Some(selection) if selection.selecting => selection.drag_to(point, &self.drawn_runs.borrow()),
                 _ => return,
             },
         }
+        cx.notify();
+    }
+
+    /// The transcript's right-click menu: Copy, and Quote for the passage selected.
+    pub(crate) fn deploy_transcript_menu(&mut self, position: gpui::Point<Pixels>, window: &mut Window, cx: &mut Context<Self>) {
+        let has_selection = self.text_selection.as_ref().is_some_and(|selection| !selection.is_empty());
+        let this = cx.entity();
+        let copy = this.clone();
+        let quote = this;
+        let entries = vec![
+            ui::MenuItem::new("Copy")
+                .icon(ui::IconName::Copy)
+                .shortcut(if cfg!(target_os = "macos") { "⌘C" } else { "Ctrl+C" })
+                .disabled(!has_selection)
+                .on_select(move |window, cx| {
+                    copy.update(cx, |this, cx| this.copy_text_selection(&crate::selection::CopyTranscriptSelection, window, cx));
+                })
+                .into(),
+            ui::MenuItem::new("Quote in Reply")
+                .icon(ui::IconName::ChatBubbleText)
+                .disabled(!has_selection)
+                .on_select(move |window, cx| {
+                    quote.update(cx, |this, cx| {
+                        this.open_quote_card(position, cx);
+                        this.start_quote_reply(window, cx);
+                    });
+                })
+                .into(),
+        ];
+        self.open_menu = Some(OpenMenu::new("transcript-context", entries, position, gpui::Anchor::TopLeft, window, cx, |this, _| this.open_menu = None));
         cx.notify();
     }
 

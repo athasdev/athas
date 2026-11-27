@@ -40,6 +40,7 @@ mod switch;
 mod tab;
 pub mod text_area;
 pub mod text_input;
+pub mod text_selection;
 mod tooltip;
 pub mod typography;
 
@@ -84,6 +85,7 @@ pub use switch::Switch;
 pub use tab::Tab;
 pub use text_area::{TextArea, TextAreaEvent, TextAreaHighlighter, TextAreaVariant};
 pub use text_input::{InputAppearance, TextInput, TextInputEvent};
+pub use text_selection::{EditMenu, Granularity, UnitDrag};
 pub use tooltip::{TOOLTIP_DELAY, Tooltip, TooltipAnchor, TooltipExt, TooltipSide, tooltip_origin};
 
 /// Binds the keys the shared controls use.

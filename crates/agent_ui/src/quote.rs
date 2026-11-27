@@ -60,7 +60,7 @@ impl SessionView {
     }
 
     /// Quote in the card: the reply field opens under the passage, focused.
-    fn start_quote_reply(&mut self, window: &mut gpui::Window, cx: &mut Context<Self>) {
+    pub(crate) fn start_quote_reply(&mut self, window: &mut gpui::Window, cx: &mut Context<Self>) {
         let Some(card) = &mut self.quote_card else { return };
         if card.reply.is_some() {
             return;
