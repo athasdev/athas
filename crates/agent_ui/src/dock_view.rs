@@ -223,7 +223,7 @@ pub struct SessionDockView {
     /// Where this session's commands run, and what else they could run on. Read from the session
     /// when the boxes refresh, never during a draw.
     #[cfg(not(target_family = "wasm"))]
-    sandbox: Option<crate::session_view::SandboxTarget>,
+    sandbox: Option<crate::thread::SandboxTarget>,
     #[cfg(not(target_family = "wasm"))]
     sandbox_choices: Vec<crate::session_view::SandboxChoice>,
     /// The sandbox the session is in right now, once its first command has made one.
@@ -271,7 +271,7 @@ impl SessionDockView {
     }
 
     /// Takes what the boxes show from the session; whether anything changed.
-    fn read_session(&mut self, session: &SessionView, cx: &App) -> bool {
+    fn read_session(&mut self, session: &SessionView, _cx: &App) -> bool {
         let summary = session.summary();
         let cloud = CloudState::of(session);
         let context = ContextState::of(session, &summary);
@@ -279,7 +279,7 @@ impl SessionDockView {
         #[cfg(not(target_family = "wasm"))]
         let sandbox = session.sandbox_target();
         #[cfg(not(target_family = "wasm"))]
-        let choices = SessionView::sandbox_choices(cx);
+        let choices = session.environments().to_vec();
         #[cfg(not(target_family = "wasm"))]
         let live = session.sandbox_live_id();
         #[cfg(not(target_family = "wasm"))]
@@ -332,10 +332,15 @@ impl SessionDockView {
             // it names.
             let leading: AnyElement = match chosen.and_then(|choice| choice.icon.clone()) {
                 Some(path) => gpui::img(path).size(px(14.)).into_any_element(),
-                None => Icon::new(if chosen.is_some() { IconName::Cube } else { icon })
-                    .size(IconSize::XSmall)
-                    .color(colors.subtle_foreground)
-                    .into_any_element(),
+                None => Icon::new(match chosen {
+                    // Somebody's computer, a sandbox, or this machine -- three places, three marks.
+                    Some(choice) if choice.machine => IconName::Monitor,
+                    Some(_) => IconName::Cube,
+                    None => icon,
+                })
+                .size(IconSize::XSmall)
+                .color(colors.subtle_foreground)
+                .into_any_element(),
             };
             // The provider and which of its sandboxes -- the one running, else the one picked,
             // else a plain word for "chosen, but nothing has run in it yet". A session that has
@@ -343,6 +348,12 @@ impl SessionDockView {
             // What it is doing while it does it, else which sandbox it is, else that it is only
             // a destination so far.
             let label = match chosen {
+                // A machine's name is the whole answer: there is no sandbox inside it to name,
+                // and its connection id is the name said twice.
+                Some(choice) if choice.machine => match self.sandbox_work.clone() {
+                    Some(work) => format!("{} · {work}", choice.name),
+                    None => choice.name.clone(),
+                },
                 Some(choice) => {
                     let which = self
                         .sandbox_work

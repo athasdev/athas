@@ -21,6 +21,7 @@ pub mod known_hosts;
 pub mod manager;
 pub mod path;
 pub mod pty;
+pub mod sandbox;
 pub mod seams;
 pub mod session;
 mod secret_input;
@@ -51,9 +52,11 @@ pub use seams::git_adapter::repository_for;
 #[cfg(feature = "terminal_view")]
 pub use seams::terminal_adapter::spawn_pty;
 
-/// Makes the connection manager a global.
+/// Makes the connection manager a global, and the saved machines an environment a session's
+/// commands can run in.
 pub fn init(cx: &mut gpui::App) {
     cx.set_global(RemoteConnections(manager().clone()));
+    sandbox::init();
 }
 
 /// The SFTP file system for a `remote://` path; `None` for a local one. One instance serves

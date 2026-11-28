@@ -395,6 +395,16 @@ fn render_sandbox_keys(
     if !status.installed {
         return None;
     }
+    // Only the providers that want a key. Docker's row would be a field with nothing to type
+    // in it and a Remove button for a key that cannot exist.
+    #[cfg(not(target_family = "wasm"))]
+    let providers: Vec<_> = entry
+        .manifest
+        .sandbox_providers()
+        .filter(|provider| sandbox::providers::auth(&provider.id) == Some(sandbox::providers::Auth::ApiKey))
+        .cloned()
+        .collect();
+    #[cfg(target_family = "wasm")]
     let providers: Vec<_> = entry.manifest.sandbox_providers().cloned().collect();
     if providers.is_empty() {
         return None;
@@ -516,7 +526,16 @@ fn render_running_sandboxes(
     }
     let provider = entry.manifest.sandbox_providers().next()?;
     let id = provider.id.clone();
-    let listed = view.sandbox_key(&id).flatten().and(view.provider_sandboxes(&id))?;
+    // A key is the price of asking, for the providers that charge it. Docker is asked straight
+    // away, because there is nothing to authenticate.
+    #[cfg(not(target_family = "wasm"))]
+    let needs_key = sandbox::providers::auth(&id) == Some(sandbox::providers::Auth::ApiKey);
+    #[cfg(target_family = "wasm")]
+    let needs_key = true;
+    if needs_key && view.sandbox_key(&id).flatten().is_none() {
+        return None;
+    }
+    let listed = view.provider_sandboxes(&id)?;
     let line = |content: AnyElement| {
         div()
             .flex()

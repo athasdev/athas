@@ -3097,34 +3097,39 @@ impl SessionView {
             button = button.tooltip(agent);
         }
         pickers.push(button.into_any_element());
-        // Where this session's commands run, next to what runs them. A chip that only appears
-        // when a sandbox is chosen: nobody needs to be told their commands run on their own
-        // computer, and everybody needs to be told when they do not.
+        // Where this session's commands run, always. There is no such thing as a prompt that
+        // runs nowhere: it runs on this computer unless it was sent somewhere else, and the chip
+        // says which without being asked.
         #[cfg(not(target_family = "wasm"))]
-        if let Some(target) = self.sandbox_target() {
-            let name = Self::sandbox_choices(cx)
-                .into_iter()
-                .find(|choice| choice.id == target.provider)
-                .map_or_else(|| target.provider.clone(), |choice| choice.name);
-            let live = self.sandbox_live_id();
+        {
+            let target = self.sandbox_target();
+            let chosen = target.as_ref().and_then(|target| self.environments().iter().find(|choice| choice.id == target.provider));
             let ran = self.sandbox_commands_run();
-            let label = match (&live, &self.sandbox_work()) {
-                (_, Some(work)) => format!("{name} · {work}"),
-                (Some(id), None) => format!("{name} · {id}"),
-                (None, None) => format!("{name} · not started"),
+            let live = self.sandbox_live_id();
+            let label = match (chosen, &self.sandbox_work()) {
+                (Some(choice), Some(work)) => format!("{} · {work}", choice.name),
+                (Some(choice), None) if choice.machine => choice.name.clone(),
+                (Some(choice), None) => format!("{} · {}", choice.name, live.clone().unwrap_or_else(|| "not started".into())),
+                (None, _) => crate::session_view::local_machine_name(),
             };
-            // The honest answer to "did it really run in there", which is a number, and the
-            // reason it can be zero: an agent with a shell of its own never asks Athas.
-            let tooltip = match (ran, live) {
-                (0, _) => format!(
-                    "No commands have run in {name} yet. Only commands the agent asks Athas to run go there; one that runs its own shell does not."
+            // The honest answer to "did it really run there", which is a number, and the reason
+            // it can be zero: an agent with a shell of its own never asks Athas to run anything.
+            let tooltip = match (chosen, ran) {
+                (None, _) => "Commands run on this computer".to_string(),
+                (Some(choice), 0) => format!(
+                    "Nothing has run in {} yet. Only commands the agent asks Athas to run go there; one that runs its own shell does not.",
+                    choice.name
                 ),
-                (1, Some(id)) => format!("1 command has run in {id}."),
-                (count, Some(id)) => format!("{count} commands have run in {id}."),
-                (count, None) => format!("{count} commands have run in {name}."),
+                (Some(choice), 1) => format!("1 command has run in {}.", choice.name),
+                (Some(choice), count) => format!("{count} commands have run in {}.", choice.name),
+            };
+            let icon = match chosen {
+                Some(choice) if choice.machine => IconName::Remote,
+                Some(_) => IconName::Cube,
+                None => IconName::Laptop,
             };
             pickers.push(
-                picker_button("sandbox-picker", label, Some(IconName::Cube), true)
+                picker_button("sandbox-picker", label, Some(icon), true)
                     .tooltip(tooltip)
                     .on_click(cx.listener(|this, event: &ClickEvent, window, cx| {
                         this.deploy_environment_menu(event.position(), window, cx)

@@ -2904,6 +2904,95 @@
    "monochromeIcon": false
   },
   {
+   "path": "sandboxes/boat",
+   "manifest": {
+    "$schema": "https://athas.dev/schemas/extension.json",
+    "id": "athas.sandbox.boat",
+    "name": "boat",
+    "displayName": "Boat",
+    "description": "Run commands in a throwaway Linux sandbox on your own Boat account instead of on this machine. Not affiliated with Boat.",
+    "version": "1.0.0",
+    "publisher": "Athas",
+    "categories": [
+     "Sandbox"
+    ],
+    "sandboxProviders": [
+     {
+      "id": "boat",
+      "name": "Boat",
+      "description": "Sandboxes with a time to live you set, that can be stopped and resumed with their disk intact.",
+      "apiKeyUrl": "https://boat.dev/dashboard"
+     }
+    ],
+    "license": "MIT",
+    "repository": {
+     "type": "git",
+     "url": "https://github.com/athasdev/athas"
+    }
+   },
+   "icon": "extensions/icons/athas.sandbox.boat.svg",
+   "monochromeIcon": false
+  },
+  {
+   "path": "sandboxes/daytona",
+   "manifest": {
+    "$schema": "https://athas.dev/schemas/extension.json",
+    "id": "athas.sandbox.daytona",
+    "name": "daytona",
+    "displayName": "Daytona",
+    "description": "Run commands in a throwaway Linux sandbox on your own Daytona account instead of on this machine. Not affiliated with Daytona.",
+    "version": "1.0.0",
+    "publisher": "Athas",
+    "categories": [
+     "Sandbox"
+    ],
+    "sandboxProviders": [
+     {
+      "id": "daytona",
+      "name": "Daytona",
+      "description": "Sandboxes that stop when they go idle and keep their disk, so yesterday's is still there tomorrow.",
+      "apiKeyUrl": "https://app.daytona.io/dashboard/keys"
+     }
+    ],
+    "license": "MIT",
+    "repository": {
+     "type": "git",
+     "url": "https://github.com/athasdev/athas"
+    }
+   },
+   "icon": "extensions/icons/athas.sandbox.daytona.svg",
+   "monochromeIcon": true
+  },
+  {
+   "path": "sandboxes/docker",
+   "manifest": {
+    "$schema": "https://athas.dev/schemas/extension.json",
+    "id": "athas.sandbox.docker",
+    "name": "docker-sandbox",
+    "displayName": "Docker",
+    "description": "Run commands in a container on this machine instead of in your workspace. No account and no key: it uses the Docker you already have. Not affiliated with Docker.",
+    "version": "1.0.0",
+    "publisher": "Athas",
+    "categories": [
+     "Sandbox"
+    ],
+    "sandboxProviders": [
+     {
+      "id": "docker",
+      "name": "Docker",
+      "description": "A container on this computer. Nothing leaves the machine and nothing is paid for; the image needs bash, git, tar and gzip."
+     }
+    ],
+    "license": "MIT",
+    "repository": {
+     "type": "git",
+     "url": "https://github.com/athasdev/athas"
+    }
+   },
+   "icon": "extensions/icons/athas.sandbox.docker.svg",
+   "monochromeIcon": false
+  },
+  {
    "path": "sandboxes/e2b",
    "manifest": {
     "$schema": "https://athas.dev/schemas/extension.json",
