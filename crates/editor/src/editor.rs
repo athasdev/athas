@@ -2108,7 +2108,7 @@ impl Render for Editor {
         let find_bar = self.render_find_bar(cx);
         let go_to_line = self.render_go_to_line(cx);
         let notice = self.render_notice(cx);
-        let popovers = self.render_lsp_popovers(cx);
+        let popovers = self.render_lsp_popovers(window, cx);
         let mut key_context = KeyContext::default();
         key_context.add("Editor");
         if self.lsp.completion.is_some() || self.lsp.code_actions.is_some() {

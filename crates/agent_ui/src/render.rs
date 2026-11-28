@@ -1528,12 +1528,13 @@ impl SessionView {
                 this.child(
                     div()
                         .id(("diff", index * 100 + content_index))
+                        .flex()
                         .overflow_x_scroll()
                         .bg(colors.background)
                         .font_family(typography::MONO_FONT)
                         .text_size(typography::text_caption())
                         .line_height(px(DIFF_ROW_HEIGHT))
-                        .child(div().flex().flex_col().min_w_full().children(lines)),
+                        .child(div().flex().flex_col().flex_none().min_w_full().children(lines)),
                 )
             });
         div()
@@ -3664,6 +3665,7 @@ fn render_block(block: &Block, path: &SpanPath, sel: &Selecting, cx: &mut Contex
                 .child(
                     div()
                         .id(SharedString::from(format!("code-{path}")))
+                        .flex()
                         .overflow_x_scroll()
                         .px(px(10.))
                         .pb(px(8.))
@@ -3686,7 +3688,7 @@ fn render_block(block: &Block, path: &SpanPath, sel: &Selecting, cx: &mut Contex
                                     crate::selection::draggable(div().min_h(px(19.)), line_path, layout, cx).child(text).into_any_element()
                                 })
                                 .collect();
-                            div().flex().flex_col().children(lines)
+                            div().flex().flex_col().flex_none().min_w_full().children(lines)
                         }),
                 )
                 .into_any_element()

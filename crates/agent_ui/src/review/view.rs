@@ -268,12 +268,13 @@ impl ReviewView {
             .child(
                 div()
                     .id(("hunk-lines", id))
+                    .flex()
                     .overflow_x_scroll()
                     .py(px(4.))
                     .font_family(typography::MONO_FONT)
                     .text_size(typography::text_caption())
                     .line_height(px(17.))
-                    .child(div().flex().flex_col().min_w_full().children(lines.iter().map(|line| Self::render_line(line, cx)))),
+                    .child(div().flex().flex_col().flex_none().min_w_full().children(lines.iter().map(|line| Self::render_line(line, cx)))),
             )
             .into_any_element()
     }
