@@ -129,11 +129,19 @@ impl GitHubPanel {
     /// that narrow it -- are never the whole answer. A list that is still loading, failed, or is
     /// genuinely empty each read differently, and none of them is "four filters and nothing".
     fn surface_note<T: Clone>(&self, what: &str, list: &crate::List<T>, cx: &Context<Self>) -> Option<CommandRow> {
-        let label: SharedString = match (&list.items, &list.error, list.loading) {
-            (_, Some(error), _) => format!("Could not load the {what}. {error}").into(),
-            (_, _, true) => format!("Loading {what}…").into(),
-            (None, _, _) => format!("No {what} loaded yet").into(),
-            (Some(items), _, _) if items.is_empty() => format!("This repository has no {what}").into(),
+        // Why nothing can be fetched at all comes first: a list that was never asked for is not
+        // an empty list, and "no releases" would be a lie told to someone who is signed out.
+        let blocked = match (self.repo_path(), self.auth.token()) {
+            (None, _) => Some("This folder is not a GitHub repository".to_string()),
+            (_, None) => Some(format!("Sign in to GitHub to see its {what}")),
+            _ => None,
+        };
+        let label: SharedString = match (blocked, &list.items, &list.error, list.loading) {
+            (Some(reason), ..) => reason.into(),
+            (_, _, Some(error), _) => format!("Could not load the {what}. {error}").into(),
+            (_, _, _, true) => format!("Loading {what}…").into(),
+            (_, None, ..) => format!("No {what} loaded yet").into(),
+            (_, Some(items), ..) if items.is_empty() => format!("This repository has no {what}").into(),
             _ => return None,
         };
         let icon = if list.error.is_some() { IconName::WarningCircle } else { IconName::Info };
@@ -153,12 +161,19 @@ impl GitHubPanel {
             Section::Releases => self.releases.items.is_none(),
             _ => self.deployments.items.is_none(),
         };
-        if empty {
+        // The footer's lists can be the first thing anyone asks of GitHub in a window, before
+        // the panel has gone looking for a token. Without one `load_section` returns having done
+        // nothing, which is how "no releases loaded yet" came to stand for "never asked".
+        let signed_in = self.auth.token().is_some();
+        if !signed_in && self.auth != crate::auth::Auth::Checking {
+            self.check_auth(false, cx);
+        }
+        if empty && signed_in {
             self.load_section(section, cx);
         }
         let which = which.to_string();
-        // Shown now with whatever it has, and again when the answer lands: the first tells the
-        // reader it is working, the second is what they came for.
+        // Shown now with whatever it has, and again when the answer lands: the first says what it
+        // is doing, the second is what the reader came for.
         if let Some(list) = self.command_surface(&which, cx) {
             palette::show_command_list(cx, list);
         }
@@ -166,15 +181,31 @@ impl GitHubPanel {
             return;
         }
         cx.spawn(async move |this, cx| {
-            for _ in 0..100 {
+            // Waits for the token first, then for the list: a window that has not checked yet
+            // would otherwise be told it has no releases before anyone looked.
+            for _ in 0..150 {
                 cx.background_executor().timer(std::time::Duration::from_millis(100)).await;
-                let settled = this.read_with(cx, |this, _| match which.as_str() {
-                    "releases" => !this.releases.loading,
-                    _ => !this.deployments.loading,
+                let state = this.read_with(cx, |this, _| {
+                    let loading = match which.as_str() {
+                        "releases" => this.releases.loading,
+                        _ => this.deployments.loading,
+                    };
+                    let items = match which.as_str() {
+                        "releases" => this.releases.items.is_some(),
+                        _ => this.deployments.items.is_some(),
+                    };
+                    (this.auth.clone(), loading, items)
                 });
-                if settled.unwrap_or(true) {
-                    break;
+                let Ok((auth, loading, items)) = state else { break };
+                if auth == crate::auth::Auth::Checking || loading {
+                    continue;
                 }
+                // The token arrived after the surface opened: ask for the list now.
+                if auth.token().is_some() && !items {
+                    this.update(cx, |this, cx| this.load_section(section, cx)).ok();
+                    continue;
+                }
+                break;
             }
             this.update(cx, |this, cx| {
                 if let Some(list) = this.command_surface(&which, cx) {
