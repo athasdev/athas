@@ -18,6 +18,7 @@ name = "github_snapshot"
 required-features = ["snapshot"]
 
 [dependencies]
+log = "0.4"
 paths = { path = "../paths" }
 # The account menu's linked GitHub account (`registerGitHubLinkedAccount`).
 account = { path = "../account" }

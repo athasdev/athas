@@ -3572,6 +3572,7 @@ dependencies = [
  "gpui_platform",
  "image",
  "keymap",
+ "log",
  "markdown",
  "multibuffer",
  "notifications",

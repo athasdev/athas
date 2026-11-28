@@ -637,7 +637,20 @@ impl GitHubPanel {
     }
 
     pub(crate) fn load_section(&mut self, section: Section, cx: &mut Context<Self>) {
-        let (Some(path), Some(token), Some(key)) = (self.repo_path(), self.auth.token(), self.list_key(section)) else { return };
+        let (repo, token, key) = (self.repo_path(), self.auth.token(), self.list_key(section));
+        let (Some(path), Some(token), Some(key)) = (repo.clone(), token, key) else {
+            // Returning here used to leave no trace, so a list that was never asked for looked
+            // exactly like one GitHub said was empty.
+            log::warn!(
+                "GitHub {section:?} was not loaded: {}",
+                match (repo.is_some(), matches!(self.auth, crate::auth::Auth::Checking)) {
+                    (false, _) => "this folder has no GitHub repository".to_string(),
+                    (true, true) => "the token is still being checked".to_string(),
+                    (true, false) => format!("no usable token ({:?})", self.auth),
+                }
+            );
+            return;
+        };
         match section {
             Section::PullRequests => {
                 let filter = self.pr_filter.api_value().to_string();
