@@ -11,20 +11,19 @@ license = "AGPL-3.0-or-later"
 publish = false
 
 [workspace.dependencies]
-gpui = { git = "https://github.com/zed-industries/zed", rev = "3def8bad0b62dbda02d5b67b00df96fe8d3957bd" }
+# GPUI from crates.io: the `gpui-pre-*` weekly snapshots of Zed's crates (the ones gpui-kit
+# builds on), so a build never clones the Zed repository. A snapshot may change GPUI's API, so
+# the pin is exact; bump every `gpui-pre-*` crate together.
+gpui = { package = "gpui-pre", version = "=0.3.14" }
 # Linux needs wayland and x11 turned on, or GPUI only builds its headless backend and the
 # window never draws (#795).
-gpui_platform = { git = "https://github.com/zed-industries/zed", rev = "3def8bad0b62dbda02d5b67b00df96fe8d3957bd", default-features = false, features = ["font-kit", "runtime_shaders", "wayland", "x11"] }
+gpui_platform = { package = "gpui-pre-platform", version = "=0.3.14", default-features = false, features = ["font-kit", "runtime_shaders", "wayland", "x11"] }
+http_client = { package = "gpui-pre-http-client", version = "=0.3.14" }
 anyhow = "1"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 
-# GPUI depends on Zed's forks of these crates; mirror Zed's workspace patches.
 [patch.crates-io]
-async-process = { git = "https://github.com/zed-industries/async-process.git", rev = "0b6d6713570af61806e1e5cb40e0f757cb93fd9d" }
-async-task = { git = "https://github.com/zed-industries/async-task.git", rev = "015845a19fc31752c02367567d3b8900a406f9da" }
-calloop = { git = "https://github.com/zed-industries/calloop", rev = "3759371fee14c40066d64777e2a36b6ffcc22590" }
-khronos-egl = { git = "https://github.com/zed-industries/khronos-egl", rev = "42214b36347b108fd9630ca6254b96dde59e04fe" }
 # Builds for wasm without its PTY; see the crate's manifest.
 alacritty_terminal = { path = "third_party/alacritty_terminal" }
 
@@ -37,8 +36,8 @@ debug = "line-tables-only"
 
 [profile.dev.package]
 "*" = { debug = false }
-gpui_macros = { opt-level = 3 }
-derive_refineable = { opt-level = 3 }
+gpui-pre-macros = { opt-level = 3 }
+gpui-pre-derive-refineable = { opt-level = 3 }
 # The crates that run once per frame, or once per character of a frame: unoptimized, they are
 # what makes a `cargo run` build stutter while it scrolls (#797). Optimizing them costs one
 # longer first build and nothing after it -- they are dependencies, so an edit to `crates/`
@@ -50,7 +49,8 @@ zeno = { opt-level = 3 }
 ttf-parser = { opt-level = 3 }
 taffy = { opt-level = 3 }
 etagere = { opt-level = 3 }
-lyon = { opt-level = 3 }
+lyon_path = { opt-level = 3 }
+lyon_geom = { opt-level = 3 }
 naga = { opt-level = 3 }
 wgpu-hal = { opt-level = 3 }
 wgpu-core = { opt-level = 3 }
