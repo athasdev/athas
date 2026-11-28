@@ -24,6 +24,8 @@ actions!(
         ManageWorkspaces,
         /// Asks for a folder and adds it as a team workspace.
         AddWorkspace,
+        /// Shows this window's log file in the file manager.
+        OpenLogs,
     ]
 );
 
@@ -143,6 +145,7 @@ pub fn init(cx: &mut App) {
             None,
         );
     }
+    keymap::register(cx, "help.openLogs", OpenLogs);
     keymap::register(cx, "workspace.manage", ManageWorkspaces);
     keymap::describe(cx, info("workspace.manage", "Workspace: Manage Workspaces", "File", Some("Share project commands and AI instructions with your team".into()), "Grid"), None);
     keymap::register(cx, "workspace.add", AddWorkspace);
@@ -155,6 +158,7 @@ pub fn init(cx: &mut App) {
     });
     cx.on_action(|_: &OpenKeyboardShortcuts, cx| workbench_api::open_settings(cx, Some("keyboard"), None));
     cx.on_action(|_: &OpenSettingsJson, cx| open_settings_json(cx));
+    cx.on_action(|_: &OpenLogs, cx| crate::reveal_logs(cx));
     cx.on_action(|_: &OpenKeymapJson, cx| open_keymap_json(cx));
     watch_files(cx);
 }

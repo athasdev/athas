@@ -37,6 +37,7 @@ pub const COMMAND_ORDER: &[&str] = &[
     "workbench.openSettings",
     "help.sendProductFeedback",
     "help.showWhatsNew",
+    "help.openLogs",
     "help.openOnboarding",
     "preferences.openSettingsJson",
     "preferences.colorTheme",

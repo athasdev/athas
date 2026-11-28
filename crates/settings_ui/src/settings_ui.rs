@@ -447,7 +447,7 @@ fn logs_folder() -> Option<std::path::PathBuf> {
 }
 
 /// Shows the logs folder, with the newest log selected when there is one.
-fn reveal_logs(cx: &mut App) {
+pub(crate) fn reveal_logs(cx: &mut App) {
     match logs_folder() {
         Some(folder) if std::fs::create_dir_all(&folder).is_ok() => {
             #[cfg(not(target_family = "wasm"))]
