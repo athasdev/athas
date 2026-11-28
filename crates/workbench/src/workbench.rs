@@ -1084,6 +1084,11 @@ impl Workbench {
                     this.update_state(cx, |state| state.open_file(&path));
                 }
                 github_panel::GitHubEvent::OpenInNewWindow { kind, id, title } => this.open_resource_in_detached_window(kind, id, title, cx),
+                // The footer rows drive the column the sessions and Source Control footers drive.
+                github_panel::GitHubEvent::OpenSection(section) => {
+                    this.secondary = section.map(crate::secondary::Secondary::GitHub);
+                    cx.notify();
+                }
             });
             self.github_panel = Some((github, subscription));
         }
@@ -1965,11 +1970,15 @@ impl Workbench {
     /// The Git panel draws its own footer, so it keeps its own note of which list is open to
     /// light the row. This puts it out when the column shows something else or closes.
     pub(crate) fn clear_git_section(&mut self, cx: &mut Context<Self>) {
-        if matches!(self.secondary, Some(crate::secondary::Secondary::Git(_))) {
-            return;
-        }
-        if let Some((git, _)) = self.git_panel.as_ref() {
+        if !matches!(self.secondary, Some(crate::secondary::Secondary::Git(_)))
+            && let Some((git, _)) = self.git_panel.as_ref()
+        {
             git.clone().update(cx, |panel, cx| panel.open_section(None, cx));
+        }
+        if !matches!(self.secondary, Some(crate::secondary::Secondary::GitHub(_)))
+            && let Some((github, _)) = self.github_panel.as_ref()
+        {
+            github.clone().update(cx, |panel, cx| panel.open_section(None, cx));
         }
     }
 

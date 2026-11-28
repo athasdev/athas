@@ -797,8 +797,14 @@ impl Workbench {
             git.clone().update(cx, |panel, cx| panel.open_section(Some(section), cx));
             return;
         }
+        // GitHub's two open in the secondary column as well, beside the sidebar that opened them.
         let Some((github, _)) = self.github_panel.as_ref() else { return };
-        github.clone().update(cx, |panel, cx| panel.open_command_surface(which, cx));
+        let section = match which {
+            "releases" => github_panel::Section::Releases,
+            "deployments" => github_panel::Section::Deployments,
+            _ => return,
+        };
+        github.clone().update(cx, |panel, cx| panel.open_section(Some(section), cx));
     }
 
     /// A search field over an open menu's rows, as the Source Control menus have.

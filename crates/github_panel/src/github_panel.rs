@@ -6,7 +6,7 @@
 //! or page reopens at once and refreshes behind the scenes.
 
 pub mod auth;
-mod command_surface;
+mod section_panel;
 mod create_view;
 mod delivery_view;
 mod diff;
@@ -146,6 +146,8 @@ pub enum GitHubEvent {
     OpenFile(PathBuf),
     /// Open a pull request, issue or run in a window of its own (`openGitHubContentInNewWindow`).
     OpenInNewWindow { kind: String, id: String, title: String },
+    /// Show one of the footer's lists in the secondary column, or close the column when `None`.
+    OpenSection(Option<Section>),
 }
 
 /// The kinds of centre views GitHub opens.
@@ -159,7 +161,7 @@ const STALE_AFTER: Duration = Duration::from_secs(60);
 const RELEASE_PAGE: usize = 20;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
-pub(crate) enum Section {
+pub enum Section {
     PullRequests,
     Issues,
     Actions,
@@ -168,7 +170,7 @@ pub(crate) enum Section {
 }
 
 impl Section {
-    pub(crate) const ALL: [Section; 5] = [Section::PullRequests, Section::Issues, Section::Actions, Section::Releases, Section::Deployments];
+    pub const ALL: [Section; 5] = [Section::PullRequests, Section::Issues, Section::Actions, Section::Releases, Section::Deployments];
 
     /// Whether the section sits in the sidebar's footer, as a row that opens its command
     /// surface, instead of folding open in the list. Releases and deployments are read rarely
@@ -178,6 +180,14 @@ impl Section {
     }
 
     /// The section's id in `githubSidebarSectionOrder`.
+    /// The footer row that opens it, for the row to light up while its panel is open.
+    pub fn row_id(self) -> &'static str {
+        match self {
+            Section::Releases => "github-footer-releases",
+            _ => "github-footer-deployments",
+        }
+    }
+
     pub(crate) fn id(self) -> &'static str {
         match self {
             Section::PullRequests => "pull-requests",
@@ -261,6 +271,8 @@ pub(crate) struct Notice {
 
 /// The sidebar view: the project's pull requests, issues, workflow runs, releases and deployments.
 pub struct GitHubPanel {
+    /// The footer list the secondary column shows, so its row reads as pressed while it is open.
+    open_footer_section: Option<Section>,
     root: PathBuf,
     /// A repository picked with Browse Repository; detection runs from here instead of the root.
     manual_root: Option<PathBuf>,
@@ -365,6 +377,7 @@ impl GitHubPanel {
             }
         });
         let mut panel = Self {
+            open_footer_section: None,
             root,
             manual_root: None,
             selecting_repo: false,
@@ -462,6 +475,33 @@ impl GitHubPanel {
         use gpui::{IntoElement as _, ParentElement as _, Styled as _};
         let more = self.render_more_button(cx);
         gpui::div().flex().items_center().gap(ui::scale::px(2.)).child(self.render_header_buttons(cx)).child(more).into_any_element()
+    }
+
+    /// Which footer list the secondary column is showing, if it is showing one of ours.
+    pub fn open_footer_section(&self) -> Option<Section> {
+        self.open_footer_section
+    }
+
+    /// Follows the secondary column: the workbench calls this when the column closes or shows
+    /// something else, so a footer row never reads as pressed over a column that moved on.
+    pub fn open_section(&mut self, section: Option<Section>, cx: &mut Context<Self>) {
+        if self.open_footer_section == section {
+            return;
+        }
+        self.open_footer_section = section;
+        // A list nobody has asked GitHub for yet is fetched the moment it is opened.
+        if let Some(section) = section {
+            let empty = match section {
+                Section::Releases => self.releases.items.is_none(),
+                Section::Deployments => self.deployments.items.is_none(),
+                _ => false,
+            };
+            if empty {
+                self.load_section(section, cx);
+            }
+        }
+        cx.emit(GitHubEvent::OpenSection(section));
+        cx.notify();
     }
 
     pub(crate) fn repository(&self) -> Option<&Repository> {

@@ -24,6 +24,9 @@ pub(crate) enum Secondary {
     /// the Command surface -- a palette over the whole window for a list that belongs beside the
     /// sidebar that opened it.
     Git(git_panel::GitSection),
+    /// One of the GitHub footer's lists: releases or deployments. They opened the Command
+    /// surface too, for the same wrong reason.
+    GitHub(github_panel::Section),
 }
 
 impl Secondary {
@@ -34,6 +37,7 @@ impl Secondary {
             Secondary::Accounts => "sessions-accounts",
             Secondary::Archived => "sessions-archived",
             Secondary::Git(section) => section.row_id(),
+            Secondary::GitHub(section) => section.row_id(),
         }
     }
 }
@@ -144,6 +148,7 @@ impl Workbench {
             Secondary::Accounts => Some(self.render_accounts_panel(cx)),
             Secondary::Archived => Some(self.render_archived_panel(cx)),
             Secondary::Git(section) => self.render_git_panel_section(*section, cx),
+            Secondary::GitHub(section) => self.render_github_panel_section(*section, cx),
         }
     }
 
@@ -157,6 +162,18 @@ impl Workbench {
             git_panel::GitSection::Stashes => "git-stashes-panel",
             git_panel::GitSection::Remotes => "git-remotes-panel",
             git_panel::GitSection::Tags => "git-tags-panel",
+        };
+        Some(panel(id, section.title(), None, body.actions, body.filters, list(id, body.rows, body.empty, &self.secondary_scroll, cx), cx))
+    }
+
+    /// One of the GitHub footer's lists, in the same shell as the rest. The rows and their
+    /// actions come from the GitHub panel, which owns the repository and its token.
+    fn render_github_panel_section(&self, section: github_panel::Section, cx: &mut Context<Self>) -> Option<AnyElement> {
+        let github = self.github_panel.as_ref()?.0.clone();
+        let body = github.update(cx, |panel, cx| panel.section_body(section, cx));
+        let id = match section {
+            github_panel::Section::Deployments => "github-deployments-panel",
+            _ => "github-releases-panel",
         };
         Some(panel(id, section.title(), None, body.actions, body.filters, list(id, body.rows, body.empty, &self.secondary_scroll, cx), cx))
     }

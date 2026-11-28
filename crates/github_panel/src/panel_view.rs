@@ -58,7 +58,7 @@ fn bar_height() -> gpui::Pixels { px(32.) }
 const SHOWN: usize = 5;
 
 impl Section {
-    fn title(self) -> &'static str {
+    pub fn title(self) -> &'static str {
         match self {
             Section::PullRequests => "PRs",
             Section::Issues => "Issues",
@@ -223,17 +223,17 @@ impl GitHubPanel {
     /// where the Source Control sidebar's stashes open theirs.
     fn render_footer(&self, colors: &ThemeColors, cx: &mut Context<Self>) -> impl IntoElement {
         let mut rows: Vec<AnyElement> = Vec::new();
+        let open_section = self.open_footer_section();
         for section in self.sections.iter().copied().filter(|section| section.in_footer()) {
-            let open: fn(&GitHubPanel, &Context<GitHubPanel>) -> palette::CommandList = match section {
-                Section::Deployments => GitHubPanel::deployments_surface,
-                _ => GitHubPanel::releases_surface,
-            };
             let item = ui::SidebarListItem::new(SharedString::from(format!("github-footer-{}", section.id())), section.title())
                 .leading(Icon::new(section.icon()).size(IconSize::XSmall).color(colors.subtle_foreground))
                 .trailing(self.section_count(section).to_string())
+                .active(open_section == Some(section))
                 .on_click(cx.listener(move |panel, _: &ClickEvent, _, cx| {
-                    let list = open(panel, cx);
-                    palette::show_command_list(cx, list);
+                    // Clicking the row that is already open closes the column, as the Source
+                    // Control footer's rows do.
+                    let next = (panel.open_footer_section() != Some(section)).then_some(section);
+                    panel.open_section(next, cx);
                 }));
             rows.push(div().flex_none().px(px(8.)).child(item).into_any_element());
         }
