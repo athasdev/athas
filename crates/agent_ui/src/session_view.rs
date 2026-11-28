@@ -163,6 +163,9 @@ pub(crate) struct SandboxChoice {
     pub machine: bool,
     /// What the row says under the name -- where a machine is, mostly.
     pub detail: Option<String>,
+    /// The integration that contributed this provider, so a row with no key can open the page
+    /// that takes one. A machine has none: its own dialog is where it is set up.
+    pub extension: Option<String>,
 }
 
 /// A question the agent waits on.
@@ -2403,6 +2406,7 @@ impl SessionView {
                     Some(extensions::ExtensionIcon::Embedded { path, .. }) => Some(gpui::SharedString::from(path)),
                     _ => None,
                 }),
+                extension: Some(extension),
                 id: provider.id,
                 name: provider.name,
                 machine: false,
@@ -2415,6 +2419,7 @@ impl SessionView {
             icon: None,
             machine: true,
             detail: Some(machine.location),
+            extension: None,
         }));
         choices
     }
@@ -3447,51 +3452,34 @@ impl SessionView {
         cx.notify();
     }
 
-    /// The menu behind the Environment box's first row: where this session's commands run. Only
-    /// the commands move -- the files stay on this machine, which is what the row under it says.
+    /// Where this session's commands run, as menu rows. `local` adds the row for this machine;
+    /// the cloud menu leaves it out, since its own "Local" row already means the same thing.
     ///
-    /// A provider is a heading, not a choice: what runs a command is one of its sandboxes, so
-    /// the account's own are listed under it and "New sandbox" is the one that makes another.
+    /// A hosted provider is a submenu: what runs a command is one of its sandboxes, so its own
+    /// are inside it with "New sandbox" to make another. A machine of the user's is a row --
+    /// there is nothing to make and nothing to choose between.
     #[cfg(not(target_family = "wasm"))]
-    pub(crate) fn deploy_environment_menu(&mut self, position: gpui::Point<Pixels>, window: &mut Window, cx: &mut Context<Self>) {
-        self.refresh_environments(cx);
+    pub(crate) fn sandbox_menu_entries(&self, local: bool, cx: &mut Context<Self>) -> Vec<ui::MenuEntry> {
         let current = self.sandbox_target();
         let this = cx.entity();
-        let here = this.clone();
-        let mut entries: Vec<ui::MenuEntry> = vec![
-            ui::MenuItem::new(local_machine_name())
-                .icon(ui::IconName::Laptop)
-                .checked(current.is_none())
-                .on_select(move |_, cx| {
-                    here.update(cx, |this, cx| this.set_sandbox_target(None, cx));
-                })
-                .into(),
-        ];
-        let (machines, providers): (Vec<SandboxChoice>, Vec<SandboxChoice>) =
-            self.environments.iter().cloned().partition(|choice| choice.machine);
-        // The sandboxes sit under a heading of their own: the first row is this machine, and
-        // everything under the heading is somewhere else. The line under it is there because
-        // the first question anyone asks of this menu is what exactly moves.
-        if !providers.is_empty() {
-            entries.push(ui::MenuEntry::Label("Sandboxes".into()));
-            entries.push(ui::MenuEntry::Text("Commands run there. Your files are copied over.".into()));
+        let mut entries: Vec<ui::MenuEntry> = Vec::new();
+        if local {
+            let here = this.clone();
+            entries.push(
+                ui::MenuItem::new(local_machine_name())
+                    .icon(ui::IconName::Laptop)
+                    .checked(current.is_none())
+                    .on_select(move |_, cx| {
+                        here.update(cx, |this, cx| this.set_sandbox_target(None, cx));
+                    })
+                    .into(),
+            );
         }
-        for choice in providers {
-            // A provider whose key is not saved yet is shown and not offered: a row that opens
-            // its page is the answer to "why can I not pick this", and a row that could be
-            // picked and then failed on the first command is not.
-            if !sandbox::providers::is_ready(&choice.id) {
-                let id = choice.id.clone();
-                let mut item = ui::MenuItem::new(choice.name).icon(ui::IconName::Key).description("Needs an API key").on_select(move |_, cx| {
-                    settings::update(cx, |settings| settings.extensions_active_tab = "sandbox".into());
-                    workbench_api::open_resource(cx, "extensions", &id, "Integrations");
-                });
-                if let Some(path) = choice.icon {
-                    item = item.icon_image(gpui::ImageSource::from(path));
-                }
-                entries.push(item.into());
-                continue;
-            }
+        let (machines, hosted): (Vec<_>, Vec<_>) = self.environments().iter().cloned().partition(|choice| choice.machine);
+        if !hosted.is_empty() {
+            entries.push(ui::MenuEntry::Label("Sandboxes".into()));
+        }
+        for choice in hosted {
             let mut inside: Vec<ui::MenuEntry> = Vec::new();
             for listed in self.sandbox_list.get(&choice.id).into_iter().flatten().filter(|listed| !listed.id.is_empty()) {
                 let chosen = this.clone();
@@ -3536,53 +3524,29 @@ impl SessionView {
                         .into(),
                 );
             }
-            // The provider opens; it is not picked. What runs a command is one of its sandboxes.
-            let mut item = ui::MenuItem::new(choice.name).submenu(inside);
-            item = match choice.icon {
+            let mut item = ui::MenuItem::new(choice.name.clone()).submenu(inside);
+            item = match choice.icon.clone() {
                 Some(path) => item.icon_image(gpui::ImageSource::from(path)),
                 None => item.icon(ui::IconName::Cube),
             };
             entries.push(item.into());
         }
-        // The user's own machines, under a heading that says they are not sandboxes. What
-        // changes between the two groups is what happens when the session ends: a sandbox is
-        // left running on its lease, a machine is left exactly as it was.
         if !machines.is_empty() {
-            entries.push(ui::MenuEntry::Label("My machines".into()));
-            entries.push(ui::MenuEntry::Text("Commands run there over SSH. Nothing is created and nothing is destroyed.".into()));
+            entries.push(ui::MenuEntry::Label("Machines".into()));
         }
-        for machine in machines {
-            // A machine is one place, so it is chosen directly: there is no list of sandboxes
-            // inside it to pick from.
-            let target = SandboxTarget { provider: machine.id.clone(), sandbox: None };
-            let picked = Some(&target) == current.as_ref();
+        for choice in machines {
             let chosen = this.clone();
-            let mut item = ui::MenuItem::new(machine.name)
-                .icon(ui::IconName::Monitor)
-                .checked(picked)
-                .on_select(move |_, cx| {
-                    let target = target.clone();
-                    chosen.update(cx, |this, cx| this.set_sandbox_target(Some(target), cx));
-                });
-            if let Some(detail) = machine.detail {
-                item = item.description(detail);
+            let target = SandboxTarget { provider: choice.id.clone(), sandbox: None };
+            let picked = Some(&target) == current.as_ref();
+            let mut item = ui::MenuItem::new(choice.name.clone()).icon(ui::IconName::Remote).checked(picked).on_select(move |_, cx| {
+                let target = target.clone();
+                chosen.update(cx, |this, cx| this.set_sandbox_target(Some(target), cx));
+            });
+            if let Some(detail) = choice.detail.clone() {
+                item = item.trailing_text(detail);
             }
             entries.push(item.into());
         }
-        // Where another machine comes from. The same dialog the project picker opens, so a host
-        // saved for a project is a host a session can run on without being saved twice.
-        entries.push(
-            ui::MenuItem::new("Add a machine…")
-                .icon(ui::IconName::Monitor)
-                .on_select(|window, cx| {
-                    if let Some(action) = cx.default_global::<keymap::CommandRegistry>().action("remote.connect") {
-                        window.dispatch_action(action, cx);
-                    }
-                })
-                .into(),
-        );
-        // Where another provider comes from, for an account that has one Athas has not been
-        // told about yet.
         entries.push(
             ui::MenuItem::new("Add a provider…")
                 .icon(ui::IconName::PuzzlePiece)
@@ -3592,6 +3556,14 @@ impl SessionView {
                 })
                 .into(),
         );
+        entries
+    }
+
+    /// The menu behind the Environment box's row and the composer's chip, for an account with no
+    /// cloud agents; with them, the cloud menu carries these rows under its own.
+    #[cfg(not(target_family = "wasm"))]
+    pub(crate) fn deploy_environment_menu(&mut self, position: gpui::Point<Pixels>, window: &mut Window, cx: &mut Context<Self>) {
+        let entries = self.sandbox_menu_entries(true, cx);
         self.open_menu = Some(OpenMenu::sized(
             "session-environment",
             entries,

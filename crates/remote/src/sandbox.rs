@@ -215,11 +215,27 @@ impl sandbox::machines::Machines for Saved {
     }
 
     fn provider(&self, machine: &str) -> Result<Box<dyn Provider>> {
-        let connection = crate::manager::manager()
-            .get_or_connect(machine)
-            .map_err(|error| failed(&error, "Opening the machine", machine))?;
+        let connection = crate::manager::manager().get_or_connect(machine).map_err(|error| needs_a_person(&error, machine))?;
         Ok(Box::new(Machine::new(connection)))
     }
+}
+
+/// A connection that cannot be made without someone answering something -- a password, a host
+/// key it has never seen -- said as what to do about it. A sandbox call runs on a background
+/// thread and has no window to put a dialog in, so the only useful answer is where the dialog
+/// is: the connections panel, which asks once and remembers.
+fn needs_a_person(error: &anyhow::Error, machine: &str) -> Error {
+    let name = crate::connections::load_default()
+        .into_iter()
+        .find(|saved| saved.id == machine)
+        .map(|saved| saved.name)
+        .unwrap_or_else(|| machine.to_string());
+    if error.downcast_ref::<crate::session::PasswordRequired>().is_some() || error.downcast_ref::<crate::known_hosts::HostKeyChallenge>().is_some() {
+        return Error::auth(format!(
+            "{name} is not connected yet. Connect to it once from Remote -- that is where Athas can ask for the password or the host key -- and then run here."
+        ));
+    }
+    failed(error, "Opening the machine", &name)
 }
 
 /// Makes the saved connections answer the Environment menu. Called once, beside [`crate::init`].

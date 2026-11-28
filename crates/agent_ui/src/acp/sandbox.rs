@@ -22,11 +22,9 @@
 use std::{
     collections::HashMap,
     path::{Path, PathBuf},
-    sync::{Arc, Mutex},
+    sync::Mutex,
     time::{Duration, SystemTime},
 };
-
-use gpui::App;
 
 use sandbox::Provider;
 
@@ -48,17 +46,6 @@ pub struct SandboxRun {
     pub exit_code: Option<i32>,
     /// Files the command changed, already written back to this machine.
     pub pulled: usize,
-}
-
-/// The sandbox a session's commands run in, when the setting is on and an enabled integration
-/// offers a provider. Nothing is created and the keychain is not touched here: a session that
-/// never runs a command never makes a sandbox.
-pub fn for_session(cwd: &Path, cx: &App) -> Option<Arc<SandboxRuntime>> {
-    if !settings::get(cx).ai_sandbox_commands {
-        return None;
-    }
-    let (_, provider) = extensions::get(cx).sandbox_providers().into_iter().next()?;
-    Some(Arc::new(SandboxRuntime::new(&provider.id, cwd.to_path_buf())))
 }
 
 /// What `provider` has right now: the account's sandboxes, the machine's own answer, the
