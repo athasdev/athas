@@ -86,6 +86,9 @@ struct BlockEdit {
     field: Entity<MarkdownField>,
     /// The text the field opened with; an unchanged block writes nothing back.
     original: String,
+    /// What a block appended past the last one needs before it: written only with the block, so
+    /// one opened and left empty leaves the buffer as it was.
+    lead: &'static str,
     _subscriptions: Vec<Subscription>,
 }
 
@@ -298,6 +301,12 @@ impl MarkdownPreview {
         // of its field -- can have moved this one further down the buffer.
         self.commit_edit(cx);
         let source = self.moved(source);
+        self.open_block(source, "", window, cx);
+    }
+
+    /// Opens a field over `source`, a range of the buffer as it is now rather than as the blocks
+    /// last drawn had it.
+    fn open_block(&mut self, source: Range<usize>, lead: &'static str, window: &mut Window, cx: &mut Context<Self>) {
         let text = self.editor.read(cx).text();
         let anchor = source.start.min(text.len())..source.end.min(text.len());
         // The trailing newlines a block's range carries belong between blocks, not in the field.
@@ -327,7 +336,7 @@ impl MarkdownPreview {
                 this.commit_edit(cx);
             }),
         ];
-        self.editing = Some(BlockEdit { anchor, source, field: field.clone(), original, _subscriptions: subscriptions });
+        self.editing = Some(BlockEdit { anchor, source, field: field.clone(), original, lead, _subscriptions: subscriptions });
         field.update(cx, |field, cx| field.focus_at_end(window, cx));
         cx.notify();
     }
@@ -335,12 +344,16 @@ impl MarkdownPreview {
     /// Writes what was typed back where the block was.
     fn commit_edit(&mut self, cx: &mut Context<Self>) {
         let Some(edit) = self.editing.take() else { return };
-        let text = edit.field.read(cx).text(cx);
-        if text == edit.original {
+        let Some(text) = block_write(edit.lead, &edit.original, edit.field.read(cx).text(cx)) else {
             cx.notify();
             return;
+        };
+        if text.is_empty() {
+            let range = removal(&self.editor.read(cx).text(), edit.source);
+            self.write(range, String::new(), cx);
+        } else {
+            self.write(edit.source, text, cx);
         }
-        self.write(edit.source, text, cx);
     }
 
     /// Ticks or clears a task box, rewriting the `[ ]` it was drawn from.
@@ -362,19 +375,8 @@ impl MarkdownPreview {
             self.commit_edit(cx);
             return;
         }
-        let text = self.editor.read(cx).text();
-        let end = text.len();
-        let separator = match () {
-            _ if text.is_empty() => "",
-            _ if text.ends_with("\n\n") => "",
-            _ if text.ends_with('\n') => "\n",
-            _ => "\n\n",
-        };
-        if !separator.is_empty() {
-            self.write(end..end, separator.to_string(), cx);
-        }
-        let at = end + separator.len();
-        self.edit_block(at..at, window, cx);
+        let (at, lead) = append_point(&self.editor.read(cx).text());
+        self.open_block(at..at, lead, window, cx);
     }
 
     /// What the renderer can call back into: links, images, task boxes and opening a block.
@@ -669,6 +671,44 @@ fn task_box(text: &str, source: Range<usize>, checked: bool) -> Option<(Range<us
     Some((source.start + open..source.start + close + 1, if checked { "[x]" } else { "[ ]" }))
 }
 
+/// What committing a field writes over its block, or nothing when it is as it opened. Newlines at
+/// either end are dropped: a block opens without them (`block_text`), so blank lines typed there
+/// would land in the file but never show in the field again.
+fn block_write(lead: &str, original: &str, typed: String) -> Option<String> {
+    let typed = typed.trim_matches('\n');
+    if typed == original {
+        return None;
+    }
+    Some(format!("{lead}{typed}"))
+}
+
+// The newlines that end the file belong to the file, not to its last block: a block appended
+// goes in before them and an emptied last block leaves them, so the two undo each other.
+
+/// Where a block appended past the last one goes, and the blank line it needs before it.
+fn append_point(text: &str) -> (usize, &'static str) {
+    let content_end = text.trim_end_matches('\n').len();
+    (content_end, if content_end == 0 { "" } else { "\n\n" })
+}
+
+/// What emptying a block removes: the block with the blank lines that set it apart, the ones
+/// after it or, for the last block, the ones before it.
+fn removal(text: &str, source: Range<usize>) -> Range<usize> {
+    let bytes = text.as_bytes();
+    let mut end = source.end.min(text.len());
+    while end < text.len() && bytes[end] == b'\n' {
+        end += 1;
+    }
+    if end < text.len() {
+        return source.start..end;
+    }
+    let mut start = source.start.min(source.end);
+    while start > 0 && bytes[start - 1] == b'\n' {
+        start -= 1;
+    }
+    start..source.end.min(text.len())
+}
+
 /// The markdown a block opens for writing: its source without the blank line after it.
 fn block_text(text: &str, source: Range<usize>) -> Range<usize> {
     let source = source.start.min(text.len())..source.end.min(text.len());
@@ -804,6 +844,52 @@ mod tests {
         assert_eq!(opened(0), "# Title");
         assert_eq!(opened(1), "A paragraph.");
         assert_eq!(opened(2), "- one\n- two");
+    }
+
+    #[test]
+    fn a_block_appended_and_left_empty_writes_nothing() {
+        assert_eq!(block_write("\n", "", String::new()), None);
+        assert_eq!(block_write("\n", "", "More.".into()).as_deref(), Some("\nMore."));
+        assert_eq!(block_write("", "A paragraph.", "A paragraph.".into()), None);
+    }
+
+    #[test]
+    fn blank_lines_typed_at_a_blocks_edges_are_not_written() {
+        assert_eq!(block_write("", "A paragraph.", "A paragraph.\n\n".into()), None);
+        assert_eq!(block_write("", "A paragraph.", "\nA paragraph.".into()), None);
+        assert_eq!(block_write("\n", "", "\n".into()), None);
+        assert_eq!(block_write("", "One.", "One.\n\nTwo.\n".into()).as_deref(), Some("One.\n\nTwo."));
+        assert_eq!(block_write("", "```\ncode\n```", "```\ncode\n\n```".into()).as_deref(), Some("```\ncode\n\n```"));
+    }
+
+    #[test]
+    fn an_emptied_block_takes_its_blank_lines_with_it() {
+        let emptied = |text: &str, index: usize| {
+            let blocks = markdown::parse(text);
+            let range = removal(text, block_text(text, blocks[index].source.clone()));
+            let mut text = text.to_string();
+            text.replace_range(range, "");
+            text
+        };
+        let text = "# Title\n\nA paragraph.\n\n- one\n- two\n";
+        assert_eq!(emptied(text, 0), "A paragraph.\n\n- one\n- two\n");
+        assert_eq!(emptied(text, 1), "# Title\n\n- one\n- two\n");
+        assert_eq!(emptied(text, 2), "# Title\n\nA paragraph.\n");
+        assert_eq!(emptied("One.\n\nTwo.", 1), "One.");
+        assert_eq!(emptied("Only.\n", 0), "\n");
+    }
+
+    #[test]
+    fn a_block_appended_then_emptied_leaves_the_file_as_it_was() {
+        for original in ["A\n\n", "A\n", "A", "", "\n"] {
+            let (at, lead) = append_point(original);
+            let mut text = original.to_string();
+            text.insert_str(at, &format!("{lead}More."));
+            let source = at + lead.len()..at + lead.len() + "More.".len();
+            assert_eq!(markdown::parse(&text).last().map(|block| block_text(&text, block.source.clone())), Some(source.clone()), "{original:?}");
+            text.replace_range(removal(&text, source), "");
+            assert_eq!(text, original, "{original:?}");
+        }
     }
 
     #[test]

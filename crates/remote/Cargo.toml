@@ -32,6 +32,8 @@ athas_project = { package = "athas-project", path = "../../core/project" }
 # OpenSSL is vendored for portable builds, as Athas's `crates/remote` does.
 ssh2 = { version = "0.9", features = ["vendored-openssl"] }
 secure_storage = { path = "../secure_storage" }
+# Saved machines are an environment a session can run its commands in (`src/sandbox.rs`).
+sandbox = { path = "../sandbox" }
 base64 = "0.22"
 sha2 = "0.10"
 dirs = "6"

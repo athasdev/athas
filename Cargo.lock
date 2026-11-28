@@ -7880,6 +7880,7 @@ dependencies = [
  "gpui_platform",
  "image",
  "paths",
+ "sandbox",
  "secure_storage",
  "serde",
  "serde_json",

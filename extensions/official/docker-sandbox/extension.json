@@ -1,0 +1,24 @@
+{
+  "$schema": "https://athas.dev/schemas/extension.json",
+  "id": "athas.sandbox.docker",
+  "name": "docker-sandbox",
+  "displayName": "Docker",
+  "description": "Run commands in a container on this machine instead of in your workspace. No account and no key: it uses the Docker you already have. Not affiliated with Docker.",
+  "version": "1.0.0",
+  "publisher": "Athas",
+  "categories": [
+    "Sandbox"
+  ],
+  "sandboxProviders": [
+    {
+      "id": "docker",
+      "name": "Docker",
+      "description": "A container on this computer. Nothing leaves the machine and nothing is paid for; the image needs bash, git, tar and gzip."
+    }
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/athasdev/athas"
+  }
+}
