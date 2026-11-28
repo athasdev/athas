@@ -788,31 +788,20 @@ impl PickerDelegate for QuickOpenDelegate {
         false
     }
 
-    fn shows_return_hint(&self) -> bool {
-        false
-    }
-
     fn footer(&self, _: &mut Window, cx: &mut Context<Picker<Self>>) -> Option<AnyElement> {
         let subtle = cx.theme().colors.subtle_foreground;
-        let hint = |keys: &[&'static str], label: &'static str| {
-            div().flex().items_center().gap(px(4.)).children(keys.iter().map(|key| Kbd::new(*key).into_any_element())).child(label)
-        };
-        let prefixes = Section::ALL.iter().filter_map(|section| section.prefixes().first().map(|prefix| (*prefix, section.label())));
+        let hint = |key: &'static str, label: &'static str| div().flex().flex_none().items_center().gap(px(4.)).child(Kbd::new(key)).child(label);
+        let prefixes = Section::ALL.iter().filter_map(|section| section.prefixes().first().map(|prefix| hint(prefix, section.label())));
         Some(
             div()
                 .flex()
-                .w_full()
+                .flex_none()
                 .items_center()
                 .gap(px(12.))
-                .px(px(4.))
                 .text_size(typography::text_caption())
                 .text_color(subtle)
-                .child(hint(&["↑", "↓"], "Navigate"))
-                .child(hint(&["↵"], "Open"))
-                .child(hint(&["Tab"], "Switch section"))
-                .child(div().ml_auto().flex().items_center().gap(px(4.)).children(prefixes.map(|(prefix, label)| {
-                    div().flex().items_center().gap(px(4.)).child(Kbd::new(prefix)).child(label)
-                })))
+                .child(hint("Tab", "Switch section"))
+                .children(prefixes)
                 .into_any_element(),
         )
     }
