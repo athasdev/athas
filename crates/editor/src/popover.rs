@@ -6,7 +6,7 @@ use std::ops::Range;
 use ui::scale::px;
 use gpui::{
     AnyElement, Anchor, Bounds, Context, Div, Font, FontWeight, Hsla, MouseButton, Pixels, SharedString, StyledText, TextRun,
-    anchored, deferred, div, font, point, prelude::*, size,
+    Window, anchored, deferred, div, font, point, prelude::*, size,
 };
 use lsp_client::{Severity, lsp};
 use theme::{ActiveTheme, Theme};
@@ -19,6 +19,16 @@ use crate::{
 
 const MENU_ROWS: usize = 10;
 fn menu_row_height() -> Pixels { px(24.) }
+
+const POPOVER_WINDOW_MARGIN: f32 = 8.;
+
+fn popover_room(window: &Window) -> Pixels {
+    window.viewport_size().width - px(POPOVER_WINDOW_MARGIN * 2.)
+}
+
+fn popover_max_width(window: &Window) -> Pixels {
+    px(560.).min(popover_room(window))
+}
 
 pub(crate) fn severity_color(severity: Severity, theme: &Theme) -> Hsla {
     match severity {
@@ -82,6 +92,7 @@ impl TextStyle {
 fn popover_markdown(blocks: &[markdown::Block], cx: &gpui::App) -> Vec<AnyElement> {
     let style = markdown::MarkdownStyle {
         mono_font: SharedString::from(settings::get(cx).font_family.clone()),
+        code_scrolls: false,
         ..markdown::MarkdownStyle::compact()
     };
     let theme = cx.theme().clone();
@@ -120,7 +131,7 @@ impl Editor {
         Some(Bounds::new(point(x, row.top), size(layout.char_width, layout.line_height)))
     }
 
-    pub(crate) fn render_lsp_popovers(&mut self, cx: &mut Context<Self>) -> Vec<AnyElement> {
+    pub(crate) fn render_lsp_popovers(&mut self, window: &Window, cx: &mut Context<Self>) -> Vec<AnyElement> {
         let theme = cx.theme().clone();
                 let mut popovers = Vec::new();
         if let Some(rename) = &self.lsp.rename
@@ -130,24 +141,24 @@ impl Editor {
             popovers.push(deferred(anchored().anchor(Anchor::TopLeft).attach(bounds, Anchor::BottomLeft).offset(point(px(0.), px(2.))).child(field)).with_priority(2).into_any_element());
             return popovers;
         }
-        if let Some(menu) = self.render_completions(&theme, cx) {
+        if let Some(menu) = self.render_completions(&theme, window, cx) {
             popovers.push(menu);
         } else if let Some(menu) = self.render_code_actions(&theme, cx) {
             popovers.push(menu);
         }
-        if let Some(signature) = self.render_signature(&theme, cx) {
+        if let Some(signature) = self.render_signature(&theme, window, cx) {
             popovers.push(signature);
         }
-        if let Some(hover) = self.render_hover(&theme, cx) {
+        if let Some(hover) = self.render_hover(&theme, window, cx) {
             popovers.push(hover);
         }
         popovers
     }
 
-    fn render_hover(&self, theme: &Theme, cx: &mut Context<Self>) -> Option<AnyElement> {
+    fn render_hover(&self, theme: &Theme, window: &Window, cx: &mut Context<Self>) -> Option<AnyElement> {
         let hover = self.lsp.hover.as_ref()?;
         let bounds = self.offset_bounds(hover.range.start)?;
-        let mut content = card(theme).id("editor-hover").occlude().max_w(px(560.)).max_h(px(340.)).overflow_y_scroll().on_hover(cx.listener(|editor, hovered: &bool, _, cx| {
+        let mut content = card(theme).id("editor-hover").occlude().max_w(popover_max_width(window)).max_h(px(340.)).overflow_y_scroll().on_hover(cx.listener(|editor, hovered: &bool, _, cx| {
             editor.lsp.popover_hovered = *hovered;
             if !*hovered {
                 cx.notify();
@@ -162,10 +173,10 @@ impl Editor {
             }
             content = content.child(div().flex().flex_col().gap(px(8.)).px(px(10.)).py(px(8.)).children(popover_markdown(&hover.blocks, cx)));
         }
-        Some(deferred(anchored().anchor(Anchor::BottomLeft).attach(bounds, Anchor::TopLeft).snap_to_window_with_margin(px(8.)).child(content)).with_priority(1).into_any_element())
+        Some(deferred(anchored().anchor(Anchor::BottomLeft).attach(bounds, Anchor::TopLeft).snap_to_window_with_margin(px(POPOVER_WINDOW_MARGIN)).child(content)).with_priority(1).into_any_element())
     }
 
-    fn render_completions(&self, theme: &Theme, cx: &mut Context<Self>) -> Option<AnyElement> {
+    fn render_completions(&self, theme: &Theme, window: &Window, cx: &mut Context<Self>) -> Option<AnyElement> {
         let style = TextStyle::new(cx);
         let menu = self.lsp.completion.as_ref()?;
         let bounds = self.offset_bounds(menu.start)?;
@@ -206,7 +217,12 @@ impl Editor {
                 )
                 .child(div().flex_1().min_w_0().truncate().text_right().text_color(colors.subtle_foreground).child(detail.lines().next().unwrap_or_default().to_string()))
         });
-        let list = card(theme).id("editor-completions").occlude().w(px(420.)).p(px(4.)).children(rows);
+        let room = popover_room(window);
+        let list_width = px(420.).min(room);
+        let docs_room = room - list_width - px(4.);
+        let docs_beside = docs_room >= px(240.);
+        let docs_width = if docs_beside { px(340.).min(docs_room) } else { list_width };
+        let list = card(theme).id("editor-completions").occlude().w(list_width).p(px(4.)).children(rows);
         let selected = menu.matches.get(menu.selected).map(|index| &menu.items[*index]);
         let docs = selected.and_then(|item| {
             let mut blocks = Vec::new();
@@ -220,7 +236,7 @@ impl Editor {
                 card(theme)
                     .id("editor-completion-docs")
                     .occlude()
-                    .w(px(340.))
+                    .w(docs_width)
                     .max_h(px(MENU_ROWS as f32 * 24. + 8.))
                     .overflow_y_scroll()
                     .px(px(10.))
@@ -229,8 +245,8 @@ impl Editor {
                     .children(popover_markdown(&blocks, cx))
             })
         });
-        let menu = div().flex().items_start().gap(px(4.)).child(list).children(docs);
-        Some(deferred(anchored().anchor(Anchor::TopLeft).attach(bounds, Anchor::BottomLeft).offset(point(px(-30.), px(2.))).child(menu)).with_priority(2).into_any_element())
+        let menu = div().flex().when(!docs_beside, |menu| menu.flex_col()).items_start().gap(px(4.)).child(list).children(docs);
+        Some(deferred(anchored().anchor(Anchor::TopLeft).attach(bounds, Anchor::BottomLeft).offset(point(px(-30.), px(2.))).snap_to_window_with_margin(px(POPOVER_WINDOW_MARGIN)).child(menu)).with_priority(2).into_any_element())
     }
 
     fn render_code_actions(&self, theme: &Theme, cx: &mut Context<Self>) -> Option<AnyElement> {
@@ -263,7 +279,7 @@ impl Editor {
         Some(deferred(anchored().anchor(Anchor::TopLeft).attach(bounds, Anchor::BottomLeft).offset(point(px(0.), px(2.))).child(list)).with_priority(2).into_any_element())
     }
 
-    fn render_signature(&self, theme: &Theme, cx: &mut Context<Self>) -> Option<AnyElement> {
+    fn render_signature(&self, theme: &Theme, window: &Window, cx: &mut Context<Self>) -> Option<AnyElement> {
         let style = TextStyle::new(cx);
         let help = self.lsp.signature.as_ref()?;
         let bounds = self.offset_bounds(self.document.newest_selection().head)?;
@@ -313,7 +329,7 @@ impl Editor {
         let content = card(theme)
             .id("editor-signature")
             .occlude()
-            .max_w(px(560.))
+            .max_w(popover_max_width(window))
             .max_h(px(220.))
             .overflow_y_scroll()
             .px(px(10.))

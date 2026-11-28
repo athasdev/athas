@@ -660,8 +660,8 @@ impl ExtensionView {
                 .font_family(typography::MONO_FONT)
                 .text_size(typography::text_sm())
                 .text_color(colors.foreground)
-                .when(!wrap.unwrap_or(false), |this| this.overflow_x_scroll().whitespace_nowrap())
-                .children(value.lines().map(|line| div().child(if line.is_empty() { " ".to_string() } else { line.to_string() })))
+                .when(!wrap.unwrap_or(false), |this| this.flex().overflow_x_scroll().whitespace_nowrap())
+                .child(div().flex().flex_col().children(value.lines().map(|line| div().child(if line.is_empty() { " ".to_string() } else { line.to_string() }))))
                 .into_any_element(),
             Node::Diff { file_path, old_path, lines, truncated, .. } => diff_preview(file_path, old_path.as_ref(), lines, truncated.unwrap_or(false), colors),
             Node::Activity { items } => {

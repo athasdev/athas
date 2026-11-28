@@ -1064,6 +1064,7 @@ impl FileViewer {
         let hex = section().child(heading("Hex Preview")).child(
             div()
                 .id("viewer-hex-preview")
+                .flex()
                 .overflow_x_scroll()
                 .font_family(typography::MONO_FONT)
                 .font_features(gpui::FontFeatures::disable_ligatures())
@@ -1071,7 +1072,7 @@ impl FileViewer {
                 .line_height(px(18.))
                 .text_color(colors.subtle_foreground)
                 .whitespace_nowrap()
-                .children(preview.lines().map(|line| div().child(line.to_string()))),
+                .child(div().flex().flex_col().children(preview.lines().map(|line| div().child(line.to_string())))),
         );
         let mut sections = vec![information.into_any_element()];
         sections.extend(wasm.map(IntoElement::into_any_element));

@@ -238,7 +238,9 @@ impl Renderer {
         div()
             .id(self.next_id("code"))
             .min_w_0()
-            .when(self.style.code_scrolls, |this| this.overflow_x_scroll().whitespace_nowrap())
+            // A block parent stretches the text to its own width, leaving nothing to scroll; as a
+            // flex item the text keeps its full line width.
+            .when(self.style.code_scrolls, |this| this.flex().overflow_x_scroll().whitespace_nowrap())
             .px(px(12.))
             .py(px(10.))
             .rounded(metrics::radius_md())
