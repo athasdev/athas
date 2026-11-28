@@ -1,0 +1,25 @@
+{
+  "$schema": "https://athas.dev/schemas/extension.json",
+  "id": "athas.sandbox.boat",
+  "name": "boat",
+  "displayName": "Boat",
+  "description": "Run commands in a throwaway Linux sandbox on your own Boat account instead of on this machine. Not affiliated with Boat.",
+  "version": "1.0.0",
+  "publisher": "Athas",
+  "categories": [
+    "Sandbox"
+  ],
+  "sandboxProviders": [
+    {
+      "id": "boat",
+      "name": "Boat",
+      "description": "Sandboxes with a time to live you set, that can be stopped and resumed with their disk intact.",
+      "apiKeyUrl": "https://boat.dev/dashboard"
+    }
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/athasdev/athas"
+  }
+}

@@ -13,6 +13,16 @@ use agent_client_protocol_schema::MaybeUndefined;
 
 use crate::acp::schema as acp;
 
+/// Whose sandbox a session's commands run in, and which of theirs. No sandbox named means a
+/// fresh one, made when the session needs it.
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default, rename_all = "camelCase")]
+pub struct SandboxTarget {
+    pub provider: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub sandbox: Option<String>,
+}
+
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 #[serde(default, rename_all = "camelCase")]
 pub struct Transcript {
@@ -33,6 +43,11 @@ pub struct Transcript {
     /// Where the session's prompts run when it runs in the cloud.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub cloud: Option<crate::cloud::session::CloudEnvironment>,
+    /// Where the session's commands run, when they do not run on this machine. Saved with the
+    /// session: Athas restarts often, and a choice that disappears with the window is one the
+    /// user has to make again every time.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub sandbox: Option<SandboxTarget>,
     /// The session's browser opened itself on a dev server once (`autoOpened`), so it does not
     /// again after a restart.
     #[serde(skip_serializing_if = "std::ops::Not::not")]

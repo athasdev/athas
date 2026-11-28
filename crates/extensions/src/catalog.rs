@@ -243,7 +243,7 @@ mod tests {
     #[test]
     fn every_official_manifest_parses() {
         let catalog = Catalog::bundled();
-        assert_eq!(catalog.entries().len(), 85);
+        assert_eq!(catalog.entries().len(), 88);
         let count = |kind| catalog.entries().iter().filter(|entry| entry.kind == kind).count();
         assert_eq!(count(ExtensionKind::Language), 47);
         assert_eq!(count(ExtensionKind::Mcp), 21);
@@ -253,7 +253,7 @@ mod tests {
         assert_eq!(count(ExtensionKind::Theme), 1);
         assert_eq!(count(ExtensionKind::Ai), 1);
         assert_eq!(count(ExtensionKind::Integration), 2);
-        assert_eq!(count(ExtensionKind::Sandbox), 1);
+        assert_eq!(count(ExtensionKind::Sandbox), 4);
         assert!(catalog.entries().iter().all(|entry| entry.icon.is_some()));
         let theme = catalog.get("athas.theme.vercel").unwrap();
         assert_eq!(theme.path, "theme/vercel");
@@ -296,7 +296,7 @@ mod tests {
             ExtensionManifest::from_json(&json).unwrap_or_else(|error| panic!("{}: {error:#}", path.display()));
             count += 1;
         }
-        assert_eq!(count, 91);
+        assert_eq!(count, 94);
     }
 
     #[test]

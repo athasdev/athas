@@ -12,8 +12,6 @@ pub mod ui_extensions;
 mod widgets;
 
 use extensions::{CatalogEntry, CatalogSource, ExtensionKind, ExtensionStatus, Extensions, Operation};
-#[cfg(not(target_family = "wasm"))]
-use sandbox::Provider as _;
 use ui::scale::px;
 use gpui::{
     AnyElement, App, Context, EventEmitter, FocusHandle, Focusable, KeyBinding, ScrollHandle,
@@ -282,10 +280,15 @@ impl ExtensionsView {
                     })
                     .await;
                 this.update(cx, |this, cx| {
-                    let with_keys: Vec<String> =
-                        read.iter().filter(|(_, masked)| masked.is_some()).map(|(id, _)| id.clone()).collect();
+                    // Every provider that can be asked, which is the ones with a key and the
+                    // ones that never wanted one.
+                    let askable: Vec<String> = read
+                        .iter()
+                        .filter(|(id, masked)| masked.is_some() || sandbox::providers::auth(id) == Some(sandbox::providers::Auth::None))
+                        .map(|(id, _)| id.clone())
+                        .collect();
                     this.sandbox_keys.extend(read);
-                    for provider in with_keys {
+                    for provider in askable {
                         this.refresh_sandboxes(&provider, cx);
                     }
                     cx.notify();
@@ -411,11 +414,7 @@ impl ExtensionsView {
             cx.spawn(async move |this, cx| {
                 let listed = {
                     let provider = provider.clone();
-                    cx.background_spawn(async move {
-                        let key = sandbox::keys::get(&provider)?;
-                        client_for(&provider, &key)?.list().ok()
-                    })
-                    .await
+                    cx.background_spawn(async move { sandbox::providers::connect(&provider).and_then(|client| client.list()).ok() }).await
                 };
                 this.update(cx, |this, cx| {
                     if let Some(listed) = listed {
@@ -440,8 +439,13 @@ impl ExtensionsView {
                 {
                     let (provider, id) = (provider.clone(), id.clone());
                     cx.background_spawn(async move {
-                        let Some(key) = sandbox::keys::get(&provider) else { return };
-                        let Some(client) = client_for(&provider, &key) else { return };
+                        let client = match sandbox::providers::connect(&provider) {
+                            Ok(client) => client,
+                            Err(error) => {
+                                log::error!("The sandbox could not be stopped: {error}");
+                                return;
+                            }
+                        };
                         let listed = sandbox::Listed { id, ..Default::default() };
                         if let Err(error) = client.dispose(&listed.handle(&provider)) {
                             log::error!("The sandbox could not be stopped: {error}");
@@ -935,9 +939,15 @@ impl ExtensionsView {
 
 /// The client for a provider Athas speaks to, by the id its manifest declares. A provider in a
 /// manifest this build has no client for is nothing Athas can do anything with.
+///
+/// `key` is the one being checked or saved rather than the one in the keychain, so a key can be
+/// tried before it is kept. A provider that takes no key is reached without one.
 #[cfg(not(target_family = "wasm"))]
-fn client_for(provider: &str, key: &str) -> Option<impl sandbox::Provider> {
-    (provider == sandbox::e2b::ID).then(|| sandbox::e2b::E2b::new(key))
+fn client_for(provider: &str, key: &str) -> Option<Box<dyn sandbox::Provider>> {
+    match sandbox::providers::auth(provider)? {
+        sandbox::providers::Auth::ApiKey => sandbox::providers::with_key(provider, key),
+        _ => sandbox::providers::connect(provider).ok(),
+    }
 }
 
 /// The hover group of a catalog row, so its Install shows only under the pointer.

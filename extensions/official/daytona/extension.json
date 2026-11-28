@@ -1,0 +1,25 @@
+{
+  "$schema": "https://athas.dev/schemas/extension.json",
+  "id": "athas.sandbox.daytona",
+  "name": "daytona",
+  "displayName": "Daytona",
+  "description": "Run commands in a throwaway Linux sandbox on your own Daytona account instead of on this machine. Not affiliated with Daytona.",
+  "version": "1.0.0",
+  "publisher": "Athas",
+  "categories": [
+    "Sandbox"
+  ],
+  "sandboxProviders": [
+    {
+      "id": "daytona",
+      "name": "Daytona",
+      "description": "Sandboxes that stop when they go idle and keep their disk, so yesterday's is still there tomorrow.",
+      "apiKeyUrl": "https://app.daytona.io/dashboard/keys"
+    }
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/athasdev/athas"
+  }
+}
