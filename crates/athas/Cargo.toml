@@ -29,6 +29,6 @@ collaboration = { path = "../collaboration" }
 platform = { path = "../platform" }
 logging = { path = "../logging" }
 exec_path = { path = "../exec_path" }
-http_client = { git = "https://github.com/zed-industries/zed", rev = "3def8bad0b62dbda02d5b67b00df96fe8d3957bd" }
+http_client.workspace = true
 ureq = { version = "3.5", default-features = false, features = ["rustls"] }
 futures = "0.3"
