@@ -82,6 +82,7 @@ impl GitHubPanel {
                 .keywords(release.tag_name.clone()),
             );
         }
+        rows.extend(self.surface_note("releases", &self.releases, cx));
         CommandList::new("Releases", rows).icon(IconName::Tag).placeholder("Search releases").empty("No matching releases")
     }
 
@@ -118,11 +119,73 @@ impl GitHubPanel {
                 .keywords(format!("{} {}", deployment.environment, deployment.sha)),
             );
         }
+        rows.extend(self.surface_note("deployments", &self.deployments, cx));
         CommandList::new("Deployments", rows).icon(IconName::Rocket).placeholder("Search deployments").empty("No matching deployments")
     }
 }
 
 impl GitHubPanel {
+    /// What to say when a surface has no items to show, so the rows it does have -- the ones
+    /// that narrow it -- are never the whole answer. A list that is still loading, failed, or is
+    /// genuinely empty each read differently, and none of them is "four filters and nothing".
+    fn surface_note<T: Clone>(&self, what: &str, list: &crate::List<T>, cx: &Context<Self>) -> Option<CommandRow> {
+        let label: SharedString = match (&list.items, &list.error, list.loading) {
+            (_, Some(error), _) => format!("Could not load the {what}. {error}").into(),
+            (_, _, true) => format!("Loading {what}…").into(),
+            (None, _, _) => format!("No {what} loaded yet").into(),
+            (Some(items), _, _) if items.is_empty() => format!("This repository has no {what}").into(),
+            _ => return None,
+        };
+        let icon = if list.error.is_some() { IconName::WarningCircle } else { IconName::Info };
+        Some(self.row(label, icon, cx, |_, _| {}).section("Releases"))
+    }
+
+    /// Opens a footer surface, having first fetched what it lists. Picking Releases used to show
+    /// the rows that narrow the list and nothing else, because nothing had asked GitHub for the
+    /// releases yet -- they load when the panel's own section is opened, which it never was.
+    pub fn open_command_surface(&mut self, which: &str, cx: &mut Context<Self>) {
+        let section = match which {
+            "releases" => Section::Releases,
+            "deployments" => Section::Deployments,
+            _ => return,
+        };
+        let empty = match section {
+            Section::Releases => self.releases.items.is_none(),
+            _ => self.deployments.items.is_none(),
+        };
+        if empty {
+            self.load_section(section, cx);
+        }
+        let which = which.to_string();
+        // Shown now with whatever it has, and again when the answer lands: the first tells the
+        // reader it is working, the second is what they came for.
+        if let Some(list) = self.command_surface(&which, cx) {
+            palette::show_command_list(cx, list);
+        }
+        if !empty {
+            return;
+        }
+        cx.spawn(async move |this, cx| {
+            for _ in 0..100 {
+                cx.background_executor().timer(std::time::Duration::from_millis(100)).await;
+                let settled = this.read_with(cx, |this, _| match which.as_str() {
+                    "releases" => !this.releases.loading,
+                    _ => !this.deployments.loading,
+                });
+                if settled.unwrap_or(true) {
+                    break;
+                }
+            }
+            this.update(cx, |this, cx| {
+                if let Some(list) = this.command_surface(&which, cx) {
+                    palette::show_command_list(cx, list);
+                }
+            })
+            .ok();
+        })
+        .detach();
+    }
+
     /// One of the footer's surfaces by name, for the headless snapshot.
     pub fn command_surface(&self, which: &str, cx: &Context<Self>) -> Option<CommandList> {
         Some(match which {

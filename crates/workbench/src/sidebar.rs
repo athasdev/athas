@@ -798,8 +798,7 @@ impl Workbench {
             return;
         }
         let Some((github, _)) = self.github_panel.as_ref() else { return };
-        let Some(list) = github.clone().update(cx, |panel, cx| panel.command_surface(which, cx)) else { return };
-        palette::show_command_list(cx, list);
+        github.clone().update(cx, |panel, cx| panel.open_command_surface(which, cx));
     }
 
     /// A search field over an open menu's rows, as the Source Control menus have.
