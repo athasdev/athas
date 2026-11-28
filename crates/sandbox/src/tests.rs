@@ -313,3 +313,185 @@ fn envelopes_survive_a_round_trip_and_a_cut_stream_is_refused() {
     let error: Error = connect::decode(cut).expect_err("a half message is not half an answer");
     assert_eq!(error.kind, ErrorKind::Protocol);
 }
+
+/// Daytona against a local server that answers the way Daytona does. The two hosts are pointed at
+/// one base, which is what [`Daytona::with_bases`] is for, so a test can tell the account API's
+/// calls from the toolbox's by their paths alone.
+mod daytona {
+    use serde_json::json;
+    use telemetry::mock_server::{MockServer, Request, Response};
+
+    use crate::{Error, ErrorKind, Exec, Provider, Sandbox, Spec, daytona::Daytona};
+
+    fn handle(sandbox: &Sandbox) -> Sandbox {
+        sandbox.clone()
+    }
+
+    #[test]
+    fn creating_a_sandbox_asks_the_account_api_and_puts_the_workspace_in_the_sandbox_users_home() {
+        let server = MockServer::start(|_| Response::json(201, json!({ "id": "sb-7", "state": "started", "user": "ubuntu" })));
+        let client = Daytona::new("dtn-key").with_bases(server.url());
+        let spec = Spec { timeout_seconds: Some(3600), ..Spec::default() };
+
+        let sandbox = client.create(&spec).expect("the sandbox is created");
+
+        assert_eq!(sandbox.id, "sb-7");
+        // The home of the sandbox's own user, not a guess: a workspace written anywhere else is
+        // a workspace the sandbox user cannot change.
+        assert_eq!(sandbox.root, "/home/ubuntu");
+        let request = &server.requests()[0];
+        assert_eq!(request.method, "POST");
+        assert_eq!(request.path, "/sandbox");
+        assert_eq!(request.header("Authorization"), Some("Bearer dtn-key"));
+        // An hour, in the minutes Daytona counts idle time in.
+        assert_eq!(request.json()["autoStopInterval"], json!(60));
+    }
+
+    #[test]
+    fn a_command_comes_back_in_one_answer_with_its_exit_code() {
+        let server = MockServer::start(|_| Response::json(200, json!({ "exitCode": 0, "result": "hello\n" })));
+        let client = Daytona::new("dtn-key").with_bases(server.url());
+        let sandbox = Sandbox { provider: "daytona".into(), id: "sb-7".into(), host: String::new(), access_token: None, root: "/home/daytona".into() };
+
+        let output = client.exec(&handle(&sandbox), &Exec::new("echo hello").in_dir("/home/daytona/work")).expect("the command runs");
+
+        assert!(output.succeeded());
+        assert_eq!(output.stdout, "hello\n");
+        assert!(!output.timed_out);
+        let request = &server.requests()[0];
+        assert_eq!(request.path, "/toolbox/sb-7/process/execute");
+        assert_eq!(request.json()["cwd"], json!("/home/daytona/work"));
+    }
+
+    #[test]
+    fn a_file_goes_over_as_multipart_with_its_path_in_the_query() {
+        let server = MockServer::start(|_| Response::json(200, json!({ "ok": true })));
+        let client = Daytona::new("dtn-key").with_bases(server.url());
+        let sandbox = Sandbox { provider: "daytona".into(), id: "sb-7".into(), host: String::new(), access_token: None, root: "/home/daytona".into() };
+
+        client.write_file(&handle(&sandbox), "/home/daytona/.athas-sync.tar.gz", b"gzipped").expect("the file is written");
+
+        let request = &server.requests()[0];
+        assert_eq!(request.method, "POST");
+        assert!(request.path.starts_with("/toolbox/sb-7/files/upload-v2?path="), "{}", request.path);
+        assert!(request.header("Content-Type").is_some_and(|value| value.starts_with("multipart/form-data; boundary=")));
+        assert!(request.body.contains("gzipped"), "the file's bytes are in the body");
+    }
+
+    #[test]
+    fn a_refused_key_is_the_users_to_fix_and_is_never_retried() {
+        let server = MockServer::start(|_| Response::json(401, json!({ "message": "invalid api key" })));
+        let client = Daytona::new("wrong").with_bases(server.url());
+
+        let error: Error = client.list().expect_err("the key is refused");
+
+        assert_eq!(error.kind, ErrorKind::Auth);
+        assert!(!error.is_retryable());
+        assert!(error.message.contains("refused the API key"), "{}", error.message);
+    }
+
+    #[test]
+    fn a_sandbox_that_stopped_on_its_own_is_started_again_rather_than_called_gone() {
+        let server = MockServer::start(|request: &Request| match request.method.as_str() {
+            "POST" => Response::json(200, json!({ "ok": true })),
+            _ => Response::json(200, json!({ "id": "sb-7", "state": "stopped", "user": "daytona" })),
+        });
+        let client = Daytona::new("dtn-key").with_bases(server.url());
+
+        let sandbox = client.attach("sb-7").expect("the sandbox is opened");
+
+        assert_eq!(sandbox.id, "sb-7");
+        let paths: Vec<String> = server.requests().into_iter().map(|request| request.path).collect();
+        assert_eq!(paths, vec!["/sandbox/sb-7", "/sandbox/sb-7/start"]);
+    }
+}
+
+/// Boat against a local server. The two limits worth a test are Boat's own: ten minutes on a
+/// command and five megabytes on a file.
+mod boat {
+    use std::time::Duration;
+
+    use serde_json::json;
+    use telemetry::mock_server::{MockServer, Request, Response};
+
+    use crate::{ErrorKind, Exec, Provider, Sandbox, Spec, boat::Boat};
+
+    fn sandbox_of() -> Sandbox {
+        Sandbox { provider: "boat".into(), id: "sb-3".into(), host: String::new(), access_token: None, root: "/home/user".into() }
+    }
+
+    #[test]
+    fn creating_a_sandbox_reads_the_id_out_of_boats_envelope() {
+        let server = MockServer::start(|_| Response::json(200, json!({ "ok": true, "type": "sandbox.created", "sandbox": { "id": "sb-3", "state": "running" } })));
+        let client = Boat::new("boat_key").with_base(server.url());
+
+        let sandbox = client.create(&Spec { timeout_seconds: Some(1800), ..Spec::default() }).expect("the sandbox is created");
+
+        assert_eq!(sandbox.id, "sb-3");
+        assert_eq!(sandbox.root, "/home/user");
+        let request = &server.requests()[0];
+        assert_eq!(request.path, "/sandboxes");
+        assert_eq!(request.header("Authorization"), Some("Bearer boat_key"));
+        assert_eq!(request.json()["ttlSeconds"], json!(1800));
+    }
+
+    #[test]
+    fn a_command_longer_than_boat_allows_is_clamped_rather_than_rejected() {
+        let server = MockServer::start(|_| Response::json(200, json!({ "ok": true, "exitCode": 0, "stdout": "", "stderr": "", "timedOut": false })));
+        let client = Boat::new("boat_key").with_base(server.url());
+
+        // Athas gives a command fifteen minutes; Boat refuses anything over ten.
+        let exec = Exec::new("cargo build").with_timeout(Duration::from_secs(15 * 60));
+        client.exec(&sandbox_of(), &exec).expect("the command runs");
+
+        assert_eq!(server.requests()[0].json()["timeoutSeconds"], json!(600));
+    }
+
+    #[test]
+    fn a_failure_boat_sends_with_a_200_is_still_a_failure() {
+        let server = MockServer::start(|_| Response::json(200, json!({ "ok": false, "status": 404, "message": "sandbox not found" })));
+        let client = Boat::new("boat_key").with_base(server.url());
+
+        let error = client.list().expect_err("the call failed even though the status line said 200");
+
+        assert_eq!(error.kind, ErrorKind::Gone);
+    }
+
+    #[test]
+    fn a_file_too_big_for_one_write_goes_in_pieces_and_is_joined_in_the_sandbox() {
+        let server = MockServer::start(|_| Response::json(200, json!({ "ok": true, "exitCode": 0, "stdout": "", "stderr": "", "timedOut": false })));
+        let client = Boat::new("boat_key").with_base(server.url());
+        // Over two of Boat's writes' worth, so it takes three pieces and one command.
+        let archive = vec![7u8; 7 * 1024 * 1024];
+
+        client.write_file(&sandbox_of(), "/home/user/.athas-sync.tar.gz", &archive).expect("the archive is written");
+
+        let requests = server.requests();
+        let writes: Vec<&Request> = requests.iter().filter(|request| request.method == "PUT").collect();
+        assert_eq!(writes.len(), 3, "three pieces");
+        let names: Vec<String> = writes.iter().map(|request| request.json()["path"].as_str().unwrap_or_default().to_string()).collect();
+        assert_eq!(names, vec![
+            "/home/user/.athas-sync.tar.gz.athas-part-0000",
+            "/home/user/.athas-sync.tar.gz.athas-part-0001",
+            "/home/user/.athas-sync.tar.gz.athas-part-0002",
+        ]);
+        // One command puts them back together and clears up after itself, so the sandbox is not
+        // left holding a second copy of the workspace.
+        let joined = requests.iter().find(|request| request.path == "/sandboxes/sb-3/commands").expect("the pieces are joined");
+        let command = joined.json()["command"].as_str().unwrap_or_default().to_string();
+        assert!(command.starts_with("cat '/home/user/.athas-sync.tar.gz.athas-part-0000'"), "{command}");
+        assert!(command.contains("> '/home/user/.athas-sync.tar.gz'"), "{command}");
+        assert!(command.contains("rm -f"), "{command}");
+    }
+
+    #[test]
+    fn a_file_is_asked_for_as_base64_so_a_binary_one_survives_the_round_trip() {
+        let server = MockServer::start(|_| Response::json(200, json!({ "ok": true, "content": "AAEC", "encoding": "base64" })));
+        let client = Boat::new("boat_key").with_base(server.url());
+
+        let bytes = client.read_file(&sandbox_of(), "/home/user/a.bin").expect("the file is read");
+
+        assert_eq!(bytes, vec![0u8, 1, 2]);
+        assert!(server.requests()[0].path.contains("encoding=base64"), "{}", server.requests()[0].path);
+    }
+}

@@ -41,6 +41,9 @@ use crate::{
     thread::{Applied, ConfigOption, Entry, NoticeKind, ToolStatus, Transcript},
     title,
 };
+/// Only the desktop build runs a session's commands anywhere but here.
+#[cfg(not(target_family = "wasm"))]
+use crate::thread::SandboxTarget;
 
 /// Whether the agent process runs, and what it said about itself.
 pub(crate) enum AgentState {
@@ -146,16 +149,8 @@ pub(crate) struct RunningAgent {
     _events: Task<()>,
 }
 
-/// Where a session's commands run, when they do not run here: whose sandbox, and which one of
-/// theirs. No sandbox named means a fresh one, made with the session's first command.
-#[cfg(not(target_family = "wasm"))]
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub(crate) struct SandboxTarget {
-    pub provider: String,
-    pub sandbox: Option<String>,
-}
-
-/// A sandbox a session's commands could run in, as the Environment menu shows it.
+/// Somewhere a session's commands could run, as the Environment menu shows it: a sandbox
+/// provider from an installed integration, or one of the user's own machines.
 #[cfg(not(target_family = "wasm"))]
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(crate) struct SandboxChoice {
@@ -163,6 +158,11 @@ pub(crate) struct SandboxChoice {
     pub name: String,
     /// The provider's mark from its extension, when it ships one.
     pub icon: Option<gpui::SharedString>,
+    /// A machine of the user's own rather than a sandbox: listed apart, chosen directly instead
+    /// of through a list of sandboxes, and never thrown away by Athas.
+    pub machine: bool,
+    /// What the row says under the name -- where a machine is, mostly.
+    pub detail: Option<String>,
 }
 
 /// A question the agent waits on.
@@ -248,10 +248,6 @@ pub struct SessionView {
     /// The tool calls each cloud run's log shows so far, by the agent message the run fills.
     pub(crate) cloud_tool_calls: HashMap<usize, Vec<crate::cloud::transcript::CloudToolCall>>,
     pub(crate) open_menu: Option<OpenMenu>,
-    /// Where this session's commands run, or `None` for this machine. The session's, not the
-    /// host's, so it can be chosen before the agent has started.
-    #[cfg(not(target_family = "wasm"))]
-    sandbox_target: Option<SandboxTarget>,
     /// The sandbox itself, made as soon as one is chosen. The session's, not the host's: it is
     /// started and filled before any agent exists, and handed to the host when one does.
     #[cfg(not(target_family = "wasm"))]
@@ -264,10 +260,16 @@ pub struct SessionView {
     sandbox_error: Option<gpui::SharedString>,
     #[cfg(not(target_family = "wasm"))]
     sandbox_task: Option<Task<()>>,
-    /// The account's own sandboxes, as the provider last listed them. Asked for when the menu
-    /// opens, so the list is never fetched by a draw.
+    /// Each provider's own sandboxes, by provider id, as it last listed them. Asked for when the
+    /// menu opens, so the list is never fetched by a draw. Keyed by provider because two
+    /// providers' accounts have nothing to do with each other, and a flat list showed each
+    /// account's sandboxes under every provider's name.
     #[cfg(not(target_family = "wasm"))]
-    sandbox_list: Vec<sandbox::Listed>,
+    sandbox_list: HashMap<String, Vec<sandbox::Listed>>,
+    /// Everywhere this session could run, read once rather than per draw: the machines come off
+    /// disk and the providers out of the extension store, and a frame should do neither.
+    #[cfg(not(target_family = "wasm"))]
+    environments: Vec<SandboxChoice>,
     #[cfg(not(target_family = "wasm"))]
     sandbox_list_task: Option<Task<()>>,
     pub(crate) effort_popover: Option<(gpui::Point<gpui::Pixels>, String)>,
@@ -764,8 +766,6 @@ impl SessionView {
             cloud_tool_calls: HashMap::new(),
             open_menu: None,
             #[cfg(not(target_family = "wasm"))]
-            sandbox_target: Self::default_sandbox_target(cx),
-            #[cfg(not(target_family = "wasm"))]
             sandbox_runtime: None,
             #[cfg(not(target_family = "wasm"))]
             sandbox_work: None,
@@ -774,7 +774,9 @@ impl SessionView {
             #[cfg(not(target_family = "wasm"))]
             sandbox_task: None,
             #[cfg(not(target_family = "wasm"))]
-            sandbox_list: Vec::new(),
+            sandbox_list: HashMap::new(),
+            #[cfg(not(target_family = "wasm"))]
+            environments: Self::sandbox_choices(cx),
             #[cfg(not(target_family = "wasm"))]
             sandbox_list_task: None,
             effort_popover: None,
@@ -2372,7 +2374,7 @@ impl SessionView {
     /// after, and an agent that has not started yet still has a place its commands will go.
     #[cfg(not(target_family = "wasm"))]
     pub(crate) fn sandbox_target(&self) -> Option<SandboxTarget> {
-        self.sandbox_target.clone()
+        self.transcript.sandbox.clone()
     }
 
     /// The sandbox this session is in right now. `None` while it is still only a destination:
@@ -2382,14 +2384,20 @@ impl SessionView {
         self.sandbox_runtime.as_ref()?.current_id()
     }
 
-    /// The sandbox providers that could run this session's commands: installed, enabled, and
-    /// with a client in this build.
+    /// Everywhere this session's commands could run instead of here: every sandbox provider from
+    /// an installed, enabled integration this build has a client for, then the user's own saved
+    /// machines. A provider a manifest names and this build cannot reach is left out -- showing
+    /// it would be offering something that cannot be chosen.
+    ///
+    /// Reads the extension store and the saved connections, so it is called when something
+    /// changed and not while drawing; [`Self::environments`] is what a draw reads.
     #[cfg(not(target_family = "wasm"))]
     pub(crate) fn sandbox_choices(cx: &App) -> Vec<SandboxChoice> {
         let extensions = extensions::get(cx);
-        extensions
+        let mut choices: Vec<SandboxChoice> = extensions
             .sandbox_providers()
             .into_iter()
+            .filter(|(_, provider)| sandbox::providers::is_known(&provider.id))
             .map(|(extension, provider)| SandboxChoice {
                 icon: extensions.entry(&extension).and_then(|entry| match entry.icon {
                     Some(extensions::ExtensionIcon::Embedded { path, .. }) => Some(gpui::SharedString::from(path)),
@@ -2397,15 +2405,41 @@ impl SessionView {
                 }),
                 id: provider.id,
                 name: provider.name,
+                machine: false,
+                detail: None,
             })
-            .collect()
+            .collect();
+        choices.extend(sandbox::machines::list().into_iter().map(|machine| SandboxChoice {
+            id: machine.provider_id(),
+            name: machine.name,
+            icon: None,
+            machine: true,
+            detail: Some(machine.location),
+        }));
+        choices
+    }
+
+    /// Everywhere this session could run, as it was last read. Safe to call from a draw.
+    #[cfg(not(target_family = "wasm"))]
+    pub(crate) fn environments(&self) -> &[SandboxChoice] {
+        &self.environments
+    }
+
+    /// Reads the environments again, after something that could have changed them: an
+    /// integration installed, a machine saved, a key added.
+    #[cfg(not(target_family = "wasm"))]
+    pub(crate) fn refresh_environments(&mut self, cx: &App) {
+        let environments = Self::sandbox_choices(cx);
+        if environments != self.environments {
+            self.environments = environments;
+        }
     }
 
     /// Sends this session's commands to a provider, or back to this machine. Takes effect with
     /// the next command; one already running finishes where it started.
     #[cfg(not(target_family = "wasm"))]
     pub(crate) fn set_sandbox_target(&mut self, target: Option<SandboxTarget>, cx: &mut Context<Self>) {
-        if self.sandbox_target == target {
+        if self.transcript.sandbox == target {
             return;
         }
         let cwd = session_cwd(&self.info);
@@ -2416,9 +2450,10 @@ impl SessionView {
                 None => acp::sandbox::SandboxRuntime::new(&target.provider, cwd),
             })
         });
-        self.sandbox_target = target;
+        self.transcript.sandbox = target;
         self.sandbox_work = None;
         self.sandbox_error = None;
+        self.schedule_save(cx);
         self.apply_sandbox_target(cx);
         // Chosen means chosen: the sandbox is made and the workspace sent now, not at whatever
         // moment the agent happens to want a command.
@@ -2483,7 +2518,18 @@ impl SessionView {
     /// Points the running agent's host where the session says. Called when the choice changes
     /// and again when an agent starts, since a session chooses before it has one.
     #[cfg(not(target_family = "wasm"))]
-    fn apply_sandbox_target(&mut self, _cx: &mut Context<Self>) {
+    fn apply_sandbox_target(&mut self, cx: &mut Context<Self>) {
+        // A session reopened from disk carries its choice but not the thing behind it.
+        if self.sandbox_runtime.is_none()
+            && let Some(target) = self.transcript.sandbox.clone()
+        {
+            let cwd = session_cwd(&self.info);
+            self.sandbox_runtime = Some(Arc::new(match &target.sandbox {
+                Some(sandbox) => acp::sandbox::SandboxRuntime::attached(&target.provider, cwd, sandbox),
+                None => acp::sandbox::SandboxRuntime::new(&target.provider, cwd),
+            }));
+            let _ = cx;
+        }
         let AgentState::Ready(agent) = &self.agent else { return };
         let Some(host) = agent.host.clone() else { return };
         host.set_sandbox(&agent.session_id, self.sandbox_runtime.clone());
@@ -2495,7 +2541,14 @@ impl SessionView {
         if !settings::get(cx).ai_sandbox_commands {
             return None;
         }
-        let provider = Self::sandbox_choices(cx).into_iter().next()?.id;
+        // The first that is ready, not simply the first: an integration installed without a key
+        // would otherwise make every new session start somewhere that fails on its first
+        // command. A machine is never the default -- it is someone's computer, and running
+        // there is a thing to choose on purpose.
+        let provider = Self::sandbox_choices(cx)
+            .into_iter()
+            .find(|choice| !choice.machine && sandbox::providers::is_ready(&choice.id))?
+            .id;
         Some(SandboxTarget { provider, sandbox: None })
     }
 
@@ -2503,7 +2556,10 @@ impl SessionView {
     /// list when it lands, so opening it never waits on the network.
     #[cfg(not(target_family = "wasm"))]
     fn refresh_sandbox_list(&mut self, position: gpui::Point<Pixels>, window: &mut Window, cx: &mut Context<Self>) {
-        let providers: Vec<String> = Self::sandbox_choices(cx).into_iter().map(|choice| choice.id).collect();
+        // Machines are left out on purpose: asking one what it has means opening an SSH
+        // connection, and a menu that connects to every saved host the moment it opens would ask
+        // for passwords nobody pressed anything to be asked for.
+        let providers: Vec<String> = self.environments.iter().filter(|choice| !choice.machine).map(|choice| choice.id.clone()).collect();
         if providers.is_empty() {
             return;
         }
@@ -2512,8 +2568,11 @@ impl SessionView {
                 .background_spawn(async move {
                     providers
                         .into_iter()
-                        .flat_map(|provider| acp::sandbox::list(&provider).unwrap_or_default())
-                        .collect::<Vec<_>>()
+                        .map(|provider| {
+                            let sandboxes = acp::sandbox::list(&provider).unwrap_or_default();
+                            (provider, sandboxes)
+                        })
+                        .collect::<HashMap<_, _>>()
                 })
                 .await;
             this.update_in(cx, |this, window, cx| {
@@ -2545,7 +2604,14 @@ impl SessionView {
         self.skipped_mcp = opened.skipped_mcp;
         self.transcript.agent_session_id = Some(opened.session_id);
         #[cfg(not(target_family = "wasm"))]
-        self.apply_sandbox_target(cx);
+        {
+            // A session that has never chosen starts where the settings say; one that has keeps
+            // what it chose, whatever the settings became since.
+            if self.transcript.sandbox.is_none() && self.transcript.entries.is_empty() {
+                self.transcript.sandbox = Self::default_sandbox_target(cx);
+            }
+            self.apply_sandbox_target(cx);
+        }
         let saved_mode = self.transcript.modes.as_ref().map(|modes| modes.current.clone());
         let saved_options: Vec<(String, String)> = self.transcript.config_options.iter().map(|option| (option.id.clone(), option.current.clone())).collect();
         if let Some(modes) = opened.modes {
@@ -3388,6 +3454,7 @@ impl SessionView {
     /// the account's own are listed under it and "New sandbox" is the one that makes another.
     #[cfg(not(target_family = "wasm"))]
     pub(crate) fn deploy_environment_menu(&mut self, position: gpui::Point<Pixels>, window: &mut Window, cx: &mut Context<Self>) {
+        self.refresh_environments(cx);
         let current = self.sandbox_target();
         let this = cx.entity();
         let here = this.clone();
@@ -3400,14 +3467,33 @@ impl SessionView {
                 })
                 .into(),
         ];
+        let (machines, providers): (Vec<SandboxChoice>, Vec<SandboxChoice>) =
+            self.environments.iter().cloned().partition(|choice| choice.machine);
         // The sandboxes sit under a heading of their own: the first row is this machine, and
         // everything under the heading is somewhere else. The line under it is there because
         // the first question anyone asks of this menu is what exactly moves.
-        entries.push(ui::MenuEntry::Label("Sandboxes".into()));
-        entries.push(ui::MenuEntry::Text("Commands run there. Your files are copied over.".into()));
-        for choice in Self::sandbox_choices(cx) {
+        if !providers.is_empty() {
+            entries.push(ui::MenuEntry::Label("Sandboxes".into()));
+            entries.push(ui::MenuEntry::Text("Commands run there. Your files are copied over.".into()));
+        }
+        for choice in providers {
+            // A provider whose key is not saved yet is shown and not offered: a row that opens
+            // its page is the answer to "why can I not pick this", and a row that could be
+            // picked and then failed on the first command is not.
+            if !sandbox::providers::is_ready(&choice.id) {
+                let id = choice.id.clone();
+                let mut item = ui::MenuItem::new(choice.name).icon(ui::IconName::Key).description("Needs an API key").on_select(move |_, cx| {
+                    settings::update(cx, |settings| settings.extensions_active_tab = "sandbox".into());
+                    workbench_api::open_resource(cx, "extensions", &id, "Integrations");
+                });
+                if let Some(path) = choice.icon {
+                    item = item.icon_image(gpui::ImageSource::from(path));
+                }
+                entries.push(item.into());
+                continue;
+            }
             let mut inside: Vec<ui::MenuEntry> = Vec::new();
-            for listed in self.sandbox_list.iter().filter(|listed| !listed.id.is_empty()) {
+            for listed in self.sandbox_list.get(&choice.id).into_iter().flatten().filter(|listed| !listed.id.is_empty()) {
                 let chosen = this.clone();
                 let target = SandboxTarget { provider: choice.id.clone(), sandbox: Some(listed.id.clone()) };
                 let picked = Some(&target) == current.as_ref();
@@ -3458,6 +3544,43 @@ impl SessionView {
             };
             entries.push(item.into());
         }
+        // The user's own machines, under a heading that says they are not sandboxes. What
+        // changes between the two groups is what happens when the session ends: a sandbox is
+        // left running on its lease, a machine is left exactly as it was.
+        if !machines.is_empty() {
+            entries.push(ui::MenuEntry::Label("My machines".into()));
+            entries.push(ui::MenuEntry::Text("Commands run there over SSH. Nothing is created and nothing is destroyed.".into()));
+        }
+        for machine in machines {
+            // A machine is one place, so it is chosen directly: there is no list of sandboxes
+            // inside it to pick from.
+            let target = SandboxTarget { provider: machine.id.clone(), sandbox: None };
+            let picked = Some(&target) == current.as_ref();
+            let chosen = this.clone();
+            let mut item = ui::MenuItem::new(machine.name)
+                .icon(ui::IconName::Monitor)
+                .checked(picked)
+                .on_select(move |_, cx| {
+                    let target = target.clone();
+                    chosen.update(cx, |this, cx| this.set_sandbox_target(Some(target), cx));
+                });
+            if let Some(detail) = machine.detail {
+                item = item.description(detail);
+            }
+            entries.push(item.into());
+        }
+        // Where another machine comes from. The same dialog the project picker opens, so a host
+        // saved for a project is a host a session can run on without being saved twice.
+        entries.push(
+            ui::MenuItem::new("Add a machine…")
+                .icon(ui::IconName::Monitor)
+                .on_select(|window, cx| {
+                    if let Some(action) = cx.default_global::<keymap::CommandRegistry>().action("remote.connect") {
+                        window.dispatch_action(action, cx);
+                    }
+                })
+                .into(),
+        );
         // Where another provider comes from, for an account that has one Athas has not been
         // told about yet.
         entries.push(
@@ -3976,7 +4099,7 @@ mod tests {
 
     #[test]
     fn a_reattached_session_gets_its_mode_and_options_back() {
-        use crate::thread::{ConfigChoice, Mode, ModeState};
+        use crate::thread::{ConfigChoice, Mode, ModeState, SandboxTarget};
         let mode = |id: &str| Mode { id: id.into(), name: id.into(), description: None };
         let modes = ModeState { current: "default".into(), available: vec![mode("default"), mode("plan")] };
         let choice = |value: &str| ConfigChoice { value: value.into(), name: value.into(), description: None, group: None };

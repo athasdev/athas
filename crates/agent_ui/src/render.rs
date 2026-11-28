@@ -3102,15 +3102,20 @@ impl SessionView {
         // computer, and everybody needs to be told when they do not.
         #[cfg(not(target_family = "wasm"))]
         if let Some(target) = self.sandbox_target() {
-            let name = Self::sandbox_choices(cx)
-                .into_iter()
-                .find(|choice| choice.id == target.provider)
-                .map_or_else(|| target.provider.clone(), |choice| choice.name);
+            let chosen = self.environments().iter().find(|choice| choice.id == target.provider);
+            let name = chosen.map_or_else(|| target.provider.clone(), |choice| choice.name.clone());
+            // A machine is somebody's computer and a sandbox is a box; the chip says which.
+            let mark = if chosen.is_some_and(|choice| choice.machine) { IconName::Monitor } else { IconName::Cube };
             let live = self.sandbox_live_id();
             let ran = self.sandbox_commands_run();
+            let machine = chosen.is_some_and(|choice| choice.machine);
             let label = match (&live, &self.sandbox_work()) {
                 (_, Some(work)) => format!("{name} · {work}"),
+                // A machine's "sandbox id" is the connection's own id, which the name already
+                // said; repeating it would make the chip twice as wide and no clearer.
+                (Some(_), None) if machine => name.clone(),
                 (Some(id), None) => format!("{name} · {id}"),
+                (None, None) if machine => format!("{name} · not connected"),
                 (None, None) => format!("{name} · not started"),
             };
             // The honest answer to "did it really run in there", which is a number, and the
@@ -3119,12 +3124,13 @@ impl SessionView {
                 (0, _) => format!(
                     "No commands have run in {name} yet. Only commands the agent asks Athas to run go there; one that runs its own shell does not."
                 ),
-                (1, Some(id)) => format!("1 command has run in {id}."),
-                (count, Some(id)) => format!("{count} commands have run in {id}."),
-                (count, None) => format!("{count} commands have run in {name}."),
+                (1, Some(id)) if !machine => format!("1 command has run in {id}."),
+                (count, Some(id)) if !machine => format!("{count} commands have run in {id}."),
+                (1, _) => format!("1 command has run on {name}."),
+                (count, _) => format!("{count} commands have run on {name}."),
             };
             pickers.push(
-                picker_button("sandbox-picker", label, Some(IconName::Cube), true)
+                picker_button("sandbox-picker", label, Some(mark), true)
                     .tooltip(tooltip)
                     .on_click(cx.listener(|this, event: &ClickEvent, window, cx| {
                         this.deploy_environment_menu(event.position(), window, cx)

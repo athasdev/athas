@@ -2,19 +2,34 @@
 //! machine somewhere else, run a command in it, move files in and out, throw it away. This is the
 //! client side only -- nothing here knows about the agent, the editor or GPUI.
 //!
-//! One trait, [`Provider`], with one provider behind it so far ([`e2b`]). Providers disagree about
-//! almost everything (a port is a URL to one and a hostname to another, files are multipart here
-//! and streamed there), so the trait stays narrow: the four things a sandbox has to do are run a
-//! command, take a file, give a file back, and stop costing money.
+//! One trait, [`Provider`], and several behind it: [`e2b`], [`daytona`] and [`boat`] on the
+//! user's own account, [`docker`] on this machine, and a saved SSH connection through
+//! [`machines`]. Providers disagree about almost everything (a port is a URL to one and a
+//! hostname to another, files are multipart here, base64 there and a stream somewhere else), so
+//! the trait stays narrow: the four things a sandbox has to do are run a command, take a file,
+//! give a file back, and stop costing money.
+//!
+//! [`providers`] is the one place that maps a name to a client. Add a provider there and the
+//! agent, the Integrations page and the Environment menu all find it at once.
 //!
 //! Every call blocks and takes between a few hundred milliseconds and a few seconds. Call them
 //! from a background executor, the way `telemetry::send` is called, never from `render`.
 
 pub mod connect;
 #[cfg(not(target_family = "wasm"))]
+pub mod boat;
+#[cfg(not(target_family = "wasm"))]
+pub mod daytona;
+#[cfg(not(target_family = "wasm"))]
+pub mod docker;
+#[cfg(not(target_family = "wasm"))]
 pub mod e2b;
 #[cfg(not(target_family = "wasm"))]
 pub mod keys;
+#[cfg(not(target_family = "wasm"))]
+pub mod machines;
+#[cfg(not(target_family = "wasm"))]
+pub mod providers;
 #[cfg(test)]
 mod tests;
 

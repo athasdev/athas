@@ -61,13 +61,15 @@ pub fn for_session(cwd: &Path, cx: &App) -> Option<Arc<SandboxRuntime>> {
     Some(Arc::new(SandboxRuntime::new(&provider.id, cwd.to_path_buf())))
 }
 
-/// What `provider`'s account has right now. Blocking: the caller runs it on a background thread.
+/// What `provider` has right now: the account's sandboxes, the machine's own answer, the
+/// containers on this computer. `None` when the provider is not ready to be asked -- no key
+/// saved, no client in this build -- which is different from an account with nothing in it.
+/// Blocking: the caller runs it on a background thread.
 pub fn list(provider: &str) -> Option<Vec<sandbox::Listed>> {
-    let key = sandbox::keys::get(provider)?;
-    match provider {
-        sandbox::e2b::ID => sandbox::e2b::E2b::new(&key).list().ok(),
-        _ => None,
+    if !sandbox::providers::is_ready(provider) {
+        return None;
     }
+    sandbox::providers::connect(provider).and_then(|client| client.list()).ok()
 }
 
 /// One session's sandbox: made when its first command runs, kept until the session is done.
@@ -128,12 +130,7 @@ impl SandboxRuntime {
         if let Some(client) = self.client.get() {
             return Ok(client.as_ref());
         }
-        let key = sandbox::keys::get(&self.provider)
-            .ok_or_else(|| format!("No {} key is saved. Add one on its page in Integrations.", self.provider))?;
-        let client: Box<dyn Provider> = match self.provider.as_str() {
-            sandbox::e2b::ID => Box::new(sandbox::e2b::E2b::new(&key)),
-            other => return Err(format!("This build of Athas has no client for {other}.")),
-        };
+        let client = sandbox::providers::connect(&self.provider).map_err(|error| error.message)?;
         let _ = self.client.set(client);
         self.client.get().map(Box::as_ref).ok_or_else(|| "The sandbox client could not be made.".to_string())
     }
